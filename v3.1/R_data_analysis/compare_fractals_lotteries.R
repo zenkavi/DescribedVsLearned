@@ -1,11 +1,15 @@
 rm(list=ls(all=TRUE))
-setwd("~/Documents/Caltech/Fall_2016/fmri_bundles/behavioral_analysis/v2.1/R_data_analysis/")
 
 library(xtable)
 
+# setwd("~/Documents/Caltech/Fall_2016/fmri_bundles/behavioral_analysis/v2.1/R_data_analysis/")
+data_path = '/Users/zeynepenkavi/Dropbox/RangelLab/DescribedVsLearned/v3.1/R_data_analysis'
+setwd(data_path)
+
 # load data
 #########
-data = read.csv("~/Documents/Caltech/Fall_2016/fmri_bundles/behavioral_analysis/v2.1/R_data_analysis/bundles_data.csv")
+# data = read.csv("~/Documents/Caltech/Fall_2016/fmri_bundles/behavioral_analysis/v2.1/R_data_analysis/bundles_data.csv")
+data = read.csv(paste0(data_path, '/bundles_data.csv'))
 attach(data)
 
 # prelims

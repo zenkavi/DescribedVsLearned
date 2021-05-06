@@ -31,8 +31,9 @@ check_complete = function(listElement){
 #Loop through the files in the data path
 #Read in and format each matlab file
 #Put the reformatted session file into output file
+print("Beginning reading data in...")
 for (i in 1:length(file_names)){
-  print(paste0("Processing file: ", i, ' of ', length(file_names)))
+  # print(paste0("Processing file: ", i, ' of ', length(file_names)))
   
   cur_mat = readMat(paste0(data_path, file_names[i]))
   names(cur_mat$data) = field_names
@@ -64,4 +65,6 @@ for (i in 1:length(file_names)){
 }
 
 #Clean up
-rm(list=setdiff(ls(), "beh_data"))
+rm("cur_df", "cur_mat", "data_path", "df_names", "field_names", "file_names", "check_complete", "i")
+print("Done!")
+

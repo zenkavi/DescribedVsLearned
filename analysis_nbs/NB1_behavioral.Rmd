@@ -4,10 +4,6 @@ output: html_notebook
 ---
 
 ```{r}
-library(tidyverse)
-```
-
-```{r}
 helpers_path = '~/Dropbox/RangelLab/DescribedVsLearned/helpers/'
 ```
 
@@ -15,4 +11,28 @@ Read in behavioral data
 
 ```{r}
 source(paste0(helpers_path,'get_behavioral_data.R'))
+```
+
+What does behavior look like?
+
+Distribution of response times
+
+```{r}
+beh_data %>%
+  ggplot()+
+  geom_histogram(aes(reactionTime), bins=50)
+```
+
+There are some too short/negative RTs. Exclude those.
+
+```{r}
+beh_data %>% 
+  group_by(session) %>%
+  summarise(mean_rt = mean(reactionTime))
+```
+
+Distribution of left/right choices or others for non response trials
+
+```{r}
+
 ```

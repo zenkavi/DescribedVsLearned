@@ -4,6 +4,10 @@ output: html_notebook
 ---
 
 ```{r}
+library(tidyverse)
+```
+
+```{r}
 helpers_path = '~/Dropbox/RangelLab/DescribedVsLearned/helpers/'
 ```
 

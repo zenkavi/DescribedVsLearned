@@ -48,15 +48,20 @@ beh_data %>%
 How many trials have negative RTs?
 
 ```{r}
-nrow(beh_data %>% 
-  filter(reactionTime < 0))
+beh_data %>% 
+  filter(reactionTime < 0)
 ```
 
-How many trials have 0<RT<.2 seconds?
+```{r}
+beh_data %>% 
+  filter(reactionTime == 0)
+```
+
+How many trials have RT<.2 seconds?
 
 ```{r}
 nrow(beh_data %>% 
-  filter(reactionTime >0 & reactionTime <.2))
+  filter(reactionTime <.2))
 ```
 
 Are trials with RT<.2 disproportionately from one subject/session?
@@ -71,7 +76,29 @@ beh_data %>%
 
 ## Choices
 
-Distribution of left/right choices or others for non response trials
+There are two choice-related columns. `responded` and `choiceLeft`.
+
+According to `fmri_bundles > task > RunTrial.m` the `responded` column should only be 1 or 0. Instead there are three unique values for this column.
+
+```{r}
+table(beh_data$responded)
+```
+
+The -1's in `responded` map onto those trials with `reactionTime` == 0.
+
+```{r}
+beh_data %>%
+  filter(responded == -1)
+```
+
+What are the 0's in the `responded` column?
+
+```{r}
+beh_data %>%
+  filter(responded == 0)
+```
+
+What is the `choiceLeft`å column?
 
 ```{r}
 
@@ -79,7 +106,8 @@ Distribution of left/right choices or others for non response trials
 
 # Data cleaning steps
 
-1. Exclude trials RTs <.2 seconds.
+- Exclude non-responded trials.
+- Exclude trials RTs <.2 seconds. 
 
 
 All of this will be incorporated in `clean_behaviora_data.R`

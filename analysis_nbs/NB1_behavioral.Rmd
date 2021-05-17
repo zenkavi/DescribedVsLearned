@@ -1,7 +1,9 @@
 ---
-title: "Experience vs. description based decision-making project: Behavioral data"
+title: "Experience vs. description based decision-making project: Behavioral data descriptive stats and cleaning"
 output: html_notebook
 ---
+
+# Set up environment and load in data
 
 ```{r}
 library(tidyverse)
@@ -17,9 +19,25 @@ Read in behavioral data
 source(paste0(helpers_path,'get_behavioral_data.R'))
 ```
 
-What does behavior look like?
+# Descriptive stats
 
-Distribution of response times
+## Number of subjects
+
+How many subjects do we have raw data from?
+
+```{r}
+length(unique(beh_data$subnum))
+```
+
+How many sessions per subject and trials per session? (There is no subject 21 or 26)
+
+```{r}
+with(beh_data, table(subnum, session))
+```
+
+## Response times
+
+What is the response times distribution?
 
 ```{r}
 beh_data %>%
@@ -27,16 +45,41 @@ beh_data %>%
   geom_histogram(aes(reactionTime), bins=50)
 ```
 
-There are some too short/negative RTs. Exclude those.
+How many trials have negative RTs?
+
+```{r}
+nrow(beh_data %>% 
+  filter(reactionTime < 0))
+```
+
+How many trials have 0<RT<.2 seconds?
+
+```{r}
+nrow(beh_data %>% 
+  filter(reactionTime >0 & reactionTime <.2))
+```
+
+Are trials with RT<.2 disproportionately from one subject/session?
+
+There is one subject with more trials with unrealistic RTs (07) but even for this subject the number of trials-to-be-excluded is <5% of their data so not excluding any subjects entirely based on RT data. Will exclude individual trials (23+8=31) that have unrealistic RTs.
 
 ```{r}
 beh_data %>% 
-  group_by(session) %>%
-  summarise(mean_rt = mean(reactionTime))
+  filter(reactionTime < 0.2) %>%
+  count(subnum, session)
 ```
+
+## Choices
 
 Distribution of left/right choices or others for non response trials
 
 ```{r}
 
 ```
+
+# Data cleaning steps
+
+1. Exclude trials RTs <.2 seconds.
+
+
+All of this will be incorporated in `clean_behaviora_data.R`

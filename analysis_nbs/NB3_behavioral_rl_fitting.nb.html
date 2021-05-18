@@ -307,20 +307,316 @@ outcomes = as.matrix(clean_beh_data %&gt;%
                      choices = choices,
                      outcomes = outcomes))</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiU1lOVEFYIEVSUk9SLCBNRVNTQUdFKFMpIEZST00gUEFSU0VSOlxuIGVycm9yIGluICdtb2RlbDE0NTk2NGUwMDNjZWZfZml0X3FsZWFybmluZycgYXQgbGluZSA0LCBjb2x1bW4gMjZcbiAgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLVxuICAgICAyOiBkYXRhIHtcbiAgICAgMzogICBpbnQ8bG93ZXI9MT4gbnVtX3N1YmpzOyAvLyBudW1iZXIgb2YgdHJpYWxzIHBlciBzdWJqZWN0XG4gICAgIDQ6ICAgaW50PGxvd2VyPTE+IG51bV90cmlhbHNbXTsgLy8gbnVtYmVyIG9mIHRyaWFscyBwZXIgc3ViamVjdFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgXlxuICAgICA1OiAgIGludDxsb3dlcj0xPiB0b3RhbF90cmlhbHM7XG4gIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS1cblxuUEFSU0VSIEVYUEVDVEVEOiA8bGlzdD48ZGF0YS1vbmx5IGludGVnZXIgZXhwcmVzc2lvbj5cIixcIlxuRXJyb3IgaW4gc3RhbmMoZmlsZSA9IGZpbGUsIG1vZGVsX2NvZGUgPSBtb2RlbF9jb2RlLCBtb2RlbF9uYW1lID0gbW9kZWxfbmFtZSwgIDogXG4gIGZhaWxlZCB0byBwYXJzZSBTdGFuIG1vZGVsICdmaXRfcWxlYXJuaW5nJyBkdWUgdG8gdGhlIGFib3ZlIGVycm9yLlxuIn0= -->
-<pre><code>SYNTAX ERROR, MESSAGE(S) FROM PARSER:
- error in &#39;model145964e003cef_fit_qlearning&#39; at line 4, column 26
-  -------------------------------------------------
-     2: data {
-     3:   int&lt;lower=1&gt; num_subjs; // number of trials per subject
-     4:   int&lt;lower=1&gt; num_trials[]; // number of trials per subject
-                                 ^
-     5:   int&lt;lower=1&gt; total_trials;
-  -------------------------------------------------
-
-PARSER EXPECTED: &lt;list&gt;&lt;data-only integer expression&gt;&quot;,&quot;
-Error in stanc(file = file, model_code = model_code, model_name = model_name,  : 
-  failed to parse Stan model &#39;fit_qlearning&#39; due to the above error.</code></pre>
+<!-- rnb-output-begin eyJkYXRhIjoiXG5TQU1QTElORyBGT1IgTU9ERUwgJ2ZpdF9xbGVhcm5pbmcnIE5PVyAoQ0hBSU4gMSkuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBSZWplY3RpbmcgaW5pdGlhbCB2YWx1ZTpcbkNoYWluIDE6ICAgTG9nIHByb2JhYmlsaXR5IGV2YWx1YXRlcyB0byBsb2coMCksIGkuZS4gbmVnYXRpdmUgaW5maW5pdHkuXG5DaGFpbiAxOiAgIFN0YW4gY2FuJ3Qgc3RhcnQgc2FtcGxpbmcgZnJvbSB0aGlzIGluaXRpYWwgdmFsdWUuXG5DaGFpbiAxOiBcbkNoYWluIDE6IEluaXRpYWxpemF0aW9uIGJldHdlZW4gKC0yLCAyKSBmYWlsZWQgYWZ0ZXIgMTAwIGF0dGVtcHRzLiBcbkNoYWluIDE6ICBUcnkgc3BlY2lmeWluZyBpbml0aWFsIHZhbHVlcywgcmVkdWNpbmcgcmFuZ2VzIG9mIGNvbnN0cmFpbmVkIHZhbHVlcywgb3IgcmVwYXJhbWV0ZXJpemluZyB0aGUgbW9kZWwuXG5bMV0gXCJFcnJvciBpbiBzYW1wbGVyJGNhbGxfc2FtcGxlcihhcmdzX2xpc3RbW2ldXSkgOiBJbml0aWFsaXphdGlvbiBmYWlsZWQuXCJcbiJ9 -->
+<pre><code>
+SAMPLING FOR MODEL &#39;fit_qlearning&#39; NOW (CHAIN 1).
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: Rejecting initial value:
+Chain 1:   Log probability evaluates to log(0), i.e. negative infinity.
+Chain 1:   Stan can&#39;t start sampling from this initial value.
+Chain 1: 
+Chain 1: Initialization between (-2, 2) failed after 100 attempts. 
+Chain 1:  Try specifying initial values, reducing ranges of constrained values, or reparameterizing the model.
+[1] &quot;Error in sampler$call_sampler(args_list[[i]]) : Initialization failed.&quot;</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiZXJyb3Igb2NjdXJyZWQgZHVyaW5nIGNhbGxpbmcgdGhlIHNhbXBsZXI7IHNhbXBsaW5nIG5vdCBkb25lXG4ifQ== -->
+<pre><code>error occurred during calling the sampler; sampling not done</code></pre>
 <!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 </div>

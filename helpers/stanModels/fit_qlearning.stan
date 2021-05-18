@@ -14,8 +14,8 @@ transformed data {
 
 parameters {
   // Declare all parameters as vectors for vectorizing
-  vector[num_subjs] alphas;
-  vector[num_subjs] betas;
+  real<lower=0, upper=1> alphas[num_subjs];
+  real<lower=0, upper=5> betas[num_subjs];
 }
 
 
@@ -35,7 +35,7 @@ model {
     
     for (t in 1:num_trials_for_subj) {
       // compute action probabilities
-      choices[t] ~ bernoulli_logit(betas[i] * (ev[2]-ev[1]));
+      choices[t] ~ bernoulli_logit(betas[i] * (ev[1]-ev[2]));
 
       // prediction error
       PE[1] = outcomes[t, 1] - ev[1];

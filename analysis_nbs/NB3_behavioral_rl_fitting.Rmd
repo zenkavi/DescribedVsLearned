@@ -18,3 +18,29 @@ Read in *clean* behavioral data
 ```{r}
 source(paste0(helpers_path,'clean_behavioral_data.R'))
 ```
+
+Reshape data for model
+
+```{r}
+mac(clean_beh_data$)
+```
+
+```{r}
+num_subjs = length(unique(clean_beh_data$subnum))
+num_trials
+
+# int<lower=1> num_subjs; // number of trials per subject
+#   int<lower=1> num_trials; // number of trials per subject
+#   int<lower=-1, upper=2> choices[num_trials*num_subjs]; // choices cast for each trial in columns
+#   real outcomes[num_trials*num_subjs, 2];
+```
+
+Fit model for all subjects
+
+```{r}
+fit = stan('../helpers/stanModels/fit_qlearning.stan', 
+           data=list(num_subjs = num_subjs,
+                     num_trials = num_trials,
+                     choices = choices,
+                     outcomes = outcomes))
+```

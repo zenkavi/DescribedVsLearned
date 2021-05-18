@@ -19,7 +19,9 @@ Read in *clean* behavioral data
 source(paste0(helpers_path,'clean_behavioral_data.R'))
 ```
 
-- Are subjects "learning" fractal values?
+# Manipulation checks
+
+## Evidence for "learning" fractal values
 
 As time goes by are they more likely to choose the fractal with the higher reward probability?
 
@@ -29,7 +31,7 @@ clean_beh_data %>%
          choseBetterFractal = ifelse(leftFractalBetter & choiceLeft == 1, 1, 
                                      ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0))) %>%
   ggplot(aes(trialNum, choseBetterFractal))+
-  geom_jitter(width=0.03, height=0.08, alpha = 0.05)+
+  # geom_jitter(width=0.03, height=0.08, alpha = 0.05)+
   geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE)
 ```
 
@@ -43,9 +45,11 @@ clean_beh_data %>%
                                      ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0))) %>%
   # select(fractalLeftProb, fractalRightProb, leftFractalBetter, choseBetterFractal, choiceLeft)
   ggplot(aes(trialNum, choseBetterFractal))+
-  geom_jitter(width=0.03, height=0.08, alpha = 0.05)+
+  # geom_jitter(width=0.03, height=0.08, alpha = 0.05)+
   geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE)
 ```
+
+## Correct interpretation of $\pi$
 
 - When p of fractal is 0 do subjects choose based on the EV difference between lotteries?
 

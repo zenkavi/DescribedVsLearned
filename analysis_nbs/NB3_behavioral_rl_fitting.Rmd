@@ -1,0 +1,20 @@
+---
+title: "Experience vs. description based decision-making project: RL model fits onto behavioral data"
+output: html_notebook
+---
+
+# Set up environment and load in data
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+helpers_path = '~/Dropbox/RangelLab/DescribedVsLearned/helpers/'
+```
+
+Read in *clean* behavioral data
+
+```{r}
+source(paste0(helpers_path,'clean_behavioral_data.R'))
+```

@@ -26,6 +26,16 @@ source(paste0(helpers_path,'clean_behavioral_data.R'))
 Reshape data for model
 
 ```{r}
+as.matrix(clean_beh_data %>% 
+  select(subnum, leftFractalReward) %>%
+  group_by(subnum) %>%
+  mutate(trial= 1:n()) %>%
+  spread(trial, leftFractalReward) %>%
+  ungroup()%>%
+  select(-subnum))
+```
+
+```{r}
 num_subjs = length(unique(clean_beh_data$subnum))
 
 num_trials = clean_beh_data %>%
@@ -33,12 +43,30 @@ num_trials = clean_beh_data %>%
   select(n)
 num_trials = num_trials$n
 
-total_trials = sum(num_trials)
+#subjects in rows, trials in columns
+choices = as.matrix(clean_beh_data %>% 
+  select(subnum, choiceLeft) %>%
+  group_by(subnum) %>%
+  mutate(trial= 1:n()) %>%
+  spread(trial, choiceLeft) %>%
+  ungroup()%>%
+  select(-subnum))
 
-choices = clean_beh_data$choiceLeft
-
-outcomes = as.matrix(clean_beh_data %>%
-  select(leftFractalReward, rightFractalReward))
+outcomes_left = as.matrix(clean_beh_data %>% 
+  select(subnum, leftFractalReward) %>%
+  group_by(subnum) %>%
+  mutate(trial= 1:n()) %>%
+  spread(trial, leftFractalReward) %>%
+  ungroup()%>%
+  select(-subnum))
+  
+outcomes_right = as.matrix(clean_beh_data %>% 
+  select(subnum, rightFractalReward) %>%
+  group_by(subnum) %>%
+  mutate(trial= 1:n()) %>%
+  spread(trial, rightFractalReward) %>%
+  ungroup()%>%
+  select(-subnum))
 ```
 
 Fit model for all subjects
@@ -47,7 +75,51 @@ Fit model for all subjects
 fit = stan('../helpers/stanModels/fit_qlearning.stan', 
            data=list(num_subjs = num_subjs,
                      num_trials = num_trials,
-                     total_trials = total_trials,
                      choices = choices,
-                     outcomes = outcomes))
+                     outcomes_left = outcomes_left,
+                     outcomes_right=outcomes_right))
+```
+
+```{r}
+par_ests = data.frame(extract(fit, c("alphas", "betas")))  %>%
+  gather(key, value) %>%
+  separate(key, c('par', 'subj'), sep='\\.')
+```
+
+```{r}
+par_ests %>%
+  filter(par == "alphas") %>%
+  ggplot(aes(value))+
+  geom_histogram(alpha=.5, bins=50)+
+  facet_wrap(~subj)+
+  labs(title = "Posterior distribution of learning rates for each subject",
+       xlab="", ylab="")
+```
+There's no variation between subjects. Something must be wrong.
+
+```{r}
+par_ests %>%
+  filter(par == "alphas") %>%
+  group_by(subj) %>%
+  summarise(mean_alpha = mean(value),
+            median_alpha = median(value))
+```
+
+
+```{r}
+par_ests %>%
+  filter(par == "betas") %>%
+  ggplot(aes(value))+
+  geom_histogram(alpha=.5, bins=50)+
+  facet_wrap(~subj)+
+  labs(title = "Posterior distribution of inverse temperatures for each subject",
+       xlab="", ylab="")
+```
+
+```{r}
+par_ests %>%
+  filter(par == "betas") %>%
+  group_by(subj) %>%
+  summarise(mean_beta = mean(value),
+            median_beta = median(value))
 ```

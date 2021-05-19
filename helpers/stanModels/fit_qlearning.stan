@@ -36,6 +36,10 @@ model {
     for (t in 1:num_trials_for_subj) {
       // compute action probabilities
       choices[i, t] ~ bernoulli_logit(betas[i] * (ev[1]-ev[2]));
+      // p(choice left = 1) = exp(a)/(1+exp(a)) = 1/(1+exp(-a))
+      // a = beta * (EV_left-EV_right)
+      // The higher EV_left - EV_right, the higher p(choice left)
+      // The larger abs(beta), the more the value difference is amplified
 
       // prediction error
       PE[1] = outcomes_left[i, t] - ev[1];

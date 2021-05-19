@@ -31,7 +31,7 @@ clean_beh_data %>%
          choseBetterFractal = ifelse(leftFractalBetter & choiceLeft == 1, 1, 
                                      ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0))) %>%
   ggplot(aes(trialNum, choseBetterFractal))+
-  # geom_jitter(width=0.03, height=0.08, alpha = 0.05)+
+  geom_jitter(width=0.03, height=0.08, alpha = 0.05)+
   geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE)
 ```
 
@@ -43,9 +43,8 @@ clean_beh_data %>%
   mutate(leftFractalBetter = fractalLeftProb>fractalRightProb,
          choseBetterFractal = ifelse(leftFractalBetter & choiceLeft == 1, 1, 
                                      ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0))) %>%
-  # select(fractalLeftProb, fractalRightProb, leftFractalBetter, choseBetterFractal, choiceLeft)
   ggplot(aes(trialNum, choseBetterFractal))+
-  # geom_jitter(width=0.03, height=0.08, alpha = 0.05)+
+  geom_jitter(width=0.03, height=0.08, alpha = 0.05)+
   geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE)
 ```
 

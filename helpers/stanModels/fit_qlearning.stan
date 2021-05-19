@@ -41,11 +41,12 @@ model {
       // The higher EV_left - EV_right, the higher p(choice left)
       // The larger abs(beta), the more the value difference is amplified
 
-      // prediction error
+      // prediction error for both options (instead of only chosen one)
+      // outcome for both options presented on each trial
       PE[1] = outcomes_left[i, t] - ev[1];
       PE[2] = outcomes_right[i, t] - ev[2];
       
-      // value updating (learning)
+      // value updating (learning) of both options
       ev[1] += alphas[i] * PE[1];
       ev[2] += alphas[i] * PE[2];
     }

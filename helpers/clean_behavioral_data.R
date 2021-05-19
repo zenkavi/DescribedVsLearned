@@ -4,7 +4,7 @@ if (!exists('beh_data')){
   source(paste0(helpers_path,'get_behavioral_data.R'))
 }
 
-require(tidyverse)
+library(tidyverse)
 
 # Clean raw behavioral data
 clean_beh_data = beh_data %>%

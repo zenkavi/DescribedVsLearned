@@ -17,13 +17,13 @@ library(rstan)
 helpers_path = '~/Dropbox/RangelLab/DescribedVsLearned/helpers/'
 ```
 
-Read in *clean* behavioral data
+# Read in *clean* behavioral data
 
 ```{r}
 source(paste0(helpers_path,'clean_behavioral_data.R'))
 ```
 
-Reshape data for model
+# Reshape data for model
 
 ```{r}
 num_subjs = length(unique(clean_beh_data$subnum))
@@ -62,7 +62,7 @@ outcomes_right = as.matrix(clean_beh_data %>%
   replace(is.na(.), -1))
 ```
 
-Fit model for all subjects
+# Fit model for all subjects
 
 ```{r}
 m = stan_model('../helpers/stanModels/fit_qlearning.stan')
@@ -80,11 +80,19 @@ m_data=list(num_subjs = num_subjs,
 fit = sampling(m, data=m_data)
 ```
 
+# Organize output
 
 ```{r}
+# Extract parameters from fit object
 par_ests = data.frame(extract(fit, c("alphas", "betas")))  %>%
   gather(key, value) %>%
   separate(key, c('par', 'subj'), sep='\\.')
+
+# Add correct subject identifiers
+par_ests = data.frame(subnum = unique(clean_beh_data$subnum)) %>%
+  mutate(subj = as.character(1:n())) %>%
+  right_join(par_ests, by='subj') %>%
+  select(-subj)
 ```
 
 ```{r}
@@ -92,7 +100,7 @@ par_ests %>%
   filter(par == "alphas") %>%
   ggplot(aes(value))+
   geom_histogram(alpha=.5, bins=50)+
-  facet_wrap(~subj)+
+  facet_wrap(~subnum, scales='free_y')+
   labs(title = "Posterior distribution of learning rates for each subject",
        xlab="", ylab="")
 ```
@@ -100,7 +108,7 @@ par_ests %>%
 ```{r}
 par_ests %>%
   filter(par == "alphas") %>%
-  group_by(subj) %>%
+  group_by(subnum) %>%
   summarise(mean_alpha = mean(value),
             median_alpha = median(value))
 ```
@@ -111,7 +119,7 @@ par_ests %>%
   filter(par == "betas") %>%
   ggplot(aes(value))+
   geom_histogram(alpha=.5, bins=50)+
-  facet_wrap(~subj)+
+  facet_wrap(~subnum, scales='free_y')+
   labs(title = "Posterior distribution of inverse temperatures for each subject",
        xlab="", ylab="")
 ```
@@ -119,7 +127,17 @@ par_ests %>%
 ```{r}
 par_ests %>%
   filter(par == "betas") %>%
-  group_by(subj) %>%
+  group_by(subnum) %>%
   summarise(mean_beta = mean(value),
             median_beta = median(value))
 ```
+
+Save median estimates to `clean_beh_data`
+
+```{r}
+
+
+```
+
+
+

@@ -19,6 +19,12 @@ Read in *clean* behavioral data
 source(paste0(helpers_path,'clean_behavioral_data.R'))
 ```
 
+Fit q learning model to get parameter estimates
+
+```{r}
+source(paste0(helpers_path,'fit_qlearning.R'))
+```
+
 # Manipulation checks
 
 ## Evidence for "learning" fractal values

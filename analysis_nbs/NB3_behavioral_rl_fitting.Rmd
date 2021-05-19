@@ -135,9 +135,30 @@ par_ests %>%
 Save median estimates to `clean_beh_data`
 
 ```{r}
-
+clean_beh_data = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = median(value), .groups='keep') %>%
+  spread(par, est) %>%
+  left_join(clean_beh_data, by='subnum')
 
 ```
 
+Add Q values to each trial
 
+```{r}
 
+get_qvals = function(subj_data){
+  subj_data$leftQValue = 0
+  subj_data$rightQValue = 0
+  for (i in 2:nrow(subj_data)){
+  subj_data$leftQValue[i] = subj_data$alphas[i] * (subj_data$leftFractalReward[i-1] - subj_data$leftQValue[i-1])
+  subj_data$rightQValue[i] = subj_data$alphas[i] * (subj_data$rightFractalReward[i-1] - subj_data$rightQValue[i-1])
+  }
+  return(subj_data)
+}
+
+clean_beh_data = clean_beh_data %>%
+  group_by(subnum) %>%
+  do(get_qvals(.))
+
+```

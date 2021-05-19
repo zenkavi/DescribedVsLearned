@@ -95,6 +95,7 @@ get_qvals = function(subj_data){
 
 clean_beh_data = clean_beh_data %>%
   group_by(subnum) %>%
-  do(get_qvals(.))
+  do(get_qvals(.)) %>%
+  ungroup()
 
 rm(get_qvals)

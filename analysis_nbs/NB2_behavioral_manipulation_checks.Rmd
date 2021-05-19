@@ -83,8 +83,25 @@ clean_beh_data %>%
   ylab("p(Left)")
 ```
 
-- Is there a lottery or fractal bias?
+## Is there a lottery or fractal bias?
+
+When the fractal and lottery are equally likely AND the better lottery and better fractal suggest different options do subjects chose more frequently based on the lottery or their fractal Q Value? Yes.
 
 ```{r}
+clean_beh_data %>%
+  filter(probFractalDraw == .5) %>%
+  mutate(leftLotteryEV = lotteryValue*lotteryProb,
+         rightLotteryEV = referenceValue*referenceProb,
+         leftLotteryBetter = leftLotteryEV>rightLotteryEV,
+         choseBetterLottery = ifelse(leftLotteryBetter & choiceLeft == 1, 1, 
+                                     ifelse(!leftLotteryBetter & choiceLeft == 0, 1, 0)),
+         leftFractalBetter = leftQValue>rightQValue,
+         choseBetterFractal = ifelse(leftFractalBetter & choiceLeft == 1, 1, 
+                                     ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0))) %>%
+  filter(choseBetterFractal != choseBetterLottery) %>%
+  summarise(choseBetterLottery = sum(choseBetterLottery),
+            choseBetterFractal = sum(choseBetterFractal))
 
 ```
+
+

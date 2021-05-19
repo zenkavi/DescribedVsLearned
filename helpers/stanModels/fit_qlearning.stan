@@ -2,8 +2,7 @@
 data {
   int<lower=1> num_subjs; // number of trials per subject
   int<lower=1> num_trials[num_subjs]; // number of trials per subject
-  int<lower=1> total_trials;
-  int<lower=0, upper=1> choices[num_subjs, 300]; // choices cast for each trial in columns
+  int<lower=-1, upper=1> choices[num_subjs, 300]; // choices cast for each trial in columns
   real outcomes_left[num_subjs, 300];
   real outcomes_right[num_subjs, 300];
 }

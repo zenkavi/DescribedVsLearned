@@ -35,7 +35,7 @@ model {
 
     for (t in 1:num_trials_for_subj) {
       // compute action probabilities
-      choices[i, t] ~ bernoulli_logit(betas[i] * (ev[2]-ev[1]));
+      choices[i, t] ~ bernoulli_logit(betas[i] * (ev[1]-ev[2]));
 
       // prediction error
       PE[1] = outcomes_left[i, t] - ev[1];

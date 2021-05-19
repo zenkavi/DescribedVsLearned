@@ -96,7 +96,6 @@ par_ests %>%
   labs(title = "Posterior distribution of learning rates for each subject",
        xlab="", ylab="")
 ```
-There's no variation between subjects. Something must be wrong.
 
 ```{r}
 par_ests %>%

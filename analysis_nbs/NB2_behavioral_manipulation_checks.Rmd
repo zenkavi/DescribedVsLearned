@@ -85,11 +85,10 @@ clean_beh_data %>%
 
 ## Is there a lottery or fractal bias?
 
-When the fractal and lottery are equally likely AND the better lottery and better fractal suggest different options do subjects chose more frequently based on the lottery or their fractal Q Value? Yes.
+When the better lottery and the better fractal (based on the learned Q value) suggest different options do subjects chose more frequently based on the lottery or their fractal Q Value? Yes.
 
 ```{r}
 clean_beh_data %>%
-  filter(probFractalDraw == .5) %>%
   mutate(leftLotteryEV = lotteryValue*lotteryProb,
          rightLotteryEV = referenceValue*referenceProb,
          leftLotteryBetter = leftLotteryEV>rightLotteryEV,
@@ -99,8 +98,17 @@ clean_beh_data %>%
          choseBetterFractal = ifelse(leftFractalBetter & choiceLeft == 1, 1, 
                                      ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0))) %>%
   filter(choseBetterFractal != choseBetterLottery) %>%
-  summarise(choseBetterLottery = sum(choseBetterLottery),
-            choseBetterFractal = sum(choseBetterFractal))
+  group_by(probFractalDraw, subnum) %>%
+  summarise(choseBetterLottery = mean(choseBetterLottery),
+            choseBetterFractal = mean(choseBetterFractal),
+            .groups='keep') %>%
+  gather(key, value, -probFractalDraw, -subnum) %>%
+  ggplot(aes(as.factor(probFractalDraw), value, color=key))+
+  geom_boxplot()+
+  # geom_point(alpha=.3,position = position_dodge(width=.75))+
+  labs(x="p(Fractal)",
+       y="p(choice)",
+       color="")
 
 ```
 

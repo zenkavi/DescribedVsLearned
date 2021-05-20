@@ -83,9 +83,9 @@ clean_beh_data %>%
   ylab("p(Left)")
 ```
 
-## Is there a lottery or fractal bias?
+# Lottery bias
 
-When the better lottery and the better fractal (based on the learned Q value) suggest different options do subjects chose more frequently based on the lottery or their fractal Q Value? Yes.
+When the better lottery and the better fractal (based on the learned Q value) suggest different options do subjects choose more frequently based on the lottery or their fractal Q Value? Yes, there is a general tendency towards choosing the option with the better lottery even when the trial reward depends less on the lottery and more on the fractal (p(Fractal) >=.5). Only when the outcome depend entirely on the fractal are people more likely to choose the option with the better fractal but even then there is a non-negligible portion of choices determined by the lottery EV. 
 
 ```{r}
 clean_beh_data %>%
@@ -105,8 +105,7 @@ clean_beh_data %>%
   gather(key, value, -probFractalDraw, -subnum) %>%
   ggplot(aes(as.factor(probFractalDraw), value, color=key))+
   geom_boxplot()+
-  # geom_point(alpha=.3,position = position_dodge(width=.75))+
-  labs(x="p(Fractal)",
+ labs(x="p(Fractal)",
        y="p(choice)",
        color="")
 

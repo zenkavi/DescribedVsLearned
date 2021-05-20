@@ -132,6 +132,18 @@ par_ests %>%
             median_beta = median(value))
 ```
 
+Distributions of the recovered (median) parameters
+
+```{r}
+par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = median(value), .groups='keep') %>%
+  ggplot(aes(est))+
+  geom_histogram(alpha=.5, bins=30)+
+  facet_wrap(~par, scales='free_x')+
+  xlab("Median estimates for all subjects")
+```
+
 Save median estimates to `clean_beh_data`
 
 ```{r}

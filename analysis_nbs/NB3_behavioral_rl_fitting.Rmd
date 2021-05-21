@@ -21,6 +21,7 @@ helpers_path = '~/Dropbox/RangelLab/DescribedVsLearned/helpers/'
 
 ```{r}
 source(paste0(helpers_path,'clean_behavioral_data.R'))
+source(paste0(helpers_path, 'extract_var_for_stan.R'))
 ```
 
 # Reshape data for model
@@ -34,32 +35,11 @@ num_trials = clean_beh_data %>%
 num_trials = num_trials$n
 
 #subjects in rows, trials in columns
-choices = as.matrix(clean_beh_data %>% 
-  select(subnum, choiceLeft) %>%
-  group_by(subnum) %>%
-  mutate(trial= 1:n()) %>%
-  spread(trial, choiceLeft) %>%
-  ungroup()%>%
-  select(-subnum) %>%
-  replace(is.na(.), -1))
+choices = extract_var_for_stan(clean_beh_data, choiceLeft)
 
-outcomes_left = as.matrix(clean_beh_data %>% 
-  select(subnum, leftFractalReward) %>%
-  group_by(subnum) %>%
-  mutate(trial= 1:n()) %>%
-  spread(trial, leftFractalReward) %>%
-  ungroup()%>%
-  select(-subnum)%>%
-  replace(is.na(.), -1))
+outcomes_left = extract_var_for_stan(clean_beh_data, leftFractalReward)
   
-outcomes_right = as.matrix(clean_beh_data %>% 
-  select(subnum, rightFractalReward) %>%
-  group_by(subnum) %>%
-  mutate(trial= 1:n()) %>%
-  spread(trial, rightFractalReward) %>%
-  ungroup()%>%
-  select(-subnum)%>%
-  replace(is.na(.), -1))
+outcomes_right = extract_var_for_stan(clean_beh_data, rightFractalReward)
 ```
 
 # Fit model for all subjects
@@ -152,10 +132,10 @@ clean_beh_data = par_ests %>%
   summarise(est = median(value), .groups='keep') %>%
   spread(par, est) %>%
   left_join(clean_beh_data, by='subnum')
-
+rm(fit, par_ests)
 ```
 
-Add Q values to each trial
+Add Q values to each trial using median parameter estimates from the Q-learning model fit.
 
 ```{r}
 

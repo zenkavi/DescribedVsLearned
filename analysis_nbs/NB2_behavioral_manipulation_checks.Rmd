@@ -58,6 +58,16 @@ p2 = clean_beh_data %>%
 grid.arrange(p1, p2, nrow=1, ncol=2)
 ```
 
+```{r}
+rm(p1, p2)
+```
+
+**ADD Bayesian multilevel model and check the significance of slopes**
+
+```{r}
+
+```
+
 ## Correct interpretation of $\pi$
 
 - When p of fractal is 0 do subjects choose based on the EV difference between lotteries? Does the QV difference matter at all?
@@ -83,6 +93,12 @@ clean_beh_data %>%
   ylab("p(Left)")
 ```
 
+**ADD Bayesian multilevel model and check the significance of slopes**
+
+```{r}
+
+```
+
 # Lottery bias
 
 When the better lottery and the better fractal (based on the learned Q value) suggest different options do subjects choose more frequently based on the lottery or their fractal Q Value? Yes, there is a general tendency towards choosing the option with the better lottery even when the trial reward depends less on the lottery and more on the fractal (p(Fractal) >=.5). Only when the outcome depend entirely on the fractal are people more likely to choose the option with the better fractal but even then there is a non-negligible portion of choices determined by the lottery EV. 
@@ -105,10 +121,12 @@ clean_beh_data %>%
   gather(key, value, -probFractalDraw, -subnum) %>%
   ggplot(aes(as.factor(probFractalDraw), value, color=key))+
   geom_boxplot()+
- labs(x="p(Fractal)",
-       y="p(choice)",
-       color="")
+ labs(x="p(Fractal)",y="Proportion of choices",color="", title="Lottery bias in conflict trials")
 
 ```
+**ADD statistical test to check if the proportion of lottery based choices are higher than 50% for all levels of $\pi$**
 
+```{r}
+
+```
 

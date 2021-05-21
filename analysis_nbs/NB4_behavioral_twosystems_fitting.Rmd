@@ -1,0 +1,71 @@
+---
+title: "Experience vs. description based decision-making project: Two valuation systems modeling"
+output: html_notebook
+---
+
+# Set up environment and load in data
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+library(rstan)
+```
+
+```{r}
+helpers_path = '~/Dropbox/RangelLab/DescribedVsLearned/helpers/'
+```
+
+# Read in *clean* behavioral data
+
+```{r}
+source(paste0(helpers_path,'clean_behavioral_data.R'))
+source(paste0(helpers_path, 'extract_var_for_stan.R'))
+```
+
+# Reshape data for model
+
+```{r}
+num_subjs = length(unique(clean_beh_data$subnum))
+
+num_trials = clean_beh_data %>%
+  count(subnum) %>%
+  select(n)
+num_trials = num_trials$n
+
+#subjects in rows, trials in columns
+choices = extract_var_for_stan(clean_beh_data, choiceLeft)
+
+qv_left = extract_var_for_stan(clean_beh_data, leftQValue)
+
+qv_right = extract_var_for_stan(clean_beh_data, rightQValue)
+
+clean_beh_data = clean_beh_data %>%
+  mutate(leftLotteryEV = lotteryValue*lotteryProb,
+         rightLotteryEV = referenceValue*referenceProb)
+
+ev_left = extract_var_for_stan(clean_beh_data, leftLotteryEV)
+
+ev_right = extract_var_for_stan(clean_beh_data, righLotteryEV)
+```
+
+# Fit model for all subjects
+
+```{r}
+m = stan_model('../helpers/stanModels/fit_twoValSystems.stan')
+```
+
+```{r}
+m_data=list(num_subjs = num_subjs,
+            num_trials = num_trials,
+            choices = choices,
+            ev_left = ev_left,
+            ev_right = ev_right,
+            qv_left = qv_left,
+            qv_right = qv_right)
+```
+
+```{r}
+fit = sampling(m, data=m_data)
+```

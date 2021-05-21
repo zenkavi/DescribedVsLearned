@@ -71,6 +71,14 @@ $$V_i = w(\pi)EV_i + (1-w(\pi))QV_i , \:i \in \{left, right\}$$
 $$w(\pi) = \frac{\delta\pi^\gamma}{\delta\pi^\gamma+(1-\pi)^\gamma}$$
 
 ```{r}
+pi = .6
+delta = 1.1
+gamma = 1
+w = (delta*pi^gamma)/(delta*pi^gamma + (1-pi)^gamma)
+w
+```
+
+```{r}
 m = stan_model('../helpers/stanModels/fit_twoValSystems.stan')
 ```
 
@@ -93,13 +101,25 @@ par_ests = data.frame(subnum = unique(clean_beh_data$subnum)) %>%
   select(-subj)
 ```
 
+Distributions of the recovered (median) parameters
+
+```{r}
+par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = median(value), .groups='keep') %>%
+  ggplot(aes(est))+
+  geom_histogram(alpha=.5, bins=30)+
+  facet_wrap(~par, scales='free_x')+
+  xlab("Median estimates for all subjects")
+```
+
 ```{r}
 par_ests %>%
   filter(par == "gamma") %>%
   ggplot(aes(value))+
   geom_histogram(alpha=.5, bins=50)+
   facet_wrap(~subnum, scales='free_y')+
-  labs(title = "Posterior distribution of probability distortion",
+  labs(title = "Posterior distribution of probability distortion \U03B3",
        xlab="", ylab="")
 ```
 
@@ -109,7 +129,7 @@ par_ests %>%
   ggplot(aes(value))+
   geom_histogram(alpha=.5, bins=50)+
   facet_wrap(~subnum, scales='free_y')+
-  labs(title = "Posterior distribution of lottery bias",
+  labs(title = "Posterior distribution of lottery bias \U03B4",
        xlab="", ylab="")
 ```
 
@@ -119,6 +139,6 @@ par_ests %>%
   ggplot(aes(value))+
   geom_histogram(alpha=.5, bins=50)+
   facet_wrap(~subnum, scales='free_y')+
-  labs(title = "Posterior distribution of inverse temperature",
+  labs(title = "Posterior distribution of inverse temperature \U03B2",
        xlab="", ylab="")
 ```

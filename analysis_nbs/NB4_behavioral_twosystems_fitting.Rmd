@@ -72,3 +72,48 @@ m = stan_model('../helpers/stanModels/fit_twoValSystems.stan')
 ```{r}
 fit = sampling(m, data=m_data)
 ```
+
+# Organize output
+
+```{r}
+# Extract parameters from fit object
+par_ests = data.frame(extract(fit, c("gamma", "delta", "beta")))  %>%
+  gather(key, value) %>%
+  separate(key, c('par', 'subj'), sep='\\.')
+
+# Add correct subject identifiers
+par_ests = data.frame(subnum = unique(clean_beh_data$subnum)) %>%
+  mutate(subj = as.character(1:n())) %>%
+  right_join(par_ests, by='subj') %>%
+  select(-subj)
+```
+
+```{r}
+par_ests %>%
+  filter(par == "gamma") %>%
+  ggplot(aes(value))+
+  geom_histogram(alpha=.5, bins=50)+
+  facet_wrap(~subnum, scales='free_y')+
+  labs(title = "Posterior distribution of probability distortion",
+       xlab="", ylab="")
+```
+
+```{r}
+par_ests %>%
+  filter(par == "delta") %>%
+  ggplot(aes(value))+
+  geom_histogram(alpha=.5, bins=50)+
+  facet_wrap(~subnum, scales='free_y')+
+  labs(title = "Posterior distribution of lottery bias",
+       xlab="", ylab="")
+```
+
+```{r}
+par_ests %>%
+  filter(par == "beta") %>%
+  ggplot(aes(value))+
+  geom_histogram(alpha=.5, bins=50)+
+  facet_wrap(~subnum, scales='free_y')+
+  labs(title = "Posterior distribution of inverse temperature",
+       xlab="", ylab="")
+```

@@ -14,7 +14,7 @@ library(gridExtra)
 ```
 
 ```{r}
-helpers_path = '~/Dropbox/RangelLab/DescribedVsLearned/helpers/'
+helpers_path = '~/Documents/RangelLab/DescribedVsLearned/helpers/'
 ```
 
 Read in *clean* behavioral data

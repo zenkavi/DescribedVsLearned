@@ -24,8 +24,8 @@ model {
   real w_pi;
   
   // priors
-  gamma ~ gamma(1, 2);
-  delta ~ gamma(1, 2);
+  gamma ~ gamma(1, 5);
+  delta ~ gamma(1, 5);
   beta ~ gamma(1, 2);
   
   for(i in 1:num_subjs){

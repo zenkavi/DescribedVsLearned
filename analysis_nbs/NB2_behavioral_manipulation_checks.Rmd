@@ -124,6 +124,7 @@ clean_beh_data %>%
  labs(x="p(Fractal)",y="Proportion of choices",color="", title="Lottery bias in conflict trials")
 
 ```
+
 **ADD statistical test to check if the proportion of lottery based choices are higher than 50% for all levels of $\pi$**
 
 ```{r}

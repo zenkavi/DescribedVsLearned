@@ -20,7 +20,7 @@ helpers_path = '~/Documents/RangelLab/DescribedVsLearned/helpers/'
 # Read in *clean* behavioral data
 
 ```{r}
-source(paste0(helpers_path,'clean_behavioral_data.R'))
+source(paste0(helpers_path,'fit_qlearning.R'))
 source(paste0(helpers_path, 'extract_var_for_stan.R'))
 ```
 
@@ -47,23 +47,26 @@ clean_beh_data = clean_beh_data %>%
 
 ev_left = extract_var_for_stan(clean_beh_data, leftLotteryEV)
 
-ev_right = extract_var_for_stan(clean_beh_data, righLotteryEV)
-```
+ev_right = extract_var_for_stan(clean_beh_data, rightLotteryEV)
 
-# Fit model for all subjects
+trial_pi = extract_var_for_stan(clean_beh_data, probFractalDraw)
 
-```{r}
-m = stan_model('../helpers/stanModels/fit_twoValSystems.stan')
-```
-
-```{r}
 m_data=list(num_subjs = num_subjs,
             num_trials = num_trials,
             choices = choices,
             ev_left = ev_left,
             ev_right = ev_right,
             qv_left = qv_left,
-            qv_right = qv_right)
+            qv_right = qv_right,
+            trial_pi = trial_pi)
+
+rm(num_subjs, num_trials, choices, ev_left, ev_right, qv_left, qv_right, trial_pi)
+```
+
+# Fit model for all subjects
+
+```{r}
+m = stan_model('../helpers/stanModels/fit_twoValSystems.stan')
 ```
 
 ```{r}

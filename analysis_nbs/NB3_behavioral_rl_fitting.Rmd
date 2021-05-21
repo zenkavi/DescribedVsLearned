@@ -40,20 +40,20 @@ choices = extract_var_for_stan(clean_beh_data, choiceLeft)
 outcomes_left = extract_var_for_stan(clean_beh_data, leftFractalReward)
   
 outcomes_right = extract_var_for_stan(clean_beh_data, rightFractalReward)
+
+m_data=list(num_subjs = num_subjs,
+            num_trials = num_trials,
+            choices = choices,
+            outcomes_left = outcomes_left,
+            outcomes_right=outcomes_right)
+
+rm(num_subjs, num_trials, choices, outcomes_left, outcomes_right)
 ```
 
 # Fit model for all subjects
 
 ```{r}
 m = stan_model('../helpers/stanModels/fit_qlearning.stan')
-```
-
-```{r}
-m_data=list(num_subjs = num_subjs,
-            num_trials = num_trials,
-            choices = choices,
-            outcomes_left = outcomes_left,
-            outcomes_right=outcomes_right)
 ```
 
 ```{r}

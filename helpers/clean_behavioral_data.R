@@ -1,6 +1,6 @@
 # Check if data is loaded, load if not
 if (!exists('beh_data')){
-  helpers_path = '~/Dropbox/RangelLab/DescribedVsLearned/helpers/'
+  helpers_path = '~/Documents/RangelLab/DescribedVsLearned/helpers/'
   source(paste0(helpers_path,'get_behavioral_data.R'))
 }
 

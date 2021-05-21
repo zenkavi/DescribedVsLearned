@@ -67,16 +67,8 @@ rm(num_subjs, num_trials, choices, ev_left, ev_right, qv_left, qv_right, trial_p
 
 $$p(choice = left) = \frac{1}{1+e^{-\beta(V_{left} - V_{right})}}$$
 
-$$V_i = w(\pi)EV_i + (1-w(\pi))QV_i , \:i \in \{left, right\}$$
+$$V_i = (1-w(\pi))EV_i + w(\pi)QV_i , \:i \in \{left, right\}$$
 $$w(\pi) = \frac{\delta\pi^\gamma}{\delta\pi^\gamma+(1-\pi)^\gamma}$$
-
-```{r}
-pi = .6
-delta = 1.1
-gamma = 1
-w = (delta*pi^gamma)/(delta*pi^gamma + (1-pi)^gamma)
-w
-```
 
 ```{r}
 m = stan_model('../helpers/stanModels/fit_twoValSystems.stan')
@@ -113,13 +105,42 @@ par_ests %>%
   xlab("Median estimates for all subjects")
 ```
 
+How do the median estimates suggest the probability of a fractal draw is distorted for each subject?
+
+```{r}
+tmp = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = median(value), .groups='keep') %>%
+  filter(par != "beta") %>%
+  spread(par, est)
+
+do.call("rbind", replicate(9, tmp, simplify = FALSE)) %>%
+  arrange(subnum) %>%
+  ungroup() %>%
+  mutate(pi = rep(seq(0.1, .9, .1), 25), 
+         wpi = (delta*pi^gamma)/(delta*pi^gamma + (1-pi)^gamma)) %>%
+  ggplot()+
+  geom_boxplot(aes(as.factor(pi), wpi))+
+  geom_abline(intercept = 0, slope=.1, linetype='dashed')+
+  labs(x="\u03c0", y="w(\u03c0)", title="Distortion of p(Fractal)")+
+  ylim(0, 1)
+```
+
+How does the distortion change for different values of delta and gamma?
+
+```{r}
+
+```
+
+# Individual posteriors
+
 ```{r}
 par_ests %>%
   filter(par == "gamma") %>%
   ggplot(aes(value))+
   geom_histogram(alpha=.5, bins=50)+
   facet_wrap(~subnum, scales='free_y')+
-  labs(title = "Posterior distribution of probability distortion \U03B3",
+  labs(title = "Posterior distribution of \U03B3",
        xlab="", ylab="")
 ```
 
@@ -129,7 +150,7 @@ par_ests %>%
   ggplot(aes(value))+
   geom_histogram(alpha=.5, bins=50)+
   facet_wrap(~subnum, scales='free_y')+
-  labs(title = "Posterior distribution of lottery bias \U03B4",
+  labs(title = "Posterior distribution of \U03B4",
        xlab="", ylab="")
 ```
 
@@ -142,3 +163,9 @@ par_ests %>%
   labs(title = "Posterior distribution of inverse temperature \U03B2",
        xlab="", ylab="")
 ```
+
+# Model comparisons
+
+1. Fit Q learning + two value system separately
+2. Fit Q learning + two value system simultaneously
+3. Two value systems with one parameter

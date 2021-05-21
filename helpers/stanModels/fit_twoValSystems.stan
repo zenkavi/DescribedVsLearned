@@ -7,29 +7,36 @@ data {
   real ev_right[num_subjs, 300];
   real qv_left[num_subjs, 300];
   real qv_right[num_subjs, 300];
+  real trial_pi[num_subjs, 300];
 }
 
 parameters {
   // Declare all parameters as vectors for vectorizing
-  real<lower=0, upper=1> w_pi[num_subjs];
+  real<lower=0, upper=20> gamma[num_subjs];
+  real<lower=0, upper=20> delta[num_subjs];
   real<lower=0, upper=5> beta[num_subjs];
 }
 
+
 model {
-  vector[2] opt_val; // expected value
+  vector[2] opt_val; 
   int num_trials_for_subj;
+  real w_pi;
   
   // priors
-  w_pi ~ beta(1, 1);
+  gamma ~ gamma(1, 2);
+  delta ~ gamma(1, 2);
   beta ~ gamma(1, 2);
   
   for(i in 1:num_subjs){
     num_trials_for_subj = num_trials[i];
-
+    
     for (t in 1:num_trials_for_subj) {
       
-      opt_val[1] = (w_pi[i] * ev_left[i, t]) + ((1-w_pi[i]) * qv_left[i, t]);
-      opt_val[2] = (w_pi[i] * ev_right[i, t]) + ((1-w_pi[i]) * qv_right[i, t]) ;
+      w_pi = (delta[i]*(trial_pi[i, t]^gamma[i])) / ((delta[i]*(trial_pi[i, t]^gamma[i])) + (1-trial_pi[i, t])^gamma[i]);
+      
+      opt_val[1] = (w_pi * ev_left[i, t]) + ((1-w_pi) * qv_left[i, t]);
+      opt_val[2] = (w_pi * ev_right[i, t]) + ((1-w_pi) * qv_right[i, t]) ;
       
       // increment target with the following likelihood function:
       choices[i, t] ~ bernoulli_logit(beta[i] * (opt_val[1]-opt_val[2]));

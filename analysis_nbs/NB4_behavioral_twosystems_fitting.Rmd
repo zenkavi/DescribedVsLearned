@@ -65,6 +65,11 @@ rm(num_subjs, num_trials, choices, ev_left, ev_right, qv_left, qv_right, trial_p
 
 # Fit model for all subjects
 
+$$p(choice = left) = \frac{1}{1+e^{-\beta(V_{left} - V_{right})}}$$
+
+$$V_i = w(\pi)EV_i + (1-w(\pi))QV_i , \:i \in \{left, right\}$$
+$$w(\pi) = \frac{\delta\pi^\gamma}{\delta\pi^\gamma+(1-\pi)^\gamma}$$
+
 ```{r}
 m = stan_model('../helpers/stanModels/fit_twoValSystems.stan')
 ```

@@ -35,8 +35,8 @@ model {
       
       w_pi = (delta[i]*(trial_pi[i, t]^gamma[i])) / ((delta[i]*(trial_pi[i, t]^gamma[i])) + (1-trial_pi[i, t])^gamma[i]);
       
-      opt_val[1] = (w_pi * ev_left[i, t]) + ((1-w_pi) * qv_left[i, t]);
-      opt_val[2] = (w_pi * ev_right[i, t]) + ((1-w_pi) * qv_right[i, t]) ;
+      opt_val[1] = ((1-w_pi) * ev_left[i, t]) + (w_pi * qv_left[i, t]);
+      opt_val[2] = ((1-w_pi) * ev_right[i, t]) + (w_pi * qv_right[i, t]) ;
       
       // increment target with the following likelihood function:
       choices[i, t] ~ bernoulli_logit(beta[i] * (opt_val[1]-opt_val[2]));

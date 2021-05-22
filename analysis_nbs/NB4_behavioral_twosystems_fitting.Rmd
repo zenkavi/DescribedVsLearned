@@ -114,12 +114,12 @@ tmp = par_ests %>%
   filter(par != "beta") %>%
   spread(par, est)
 
-do.call("rbind", replicate(9, tmp, simplify = FALSE)) %>%
+tmp = do.call("rbind", replicate(9, tmp, simplify = FALSE)) %>%
   arrange(subnum) %>%
   ungroup() %>%
   mutate(pi = rep(seq(0.1, .9, .1), 25), 
-         wpi = (delta*pi^gamma)/(delta*pi^gamma + (1-pi)^gamma)) %>%
-  ggplot()+
+         wpi = (delta*pi^gamma)/(delta*pi^gamma + (1-pi)^gamma)) 
+tmp %>% ggplot()+
   geom_boxplot(aes(as.factor(pi), wpi))+
   geom_abline(intercept = 0, slope=.1, linetype='dashed')+
   labs(x="\u03c0", y="w(\u03c0)", title="Distortion of p(Fractal)")+
@@ -128,9 +128,20 @@ do.call("rbind", replicate(9, tmp, simplify = FALSE)) %>%
 
 How does the distortion change for different values of delta and gamma?
 
+$$w(\pi) = \frac{\delta\pi^\gamma}{\delta\pi^\gamma+(1-\pi)^\gamma}$$
 ```{r}
-
+expand.grid(rep(list(seq(0,1,.1)), 3)) %>%
+  rename(delta=Var1, gamma=Var2, pi=Var3) %>%
+  mutate(wpi = (delta*pi^gamma)/(delta*pi^gamma + (1-pi)^gamma), 
+         distortion = pi-wpi) %>%
+  ggplot2::ggplot(aes(as.factor(delta), as.factor(gamma)))+
+  geom_raster(aes(fill=distortion))+
+  facet_wrap(~as.factor(pi))+
+  labs(x="\U03B4", y="\U03B3", fill="\u03c0 - w(\u03c0)", title="Distortion of p(Fractal)")+
+  scale_fill_gradientn(colours=c("#0000FFFF","#FFFFFFFF","#FF0000FF"))+
+  theme(axis.ticks = element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank())
 ```
+
 
 # Individual posteriors
 

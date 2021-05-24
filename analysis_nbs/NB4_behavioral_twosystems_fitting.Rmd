@@ -126,9 +126,13 @@ tmp %>% ggplot()+
   ylim(0, 1)
 ```
 
-How does the distortion change for different values of delta and gamma?
+How does the distortion change for different values of delta and gamma? This isn't based on data. Just to build intuition to understand what each prob fractal might look like for different estimates for subjects.
 
 $$w(\pi) = \frac{\delta\pi^\gamma}{\delta\pi^\gamma+(1-\pi)^\gamma}$$
+Facets - values of pi
+Blue w(pi)>pi - overweighting prob fractal
+Red pi>w(pi) - underweighting prob fractal
+
 ```{r}
 expand.grid(rep(list(seq(0,1,.1)), 3)) %>%
   rename(delta=Var1, gamma=Var2, pi=Var3) %>%
@@ -138,7 +142,8 @@ expand.grid(rep(list(seq(0,1,.1)), 3)) %>%
   geom_raster(aes(fill=distortion))+
   facet_wrap(~as.factor(pi))+
   labs(x="\U03B4", y="\U03B3", fill="\u03c0 - w(\u03c0)", title="Distortion of p(Fractal)")+
-  scale_fill_gradientn(colours=c("#0000FFFF","#FFFFFFFF","#FF0000FF"))+
+  # scale_fill_gradientn(colours=c("#0000FFFF","#FFFFFFFF","#FF0000FF"))+
+  scale_fill_gradient2()+
   theme(axis.ticks = element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank())
 ```
 

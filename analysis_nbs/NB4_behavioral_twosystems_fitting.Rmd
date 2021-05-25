@@ -20,7 +20,8 @@ helpers_path = '~/Documents/RangelLab/DescribedVsLearned/helpers/'
 # Read in *clean* behavioral data
 
 ```{r}
-source(paste0(helpers_path,'fit_qlearning.R'))
+# source(paste0(helpers_path,'fit_qlearning.R'))
+source(paste0(helpers_path,'clean_behavioral_data.R'))
 source(paste0(helpers_path, 'extract_var_for_stan.R'))
 ```
 
@@ -29,6 +30,7 @@ source(paste0(helpers_path, 'extract_var_for_stan.R'))
 $$p(choice = left) = \frac{1}{1+e^{-\beta(V_{left} - V_{right})}}$$
 
 $$V_i = (1-w(pFrac))EV_i + w(pFrac)QV_i , \:i \in \{left, right\}$$
+
 $$w(pFrac) = \frac{\delta*pFrac^{probDistortion}}{\delta*pFrac^{probDistortion}+(1- pFrac)^{probDistortion}}$$
 
 How does the distortion change for different values of delta and probDistortion exponent? This analysis isn't based on data. It is to build intuition to understand how each prob fractal might be perceived as by subjects for different values of the model parameters.
@@ -199,6 +201,78 @@ par_ests %>%
 
 # Model comparisons
 
-1. Fit Q learning + two value system separately
-2. Fit Q learning + two value system simultaneously
-3. Two value systems with one parameter
+## Fit Q learning + two value system simultaneously
+
+```{r}
+num_subjs = length(unique(clean_beh_data$subnum))
+
+num_trials = clean_beh_data %>%
+  count(subnum) %>%
+  select(n)
+num_trials = num_trials$n
+
+#subjects in rows, trials in columns
+choices = extract_var_for_stan(clean_beh_data, choiceLeft)
+
+clean_beh_data = clean_beh_data %>%
+  mutate(leftLotteryEV = lotteryValue*lotteryProb,
+         rightLotteryEV = referenceValue*referenceProb)
+
+ev_left = extract_var_for_stan(clean_beh_data, leftLotteryEV)
+
+ev_right = extract_var_for_stan(clean_beh_data, rightLotteryEV)
+
+fractal_outcomes_left = extract_var_for_stan(clean_beh_data, leftFractalReward)
+
+fractal_outcomes_right = extract_var_for_stan(clean_beh_data, rightFractalReward)
+
+trial_pFrac = extract_var_for_stan(clean_beh_data, probFractalDraw)
+
+m_data=list(num_subjs = num_subjs,
+            num_trials = num_trials,
+            choices = choices,
+            ev_left = ev_left,
+            ev_right = ev_right,
+            fractal_outcomes_left = fractal_outcomes_left,
+            fractal_outcomes_right = fractal_outcomes_right,
+            trial_pFrac = trial_pFrac)
+
+rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac)
+```
+
+## Fit model for all subjects
+
+```{r}
+m = stan_model('../helpers/stanModels/fit_twoValSystemsWithRL.stan')
+```
+
+```{r}
+fit = sampling(m, data=m_data)
+```
+
+## Organize model output
+
+```{r}
+# Extract parameters from fit object
+par_ests = data.frame(extract(fit, c("alpha","probDistortion", "delta", "beta")))  %>%
+  gather(key, value) %>%
+  separate(key, c('par', 'subj'), sep='\\.')
+
+# Add correct subject identifiers
+par_ests = data.frame(subnum = unique(clean_beh_data$subnum)) %>%
+  mutate(subj = as.character(1:n())) %>%
+  right_join(par_ests, by='subj') %>%
+  select(-subj)
+```
+
+Distributions of the recovered (median) parameters
+
+```{r}
+par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = median(value), .groups='keep') %>%
+  ggplot(aes(est))+
+  geom_histogram(alpha=.5, bins=30)+
+  facet_wrap(~par, scales='free_x')+
+  xlab("Median estimates for all subjects")
+```

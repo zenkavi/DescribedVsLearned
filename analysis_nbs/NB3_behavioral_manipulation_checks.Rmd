@@ -70,7 +70,7 @@ clean_beh_data %>%
          leftFractalBetter = leftQValue>rightQValue,
          choseBetterFractal = ifelse(leftFractalBetter & choiceLeft == 1, 1, 
                                      ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0))) %>%
-  filter(choseBetterFractal != choseBetterLottery) %>%
+  filter(leftFractalBetter != leftLotteryBetter) %>%
   group_by(probFractalDraw, subnum) %>%
   summarise(choseBetterLottery = mean(choseBetterLottery),
             choseBetterFractal = mean(choseBetterFractal),
@@ -88,3 +88,7 @@ clean_beh_data %>%
 
 ```
 
+Why don't people
+
+- Do they not learn the fractal values well?
+- Do they distort the probability of fractal and think it is less likely to get a reward from a fractal?

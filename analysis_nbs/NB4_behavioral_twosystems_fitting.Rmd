@@ -24,7 +24,37 @@ source(paste0(helpers_path,'fit_qlearning.R'))
 source(paste0(helpers_path, 'extract_var_for_stan.R'))
 ```
 
-# Reshape data for model
+# Define two systems model
+
+$$p(choice = left) = \frac{1}{1+e^{-\beta(V_{left} - V_{right})}}$$
+
+$$V_i = (1-w(pFrac))EV_i + w(pFrac)QV_i , \:i \in \{left, right\}$$
+$$w(pFrac) = \frac{\delta*pFrac^{probDistortion}}{\delta*pFrac^{probDistortion}+(1- pFrac)^{probDistortion}}$$
+
+How does the distortion change for different values of delta and probDistortion? This isn't based on data. It is to build intuition to understand what each prob fractal might look like for different estimates for subjects.
+
+delta = 0, w(pFrac) = 0
+pFrac = 0, w(pFrac) = 0 iff probDistortion !=  0
+probDistortion = 0, w(pFrac) = delta/(delta+1) 
+
+Facets - values of pFrac (true prob of Fractal)
+Blue w(pFrac)>pFrac - overweighting prob fractal
+Red pFrac>w(pFrac) - underweighting prob fractal
+
+```{r}
+expand.grid(rep(list(seq(0,1,.1)), 3)) %>%
+  rename(delta=Var1, gamma=Var2, pFrac=Var3)%>%
+  mutate(wpFrac = (delta*(pFrac^gamma)) / ((delta*(pFrac^gamma) + ((1-pFrac)^gamma))), 
+         distortion = pFrac-wpFrac) %>%
+  ggplot2::ggplot(aes(as.factor(delta), as.factor(gamma)))+
+  geom_raster(aes(fill=distortion))+
+  facet_wrap(~as.factor(pFrac))+
+  labs(x="\U03B4", y="\U03B3", fill="\u03c0 - w(\u03c0)", title="Distortion of p(Fractal)")+
+  scale_fill_gradient2(low = scales::muted("blue"), high=scales::muted("red"))+
+  theme(axis.ticks = element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank())
+```
+
+## Reshape data for model
 
 ```{r}
 num_subjs = length(unique(clean_beh_data$subnum))
@@ -63,12 +93,7 @@ m_data=list(num_subjs = num_subjs,
 rm(num_subjs, num_trials, choices, ev_left, ev_right, qv_left, qv_right, trial_pFrac)
 ```
 
-# Fit model for all subjects
-
-$$p(choice = left) = \frac{1}{1+e^{-\beta(V_{left} - V_{right})}}$$
-
-$$V_i = (1-w(pFrac))EV_i + w(pFrac)QV_i , \:i \in \{left, right\}$$
-$$w(pFrac) = \frac{\delta*pFrac^{probDistortion}}{\delta*pFrac^{probDistortion}+(1- pFrac)^{probDistortion}}$$
+## Fit model for all subjects
 
 ```{r}
 m = stan_model('../helpers/stanModels/fit_twoValSystems.stan')
@@ -78,7 +103,7 @@ m = stan_model('../helpers/stanModels/fit_twoValSystems.stan')
 fit = sampling(m, data=m_data)
 ```
 
-# Organize output
+## Organize model output
 
 ```{r}
 # Extract parameters from fit object
@@ -126,44 +151,7 @@ tmp %>% ggplot()+
   ylim(0, 1)
 ```
 
-How does the distortion change for different values of delta and probDistortion? This isn't based on data. Just to build intuition to understand what each prob fractal might look like for different estimates for subjects.
-
-$$w(\pFrac) = \frac{\delta\pFrac^\gamma}{\delta\pFrac^\gamma+(1-\pFrac)^\gamma}$$
-delta = 0, w(pFrac) = 0
-pFrac = 0, w(pFrac) = 0 iff gamma !=  0
-gamma = 0, w(pFrac) = delta/(delta+1) 
-
-Facets - values of pFrac (true prob of Fractal)
-Blue w(pFrac)>pFrac - overweighting prob fractal
-Red pFrac>w(pFrac) - underweighting prob fractal
-
-```{r}
-if(exists("delta")){
-  rm(delta)
-}
-
-if(exists("gamma")){
-  rm(gamma)
-}
-
-if(exists("pFrac")){
-  rm(pFrac)
-}
-
-expand.grid(rep(list(seq(0,1,.1)), 3)) %>%
-  rename(delta=Var1, gamma=Var2, pFrac=Var3)%>%
-  mutate(wpFrac = (delta*(pFrac^gamma)) / ((delta*(pFrac^gamma) + ((1-pFrac)^gamma))), 
-         distortion = pFrac-wpFrac) %>%
-  ggplot2::ggplot(aes(as.factor(delta), as.factor(gamma)))+
-  geom_raster(aes(fill=distortion))+
-  facet_wrap(~as.factor(pFrac))+
-  labs(x="\U03B4", y="\U03B3", fill="\u03c0 - w(\u03c0)", title="Distortion of p(Fractal)")+
-  scale_fill_gradient2(low = scales::muted("blue"), high=scales::muted("red"))+
-  theme(axis.ticks = element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank())
-```
-
-
-# Individual posteriors
+## Individual posterior distributions
 
 ```{r}
 par_ests %>%

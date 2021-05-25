@@ -29,31 +29,33 @@ source(paste0(helpers_path, 'extract_var_for_stan.R'))
 
 $$p(choice = left) = \frac{1}{1+e^{-\beta(V_{left} - V_{right})}}$$
 
-$$V_i = (1-w(pFrac))EV_i + w(pFrac)QV_i , \:i \in \{left, right\}$$
+$$V_i = (1-w(pFrac))EV_i + w(pFrac)QV_i, \:i \in \{left, right\}$$
+$$EV_{i, t} = p_{i, t} V{i_t}$$
+
+$$QV_{i,t} = QV_{i, t-1} + \alpha(R_{i, t-1}- QV_{i, t-1})$$
 
 $$w(pFrac) = \frac{\delta*pFrac^{probDistortion}}{\delta*pFrac^{probDistortion}+(1- pFrac)^{probDistortion}}$$
 
 How does the distortion change for different values of delta and probDistortion exponent? This analysis isn't based on data. It is to build intuition to understand how each prob fractal might be perceived as by subjects for different values of the model parameters.
-
-delta = 0, w(pFrac) = 0
-pFrac = 0, w(pFrac) = 0 iff probDistortion !=  0
-probDistortion = 0, w(pFrac) = delta/(delta+1) 
 
 Facets - values of pFrac (true prob of Fractal)
 Blue w(pFrac)>pFrac - overweighting prob fractal
 Red pFrac>w(pFrac) - underweighting prob fractal
 
 ```{r}
-expand.grid(rep(list(seq(0,1,.1)), 3)) %>%
+expand.grid(rep(list(seq(0,1.5,.1)), 3)) %>%
   rename(delta=Var1, gamma=Var2, pFrac=Var3)%>%
   mutate(wpFrac = (delta*(pFrac^gamma)) / ((delta*(pFrac^gamma) + ((1-pFrac)^gamma))), 
          distortion = pFrac-wpFrac) %>%
+  filter(pFrac > 0 & pFrac < 1) %>%
+  mutate(pFrac = paste0("p(Fractal) = ", pFrac)) %>%
   ggplot2::ggplot(aes(as.factor(delta), as.factor(gamma)))+
   geom_raster(aes(fill=distortion))+
-  facet_grid(~as.factor(pFrac))+
+  facet_wrap(~as.factor(pFrac))+
   labs(x="\U03B4", y="probDistortion", fill="pFrac - w(pFrac)", title="Distortion of p(Fractal)")+
   scale_fill_gradient2(low = scales::muted("blue"), high=scales::muted("red"))+
-  theme(axis.ticks = element_blank(), axis.text.x = element_text(angle=90), legend.position="bottom")
+  theme(axis.ticks = element_blank(), axis.text.x = element_text(angle=90), legend.position="bottom")+
+  scale_y_discrete(breaks=seq(0, 1.5, .3))
 ```
 
 ## Fit Q learning + two value system simultaneously
@@ -102,7 +104,10 @@ m = stan_model('../helpers/stanModels/fit_twoValSystemsWithRL.stan')
 ```
 
 ```{r}
-fit = sampling(m, data=m_data)
+if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))){
+  fit = readRDS(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))
+} else {
+  fit = sampling(m, data=m_data)}
 ```
 
 ## Organize model output
@@ -131,7 +136,6 @@ par_ests %>%
   facet_wrap(~par, scales='free_x')+
   xlab("Median estimates for all subjects")
 ```
-Scatter plot matrix of median estimates
 
 Are there any dependencies between the parameters? probDistortion is correlated with both beta and delta.
 

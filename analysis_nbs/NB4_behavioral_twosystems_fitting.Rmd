@@ -56,151 +56,6 @@ expand.grid(rep(list(seq(0,1,.1)), 3)) %>%
   theme(axis.ticks = element_blank(), axis.text.x = element_text(angle=90), legend.position="bottom")
 ```
 
-## Reshape data for model
-
-```{r}
-num_subjs = length(unique(clean_beh_data$subnum))
-
-num_trials = clean_beh_data %>%
-  count(subnum) %>%
-  select(n)
-num_trials = num_trials$n
-
-#subjects in rows, trials in columns
-choices = extract_var_for_stan(clean_beh_data, choiceLeft)
-
-qv_left = extract_var_for_stan(clean_beh_data, leftQValue)
-
-qv_right = extract_var_for_stan(clean_beh_data, rightQValue)
-
-clean_beh_data = clean_beh_data %>%
-  mutate(leftLotteryEV = lotteryValue*lotteryProb,
-         rightLotteryEV = referenceValue*referenceProb)
-
-ev_left = extract_var_for_stan(clean_beh_data, leftLotteryEV)
-
-ev_right = extract_var_for_stan(clean_beh_data, rightLotteryEV)
-
-trial_pFrac = extract_var_for_stan(clean_beh_data, probFractalDraw)
-
-m_data=list(num_subjs = num_subjs,
-            num_trials = num_trials,
-            choices = choices,
-            ev_left = ev_left,
-            ev_right = ev_right,
-            qv_left = qv_left,
-            qv_right = qv_right,
-            trial_pFrac = trial_pFrac)
-
-rm(num_subjs, num_trials, choices, ev_left, ev_right, qv_left, qv_right, trial_pFrac)
-```
-
-## Fit model for all subjects
-
-```{r}
-m = stan_model('../helpers/stanModels/fit_twoValSystems.stan')
-```
-
-```{r}
-fit = sampling(m, data=m_data)
-```
-
-## Organize model output
-
-```{r}
-# Extract parameters from fit object
-par_ests = data.frame(extract(fit, c("probDistortion", "delta", "beta")))  %>%
-  gather(key, value) %>%
-  separate(key, c('par', 'subj'), sep='\\.')
-
-# Add correct subject identifiers
-par_ests = data.frame(subnum = unique(clean_beh_data$subnum)) %>%
-  mutate(subj = as.character(1:n())) %>%
-  right_join(par_ests, by='subj') %>%
-  select(-subj)
-```
-
-Distributions of the recovered (median) parameters
-
-```{r}
-par_ests %>%
-  group_by(subnum, par) %>%
-  summarise(est = median(value), .groups='keep') %>%
-  ggplot(aes(est))+
-  geom_histogram(alpha=.5, bins=30)+
-  facet_wrap(~par, scales='free_x')+
-  xlab("Median estimates for all subjects")
-```
-
-```{r}
-par_ests %>%
-  group_by(subnum, par) %>%
-  summarise(est = median(value), .groups='keep') %>%
-  filter(par != "beta") %>%
-  spread(par, est) %>%
-  ggplot(aes(delta, probDistortion))+
-  geom_point()+
-  geom_abline(intercept=0, slope=1)+
-  xlim(0, 1)+
-  ylim(0, 1)
-  
-```
-
-How do the median estimates suggest the probability of a fractal draw is distorted for each subject?
-
-```{r}
-tmp = par_ests %>%
-  group_by(subnum, par) %>%
-  summarise(est = median(value), .groups='keep') %>%
-  filter(par != "beta") %>%
-  spread(par, est)
-
-tmp = do.call("rbind", replicate(9, tmp, simplify = FALSE)) %>%
-  arrange(subnum) %>%
-  ungroup() %>%
-  mutate(pFrac = rep(seq(0.1, .9, .1), 25), 
-         wpFrac = (delta*pFrac^probDistortion)/(delta*pFrac^probDistortion + (1-pFrac)^probDistortion)) 
-tmp %>% ggplot()+
-  geom_boxplot(aes(as.factor(pFrac), wpFrac))+
-  geom_abline(intercept = 0, slope=.1, linetype='dashed')+
-  labs(x="\u03c0", y="w(\u03c0)", title="Distortion of p(Fractal)")+
-  ylim(0, 1)
-```
-
-## Individual posterior distributions
-
-```{r}
-par_ests %>%
-  filter(par == "gamma") %>%
-  ggplot(aes(value))+
-  geom_histogram(alpha=.5, bins=50)+
-  facet_wrap(~subnum, scales='free_y')+
-  labs(title = "Posterior distribution of \U03B3",
-       xlab="", ylab="")
-```
-
-```{r}
-par_ests %>%
-  filter(par == "delta") %>%
-  ggplot(aes(value))+
-  geom_histogram(alpha=.5, bins=50)+
-  facet_wrap(~subnum, scales='free_y')+
-  labs(title = "Posterior distribution of \U03B4",
-       xlab="", ylab="")
-```
-
-```{r}
-par_ests %>%
-  filter(par == "beta") %>%
-  ggplot(aes(value))+
-  geom_histogram(alpha=.5, bins=50)+
-  facet_wrap(~subnum, scales='free_y')+
-  labs(title = "Posterior distribution of inverse temperature \U03B2",
-       xlab="", ylab="")
-```
-
-# Model comparisons
-
 ## Fit Q learning + two value system simultaneously
 
 ```{r}
@@ -275,4 +130,38 @@ par_ests %>%
   geom_histogram(alpha=.5, bins=30)+
   facet_wrap(~par, scales='free_x')+
   xlab("Median estimates for all subjects")
+```
+Scatter plot matrix of median estimates
+
+Are there any dependencies between the parameters? probDistortion is correlated with both beta and delta.
+
+```{r}
+par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = median(value), .groups='keep') %>%
+  ungroup() %>%
+  spread(par, est) %>%
+  select(-subnum) %>%
+  ggpairs(progress = FALSE)
+```
+
+How do the median estimates suggest the probability of a fractal draw is distorted for each subject?
+
+```{r}
+tmp = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = median(value), .groups='keep') %>%
+  filter(par != "beta") %>%
+  spread(par, est)
+
+tmp = do.call("rbind", replicate(9, tmp, simplify = FALSE)) %>%
+  arrange(subnum) %>%
+  ungroup() %>%
+  mutate(pFrac = rep(seq(0.1, .9, .1), 25), 
+         wpFrac = (delta*pFrac^probDistortion)/(delta*pFrac^probDistortion + (1-pFrac)^probDistortion)) 
+tmp %>% ggplot()+
+  geom_boxplot(aes(as.factor(pFrac), wpFrac))+
+  geom_abline(intercept = 0, slope=.1, linetype='dashed')+
+  labs(x="\u03c0", y="w(\u03c0)", title="Distortion of p(Fractal)")+
+  ylim(0, 1)
 ```

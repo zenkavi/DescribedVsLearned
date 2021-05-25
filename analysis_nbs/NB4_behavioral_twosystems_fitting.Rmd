@@ -49,7 +49,7 @@ expand.grid(rep(list(seq(0,1,.1)), 3)) %>%
   ggplot2::ggplot(aes(as.factor(delta), as.factor(gamma)))+
   geom_raster(aes(fill=distortion))+
   facet_grid(~as.factor(pFrac))+
-  labs(x="\U03B4", y="\U03B3", fill="\u03c0 - w(\u03c0)", title="Distortion of p(Fractal)")+
+  labs(x="\U03B4", y="probDistortion", fill="pFrac - w(pFrac)", title="Distortion of p(Fractal)")+
   scale_fill_gradient2(low = scales::muted("blue"), high=scales::muted("red"))+
   theme(axis.ticks = element_blank(), axis.text.x = element_text(angle=90), legend.position="bottom")
 ```

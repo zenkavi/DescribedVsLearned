@@ -44,12 +44,12 @@ Red pFrac>w(pFrac) - underweighting prob fractal
 
 ```{r}
 expand.grid(rep(list(seq(0,1.5,.1)), 3)) %>%
-  rename(delta=Var1, gamma=Var2, pFrac=Var3)%>%
-  mutate(wpFrac = (delta*(pFrac^gamma)) / ((delta*(pFrac^gamma) + ((1-pFrac)^gamma))), 
+  rename(delta=Var1, probDistortion=Var2, pFrac=Var3)%>%
+  mutate(wpFrac = (delta*(pFrac^probDistortion)) / ((delta*(pFrac^probDistortion) + ((1-pFrac)^probDistortion))), 
          distortion = pFrac-wpFrac) %>%
   filter(pFrac > 0 & pFrac < 1) %>%
   mutate(pFrac = paste0("p(Fractal) = ", pFrac)) %>%
-  ggplot2::ggplot(aes(as.factor(delta), as.factor(gamma)))+
+  ggplot2::ggplot(aes(as.factor(delta), as.factor(probDistortion)))+
   geom_raster(aes(fill=distortion))+
   facet_wrap(~as.factor(pFrac))+
   labs(x="\U03B4", y="probDistortion", fill="pFrac - w(pFrac)", title="Distortion of p(Fractal)")+
@@ -59,6 +59,8 @@ expand.grid(rep(list(seq(0,1.5,.1)), 3)) %>%
 ```
 
 ## Fit Q learning + two value system simultaneously
+
+Organize data
 
 ```{r}
 num_subjs = length(unique(clean_beh_data$subnum))
@@ -100,13 +102,10 @@ rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fra
 ## Fit model for all subjects
 
 ```{r}
-m = stan_model('../helpers/stanModels/fit_twoValSystemsWithRL.stan')
-```
-
-```{r}
 if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))){
   fit = readRDS(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))
 } else {
+  m = stan_model('../helpers/stanModels/fit_twoValSystemsWithRL.stan')
   fit = sampling(m, data=m_data)}
 ```
 
@@ -125,6 +124,30 @@ par_ests = data.frame(subnum = unique(clean_beh_data$subnum)) %>%
   select(-subj)
 ```
 
+Where do subjects fall in the theoretical graph above?
+
+```{r}
+tmp = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = median(value), .groups='keep') %>%
+  spread(par, est)
+
+expand.grid(rep(list(seq(0,1.5,.1)), 3)) %>%
+  rename(delta=Var1, probDistortion=Var2, pFrac=Var3)%>%
+  mutate(wpFrac = (delta*(pFrac^probDistortion)) / ((delta*(pFrac^probDistortion) + ((1-pFrac)^probDistortion))), 
+         distortion = pFrac-wpFrac) %>%
+  filter(pFrac > 0 & pFrac < 1) %>%
+  mutate(pFrac = paste0("p(Fractal) = ", pFrac)) %>%
+  ggplot2::ggplot(aes(as.factor(delta), as.factor(probDistortion)))+
+  # ggplot2::ggplot(aes(delta, probDistortion))+
+  geom_raster(aes(fill=distortion))+
+  facet_wrap(~as.factor(pFrac))+
+  labs(x="\U03B4", y="probDistortion", fill="pFrac - w(pFrac)", title="Distortion of p(Fractal)")+
+  scale_fill_gradient2(low = scales::muted("blue"), high=scales::muted("red"))+
+  theme(axis.ticks = element_blank(), axis.text.x = element_text(angle=90), legend.position="bottom")+
+  scale_y_discrete(breaks=seq(0, 1.5, .3))+
+  annotate("point", x = 10*tmp$delta, y=10*tmp$probDistortion)
+```
 Distributions of the recovered (median) parameters
 
 ```{r}
@@ -155,7 +178,7 @@ How do the median estimates suggest the probability of a fractal draw is distort
 tmp = par_ests %>%
   group_by(subnum, par) %>%
   summarise(est = median(value), .groups='keep') %>%
-  filter(par != "beta") %>%
+  filter(par != "beta" & par != "alpha") %>%
   spread(par, est)
 
 tmp = do.call("rbind", replicate(9, tmp, simplify = FALSE)) %>%
@@ -163,9 +186,10 @@ tmp = do.call("rbind", replicate(9, tmp, simplify = FALSE)) %>%
   ungroup() %>%
   mutate(pFrac = rep(seq(0.1, .9, .1), 25), 
          wpFrac = (delta*pFrac^probDistortion)/(delta*pFrac^probDistortion + (1-pFrac)^probDistortion)) 
+
 tmp %>% ggplot()+
   geom_boxplot(aes(as.factor(pFrac), wpFrac))+
   geom_abline(intercept = 0, slope=.1, linetype='dashed')+
-  labs(x="\u03c0", y="w(\u03c0)", title="Distortion of p(Fractal)")+
+  labs(x="p(Fractal)", y="w(pFractal)", title="Distortion of p(Fractal)")+
   ylim(0, 1)
 ```

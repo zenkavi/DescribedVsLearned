@@ -213,6 +213,10 @@ par_ests_rl = data.frame(subnum = unique(clean_beh_data$subnum)) %>%
   select(-subj)
 ```
 
+The learning rates don't have a clear pattern of difference, although they are mostly not the same but the inverse temperatures are systematically higher when estimates
+
+Higher inverse temperatures should suggest that the choice depends more on the value difference than chance.
+
 ```{r}
 par_ests %>%
   group_by(subnum, par) %>%
@@ -232,3 +236,55 @@ par_ests %>%
   geom_abline(intercept=0, slope=1, linetype="dashed")
 
 ```
+
+With these RL estimates do you get the same pattern for the Q values? Yes.
+
+```{r}
+clean_beh_data = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = median(value), .groups='keep') %>%
+  spread(par, est) %>%
+  left_join(clean_beh_data, by='subnum')
+
+## Add Q values to each trial
+
+get_qvals = function(subj_data){
+  subj_data$leftQValue = 0
+  subj_data$rightQValue = 0
+  for (i in 2:nrow(subj_data)){
+    subj_data$leftQValue[i] = subj_data$alpha[i] * (subj_data$leftFractalReward[i-1] - subj_data$leftQValue[i-1])
+    subj_data$rightQValue[i] = subj_data$alpha[i] * (subj_data$rightFractalReward[i-1] - subj_data$rightQValue[i-1])
+  }
+  return(subj_data)
+}
+
+clean_beh_data = clean_beh_data %>%
+  group_by(subnum) %>%
+  do(get_qvals(.)) %>%
+  ungroup()
+
+rm(get_qvals)
+
+```
+
+```{r}
+clean_beh_data %>%
+  filter(probFractalDraw == 1 | probFractalDraw == 0) %>%
+  mutate(leftQVAdv = leftQValue - rightQValue,
+         leftLotteryEV = lotteryValue*lotteryProb,
+         rightLotteryEV = referenceValue*referenceProb,
+         leftEVAdv = leftLotteryEV - rightLotteryEV) %>%
+  select(leftQVAdv, leftEVAdv, choiceLeft, probFractalDraw) %>%
+  gather(key, value, -choiceLeft, -probFractalDraw) %>%  
+  mutate(key = ifelse(key == "leftEVAdv", "EV_left - EV_right", "QV_left - QV_right"),
+         probFractalDraw = ifelse(probFractalDraw == 0, "p(Fractal)=0", "p(Fractal)=1"))%>%
+  ggplot(aes(value, choiceLeft))+
+  geom_jitter(width=0.03, height=0.08, alpha = 0.05)+
+  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE)+
+  facet_grid(probFractalDraw~key)+
+  xlab("")+
+  ylab("p(Left)")
+```
+
+How about model "fit". How do you evaluate model fit? 
+

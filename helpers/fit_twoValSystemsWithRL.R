@@ -2,19 +2,17 @@ library(tidyr)
 library(rstan)
 
 ## Read in data if not already there
-helpers_path = '~/Documents/RangelLab/DescribedVsLearned/helpers/'
+
 if (!exists('clean_beh_data')){
+  helpers_path = '~/Documents/RangelLab/DescribedVsLearned/helpers/'
   source(paste0(helpers_path,'clean_behavioral_data.R'))
 }
 
-if(!exists('extract_var_for_stan')){
-  source(paste0(helpers_path, 'extract_var_for_stan.R'))
-}
-
 ## If there is a fit object read it in
-if(file.exists(paste0(helpers_path, 'stanModels/fit_qlearning.RDS'))){
-  fit = readRDS(paste0(helpers_path, 'stanModels/fit_qlearning.RDS'))
+if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))){
+  fit = readRDS(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))
 } else {## Otherwise fit the model
+  
   ## Reshape data
   num_subjs = length(unique(clean_beh_data$subnum))
   
@@ -26,20 +24,33 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_qlearning.RDS'))){
   #subjects in rows, trials in columns
   choices = extract_var_for_stan(clean_beh_data, choiceLeft)
   
-  outcomes_left = extract_var_for_stan(clean_beh_data, leftFractalReward)
+  clean_beh_data = clean_beh_data %>%
+    mutate(leftLotteryEV = lotteryValue*lotteryProb,
+           rightLotteryEV = referenceValue*referenceProb)
   
-  outcomes_right = extract_var_for_stan(clean_beh_data, rightFractalReward)
+  ev_left = extract_var_for_stan(clean_beh_data, leftLotteryEV)
+  
+  ev_right = extract_var_for_stan(clean_beh_data, rightLotteryEV)
+  
+  fractal_outcomes_left = extract_var_for_stan(clean_beh_data, leftFractalReward)
+  
+  fractal_outcomes_right = extract_var_for_stan(clean_beh_data, rightFractalReward)
+  
+  trial_pFrac = extract_var_for_stan(clean_beh_data, probFractalDraw)
   
   m_data=list(num_subjs = num_subjs,
               num_trials = num_trials,
               choices = choices,
-              outcomes_left = outcomes_left,
-              outcomes_right=outcomes_right)
+              ev_left = ev_left,
+              ev_right = ev_right,
+              fractal_outcomes_left = fractal_outcomes_left,
+              fractal_outcomes_right = fractal_outcomes_right,
+              trial_pFrac = trial_pFrac)
   
-  rm(num_subjs, num_trials, choices, outcomes_left, outcomes_right)
+  rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac)
   
   ## Fit model for all subjects
-  m = stan_model('stanModels/fit_qlearning.stan')
+  m = stan_model('stanModels/fit_twoValSystemsWithRL.stan')
   
   m_data=list(num_subjs = num_subjs,
               num_trials = num_trials,
@@ -48,18 +59,15 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_qlearning.RDS'))){
               outcomes_right=outcomes_right)
   
   fit = sampling(m, data=m_data)
-  saveRDS(fit, paste0(helpers_path, 'stanModels/fit_qlearning.RDS'))
-  
-  ## Clean up work space
-  rm(choices, m, m_data, outcomes_left, outcomes_right, par_ests, num_subjs, num_trials)
+  saveRDS(fit, paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))
 }
 
-## Extract parameters from fit object
-par_ests = data.frame(extract(fit, c("alphas", "betas")))  %>%
+# Extract parameters from fit object
+par_ests = data.frame(extract(fit, c("alpha","probDistortion", "delta", "beta")))  %>%
   gather(key, value) %>%
   separate(key, c('par', 'subj'), sep='\\.')
 
-## Add correct subject identifiers
+# Add correct subject identifiers
 par_ests = data.frame(subnum = unique(clean_beh_data$subnum)) %>%
   mutate(subj = as.character(1:n())) %>%
   right_join(par_ests, by='subj') %>%
@@ -78,8 +86,8 @@ get_qvals = function(subj_data){
   subj_data$leftQValue = 0
   subj_data$rightQValue = 0
   for (i in 2:nrow(subj_data)){
-    subj_data$leftQValue[i] = subj_data$alphas[i] * (subj_data$leftFractalReward[i-1] - subj_data$leftQValue[i-1])
-    subj_data$rightQValue[i] = subj_data$alphas[i] * (subj_data$rightFractalReward[i-1] - subj_data$rightQValue[i-1])
+    subj_data$leftQValue[i] = subj_data$alpha[i] * (subj_data$leftFractalReward[i-1] - subj_data$leftQValue[i-1])
+    subj_data$rightQValue[i] = subj_data$alpha[i] * (subj_data$rightFractalReward[i-1] - subj_data$rightQValue[i-1])
   }
   return(subj_data)
 }

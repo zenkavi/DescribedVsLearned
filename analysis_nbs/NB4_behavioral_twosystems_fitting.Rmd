@@ -139,7 +139,6 @@ expand.grid(rep(list(seq(0,1.5,.1)), 3)) %>%
   filter(pFrac > 0 & pFrac < 1) %>%
   mutate(pFrac = paste0("p(Fractal) = ", pFrac)) %>%
   ggplot2::ggplot(aes(as.factor(delta), as.factor(probDistortion)))+
-  # ggplot2::ggplot(aes(delta, probDistortion))+
   geom_raster(aes(fill=distortion))+
   facet_wrap(~as.factor(pFrac))+
   labs(x="\U03B4", y="probDistortion", fill="pFrac - w(pFrac)", title="Distortion of p(Fractal)")+
@@ -181,15 +180,18 @@ tmp = par_ests %>%
   filter(par != "beta" & par != "alpha") %>%
   spread(par, est)
 
-tmp = do.call("rbind", replicate(9, tmp, simplify = FALSE)) %>%
+tmp = do.call("rbind", replicate(11, tmp, simplify = FALSE)) %>%
   arrange(subnum) %>%
   ungroup() %>%
-  mutate(pFrac = rep(seq(0.1, .9, .1), 25), 
+  mutate(pFrac = rep(seq(0, 1, .1), 25), 
          wpFrac = (delta*pFrac^probDistortion)/(delta*pFrac^probDistortion + (1-pFrac)^probDistortion)) 
 
-tmp %>% ggplot()+
-  geom_boxplot(aes(as.factor(pFrac), wpFrac))+
-  geom_abline(intercept = 0, slope=.1, linetype='dashed')+
-  labs(x="p(Fractal)", y="w(pFractal)", title="Distortion of p(Fractal)")+
-  ylim(0, 1)
+tmp %>%
+  mutate(delta_gt_1 = ifelse(delta>=1, 1, 0),
+         probDistortion_gt_1 = ifelse(probDistortion>=1,"prodDistortion >= 1", "prodDistortion < 0")) %>%
+  ggplot(aes(pFrac, wpFrac, group=subnum))+
+  geom_line(aes(col = as.factor(probDistortion_gt_1)))+
+  geom_abline(slope=1, intercept=0, linetype="dashed")+
+  labs(x="p(Fractal)", y="w(pFractal)", title="Distortion of p(Fractal)", color = element_blank())
 ```
+

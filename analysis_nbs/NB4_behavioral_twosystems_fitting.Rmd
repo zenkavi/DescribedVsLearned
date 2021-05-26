@@ -195,3 +195,40 @@ tmp %>%
   labs(x="p(Fractal)", y="w(pFractal)", title="Distortion of p(Fractal)", color = element_blank())
 ```
 
+# Separate vs simulatanous estimation
+
+How do the parameter estimates from the RL only fit differ from the alpha and betas in the simulatanous fit?
+
+```{r}
+fit_rl = readRDS(paste0(helpers_path, 'stanModels/fit_qlearning.RDS'))
+
+par_ests_rl = data.frame(extract(fit_rl, c("alphas", "betas")))  %>%
+  gather(key, value) %>%
+  separate(key, c('par', 'subj'), sep='\\.')
+
+# Add correct subject identifiers
+par_ests_rl = data.frame(subnum = unique(clean_beh_data$subnum)) %>%
+  mutate(subj = as.character(1:n())) %>%
+  right_join(par_ests_rl, by='subj') %>%
+  select(-subj)
+```
+
+```{r}
+par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = median(value), .groups='keep') %>%
+  filter(par %in% c("beta", "alpha")) %>%
+  mutate(fit = "simulatanous") %>%
+  rbind(par_ests_rl %>%
+          group_by(subnum, par) %>%
+          summarise(est = median(value), .groups='keep') %>%
+          filter(par %in% c("betas", "alphas")) %>%
+          mutate(fit = "separate",
+                 par = ifelse(par == "alphas", "alpha", "beta"))) %>%
+  spread(fit, est) %>%
+  ggplot(aes(separate, simulatanous))+
+  geom_point()+
+  facet_wrap(~par, scales="free")+
+  geom_abline(intercept=0, slope=1, linetype="dashed")
+
+```

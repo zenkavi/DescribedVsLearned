@@ -1,0 +1,17 @@
+---
+title: "R Notebook"
+---
+
+# Methods
+
+## Subjects
+
+## Task
+
+## Data preprocessing
+
+# Results
+
+## Raw behavioral results
+
+## Cognitive modeling

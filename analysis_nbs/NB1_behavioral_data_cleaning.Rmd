@@ -1,12 +1,16 @@
 ---
 title: "Experience vs. description based decision-making project: Behavioral data descriptive stats and cleaning"
-output: html_notebook
+output: 
+  html_document:
+    toc: true
+    toc_float: true
 ---
 
 # Set up environment and load in data
 
 ```{r}
 library(tidyverse)
+library(DT)
 ```
 
 ```{r}
@@ -49,7 +53,8 @@ How many trials have negative RTs?
 
 ```{r}
 beh_data %>% 
-  filter(reactionTime < 0)
+  filter(reactionTime < 0) %>%
+  datatable()
 ```
 
 How many trials have RT<.2 seconds?

@@ -1,6 +1,9 @@
 ---
 title: "Experience vs. description based decision-making project: Two valuation systems modeling"
-output: html_notebook
+output: 
+  html_document:
+    toc: true
+    toc_float: true
 ---
 
 # Set up environment and load in data
@@ -288,3 +291,6 @@ clean_beh_data %>%
 
 How about model "fit". How do you evaluate model fit? 
 
+```{r}
+
+```

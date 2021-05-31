@@ -10,14 +10,12 @@ output:
 
 ```{r}
 library(tidyverse)
-```
-
-```{r}
 library(rstan)
+library(here)
 ```
 
 ```{r}
-helpers_path = '~/Documents/RangelLab/DescribedVsLearned/helpers/'
+helpers_path = here('helpers')
 ```
 
 # Read in *clean* behavioral data

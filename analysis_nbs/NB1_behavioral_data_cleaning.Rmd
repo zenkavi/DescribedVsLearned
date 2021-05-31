@@ -11,10 +11,11 @@ output:
 ```{r}
 library(tidyverse)
 library(DT)
+library(here)
 ```
 
 ```{r}
-helpers_path = '~/Documents/RangelLab/DescribedVsLearned/helpers/'
+helpers_path = here('helpers')
 ```
 
 Read in raw behavioral data

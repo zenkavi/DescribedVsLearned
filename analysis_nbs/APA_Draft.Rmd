@@ -1,0 +1,130 @@
+---
+title             : "Allocation of control when choosing between bundles of description and experience-based risky options"
+shorttitle        : "Title"
+
+author: 
+  - name          : "A. Zeynep Enkavi"
+    affiliation   : "1"
+    corresponding : yes    # Define only one corresponding author
+    address       : "1200 E. Colorado Blvd., Pasadena, CA 91125"
+    email         : "zenkavi@caltech.edu"
+    role:         # Contributorship roles (e.g., CRediT, https://casrai.org/credit/)
+      - Formal Analysis
+      - Writing - Original Draft Preparation
+      - Writing - Review & Editing
+  - name          : "Gabriela Tavares"
+    affiliation   : "2"
+    role:
+      - Conceptualization
+      - Investigation
+  - name          : "Antonio Rangel"
+    affiliation   : "1"
+    role:
+      - Conceptualization
+      - Writing - Original Draft Preparation
+      - Writing - Review & Editing
+
+affiliation:
+  - id            : "1"
+    institution   : "California Institute of Technology"
+  - id            : "2"
+    institution   : "Google"
+
+authornote: |
+  Add complete departmental affiliations for each author here. Each new line herein must be indented, like this line.
+
+  Enter author note here.
+
+abstract: |
+  One or two sentences providing a **basic introduction** to the field,  comprehensible to a scientist in any discipline.
+  
+  Two to three sentences of **more detailed background**, comprehensible  to scientists in related disciplines.
+  
+  One sentence clearly stating the **general problem** being addressed by  this particular study.
+  
+  One sentence summarizing the main result (with the words "**here we show**" or their equivalent).
+  
+  Two or three sentences explaining what the **main result** reveals in direct comparison to what was thought to be the case previously, or how the  main result adds to previous knowledge.
+  
+  One or two sentences to put the results into a more **general context**.
+  
+  Two or three sentences to provide a **broader perspective**, readily comprehensible to a scientist in any discipline.
+  
+  <!-- https://tinyurl.com/ybremelq -->
+  
+keywords          : "keywords"
+wordcount         : "X"
+
+bibliography      : ["r-references.bib"]
+
+floatsintext      : no
+figurelist        : no
+tablelist         : no
+footnotelist      : no
+linenumbers       : yes
+mask              : no
+draft             : no
+
+documentclass     : "apa6"
+classoption       : "man"
+output            : papaja::apa6_pdf
+---
+
+```{r setup, include = FALSE}
+library("papaja")
+r_refs("r-references.bib")
+```
+
+```{r analysis-preferences}
+# Seed for random number generation
+set.seed(42)
+knitr::opts_chunk$set(cache.extra = knitr::rand_seed)
+```
+
+Instead of typing your R code in this chunk, you can also pull some code from an external script (preferably in the same project folder). You can do this using the read_chunk function. In your manuscript, create a code chunk that reads in this external script:
+
+```{r external, include = FALSE}
+knitr::read_chunk("myScript.R")
+```
+
+You can then run subsections of this external script as follows:
+
+```{r plot-audiogram}
+```
+
+
+# Methods
+We report how we determined our sample size, all data exclusions (if any), all manipulations, and all measures in the study. <!-- 21-word solution (Simmons, Nelson & Simonsohn, 2012; retrieved from http://ssrn.com/abstract=2160588) -->
+
+## Participants
+
+## Task
+
+## Procedure
+
+## Data preprocessing
+
+## Data analysis
+We used `r cite_r("r-references.bib")` for all our analyses.
+
+
+# Results
+
+## Raw behavioral results
+
+## Cognitive modeling
+
+# Discussion
+
+
+
+\newpage
+
+# References
+
+\begingroup
+\setlength{\parindent}{-0.5in}
+\setlength{\leftskip}{0.5in}
+
+<div id="refs" custom-style="Bibliography"></div>
+\endgroup

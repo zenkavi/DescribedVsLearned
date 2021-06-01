@@ -64,8 +64,8 @@ When the better lottery and the better fractal (based on the learned Q value) su
 ```{r}
 clean_beh_data %>%
   mutate(leftLotteryEV = lotteryValue*lotteryProb,
-         rightLotteryEV = referenceValue*referenceProb,
-         leftLotteryBetter = leftLotteryEV>rightLotteryEV,
+  			 rightLotteryEV = referenceValue*referenceProb,
+  			 leftLotteryBetter = leftLotteryEV>rightLotteryEV,
          choseBetterLottery = ifelse(leftLotteryBetter & choiceLeft == 1, 1, 
                                      ifelse(!leftLotteryBetter & choiceLeft == 0, 1, 0)),
          leftFractalBetter = leftQValue>rightQValue,

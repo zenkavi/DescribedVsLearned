@@ -1,9 +1,13 @@
+#!/usr/bin/make -f
+
 .PHONY: all clean
 .DELETE_ON_ERROR:
 .SECONDARY:
 
-all:
-	@echo Build all
+all: APA_Draft.pdf
 
 clean:
-	@echo Clean all
+	rm -rf APA_Draft.pdf
+
+APA_Draft.pdf: APA_Draft.Rmd
+	Rscript -e 'rmarkdown::render("$<")'

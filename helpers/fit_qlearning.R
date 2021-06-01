@@ -1,8 +1,10 @@
 library(tidyr)
 library(rstan)
+library(here)
 
 ## Read in data if not already there
-helpers_path = '~/Documents/RangelLab/DescribedVsLearned/helpers/'
+helpers_path = here('helpers/')
+
 if (!exists('clean_beh_data')){
   source(paste0(helpers_path,'clean_behavioral_data.R'))
 }

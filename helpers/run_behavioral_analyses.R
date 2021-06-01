@@ -1,4 +1,6 @@
-helpers_path = '~/Dropbox/RangelLab/DescribedVsLearned/helpers/'
+library(here)
+
+helpers_path = here('helpers/')
 
 source(paste0(helpers_path,'get_behavioral_data.R'))
 

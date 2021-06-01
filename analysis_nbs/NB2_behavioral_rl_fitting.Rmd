@@ -10,6 +10,7 @@ output:
 
 ```{r}
 library(tidyverse)
+library(gridExtra)
 library(rstan)
 library(here)
 ```
@@ -23,6 +24,12 @@ helpers_path = here('helpers/')
 ```{r}
 source(paste0(helpers_path,'clean_behavioral_data.R'))
 source(paste0(helpers_path, 'extract_var_for_stan.R'))
+```
+
+Set theme for plots
+
+```{r}
+theme_set(theme_bw())
 ```
 
 # Evidence for "learning" fractal values

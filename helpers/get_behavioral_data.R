@@ -1,6 +1,6 @@
 library(rmatio)
 
-#Specify data path
+#Specify data path [TO BE CHANGED WHEN DATA IS SHARED OPENLY]
 data_path = '/Users/zeynepenkavi/Downloads/GTavares_2017_arbitration/behavioral_data/'
 
 #Get list of files in data_path

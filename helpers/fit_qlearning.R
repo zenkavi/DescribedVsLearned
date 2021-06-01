@@ -6,7 +6,7 @@ library(here)
 helpers_path = here('helpers/')
 
 if (!exists('clean_beh_data')){
-  source(paste0(helpers_path,'clean_behavioral_data.R'))
+  source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 }
 
 if(!exists('extract_var_for_stan')){

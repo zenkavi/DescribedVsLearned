@@ -6,7 +6,7 @@ helpers_path = here('helpers/')
 
 ## Read in data if not already there
 if (!exists('clean_beh_data')){
-  source(paste0(helpers_path,'clean_behavioral_data.R'))
+  source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 }
 
 ## If there is a fit object read it in

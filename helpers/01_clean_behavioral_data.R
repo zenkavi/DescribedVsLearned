@@ -4,7 +4,7 @@ library(tidyverse)
 # Check if data is loaded, load if not
 if (!exists('beh_data')){
   helpers_path = here('helpers/')
-  source(paste0(helpers_path,'get_behavioral_data.R'))
+  source(paste0(helpers_path,'00_get_behavioral_data.R'))
 }
 
 # Clean raw behavioral data

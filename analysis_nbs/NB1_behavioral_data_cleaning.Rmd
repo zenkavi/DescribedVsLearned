@@ -14,8 +14,16 @@ library(DT)
 library(here)
 ```
 
+Set theme for plots
+
 ```{r}
-helpers_path = here('helpers')
+theme_set(theme_bw())
+```
+
+Specify path for bespoke helper functions
+
+```{r}
+helpers_path = here('helpers/')
 ```
 
 Read in raw behavioral data
@@ -114,7 +122,7 @@ beh_data %>%
 - Exclude non-responded trials.
 - Exclude trials RTs <.2 seconds. 
 
-These will be incorporated in `clean_behaviora_data.R`
+These will be incorporated in `clean_behavioral_data.R`
 
 What is left after these steps?
 

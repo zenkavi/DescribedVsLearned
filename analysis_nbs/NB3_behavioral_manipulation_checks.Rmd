@@ -15,7 +15,7 @@ library(here)
 ```
 
 ```{r}
-helpers_path = here('helpers')
+helpers_path = here('helpers/')
 ```
 
 Read in clean data with Q-learning parameter estimates

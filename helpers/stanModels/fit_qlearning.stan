@@ -14,8 +14,8 @@ transformed data {
 
 parameters {
   // Declare all parameters as vectors for vectorizing
-  real<lower=0, upper=1> alphas[num_subjs];
-  real<lower=0, upper=5> betas[num_subjs];
+  real<lower=0, upper=1> alpha[num_subjs];
+  real<lower=0, upper=5> beta[num_subjs];
 }
 
 
@@ -25,8 +25,8 @@ model {
   int num_trials_for_subj;
   
   // priors
-  alphas ~ beta(1, 1);
-  betas ~ gamma(1, 2);
+  alpha ~ beta(1, 1);
+  beta ~ gamma(1, 2);
   
   for(i in 1:num_subjs){
     ev = init_v;
@@ -35,7 +35,7 @@ model {
 
     for (t in 1:num_trials_for_subj) {
       // compute action probabilities
-      choices[i, t] ~ bernoulli_logit(betas[i] * (ev[1]-ev[2]));
+      choices[i, t] ~ bernoulli_logit(beta[i] * (ev[1]-ev[2]));
       // p(choice left = 1) = exp(a)/(1+exp(a)) = 1/(1+exp(-a))
       // a = beta * (EV_left-EV_right)
       // The higher EV_left - EV_right, the higher p(choice left)
@@ -47,8 +47,8 @@ model {
       PE[2] = outcomes_right[i, t] - ev[2];
       
       // value updating (learning) of both options
-      ev[1] += alphas[i] * PE[1];
-      ev[2] += alphas[i] * PE[2];
+      ev[1] += alpha[i] * PE[1];
+      ev[2] += alpha[i] * PE[2];
     }
   }
 }

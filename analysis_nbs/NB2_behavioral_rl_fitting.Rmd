@@ -12,6 +12,7 @@ output:
 library(tidyverse)
 library(gridExtra)
 library(rstan)
+library(brms)
 library(here)
 ```
 
@@ -46,7 +47,9 @@ p1 = clean_beh_data %>%
   ggplot(aes(trialNum, choseBetterFractal, col=as.factor(session)))+
   geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, alpha=.1)+
   labs(title="All trials", x="Trial Number", y="p(Chose better fractal)", color="Session")+
-  coord_cartesian(ylim=c(0.4,.8))
+  coord_cartesian(ylim=c(0.4,.8))+
+  scale_color_manual(values=cbbPalette)+
+  theme(legend.position="bottom")
 
 p2 = clean_beh_data %>%
   filter(probFractalDraw > .5) %>%
@@ -56,7 +59,9 @@ p2 = clean_beh_data %>%
   ggplot(aes(trialNum, choseBetterFractal, col=as.factor(session)))+
   geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, alpha=.1)+
   labs(title="p(Fractal)>.5", x="Trial Number", y="p(Chose better fractal)", color="Session")+
-  coord_cartesian(ylim=c(0.4,.8))
+  coord_cartesian(ylim=c(0.4,.8))+
+  scale_color_manual(values=cbbPalette)+
+  theme(legend.position="bottom")
 
 grid.arrange(p1, p2, nrow=1, ncol=2)
 ```

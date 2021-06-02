@@ -1,0 +1,97 @@
+---
+title             : "Neural correlates of choosing between bundles of description and experience-based risky options"
+shorttitle        : "Description versus experience-based risk"
+
+author: 
+  - name          : "A. Zeynep Enkavi"
+    affiliation   : "1"
+    corresponding : yes
+    address       : "1200 E. Colorado Blvd., Pasadena, CA 91125"
+    email         : "zenkavi@caltech.edu"
+    role:         
+      - Formal Analysis
+      - Writing - Original Draft Preparation
+      - Writing - Review & Editing
+  - name          : "Gabriela Tavares"
+    affiliation   : "2"
+    role:
+      - Conceptualization
+      - Investigation
+  - name          : "Antonio Rangel"
+    affiliation   : "1"
+    role:
+      - Conceptualization
+      - Writing - Original Draft Preparation
+      - Writing - Review & Editing
+
+affiliation:
+  - id            : "1"
+    institution   : "Division of Humanities and Social Sciences, California Institute of Technology"
+  - id            : "2"
+    institution   : "Google"
+
+authornote:
+
+abstract: |
+  Enter abstract here
+  
+keywords          : "risk, uncertainty, lottery, reinforcement learning"
+wordcount         : "X"
+
+bibliography      : ["references.bib"]
+
+floatsintext      : no
+figurelist        : no
+tablelist         : no
+footnotelist      : no
+linenumbers       : yes
+mask              : no
+draft             : no
+
+documentclass     : "apa6"
+classoption       : "man"
+output            : papaja::apa6_pdf
+---
+
+```{r setup, include = FALSE}
+library("papaja")
+```
+
+# Introduction
+
+# Methods
+
+## Participants
+
+## Task
+
+## Procedure
+
+## Behavioral data preprocessing
+
+## Neuroimaging data preprocessing
+
+## Data analysis software
+The list of software packages and their versions used for analyses can be found at ...
+
+# Results
+
+## Raw behavioral results
+
+## Cognitive modeling
+
+## Neuroimaging results
+
+# Discussion
+
+
+\newpage
+
+# References
+
+\begingroup
+\setlength{\parindent}{-0.5in}
+\setlength{\leftskip}{0.5in}
+
+<div id="refs" custom-style="Bibliography"></div>
+\endgroup

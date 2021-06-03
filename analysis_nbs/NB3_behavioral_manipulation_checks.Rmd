@@ -100,7 +100,7 @@ rm(tmp, m1, m2)
 When the better lottery and the better fractal (based on the learned Q value) suggest different options do subjects choose more frequently based on the lottery or their fractal Q Value? Yes, there is a general tendency towards choosing the option with the better lottery even when the trial reward depends less on the lottery and more on the fractal (p(Fractal) >=.5). Only when the outcome depend entirely on the fractal are people more likely to choose the option with the better fractal but even then there is a non-negligible portion of choices determined by the lottery EV. 
 
 ```{r}
-clean_beh_data %>%
+tmp = clean_beh_data %>%
   mutate(leftLotteryEV = lotteryValue*lotteryProb,
   			 rightLotteryEV = referenceValue*referenceProb,
   			 leftLotteryBetter = leftLotteryEV>rightLotteryEV,
@@ -109,25 +109,57 @@ clean_beh_data %>%
          leftFractalBetter = leftQValue>rightQValue,
          choseBetterFractal = ifelse(leftFractalBetter & choiceLeft == 1, 1, 
                                      ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0))) %>%
-  filter(leftFractalBetter != leftLotteryBetter) %>%
+  filter(leftFractalBetter != leftLotteryBetter) #filter conflict trials
+
+tmp %>% 
   group_by(probFractalDraw, subnum) %>%
   summarise(choseBetterLottery = mean(choseBetterLottery),
             choseBetterFractal = mean(choseBetterFractal),
             .groups='keep') %>%
   gather(key, value, -probFractalDraw, -subnum) %>%
+  mutate(key = ifelse(key == "choseBetterFractal", "Chose Better Fractal", "Chose Better Lottery")) %>%
   ggplot(aes(as.factor(probFractalDraw), value, color=key))+
   geom_boxplot()+
- labs(x="p(Fractal)",y="Proportion of choices",color="", title="Lottery bias in conflict trials")
+ labs(x="p(Fractal)",y="Proportion of choices",color="", 
+      title="Lottery bias in conflict trials (EV and QV difference suggest opposite choices)")+
+  scale_color_manual(values=cbbPalette)+
+  theme(legend.position = "bottom")
 
+```
+
+Re-plot this as proportion of choice using the relevant attribute
+
+```{r}
+tmp %>%
+  filter(probFractalDraw != .5) %>% #filter trials where relevant attribute is clear
+  mutate(fractalRelevant = ifelse(probFractalDraw <.5, 0, 1),
+         choseRelevant = ifelse(fractalRelevant & choseBetterFractal, 1,
+                                ifelse(fractalRelevant == 0 & choseBetterLottery, 1, 0))) %>%
+  group_by(probFractalDraw, subnum) %>%
+  summarise(choseRelevant = mean(choseRelevant),
+            .groups = 'keep') %>%
+  ggplot(aes(as.factor(probFractalDraw), choseRelevant))+
+  geom_hline(yintercept = .5, linetype="dashed", color= cbbPalette[2], size = 1.5)+
+  geom_boxplot()+
+  labs(y = "Proportion of choices based on relevant attribute",
+       x = "p(Fractal)",
+       title = "Lottery bias in conflict trials with unambiguous relevant option")+
+  annotate("text", x = 3, y = .25, label = "Lottery relevant")+
+  annotate("segment", x = 1, xend = 5, y = .28, yend = .28, colour = cbbPalette[1])+
+  annotate("segment", x = 1, xend = 1, y = .28, yend = .33, colour = cbbPalette[1])+
+  annotate("segment", x = 5, xend = 5, y = .28, yend = .33, colour = cbbPalette[1])+
+  annotate("text", x = 8, y = .86, label = "Fractal relevant")+
+  annotate("segment", x = 6, xend = 10, y = .83, yend = .83, colour = cbbPalette[1])+
+  annotate("segment", x = 6, xend = 6, y = .78, yend = .83, colour = cbbPalette[1])+
+  annotate("segment", x = 10, xend = 10, y = .78, yend = .83, colour = cbbPalette[1])
+  
 ```
 
 **ADD statistical test to check if the proportion of lottery based choices are higher than 50% for all levels of $\pi$**
 
-```{r}
+What do I want to check for to show the lottery bias?
 
-```
-
-Why don't people
+Why don't people chose using the relevant attribute all the time?
 
 - Do they not learn the fractal values well?
 - Do they distort the probability of fractal and think it is less likely to get a reward from a fractal?

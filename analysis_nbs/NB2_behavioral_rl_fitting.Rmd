@@ -40,23 +40,23 @@ Is there evidence if "learning" to justify the fitting of an RL model?
 As time goes by are subjects more likely to choose the fractal with the higher reward probability? There is a subtle increase in the probability of choosing the fractal with the higher reward probability. This change in probability of choosing the fractal with the higher reward probability is larger when the reward depends only on fractals (except for the last session, which bizarrely has the opposite pattern).
 
 ```{r}
-p1 = clean_beh_data %>%
+tmp = clean_beh_data %>%
   mutate(leftFractalBetter = fractalLeftProb>fractalRightProb,
          choseBetterFractal = ifelse(leftFractalBetter & choiceLeft == 1, 1, 
-                                     ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0))) %>%
+                                     ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0)))
+p1 = tmp %>%
   ggplot(aes(trialNum, choseBetterFractal, col=as.factor(session)))+
+  # ggplot(aes(trialNum, choseBetterFractal))+
   geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, alpha=.1)+
   labs(title="All trials", x="Trial Number", y="p(Chose better fractal)", color="Session")+
   coord_cartesian(ylim=c(0.4,.8))+
   scale_color_manual(values=cbbPalette)+
   theme(legend.position="bottom")
 
-p2 = clean_beh_data %>%
-  filter(probFractalDraw > .5) %>%
-  mutate(leftFractalBetter = fractalLeftProb>fractalRightProb,
-         choseBetterFractal = ifelse(leftFractalBetter & choiceLeft == 1, 1, 
-                                     ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0))) %>%
+p2 = tmp %>%
+  filter(probFractalDraw>.5) %>%
   ggplot(aes(trialNum, choseBetterFractal, col=as.factor(session)))+
+  # ggplot(aes(trialNum, choseBetterFractal))+
   geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, alpha=.1)+
   labs(title="p(Fractal)>.5", x="Trial Number", y="p(Chose better fractal)", color="Session")+
   coord_cartesian(ylim=c(0.4,.8))+
@@ -70,13 +70,36 @@ grid.arrange(p1, p2, nrow=1, ncol=2)
 rm(p1, p2)
 ```
 
-**ADD Bayesian multilevel model and check the significance of slopes**
+Bayesian multilevel model checking if the slopes in the above figure are different than 0. 
+
+When looking at all trials (left figure) the overall slope of all sessions is not different than 0 (not shown below). When including an interaction term with session number then there is a very small but non-zero increase in the probability of choosing the better fractal (i.e. learning) in sessions 1 and 3 but not in the other sessions.
 
 ```{r}
-
+# The default prior for population parameters is an improper flat prior over the reals
+m = brm(choseBetterFractal ~ trialNum*as.factor(session) + (1|subnum),
+        data=tmp, family=bernoulli(link="logit"))
 ```
 
-# Reshape data for model
+```{r}
+summary(m)
+```
+
+Filtering only trials where probability of a fractal draw is >.5, i.e. trials where learning about the fractal values would be more consequential we find a slightly stronger increase in the probability of choosing the better fractal later in the session in sessions 1 through 3 though still no effect for the other sessions.
+
+```{r}
+m2= brm(choseBetterFractal ~ trialNum*as.factor(session) + (1|subnum),
+        data=tmp %>% filter(probFractalDraw>.5), family=bernoulli(link="logit"))
+```
+
+```{r}
+summary(m2)
+```
+
+```{r}
+rm(m, m2, tmp)
+```
+
+# Reshape data for RL (only) model
 
 ```{r}
 num_subjs = length(unique(clean_beh_data$subnum))

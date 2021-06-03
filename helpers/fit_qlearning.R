@@ -41,14 +41,7 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_qlearning.RDS'))){
   rm(num_subjs, num_trials, choices, outcomes_left, outcomes_right)
   
   ## Fit model for all subjects
-  m = stan_model('stanModels/fit_qlearning.stan')
-  
-  m_data=list(num_subjs = num_subjs,
-              num_trials = num_trials,
-              choices = choices,
-              outcomes_left = outcomes_left,
-              outcomes_right=outcomes_right)
-  
+  m = stan_model(paste0(helpers_path, 'stanModels/fit_qlearning.stan'))
   fit = sampling(m, data=m_data)
   saveRDS(fit, paste0(helpers_path, 'stanModels/fit_qlearning.RDS'))
   
@@ -57,7 +50,7 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_qlearning.RDS'))){
 }
 
 ## Extract parameters from fit object
-par_ests = data.frame(extract(fit, c("alphas", "betas")))  %>%
+par_ests = data.frame(extract(fit, c("alpha", "beta")))  %>%
   gather(key, value) %>%
   separate(key, c('par', 'subj'), sep='\\.')
 

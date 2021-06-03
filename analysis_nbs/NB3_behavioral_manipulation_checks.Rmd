@@ -11,6 +11,7 @@ output:
 ```{r}
 library(tidyverse)
 library(gridExtra)
+library(brms)
 library(here)
 ```
 
@@ -24,6 +25,12 @@ Read in clean data with Q-learning parameter estimates
 source(paste0(helpers_path,'fit_qlearning.R'))
 ```
 
+Set theme for plots
+
+```{r}
+theme_set(theme_bw())
+```
+
 # Manipulation checks
 
 ## Correct interpretation of p(Fractal)$
@@ -33,16 +40,18 @@ source(paste0(helpers_path,'fit_qlearning.R'))
 - When p of fractal is 1 do subjects choose based on the QV difference between fractals? Does the EV difference matter at all?
 
 ```{r}
-clean_beh_data %>%
+tmp = clean_beh_data %>%
   filter(probFractalDraw == 1 | probFractalDraw == 0) %>%
   mutate(leftQVAdv = leftQValue - rightQValue,
          leftLotteryEV = lotteryValue*lotteryProb,
          rightLotteryEV = referenceValue*referenceProb,
-         leftEVAdv = leftLotteryEV - rightLotteryEV) %>%
+         leftEVAdv = leftLotteryEV - rightLotteryEV)
+
+tmp %>%
   select(leftQVAdv, leftEVAdv, choiceLeft, probFractalDraw) %>%
   gather(key, value, -choiceLeft, -probFractalDraw) %>%  
   mutate(key = ifelse(key == "leftEVAdv", "EV_left - EV_right", "QV_left - QV_right"),
-         probFractalDraw = ifelse(probFractalDraw == 0, "p(Fractal)=0", "p(Fractal)=1"))%>%
+         probFractalDraw = ifelse(probFractalDraw == 0, "p(Fractal)=0", "p(Fractal)=1")) %>%
   ggplot(aes(value, choiceLeft))+
   geom_jitter(width=0.03, height=0.08, alpha = 0.05)+
   geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE)+
@@ -51,10 +60,39 @@ clean_beh_data %>%
   ylab("p(Left)")
 ```
 
-**ADD Bayesian multilevel model and check the significance of slopes**
+Multilevel model checking if the slopes of the top row above are different than 0.
 
 ```{r}
+m1 = brm(choiceLeft ~ leftQVAdv + leftEVAdv + (1|subnum),
+        data=tmp %>% filter(probFractalDraw == 0), family=bernoulli(link="logit"))
+```
 
+When probability of a fractal is 0 the expected value (EV) difference between the lotteries (i.e. the only relevant attribute of each bundle) has a strong effect. The higher the EV of the left lottery the more likely the left bundle is chosen. 
+
+There is also a much smaller negative effect of the Q-value difference even though the fractal values should be irrelevant. 
+
+```{r}
+summary(m1)
+```
+
+Multilevel model checking if the slopes of the bottom row above are different than 0.
+
+```{r}
+m2 = brm(choiceLeft ~ leftQVAdv + leftEVAdv + (1|subnum),
+        data=tmp %>% filter(probFractalDraw == 1), family=bernoulli(link="logit"))
+```
+
+When the probability of the fractal draw is 1 so the reward only depends on the fractals only the learned Q-values for the fractals have an effect on choice (the lotter EV difference has no effect).
+
+Note: these Q-values are from model fits where choice is only modeled as a function of the fractal values. Joint modeling of all relevant attributes in each bundle is done in the next notebook.
+
+```{r}
+summary(m2)
+```
+
+
+```{r}
+rm(tmp, m1, m2)
 ```
 
 ## Lottery bias in conflict trials

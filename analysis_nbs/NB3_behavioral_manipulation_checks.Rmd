@@ -130,11 +130,12 @@ tmp %>%
 Re-plot this as proportion of choice using the relevant attribute
 
 ```{r}
-tmp %>%
+tmp = tmp %>%
   filter(probFractalDraw != .5) %>% #filter trials where relevant attribute is clear
   mutate(fractalRelevant = ifelse(probFractalDraw <.5, 0, 1),
          choseRelevant = ifelse(fractalRelevant & choseBetterFractal, 1,
-                                ifelse(fractalRelevant == 0 & choseBetterLottery, 1, 0))) %>%
+                                ifelse(fractalRelevant == 0 & choseBetterLottery, 1, 0)))
+tmp %>%
   group_by(probFractalDraw, subnum) %>%
   summarise(choseRelevant = mean(choseRelevant),
             .groups = 'keep') %>%
@@ -155,11 +156,26 @@ tmp %>%
   
 ```
 
-**ADD statistical test to check if the proportion of lottery based choices are higher than 50% for all levels of $\pi$**
+Multilevel model checking if subjects chose based on the relevant attribute regardless of what attribute was relevant.
 
-What do I want to check for to show the lottery bias?
+```{r}
+m1 = brm(choseRelevant ~ as.factor(fractalRelevant) + (1|subnum),
+        data=tmp, family=bernoulli(link="logit"))
+```
 
-Why don't people chose using the relevant attribute all the time?
+When the fractal is the relevant option subjects chose less frequently based on the relevant option.
+
+```{r}
+summary(m1)
+```
+
+```{r}
+rm(tmp, m1)
+```
+
+Why don't people choose using the relevant attribute all the time? Why do they overuse description-based attributes even when experience-based ones are more relevant for reward?
 
 - Do they not learn the fractal values well?
+  - The fractal Q-values in this notebook are based on modeling choice behavior
+  - First order of business: Model both attributes together and see if these effects hold with RL parameter estimates from the join model.
 - Do they distort the probability of fractal and think it is less likely to get a reward from a fractal?

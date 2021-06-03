@@ -12,7 +12,7 @@ data {
 
 parameters {
   // Declare all parameters as vectors for vectorizing
-  real<lower=0, upper=20> probDistortion[num_subjs];
+  real<lower=0, upper=20> gamma[num_subjs];
   real<lower=0, upper=20> delta[num_subjs];
   real<lower=0, upper=5> beta[num_subjs];
 }
@@ -24,7 +24,7 @@ model {
   real w_pi;
   
   // priors
-  probDistortion ~ gamma(1, 5);
+  gamma ~ gamma(1, 5);
   delta ~ gamma(1, 5);
   beta ~ gamma(1, 2);
   
@@ -33,7 +33,7 @@ model {
     
     for (t in 1:num_trials_for_subj) {
       
-      w_pi = (delta[i]*(trial_pFrac[i, t]^probDistortion[i])) / ((delta[i]*(trial_pFrac[i, t]^probDistortion[i])) + (1-trial_pFrac[i, t])^probDistortion[i]);
+      w_pi = (delta[i]*(trial_pFrac[i, t]^gamma[i])) / ((delta[i]*(trial_pFrac[i, t]^gamma[i])) + (1-trial_pFrac[i, t])^gamma[i]);
       
       opt_val[1] = ((1-w_pi) * ev_left[i, t]) + (w_pi * qv_left[i, t]);
       opt_val[2] = ((1-w_pi) * ev_right[i, t]) + (w_pi * qv_right[i, t]) ;

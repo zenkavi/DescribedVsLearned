@@ -9,6 +9,14 @@ if (!exists('clean_beh_data')){
   source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 }
 
+if(!exists('extract_var_for_stan')){
+  source(paste0(helpers_path, 'extract_var_for_stan.R'))
+}
+
+if(!exists('get_qvals')){
+  source(paste0(helpers_path, 'get_qvals.R'))
+}
+
 ## If there is a fit object read it in
 if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))){
   fit = readRDS(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))
@@ -64,7 +72,7 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))){
 }
 
 # Extract parameters from fit object
-par_ests = data.frame(extract(fit, c("alpha","probDistortion", "delta", "beta")))  %>%
+par_ests = data.frame(extract(fit, c("alpha","gamma", "delta", "beta")))  %>%
   gather(key, value) %>%
   separate(key, c('par', 'subj'), sep='\\.')
 
@@ -82,17 +90,6 @@ clean_beh_data = par_ests %>%
   left_join(clean_beh_data, by='subnum')
 
 ## Add Q values to each trial
-
-get_qvals = function(subj_data){
-  subj_data$leftQValue = 0
-  subj_data$rightQValue = 0
-  for (i in 2:nrow(subj_data)){
-    subj_data$leftQValue[i] = subj_data$alpha[i] * (subj_data$leftFractalReward[i-1] - subj_data$leftQValue[i-1])
-    subj_data$rightQValue[i] = subj_data$alpha[i] * (subj_data$rightFractalReward[i-1] - subj_data$rightQValue[i-1])
-  }
-  return(subj_data)
-}
-
 clean_beh_data = clean_beh_data %>%
   group_by(subnum) %>%
   do(get_qvals(.)) %>%

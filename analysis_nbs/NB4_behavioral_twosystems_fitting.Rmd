@@ -11,6 +11,8 @@ output:
 ```{r}
 library(tidyverse)
 library(rstan)
+library(brms)
+library(GGally)
 library(here)
 ```
 
@@ -18,13 +20,27 @@ library(here)
 helpers_path = here('helpers/')
 ```
 
+Set theme for plots
+
+```{r}
+theme_set(theme_bw())
+```
+
 # Read in *clean* behavioral data
 
 ```{r}
-# source(paste0(helpers_path,'fit_qlearning.R'))
 source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 source(paste0(helpers_path, 'extract_var_for_stan.R'))
+source(paste0(helpers_path, 'get_qvals.R'))
 ```
+
+In the previous notebook we found that subjects rely more on description based lottery value differences more than they should when their reward does not depend on this attribute. The fractal values in the previous notebook were based on an RL model estimated using only the fractal information in each trial. What the subjects experience on each trial is, however, more comprehensive than just the two fractal. So to describe the choice process in this task we must take into account both the lottery and fractal information, as well as, their relevance on each trial. In this notebook we
+
+- define a two valuation systems that takes both attributes into account
+- fit this model on behavioral to get estimates both for learning rate and inverse temperature as well as how each attribute is weighted 
+- compare this expanded model with the RL only model to show that it fits data better
+- check if the behavioral effect of interest from the last notebook, ie the over-reliance on irrelevant description-based attribute
+- check whether this effect can be explained more by distortion of probability or distorted fractal values
 
 # Define two systems model
 
@@ -35,30 +51,7 @@ $$EV_{i, t} = p_{i, t} V{i_t}$$
 
 $$QV_{i,t} = QV_{i, t-1} + \alpha(R_{i, t-1}- QV_{i, t-1})$$
 
-$$w(pFrac) = \frac{\delta*pFrac^{probDistortion}}{\delta*pFrac^{probDistortion}+(1- pFrac)^{probDistortion}}$$
-
-How does the distortion change for different values of delta and probDistortion exponent? This analysis isn't based on data. It is to build intuition to understand how each prob fractal might be perceived as by subjects for different values of the model parameters.
-
-Facets - values of pFrac (true prob of Fractal)
-Blue w(pFrac)>pFrac - overweighting prob fractal
-Red pFrac>w(pFrac) - underweighting prob fractal
-
-```{r}
-expand.grid(rep(list(seq(0,1.5,.1)), 3)) %>%
-  rename(delta=Var1, probDistortion=Var2, pFrac=Var3)%>%
-  mutate(wpFrac = (delta*(pFrac^probDistortion)) / ((delta*(pFrac^probDistortion) + ((1-pFrac)^probDistortion))), 
-         distortion = pFrac-wpFrac) %>%
-  filter(pFrac > 0 & pFrac < 1) %>%
-  mutate(pFrac = paste0("p(Fractal) = ", pFrac)) %>%
-  ggplot2::ggplot(aes(as.factor(delta), as.factor(probDistortion)))+
-  geom_raster(aes(fill=distortion))+
-  facet_wrap(~as.factor(pFrac))+
-  labs(x="\U03B4", y="probDistortion", fill="pFrac - w(pFrac)", title="Distortion of p(Fractal)")+
-  scale_fill_gradient2(low = scales::muted("blue"), high=scales::muted("red"))+
-  theme(axis.ticks = element_blank(), axis.text.x = element_text(angle=90), legend.position="bottom")+
-  scale_y_discrete(breaks=seq(0, 1.5, .3))
-```
-
+$$w(pFrac) = \frac{\delta*pFrac^{\gamma}}{\delta*pFrac^{\gamma}+(1- pFrac)^{\gamma}}$$
 ## Fit Q learning + two value system simultaneously
 
 Organize data
@@ -114,7 +107,7 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))){
 
 ```{r}
 # Extract parameters from fit object
-par_ests = data.frame(extract(fit, c("alpha","probDistortion", "delta", "beta")))  %>%
+par_ests = data.frame(extract(fit, c("alpha","gamma", "delta", "beta")))  %>%
   gather(key, value) %>%
   separate(key, c('par', 'subj'), sep='\\.')
 
@@ -125,85 +118,14 @@ par_ests = data.frame(subnum = unique(clean_beh_data$subnum)) %>%
   select(-subj)
 ```
 
-Where do subjects fall in the theoretical graph above?
+# Model comparison of RL only vs two systems model
 
-```{r}
-tmp = par_ests %>%
-  group_by(subnum, par) %>%
-  summarise(est = median(value), .groups='keep') %>%
-  spread(par, est)
-
-expand.grid(rep(list(seq(0,1.5,.1)), 3)) %>%
-  rename(delta=Var1, probDistortion=Var2, pFrac=Var3)%>%
-  mutate(wpFrac = (delta*(pFrac^probDistortion)) / ((delta*(pFrac^probDistortion) + ((1-pFrac)^probDistortion))), 
-         distortion = pFrac-wpFrac) %>%
-  filter(pFrac > 0 & pFrac < 1) %>%
-  mutate(pFrac = paste0("p(Fractal) = ", pFrac)) %>%
-  ggplot2::ggplot(aes(as.factor(delta), as.factor(probDistortion)))+
-  geom_raster(aes(fill=distortion))+
-  facet_wrap(~as.factor(pFrac))+
-  labs(x="\U03B4", y="probDistortion", fill="pFrac - w(pFrac)", title="Distortion of p(Fractal)")+
-  scale_fill_gradient2(low = scales::muted("blue"), high=scales::muted("red"))+
-  theme(axis.ticks = element_blank(), axis.text.x = element_text(angle=90), legend.position="bottom")+
-  scale_y_discrete(breaks=seq(0, 1.5, .3))+
-  annotate("point", x = 10*tmp$delta, y=10*tmp$probDistortion)
-```
-Distributions of the recovered (median) parameters
-
-```{r}
-par_ests %>%
-  group_by(subnum, par) %>%
-  summarise(est = median(value), .groups='keep') %>%
-  ggplot(aes(est))+
-  geom_histogram(alpha=.5, bins=30)+
-  facet_wrap(~par, scales='free_x')+
-  xlab("Median estimates for all subjects")
-```
-
-Are there any dependencies between the parameters? probDistortion is correlated with both beta and delta.
-
-```{r}
-par_ests %>%
-  group_by(subnum, par) %>%
-  summarise(est = median(value), .groups='keep') %>%
-  ungroup() %>%
-  spread(par, est) %>%
-  select(-subnum) %>%
-  ggpairs(progress = FALSE)
-```
-
-How do the median estimates suggest the probability of a fractal draw is distorted for each subject?
-
-```{r}
-tmp = par_ests %>%
-  group_by(subnum, par) %>%
-  summarise(est = median(value), .groups='keep') %>%
-  filter(par != "beta" & par != "alpha") %>%
-  spread(par, est)
-
-tmp = do.call("rbind", replicate(11, tmp, simplify = FALSE)) %>%
-  arrange(subnum) %>%
-  ungroup() %>%
-  mutate(pFrac = rep(seq(0, 1, .1), 25), 
-         wpFrac = (delta*pFrac^probDistortion)/(delta*pFrac^probDistortion + (1-pFrac)^probDistortion)) 
-
-tmp %>%
-  mutate(delta_gt_1 = ifelse(delta>=1, 1, 0),
-         probDistortion_gt_1 = ifelse(probDistortion>=1,"prodDistortion >= 1", "prodDistortion < 0")) %>%
-  ggplot(aes(pFrac, wpFrac, group=subnum))+
-  geom_line(aes(col = as.factor(probDistortion_gt_1)))+
-  geom_abline(slope=1, intercept=0, linetype="dashed")+
-  labs(x="p(Fractal)", y="w(pFractal)", title="Distortion of p(Fractal)", color = element_blank())
-```
-
-# Separate vs simulatanous estimation
-
-How do the parameter estimates from the RL only fit differ from the alpha and betas in the simulatanous fit?
+How do the parameter estimates from the RL only fit differ from the alpha and betas in the simultaneous fit?
 
 ```{r}
 fit_rl = readRDS(paste0(helpers_path, 'stanModels/fit_qlearning.RDS'))
 
-par_ests_rl = data.frame(extract(fit_rl, c("alphas", "betas")))  %>%
+par_ests_rl = data.frame(extract(fit_rl, c("alpha", "beta")))  %>%
   gather(key, value) %>%
   separate(key, c('par', 'subj'), sep='\\.')
 
@@ -247,18 +169,6 @@ clean_beh_data = par_ests %>%
   spread(par, est) %>%
   left_join(clean_beh_data, by='subnum')
 
-## Add Q values to each trial
-
-get_qvals = function(subj_data){
-  subj_data$leftQValue = 0
-  subj_data$rightQValue = 0
-  for (i in 2:nrow(subj_data)){
-    subj_data$leftQValue[i] = subj_data$alpha[i] * (subj_data$leftFractalReward[i-1] - subj_data$leftQValue[i-1])
-    subj_data$rightQValue[i] = subj_data$alpha[i] * (subj_data$rightFractalReward[i-1] - subj_data$rightQValue[i-1])
-  }
-  return(subj_data)
-}
-
 clean_beh_data = clean_beh_data %>%
   group_by(subnum) %>%
   do(get_qvals(.)) %>%
@@ -291,4 +201,114 @@ How about model "fit". How do you evaluate model fit?
 
 ```{r}
 
+```
+
+# Lottery bias 
+
+**DO THE BEHAVIORAL EFFECTS FROM THE LAST NOTEBOOK REMAIN WITH THE NEW PARAMETER ESTIMATES?**
+
+```{r}
+
+```
+
+# Examine two value systems parameters
+
+How does the distortion change for different values of delta and gamma exponent? This analysis isn't based on data. It is to build intuition to understand how each prob fractal might be perceived as by subjects for different values of the model parameters.
+
+Facets - values of pFrac (true prob of Fractal)
+Blue w(pFrac)>pFrac - overweighting prob fractal
+Red pFrac>w(pFrac) - underweighting prob fractal
+
+```{r}
+expand.grid(rep(list(seq(0,1.5,.1)), 3)) %>%
+  rename(delta=Var1, gamma=Var2, pFrac=Var3)%>%
+  mutate(wpFrac = (delta*(pFrac^gamma)) / ((delta*(pFrac^gamma) + ((1-pFrac)^gamma))), 
+         distortion = pFrac-wpFrac) %>%
+  filter(pFrac > 0 & pFrac < 1) %>%
+  mutate(pFrac = paste0("p(Fractal) = ", pFrac)) %>%
+  ggplot2::ggplot(aes(as.factor(delta), as.factor(gamma)))+
+  geom_raster(aes(fill=distortion))+
+  facet_wrap(~as.factor(pFrac))+
+  labs(x="\U03B4", y="Prob Distortion Exponent", 
+       title="Distortion of p(Fractal)")+
+  scale_fill_gradient2(low = scales::muted("blue"), 
+                       high= scales::muted("red"))+
+  theme(axis.ticks = element_blank(), 
+        axis.text.x = element_text(angle=90),
+        legend.title = element_blank())+
+  scale_y_discrete(breaks=seq(0, 1.5, .3))
+```
+
+Where do subjects fall in the theoretical graph above?
+
+```{r}
+tmp = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = median(value), .groups='keep') %>%
+  spread(par, est)
+
+expand.grid(rep(list(seq(0,1.5,.1)), 3)) %>%
+  rename(delta=Var1, gamma=Var2, pFrac=Var3)%>%
+  mutate(wpFrac = (delta*(pFrac^gamma)) / ((delta*(pFrac^gamma) + ((1-pFrac)^gamma))), 
+         distortion = pFrac-wpFrac) %>%
+  filter(pFrac > 0 & pFrac < 1) %>%
+  mutate(pFrac = paste0("p(Fractal) = ", pFrac)) %>%
+  ggplot2::ggplot(aes(as.factor(delta), as.factor(gamma)))+
+  geom_raster(aes(fill=distortion))+
+  facet_wrap(~as.factor(pFrac))+
+  labs(x="\U03B4", y="Prob Distortion Exponent", 
+       fill="Overestimation -> underestimation", 
+       title="Distortion of p(Fractal)")+
+  scale_fill_gradient2(low = scales::muted("blue"), high=scales::muted("red"))+
+  theme(axis.ticks = element_blank(), axis.text.x = element_text(angle=90), legend.position="bottom")+
+  scale_y_discrete(breaks=seq(0, 1.5, .3))+
+  annotate("point", x = 10*tmp$delta, y=10*tmp$gamma)
+```
+
+Distributions of the recovered (median) parameters
+
+```{r}
+par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = median(value), .groups='keep') %>%
+  ggplot(aes(est))+
+  geom_histogram(alpha=.5, bins=30)+
+  facet_wrap(~par, scales='free_x')+
+  xlab("Median estimates for all subjects")
+```
+
+Are there any dependencies between the parameters? gamma is correlated with both beta and delta.
+
+```{r}
+par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = median(value), .groups='keep') %>%
+  ungroup() %>%
+  spread(par, est) %>%
+  select(-subnum) %>%
+  ggpairs(progress = FALSE)
+```
+
+How do the median estimates suggest the probability of a fractal draw is distorted for each subject?
+
+```{r}
+tmp = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = median(value), .groups='keep') %>%
+  filter(par != "beta" & par != "alpha") %>%
+  spread(par, est)
+
+tmp = do.call("rbind", replicate(11, tmp, simplify = FALSE)) %>%
+  arrange(subnum) %>%
+  ungroup() %>%
+  mutate(pFrac = rep(seq(0, 1, .1), 25), 
+         wpFrac = (delta*pFrac^gamma)/(delta*pFrac^gamma + (1-pFrac)^gamma)) 
+
+tmp %>%
+  mutate(delta_gt_1 = ifelse(delta>=1, 1, 0),
+         gamma_gt_1 = ifelse(gamma>=1,"prodDistortion >= 1", "prodDistortion < 0")) %>%
+  ggplot(aes(pFrac, wpFrac, group=subnum))+
+  geom_line(aes(col = as.factor(gamma_gt_1)))+
+  geom_abline(slope=1, intercept=0, linetype="dashed")+
+  labs(x="p(Fractal)", y="w(pFractal)", title="Distortion of p(Fractal)", color = element_blank())
 ```

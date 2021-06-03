@@ -139,7 +139,7 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_qlearning.RDS'))){
 
 ```{r}
 # Extract parameters from fit object
-par_ests = data.frame(extract(fit, c("alphas", "betas")))  %>%
+par_ests = data.frame(extract(fit, c("alpha", "betas")))  %>%
   gather(key, value) %>%
   separate(key, c('par', 'subj'), sep='\\.')
 

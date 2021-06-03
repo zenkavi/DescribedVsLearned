@@ -139,7 +139,7 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_qlearning.RDS'))){
 
 ```{r}
 # Extract parameters from fit object
-par_ests = data.frame(extract(fit, c("alpha", "betas")))  %>%
+par_ests = data.frame(extract(fit, c("alpha", "beta")))  %>%
   gather(key, value) %>%
   separate(key, c('par', 'subj'), sep='\\.')
 
@@ -164,7 +164,7 @@ par_ests %>%
 
 ```{r}
 par_ests %>%
-  filter(par == "alphas") %>%
+  filter(par == "alpha") %>%
   ggplot(aes(value))+
   geom_histogram(alpha=.5, bins=50)+
   facet_wrap(~subnum, scales='free_y')+
@@ -174,7 +174,7 @@ par_ests %>%
 
 ```{r}
 par_ests %>%
-  filter(par == "betas") %>%
+  filter(par == "beta") %>%
   ggplot(aes(value))+
   geom_histogram(alpha=.5, bins=50)+
   facet_wrap(~subnum, scales='free_y')+
@@ -201,8 +201,8 @@ get_qvals = function(subj_data){
   subj_data$leftQValue = 0
   subj_data$rightQValue = 0
   for (i in 2:nrow(subj_data)){
-  subj_data$leftQValue[i] = subj_data$alphas[i] * (subj_data$leftFractalReward[i-1] - subj_data$leftQValue[i-1])
-  subj_data$rightQValue[i] = subj_data$alphas[i] * (subj_data$rightFractalReward[i-1] - subj_data$rightQValue[i-1])
+  subj_data$leftQValue[i] = subj_data$alpha[i] * (subj_data$leftFractalReward[i-1] - subj_data$leftQValue[i-1])
+  subj_data$rightQValue[i] = subj_data$alpha[i] * (subj_data$rightFractalReward[i-1] - subj_data$rightQValue[i-1])
   }
   return(subj_data)
 }

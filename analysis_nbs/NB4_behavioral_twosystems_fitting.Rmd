@@ -58,7 +58,7 @@ where $\delta$ (primarily) controls the elevation/intercept to capture attractiv
 
 This is not the only probability distortion function that could have been used. An alternative proposed by Prelec (1998) is
 
-$$w(pFrac) = exp(-\delta(-log(p))^\gamma)$$
+$$w(pFrac) = exp(-\delta(-log(pFrac))^\gamma)$$
 which is very similar in shape to the previous one. This one has the key property of "compound invariance" and only studies specifically designed to pit the two functions each other can discriminate them.
 
 While these two models with two parameters each are often indistinguishable models with only one parameter for the probability distortion function is often a worse fit.
@@ -321,23 +321,47 @@ m1 = brm(choseRelevant ~ as.factor(fractalRelevant) + (1|subnum),
 summary(m1)
 ```
 
+**OK, SO GIVEN THAT THE LOTTERY BIAS PERSISTS WITH THE FRACTAL VALUE ESTIMATES FROM THE TWO SYSTEMS MODEL CAN YOU NOW TELL WHETHER THE RELIANCE ON DESCRIPTION-BASED IS DUE TO DISTORTED PROBABILITY OR DISTORTED FRACTAL VALUE (BAD LEARNING)**
+
+What to use as DV? 
+ - "Over-reliance on description-based"? - how much more you chose based on the description based when it is not relevant
+ - "Chose relevant"?
+
+What to use as IV? 
+1. probFrac distortion = true fractal prob - fractal prob weighted by median delta and gamma
+2. fractal value distortion = true fractal value - q value; there would be 2 of these
+
+```{r}
+tmp %>%
+  filter(probFractalDraw > 0.5 & probFractalDraw < 1) %>%
+  group_by(subnum, probFractalDraw) %>%
+  summarise(meanChoseRelevant = mean(choseRelevant),
+            alpha = mean(alpha),
+            delta = mean(delta), 
+            gamma = mean(gamma),
+            .groups = 'keep') %>%
+  # mutate(probFractalDraw = as.list(case_when(
+  #   probFractalDraw == 0.6 ~ expression("p(Frac) = 0.6"),
+  #   probFractalDraw == 0.7 ~ expression("p(Frac) = 0.7"),
+  #   probFractalDraw == 0.8 ~ expression("p(Frac) = 0.8"),
+  #   probFractalDraw == 0.9 ~ expression("p(Frac) = 0.9"),
+  # )))
+  gather(key, value, -subnum, -meanChoseRelevant, -probFractalDraw) %>%
+  ggplot(aes(value, meanChoseRelevant)) +
+  geom_point()+
+  geom_smooth(method="lm", formula = 'y ~ x')+
+  facet_grid(probFractalDraw~key, scale = "free_x", labeller = label_parsed)+
+  xlab("")+
+  geom_hline(yintercept = .5, linetype = "dashed")+
+  theme(legend.position = "none")
+```
 ```{r}
 rm(tmp, m1)
 ```
 
-**OK, SO GIVEN THAT THE LOTTERY BIAS PERSISTS WITH THE FRACTAL VALUE ESTIMATES FROM THE TWO SYSTEMS MODEL CAN YOU NOW TELL WHETHER THE RELIANCE ON DESCRIPTION-BASED IS DUE TO DISTORTED PROBABILITY OR DISTORTED FRACTAL VALUE (BAD LEARNING)**
-
-What to use as DV? "Over-reliance on description-based"? "Chose relevant"?
-
-What to use as IV? 
-1. prob distortion = true fractal prob - fractal prob weighted by median delta and gamma
-2. fractal value distortion = true fractal value - q value; there would be 2 of these
-
-```{r}
-clean_beh_data
-```
-
 # Examine two value systems parameters
+
+**ARE MEDIAN ESTIMATES THE SAME AS THOSE THAT YIELD THE HIGHEST LIKELIHOOD OF THE SAMPLED VALUES?**
 
 How does the distortion change for different values of delta and gamma exponent? This analysis isn't based on data. It is to build intuition to understand how each prob fractal might be perceived as by subjects for different values of the model parameters.
 

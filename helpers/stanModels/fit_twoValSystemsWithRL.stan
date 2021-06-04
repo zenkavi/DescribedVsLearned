@@ -67,3 +67,43 @@ model {
     }
   }
 }
+
+generated quantities {
+  // compute log likelihood for each subject as the sum loglikelihood for each trial
+  vector[num_subjs] logLikelihood;
+  
+  {// local section to save time
+  vector[2] opt_val; 
+  vector[2] qv; // expected value
+  vector[2] PE; // prediction error
+  int num_trials_for_subj;
+  real w_pi;
+  real logLikelihood_subj_trial;
+  
+  for(i in 1:num_subjs){
+    num_trials_for_subj = num_trials[i];
+    qv = init_v;
+    
+    logLikelihood[i] = 0;
+    
+    for (t in 1:num_trials_for_subj) {
+      w_pi = (delta[i]*(trial_pFrac[i, t]^gamma[i])) / ((delta[i]*(trial_pFrac[i, t]^gamma[i])) + (1-trial_pFrac[i, t])^gamma[i]);
+      
+      opt_val[1] = ((1-w_pi) * ev_left[i, t]) + (w_pi * qv[1]);
+      opt_val[2] = ((1-w_pi) * ev_right[i, t]) + (w_pi * qv[2]) ;
+      
+      // compute action probabilities
+      logLikelihood_subj_trial = bernoulli_logit_lpmf(choices[i,t] | beta[i] * (opt_val[1]-opt_val[2]));
+      
+      PE[1] = fractal_outcomes_left[i, t] - qv[1];
+      PE[2] = fractal_outcomes_right[i, t] - qv[2];
+      
+      // value updating (learning) of both options
+      qv[1] += alpha[i] * PE[1];
+      qv[2] += alpha[i] * PE[2];
+      
+      logLikelihood[i] += logLikelihood_subj_trial;
+    }
+  }
+  }
+}

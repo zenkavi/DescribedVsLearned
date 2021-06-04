@@ -68,9 +68,11 @@ generated quantities {
     
     num_trials_for_subj = num_trials[i];
     
+    logLikelihood[i] = 0;
+    
     for (t in 1:num_trials_for_subj) {
-      // compute action probabilities
-      logLikelihood_subj = bernoulli_logit_lpmf(choices[i,t] | beta[i] * (ev[1]-ev[2]));
+      // compute log likelihood for one trial
+      logLikelihood_subj_trial = bernoulli_logit_lpmf(choices[i,t] | beta[i] * (ev[1]-ev[2]));
       
       PE[1] = outcomes_left[i, t] - ev[1];
       PE[2] = outcomes_right[i, t] - ev[2];
@@ -79,7 +81,7 @@ generated quantities {
       ev[1] += alpha[i] * PE[1];
       ev[2] += alpha[i] * PE[2];
       
-      logLikelihood[i] += sum(logLikelihood_subj);
+      logLikelihood[i] += logLikelihood_subj_trial;
     }
   }
   }

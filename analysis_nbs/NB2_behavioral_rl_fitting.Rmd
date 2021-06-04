@@ -131,7 +131,7 @@ rm(num_subjs, num_trials, choices, outcomes_left, outcomes_right)
 if(file.exists(paste0(helpers_path, 'stanModels/fit_qlearning.RDS'))){
   fit = readRDS(paste0(helpers_path, 'stanModels/fit_qlearning.RDS'))
 } else {
-  m = stan_model('../helpers/stanModels/fit_qlearning.stan')
+  m = stan_model(paste0(helpers_path,'stanModels/fit_qlearning.stan'))
   fit = sampling(m, data=m_data)
   saveRDS(fit, paste0(helpers_path, 'stanModels/fit_qlearning.RDS'))
   }

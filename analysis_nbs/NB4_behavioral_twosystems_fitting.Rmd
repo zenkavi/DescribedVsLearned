@@ -12,6 +12,7 @@ output:
 library(tidyverse)
 library(rstan)
 library(brms)
+library(loo)
 library(GGally)
 library(here)
 ```
@@ -102,7 +103,7 @@ rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fra
 if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))){
   fit = readRDS(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))
 } else {
-  m = stan_model('../helpers/stanModels/fit_twoValSystemsWithRL.stan')
+  m = stan_model(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.stan'))
   fit = sampling(m, data=m_data)
   saveRDS(fit, paste0(helpers_path, 'stanModels/fit_twoValSystemsWithR.RDS'))}
 ```

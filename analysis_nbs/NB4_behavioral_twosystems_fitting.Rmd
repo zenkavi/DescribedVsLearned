@@ -50,8 +50,11 @@ $$V_i = (1-w(pFrac))EV_i + w(pFrac)QV_i, \:i \in \{left, right\}$$
 $$EV_{i, t} = p_{i, t} V{i_t}$$
 
 $$QV_{i,t} = QV_{i, t-1} + \alpha(R_{i, t-1}- QV_{i, t-1})$$
+Probability distortion function as described in Gonzalez and Wu (1999)
 
 $$w(pFrac) = \frac{\delta*pFrac^{\gamma}}{\delta*pFrac^{\gamma}+(1- pFrac)^{\gamma}}$$
+where $\delta$ captures ... and $\gamma$ captures ...
+
 ## Fit Q learning + two value system simultaneously
 
 Organize data
@@ -100,7 +103,8 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))){
   fit = readRDS(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))
 } else {
   m = stan_model('../helpers/stanModels/fit_twoValSystemsWithRL.stan')
-  fit = sampling(m, data=m_data)}
+  fit = sampling(m, data=m_data)
+  saveRDS(fit, paste0(helpers_path, 'stanModels/fit_twoValSystemsWithR.RDS'))}
 ```
 
 ## Organize model output
@@ -149,17 +153,16 @@ par_ests %>%
   rbind(par_ests_rl %>%
           group_by(subnum, par) %>%
           summarise(est = median(value), .groups='keep') %>%
-          filter(par %in% c("betas", "alphas")) %>%
-          mutate(fit = "separate",
-                 par = ifelse(par == "alphas", "alpha", "beta"))) %>%
+          filter(par %in% c("beta", "alpha")) %>%
+          mutate(fit = "separate")) %>%
   spread(fit, est) %>%
   ggplot(aes(separate, simulatanous))+
   geom_point()+
   facet_wrap(~par, scales="free")+
-  geom_abline(intercept=0, slope=1, linetype="dashed")
+  geom_abline(intercept=0, slope=1, linetype="dashed")+
+  labs(x = "RL only", y = "Two Systems")
 
 ```
-
 With these RL estimates do you get the same pattern for the Q values? Yes.
 
 ```{r}
@@ -173,18 +176,17 @@ clean_beh_data = clean_beh_data %>%
   group_by(subnum) %>%
   do(get_qvals(.)) %>%
   ungroup()
-
-rm(get_qvals)
-
 ```
 
 ```{r}
-clean_beh_data %>%
+tmp = clean_beh_data %>%
   filter(probFractalDraw == 1 | probFractalDraw == 0) %>%
   mutate(leftQVAdv = leftQValue - rightQValue,
          leftLotteryEV = lotteryValue*lotteryProb,
          rightLotteryEV = referenceValue*referenceProb,
-         leftEVAdv = leftLotteryEV - rightLotteryEV) %>%
+         leftEVAdv = leftLotteryEV - rightLotteryEV) 
+
+tmp %>%
   select(leftQVAdv, leftEVAdv, choiceLeft, probFractalDraw) %>%
   gather(key, value, -choiceLeft, -probFractalDraw) %>%  
   mutate(key = ifelse(key == "leftEVAdv", "EV_left - EV_right", "QV_left - QV_right"),
@@ -195,6 +197,28 @@ clean_beh_data %>%
   facet_grid(probFractalDraw~key)+
   xlab("")+
   ylab("p(Left)")
+```
+
+```{r}
+m1 = brm(choiceLeft ~ leftQVAdv + leftEVAdv + (1|subnum),
+        data=tmp %>% filter(probFractalDraw == 0), family=bernoulli(link="logit"))
+```
+
+```{r}
+summary(m1)
+```
+
+```{r}
+m2 = brm(choiceLeft ~ leftQVAdv + leftEVAdv + (1|subnum),
+        data=tmp %>% filter(probFractalDraw == 1), family=bernoulli(link="logit"))
+```
+
+```{r}
+summary(m2)
+```
+
+```{r}
+rm(tmp, m1, m2)
 ```
 
 How about model "fit". How do you evaluate model fit? 
@@ -208,8 +232,56 @@ How about model "fit". How do you evaluate model fit?
 **DO THE BEHAVIORAL EFFECTS FROM THE LAST NOTEBOOK REMAIN WITH THE NEW PARAMETER ESTIMATES?**
 
 ```{r}
+tmp = clean_beh_data %>%
+  mutate(leftLotteryEV = lotteryValue*lotteryProb,
+  			 rightLotteryEV = referenceValue*referenceProb,
+  			 leftLotteryBetter = leftLotteryEV>rightLotteryEV,
+         choseBetterLottery = ifelse(leftLotteryBetter & choiceLeft == 1, 1, 
+                                     ifelse(!leftLotteryBetter & choiceLeft == 0, 1, 0)),
+         leftFractalBetter = leftQValue>rightQValue,
+         choseBetterFractal = ifelse(leftFractalBetter & choiceLeft == 1, 1, 
+                                     ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0))) %>%
+  filter(leftFractalBetter != leftLotteryBetter) #filter conflict trials
 
+tmp = tmp %>%
+  filter(probFractalDraw != .5) %>% #filter trials where relevant attribute is clear
+  mutate(fractalRelevant = ifelse(probFractalDraw <.5, 0, 1),
+         choseRelevant = ifelse(fractalRelevant & choseBetterFractal, 1,
+                                ifelse(fractalRelevant == 0 & choseBetterLottery, 1, 0)))
+tmp %>%
+  group_by(probFractalDraw, subnum) %>%
+  summarise(choseRelevant = mean(choseRelevant),
+            .groups = 'keep') %>%
+  ggplot(aes(as.factor(probFractalDraw), choseRelevant))+
+  geom_hline(yintercept = .5, linetype="dashed", color= cbbPalette[2], size = 1.5)+
+  geom_boxplot()+
+  labs(y = "Proportion of choices based on relevant attribute",
+       x = "p(Fractal)",
+       title = "Lottery bias in conflict trials with unambiguous relevant option")+
+  annotate("text", x = 3, y = .25, label = "Lottery relevant")+
+  annotate("segment", x = 1, xend = 5, y = .28, yend = .28, colour = cbbPalette[1])+
+  annotate("segment", x = 1, xend = 1, y = .28, yend = .33, colour = cbbPalette[1])+
+  annotate("segment", x = 5, xend = 5, y = .28, yend = .33, colour = cbbPalette[1])+
+  annotate("text", x = 8, y = .86, label = "Fractal relevant")+
+  annotate("segment", x = 6, xend = 10, y = .83, yend = .83, colour = cbbPalette[1])+
+  annotate("segment", x = 6, xend = 6, y = .78, yend = .83, colour = cbbPalette[1])+
+  annotate("segment", x = 10, xend = 10, y = .78, yend = .83, colour = cbbPalette[1])
+  
 ```
+
+```{r}
+m1 = brm(choseRelevant ~ as.factor(fractalRelevant) + (1|subnum),
+        data=tmp, family=bernoulli(link="logit"))
+```
+
+```{r}
+summary(m1)
+```
+
+```{r}
+rm(tmp, m1)
+```
+
 
 # Examine two value systems parameters
 
@@ -218,28 +290,6 @@ How does the distortion change for different values of delta and gamma exponent?
 Facets - values of pFrac (true prob of Fractal)
 Blue w(pFrac)>pFrac - overweighting prob fractal
 Red pFrac>w(pFrac) - underweighting prob fractal
-
-```{r}
-expand.grid(rep(list(seq(0,1.5,.1)), 3)) %>%
-  rename(delta=Var1, gamma=Var2, pFrac=Var3)%>%
-  mutate(wpFrac = (delta*(pFrac^gamma)) / ((delta*(pFrac^gamma) + ((1-pFrac)^gamma))), 
-         distortion = pFrac-wpFrac) %>%
-  filter(pFrac > 0 & pFrac < 1) %>%
-  mutate(pFrac = paste0("p(Fractal) = ", pFrac)) %>%
-  ggplot2::ggplot(aes(as.factor(delta), as.factor(gamma)))+
-  geom_raster(aes(fill=distortion))+
-  facet_wrap(~as.factor(pFrac))+
-  labs(x="\U03B4", y="Prob Distortion Exponent", 
-       title="Distortion of p(Fractal)")+
-  scale_fill_gradient2(low = scales::muted("blue"), 
-                       high= scales::muted("red"))+
-  theme(axis.ticks = element_blank(), 
-        axis.text.x = element_text(angle=90),
-        legend.title = element_blank())+
-  scale_y_discrete(breaks=seq(0, 1.5, .3))
-```
-
-Where do subjects fall in the theoretical graph above?
 
 ```{r}
 tmp = par_ests %>%

@@ -32,7 +32,7 @@ model {
     ev = init_v;
     
     num_trials_for_subj = num_trials[i];
-
+    
     for (t in 1:num_trials_for_subj) {
       // compute action probabilities
       choices[i, t] ~ bernoulli_logit(beta[i] * (ev[1]-ev[2]));
@@ -40,7 +40,7 @@ model {
       // a = beta * (EV_left-EV_right)
       // The higher EV_left - EV_right, the higher p(choice left)
       // The larger abs(beta), the more the value difference is amplified
-
+      
       // prediction error for both options (instead of only chosen one)
       // outcome for both options presented on each trial
       PE[1] = outcomes_left[i, t] - ev[1];
@@ -50,5 +50,37 @@ model {
       ev[1] += alpha[i] * PE[1];
       ev[2] += alpha[i] * PE[2];
     }
+  }
+}
+
+generated quantities {
+  // compute log likelihood for each subject as the sum loglikelihood for each trial
+  vector[num_subjs] logLikelihood;
+  
+  {// local section to save time
+  vector[2] ev; // expected value
+  vector[2] PE; // prediction error
+  int num_trials_for_subj;
+  real logLikelihood_subj_trial;
+  
+  for(i in 1:num_subjs){
+    ev = init_v;
+    
+    num_trials_for_subj = num_trials[i];
+    
+    for (t in 1:num_trials_for_subj) {
+      // compute action probabilities
+      logLikelihood_subj = bernoulli_logit_lpmf(choices[i,t] | beta[i] * (ev[1]-ev[2]));
+      
+      PE[1] = outcomes_left[i, t] - ev[1];
+      PE[2] = outcomes_right[i, t] - ev[2];
+      
+      // value updating (learning) of both options
+      ev[1] += alpha[i] * PE[1];
+      ev[2] += alpha[i] * PE[2];
+      
+      logLikelihood[i] += sum(logLikelihood_subj);
+    }
+  }
   }
 }

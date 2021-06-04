@@ -51,10 +51,18 @@ $$V_i = (1-w(pFrac))EV_i + w(pFrac)QV_i, \:i \in \{left, right\}$$
 $$EV_{i, t} = p_{i, t} V{i_t}$$
 
 $$QV_{i,t} = QV_{i, t-1} + \alpha(R_{i, t-1}- QV_{i, t-1})$$
-Probability distortion function as described in Gonzalez and Wu (1999)
+Probability distortion function as described in Gonzalez and Wu (1999) is
 
 $$w(pFrac) = \frac{\delta*pFrac^{\gamma}}{\delta*pFrac^{\gamma}+(1- pFrac)^{\gamma}}$$
-where $\delta$ captures ... and $\gamma$ captures ...
+where $\delta$ (primarily) controls the elevation/intercept to capture attractiveness of the outcome weighted by the distorted probability and $\gamma$ (primarily) controls curvature to capture the discriminability of distorted probabilities from each other. They call this shape "linear in log odds." Note the parameters control the two aspects of the curve primarily and not completely because the ends of the curves are fixed at 0 and 1 ("pinching").
+
+This is not the only probability distortion function that could have been used. An alternative proposed by Prelec (1998) is
+
+$$w(pFrac) = exp(-\delta(-log(p))^\gamma)$$
+which is very similar in shape to the previous one. This one has the key property of "compound invariance" and only studies specifically designed to pit the two functions each other can discriminate them.
+
+While these two models with two parameters each are often indistinguishable models with only one parameter for the probability distortion function is often a worse fit.
+
 
 ## Fit Q learning + two value system simultaneously
 
@@ -319,8 +327,14 @@ rm(tmp, m1)
 
 **OK, SO GIVEN THAT THE LOTTERY BIAS PERSISTS WITH THE FRACTAL VALUE ESTIMATES FROM THE TWO SYSTEMS MODEL CAN YOU NOW TELL WHETHER THE RELIANCE ON DESCRIPTION-BASED IS DUE TO DISTORTED PROBABILITY OR DISTORTED FRACTAL VALUE (BAD LEARNING)**
 
-```{r}
+What to use as DV? "Over-reliance on description-based"? "Chose relevant"?
 
+What to use as IV? 
+1. prob distortion = true fractal prob - fractal prob weighted by median delta and gamma
+2. fractal value distortion = true fractal value - q value; there would be 2 of these
+
+```{r}
+clean_beh_data
 ```
 
 # Examine two value systems parameters
@@ -380,6 +394,10 @@ par_ests %>%
 ```
 
 How do the median estimates suggest the probability of a fractal draw is distorted for each subject?
+
+Using Gonzalez and Wu's (1999) terminology the fact that almost all subjects probability weighting functions are below the 45-degree line (i.e. objective probability) regardless of the inverse-S shape is not about diminishing sensitivy/discriminability (slope) but about **attractiveness** (intercept, elevation). The fractal is almost always less attractive to subjects than it really should be given its probability in determining their reward.
+
+Unlike the simple case where the probability weighting function represents the probability of a reward, however, in this case the probability of a reward is the joint probability of p(Fractal)*p(chosen Fractal's reward)
 
 ```{r}
 tmp = par_ests %>%

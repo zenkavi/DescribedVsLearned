@@ -105,7 +105,8 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))){
 } else {
   m = stan_model(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.stan'))
   fit = sampling(m, data=m_data)
-  saveRDS(fit, paste0(helpers_path, 'stanModels/fit_twoValSystemsWithR.RDS'))}
+  saveRDS(fit, paste0(helpers_path, 'stanModels/fit_twoValSystemsWithR.RDS'))
+  rm(m, m_data)}
 ```
 
 ## Organize model output
@@ -125,7 +126,7 @@ par_ests = data.frame(subnum = unique(clean_beh_data$subnum)) %>%
 
 # Model comparison of RL only vs two systems model
 
-How do the parameter estimates from the RL only fit differ from the alpha and betas in the simultaneous fit?
+Read in data for RL only fit.
 
 ```{r}
 fit_rl = readRDS(paste0(helpers_path, 'stanModels/fit_qlearning.RDS'))
@@ -140,6 +141,45 @@ par_ests_rl = data.frame(subnum = unique(clean_beh_data$subnum)) %>%
   right_join(par_ests_rl, by='subj') %>%
   select(-subj)
 ```
+
+## Fit comparison
+
+Using `loo` to compare model fit. `ELPD` for the two systems model is higher than that for the RL only model so it does a better job of modeling the data.
+
+```{r}
+logLik1 = extract_log_lik(fit, 'logLikelihood')
+logLik2 = extract_log_lik(fit_rl, 'logLikelihood')
+loo1 = loo(logLik1)
+loo2 = loo(logLik2)
+loo_compare(loo1, loo2)
+```
+
+Visualize the better fit of the two systems model using the distribution of log likelihoods
+
+```{r}
+data.frame(logLik1) %>%
+  gather(key, value) %>%
+  group_by(key) %>%
+  summarise(medLogLik_TS = median(value)) %>%
+  left_join(data.frame(logLik2) %>%
+              gather(key, value) %>%
+              group_by(key) %>%
+              summarise(medLogLik_RL = median(value)), by="key") %>%
+  gather(model, logLik, -key) %>%
+  mutate(model = ifelse(model == "medLogLik_TS", "Two Systems", "RL only")) %>%
+  ggplot(aes(model, logLik))+
+  geom_boxplot()+
+  labs(x="", y="Median Log Likelihood")
+  
+```
+
+```{r}
+rm(logLik1, logLik2, loo1, loo2, fit_rl, par_ests_rl)
+```
+
+## Parameter estimates
+
+How do the parameter estimates from the RL only fit differ from the alpha and betas in the simultaneous fit?
 
 The learning rates don't have a clear pattern of difference, although they are mostly not the same but the inverse temperatures are systematically higher when estimates
 
@@ -164,6 +204,8 @@ par_ests %>%
   labs(x = "RL only", y = "Two Systems")
 
 ```
+## Manipulation check
+
 With these RL estimates do you get the same pattern for the Q values? Yes.
 
 ```{r}
@@ -222,19 +264,7 @@ summary(m2)
 rm(tmp, m1, m2)
 ```
 
-How about model "fit". How do you evaluate model fit? 
-
-```{r}
-logLik1 = extract(fit, 'logLikelihood')
-logLik2 = extract(fit_rl, 'logLikelihood')
-loo1 = loo(logLik1)
-loo2 = loo(logLik2)
-compare(loo1, loo2)
-```
-
-# Lottery bias 
-
-**DO THE BEHAVIORAL EFFECTS FROM THE LAST NOTEBOOK REMAIN WITH THE NEW PARAMETER ESTIMATES?**
+## Lottery bias 
 
 ```{r}
 tmp = clean_beh_data %>%
@@ -287,6 +317,11 @@ summary(m1)
 rm(tmp, m1)
 ```
 
+**OK, SO GIVEN THAT THE LOTTERY BIAS PERSISTS WITH THE FRACTAL VALUE ESTIMATES FROM THE TWO SYSTEMS MODEL CAN YOU NOW TELL WHETHER THE RELIANCE ON DESCRIPTION-BASED IS DUE TO DISTORTED PROBABILITY OR DISTORTED FRACTAL VALUE (BAD LEARNING)**
+
+```{r}
+
+```
 
 # Examine two value systems parameters
 

@@ -225,7 +225,11 @@ rm(tmp, m1, m2)
 How about model "fit". How do you evaluate model fit? 
 
 ```{r}
-
+logLik1 = extract(fit, 'logLikelihood')
+logLik2 = extract(fit_rl, 'logLikelihood')
+loo1 = loo(logLik1)
+loo2 = loo(logLik2)
+compare(loo1, loo2)
 ```
 
 # Lottery bias 

@@ -113,7 +113,7 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))){
 } else {
   m = stan_model(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.stan'))
   fit = sampling(m, data=m_data)
-  saveRDS(fit, paste0(helpers_path, 'stanModels/fit_twoValSystemsWithR.RDS'))
+  saveRDS(fit, paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))
   rm(m, m_data)}
 ```
 
@@ -182,7 +182,7 @@ data.frame(logLik1) %>%
 ```
 
 ```{r}
-rm(logLik1, logLik2, loo1, loo2, fit_rl, par_ests_rl)
+rm(logLik1, logLik2, loo1, loo2, fit_rl)
 ```
 
 ## Parameter estimates
@@ -288,7 +288,7 @@ tmp = clean_beh_data %>%
 
 tmp = tmp %>%
   filter(probFractalDraw != .5) %>% #filter trials where relevant attribute is clear
-  mutate(fractalRelevant = ifelse(probFractalDraw <.5, 0, 1),
+  mutate(fractalRelevant = ifelse(probFractalDraw >.5, 1, 0),
          choseRelevant = ifelse(fractalRelevant & choseBetterFractal, 1,
                                 ifelse(fractalRelevant == 0 & choseBetterLottery, 1, 0)))
 tmp %>%
@@ -298,6 +298,7 @@ tmp %>%
   ggplot(aes(as.factor(probFractalDraw), choseRelevant))+
   geom_hline(yintercept = .5, linetype="dashed", color= cbbPalette[2], size = 1.5)+
   geom_boxplot()+
+  geom_jitter(alpha = .15, width=.1)+
   labs(y = "Proportion of choices based on relevant attribute",
        x = "p(Fractal)",
        title = "Lottery bias in conflict trials with unambiguous relevant option")+
@@ -312,6 +313,8 @@ tmp %>%
   
 ```
 
+A choice is less likely to be based on the relevant attribute in conflict trials when the relevant attribute is the fractal. In other words, people rely more the description-based attribute (lotteries) than the experience-based ones (fractals) even when their reward is more likely to depend on the experience-based attribute.
+
 ```{r}
 m1 = brm(choseRelevant ~ as.factor(fractalRelevant) + (1|subnum),
         data=tmp, family=bernoulli(link="logit"))
@@ -321,40 +324,48 @@ m1 = brm(choseRelevant ~ as.factor(fractalRelevant) + (1|subnum),
 summary(m1)
 ```
 
-**OK, SO GIVEN THAT THE LOTTERY BIAS PERSISTS WITH THE FRACTAL VALUE ESTIMATES FROM THE TWO SYSTEMS MODEL CAN YOU NOW TELL WHETHER THE RELIANCE ON DESCRIPTION-BASED IS DUE TO DISTORTED PROBABILITY OR DISTORTED FRACTAL VALUE (BAD LEARNING)**
+```{r}
+rm(m1)
+```
 
-What to use as DV? 
- - "Over-reliance on description-based"? - how much more you chose based on the description based when it is not relevant
- - "Chose relevant"?
+Is the over-reliance on the description-based attribute due to distortion of the probability that the reward will depend on the experience-based attribute or the distortion/ bad learning of the experience-based attributes value?
 
-What to use as IV? 
-1. probFrac distortion = true fractal prob - fractal prob weighted by median delta and gamma
-2. fractal value distortion = true fractal value - q value; there would be 2 of these
+To examine this we compute the proportion of choices that align with the relevant attribute in conflict trials where the experience-based attribute is more relevant. These subject-level estimates are then correlated with parameters from the two valuation systems model. Specifically a non-zero slope between the proportion of choices and delta or gamma would suggest that the bias is due to distorted probability estimates. On the other hand a non-zero slope with learning rates would point towards distorted values.
+
 
 ```{r}
-tmp %>%
+tmp = tmp %>%
   filter(probFractalDraw > 0.5 & probFractalDraw < 1) %>%
-  group_by(subnum, probFractalDraw) %>%
+  group_by(subnum) %>%
   summarise(meanChoseRelevant = mean(choseRelevant),
             alpha = mean(alpha),
             delta = mean(delta), 
             gamma = mean(gamma),
-            .groups = 'keep') %>%
-  # mutate(probFractalDraw = as.list(case_when(
-  #   probFractalDraw == 0.6 ~ expression("p(Frac) = 0.6"),
-  #   probFractalDraw == 0.7 ~ expression("p(Frac) = 0.7"),
-  #   probFractalDraw == 0.8 ~ expression("p(Frac) = 0.8"),
-  #   probFractalDraw == 0.9 ~ expression("p(Frac) = 0.9"),
-  # )))
-  gather(key, value, -subnum, -meanChoseRelevant, -probFractalDraw) %>%
+            .groups = 'keep') 
+
+tmp %>%
+  gather(key, value, -subnum, -meanChoseRelevant) %>%
   ggplot(aes(value, meanChoseRelevant)) +
   geom_point()+
-  geom_smooth(method="lm", formula = 'y ~ x')+
-  facet_grid(probFractalDraw~key, scale = "free_x", labeller = label_parsed)+
-  xlab("")+
+  geom_smooth(method="lm", formula = 'y ~ x', color=cbbPalette[2])+
+  facet_wrap(~key, scale = "free_x")+
+  labs(x="", y="Proportion of choices based on the relevant option",
+       title = "Conflict trials where 1>p(Fractal)>.5")+
   geom_hline(yintercept = .5, linetype = "dashed")+
   theme(legend.position = "none")
 ```
+
+```{r}
+m1 = brm(meanChoseRelevant ~ alpha+delta+gamma,
+        data=tmp)
+```
+
+We find that only the slope with delta estimates is reliably > 0. Delta primarily controls the intercept of the probability distortion function. Higher values of delta suggests that a subject find choosing based on fractals more "attractive."
+
+```{r}
+summary(m1)
+```
+
 ```{r}
 rm(tmp, m1)
 ```
@@ -363,7 +374,7 @@ rm(tmp, m1)
 
 **ARE MEDIAN ESTIMATES THE SAME AS THOSE THAT YIELD THE HIGHEST LIKELIHOOD OF THE SAMPLED VALUES?**
 
-How does the distortion change for different values of delta and gamma exponent? This analysis isn't based on data. It is to build intuition to understand how each prob fractal might be perceived as by subjects for different values of the model parameters.
+How does the distortion of the fractal draw probability change for different values of delta and gamma? Where do the subjects' median estimates fall on this spectrum?
 
 Facets - values of pFrac (true prob of Fractal)
 Blue w(pFrac)>pFrac - overweighting prob fractal
@@ -384,7 +395,7 @@ expand.grid(rep(list(seq(0,1.5,.1)), 3)) %>%
   ggplot2::ggplot(aes(as.factor(delta), as.factor(gamma)))+
   geom_raster(aes(fill=distortion))+
   facet_wrap(~as.factor(pFrac))+
-  labs(x="\U03B4", y="Prob Distortion Exponent", 
+  labs(x="\U03B4", y="\U03B3", 
        fill="Overestimation -> underestimation", 
        title="Distortion of p(Fractal)")+
   scale_fill_gradient2(low = scales::muted("blue"), high=scales::muted("red"))+
@@ -438,7 +449,7 @@ tmp = do.call("rbind", replicate(11, tmp, simplify = FALSE)) %>%
 
 tmp %>%
   mutate(delta_gt_1 = ifelse(delta>=1, 1, 0),
-         gamma_gt_1 = ifelse(gamma>=1,"prodDistortion >= 1", "prodDistortion < 0")) %>%
+         gamma_gt_1 = ifelse(gamma>=1,"gamma >= 1", "gamma < 0")) %>%
   ggplot(aes(pFrac, wpFrac, group=subnum))+
   geom_line(aes(col = as.factor(gamma_gt_1)))+
   geom_abline(slope=1, intercept=0, linetype="dashed")+

@@ -1,5 +1,8 @@
 #!/usr/bin/make -f
 
+# Complete the following course before finalizing this
+# https://swcarpentry.github.io/make-novice/
+
 .PHONY: all clean
 .DELETE_ON_ERROR:
 .SECONDARY:

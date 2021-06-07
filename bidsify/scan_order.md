@@ -1,3 +1,5 @@
+# Expected scan order
+
 - Localizer
 
 5 blocks of:
@@ -14,7 +16,7 @@
 
 - T2-clinical
 
-Subjects with different files/orders:
+# Subjects with different files/orders:
 
 - 02: anatomicals in separate sub-directory
 - 06: Has mid-scan localizer (block 14)

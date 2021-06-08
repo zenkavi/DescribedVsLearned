@@ -23,6 +23,6 @@
 - 08: Subdirectory of dicoms has different name structure
 - 10: Has mid-scan localizer and anatomicals (blocks 14-19)
 - 17: Has mid-scan localizer (block 14)
-- [No subject 21]
-- 26: Only three task runs and no anatomicals
+- **EXCLUDE** 21: No subject 21
+- **EXCLUDE** 26: Only three task runs and no anatomicals 
 - 27: No T2-clinical

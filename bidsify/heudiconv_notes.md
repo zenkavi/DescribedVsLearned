@@ -1,7 +1,6 @@
+**IMPORTANT**: If you're using zsh, which is the new default on Mac Terminals you need to include `noglob` before running the docker image so it interprets the `*` wildcards correctly.
 
 Initial command to explore DICOM structures and specify the `heuristics` file.
-
-**IMPORTANT**: If you're using zsh, which is the new default on Mac Terminals you need to include `noglob` before running the docker image so it interprets the `*` wildcards correctly.
 
 ```
 noglob docker run --rm -it -v /Users/zeynepenkavi/Downloads/GTavares_2017_arbitration:/base nipy/heudiconv:latest \
@@ -23,7 +22,7 @@ noglob docker run --rm -it -v /Users/zeynepenkavi/Downloads/GTavares_2017_arbitr
 -c none --overwrite
 ```
 
-Command to convert dicoms of one subject into BIDS
+Command to convert dicoms of subject 01 into BIDS
 
 ```
 noglob docker run --rm -it -v /Users/zeynepenkavi/Downloads/GTavares_2017_arbitration:/base -v /Users/zeynepenkavi/Documents/RangelLab/DescribedVsLearned:/code nipy/heudiconv:latest \

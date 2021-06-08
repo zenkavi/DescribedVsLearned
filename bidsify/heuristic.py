@@ -21,24 +21,24 @@ def infotodict(seqinfo):
     for idx, s in enumerate(seqinfo): #each row of dicominfo.tsv
 
         if (s.TE == 2.56) and ('T1w' in s.protocol_name):
-          info[t1w] = [s.series_id]
+          info[t1w].append(s.series_id)
 
         if (s.TE == 206) and ('T2w' in s.protocol_name):
-          info[t2w] = [s.series_id]
+          info[t2w].append(s.series_id)
 
         if (s.TE == 90) and ('T2_Clinical' in s.protocol_name):
-           info[t2_clinical] = [s.series_id]
+           info[t2_clinical].append(s.series_id)
 
         if (s.dim4 == 892) and ('BOLD_MB' in s.protocol_name):
-          info[task] = [s.series_id]
+          info[task].append(s.series_id)
 
         if (s.dim4 == 1) and ('BOLD_MB' in s.protocol_name):
-           info[sbref] = [s.series_id]
+           info[sbref].append(s.series_id)
 
-        if (s.TE == 50) and ('Fieldmap_Pos' in s.protocol_name):
-           info[fmap_pos] = [s.series_id]
+        if ('Fieldmap_Pos' in s.protocol_name):
+           info[fmap_pos].append(s.series_id)
 
-        if (s.TE == 50) and ('Fieldmap_Neg' in s.protocol_name):
-           info[fmap_neg] = [s.series_id]
+        if ('Fieldmap_Neg' in s.protocol_name):
+           info[fmap_neg].append(s.series_id)
 
     return info

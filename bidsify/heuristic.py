@@ -16,7 +16,7 @@ def infotodict(seqinfo):
     fmap_pos = create_key('sub-{subject}/fmap/sub-{subject}_pos') #fmap
     fmap_neg = create_key('sub-{subject}/fmap/sub-{subject}_neg') #fmap
 
-    info = {t1w: [], t2w: [], task: [], sbref: [], fmap_pos: [], fmap_neg: []}
+    info = {t1w: [], t2w: [], t2_clinical: [], task: [], sbref: [], fmap_pos: [], fmap_neg: []}
 
     for idx, s in enumerate(seqinfo): #each row of dicominfo.tsv
 
@@ -35,10 +35,10 @@ def infotodict(seqinfo):
         if (s.dim4 == 1) and ('BOLD_MB' in s.protocol_name):
            info[sbref].append(s.series_id)
 
-        if ('Fieldmap_Pos' in s.protocol_name):
+        if (s.TE == 50) and ('Fieldmap_Pos' in s.protocol_name):
            info[fmap_pos].append(s.series_id)
 
-        if ('Fieldmap_Neg' in s.protocol_name):
+        if (s.TE == 50) and ('Fieldmap_Neg' in s.protocol_name):
            info[fmap_neg].append(s.series_id)
 
     return info

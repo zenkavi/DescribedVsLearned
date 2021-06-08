@@ -11,8 +11,8 @@ def infotodict(seqinfo):
     t1w = create_key('sub-{subject}/anat/sub-{subject}_T1w') #anat
     t2w = create_key('sub-{subject}/anat/sub-{subject}_T2w') #anat
     t2_clinical = create_key('sub-{subject}/anat/sub-{subject}_T2clinical') #anat
-    task = create_key('sub-{subject}/func/sub-{subject}_task-bundles_run-{item:02d}_bold') #func
-    sbref = create_key('sub-{subject}/func/sub-{subject}_task-bundles_run-{item:02d}_sbref') #func
+    task = create_key('sub-{subject}/func/sub-{subject}_task-bundles_run-{item:01d}_bold') #func
+    sbref = create_key('sub-{subject}/func/sub-{subject}_task-bundles_run-{item:01d}_sbref') #func
     fmap_pos = create_key('sub-{subject}/fmap/sub-{subject}_pos') #fmap
     fmap_neg = create_key('sub-{subject}/fmap/sub-{subject}_neg') #fmap
 

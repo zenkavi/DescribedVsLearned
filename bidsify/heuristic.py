@@ -19,12 +19,13 @@ def infotodict(seqinfo):
     """
 
     # paths done in BIDS format
-    t1w = create_key('sub-{subject}/anat/sub-{subject}_T1w')
-    t2w = create_key('sub-{subject}/anat/sub-{subject}_T2w')
-    func
-    sbref
-    fieldmap
-    info = {t1w: [], func: []}
+    t1w = create_key('sub-{subject}/anat/sub-{subject}_T1w') #anat
+    t2w = create_key('sub-{subject}/anat/sub-{subject}_T2w') #anat
+    task = create_key('sub-{subject}/func/sub-{subject}_task-bundles_bold') #func
+    sbref = create_key('sub-{subject}/func/sub-{subject}_task-bundles_sbref') #func
+    fmap_p = create_key('sub-{subject}/func/sub-{subject}_phasediff') #fmap
+    fmap_m = create_key('sub-{subject}/func/sub-{subject}_magnitude') #fmap
+    info = {anat: [], func: [], fmap: []}
 
     data = create_key('run{item:03d}')
     info = {data: []}

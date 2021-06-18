@@ -63,6 +63,14 @@ library("papaja")
 
 ## Participants
 
+```{r echo=FALSE}
+demog = read.table('/Users/zeynepenkavi/Downloads/GTavares_2017_arbitration/bids_nifti_wface/participants.tsv', sep='\t', header=TRUE)
+num_female = sum(demog$sex == "F")
+mean_age = round(mean(demog$age), 2)
+```
+
+27 Caltech undergraduates were recruited for the experiment. Two subjects could not be scanned due to discomfort in the scanner so data from 25 subjects  (`r num_female` female, mean age = `r mean_age`) are analyzed. Each subjects completed 300 trials broken down to five runs completed in a single sessions. Participants were compensated $30 for their time and received additional earnings based on their performance as described below. All procedures were approved by the Caltech's IRB and all subjects provided informed consent prior to participation.
+
 ## Task
 
 ## Procedure

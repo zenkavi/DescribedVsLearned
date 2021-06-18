@@ -59,7 +59,7 @@ library("papaja")
 
 # Introduction
 
-# Methods
+# Materials and Methods
 
 ## Participants
 
@@ -73,7 +73,9 @@ mean_age = round(mean(demog$age), 2)
 
 ## Task
 
-## Procedure
+Participants completed the task in the fMRI scanner. The task consisted of 300 trials broken down into five runs of 60 trials. Each trial began with a central fixation cross that remained on the screen for a random inter-trial interval between four and seven seconds plus a variable amount as described below.
+
+In each trial, the participant had to choose between two pairs presented on the left and right of the screen separated with a gray vertical line. Each pair contained a fractal at the top and a lottery at the bottom. The fractals were randomized across participants from a sample of 25 but they remained the same for the duration of the experiment for a given participant. Each fractal was associated with a probability of a `$`1 reward, which were not shown on the screen. These probabilities drifted slowly and independently between 0.25 and 0.75, according to a Gaussian random walk with $\sigma = 0.025$. Participants were told that these reward probabilities drifted slowly and independently but were not informed about the bounds or the drift rate.
 
 ## Behavioral data preprocessing
 

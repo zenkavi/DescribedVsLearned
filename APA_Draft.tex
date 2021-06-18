@@ -184,8 +184,8 @@ Enter abstract here
 \hypertarget{introduction}{%
 \section{Introduction}\label{introduction}}
 
-\hypertarget{methods}{%
-\section{Methods}\label{methods}}
+\hypertarget{materials-and-methods}{%
+\section{Materials and Methods}\label{materials-and-methods}}
 
 \hypertarget{participants}{%
 \subsection{Participants}\label{participants}}
@@ -195,8 +195,13 @@ Enter abstract here
 \hypertarget{task}{%
 \subsection{Task}\label{task}}
 
-\hypertarget{procedure}{%
-\subsection{Procedure}\label{procedure}}
+Participants completed the task in the fMRI scanner. The task consisted of 300 trials broken down into five runs of 60 trials. Each trial began with a central fixation cross that remained on the screen for a random inter-trial interval between four and seven seconds plus a variable amount as described below.
+
+In each trial, the participant had to choose between two pairs presented on the left and right of the screen separated with a gray vertical line. Each pair contained a fractal at the top and a lottery at the bottom. The fractals were randomized across participants from a sample of 25 but they remained the same for the duration of the experiment for a given participant. Each fractal was associated with a probability of a \texttt{\$}1 reward, which were not shown on the screen. These probabilities drifted slowly and independently between 0.25 and 0.75. The initial value for each probability was sampled uniformly within the bounds. After every trial the change to each probability was sampled from a Gaussian distribution centered at 0 and with \(\sigma = 0.025\). If the sampled change value pushed a probability out of bounds, its sign was reversed.
+
+Participants were told that reward probabilities of the fractals drifted slowly and independently but were not informed about the bounds or the drift rate. Instead they learned about each fractal's likelihood to yield a reward by observing the outcomes in each trial as described below.
+
+In addition to the fractals each pair involved a lottery. The lottery for the left option was presented as a pie chart representing its reward probability with the amount of reward listed below this. The right lottery was fixed for all trials and depicted with the text ``REF.'' The varying left lottery was drawn from the following set of twenty probability and reward combinations, each occuring three times per run: \{(1, \texttt{\$}0.50), (0.25, \texttt{\$}2), (0.2, \texttt{\$}2.50), (0.1, \texttt{\$}5), (1, \texttt{\$}0.10), (0.1, \texttt{\$}1), (0.05, \texttt{\$}2), (0.01, \texttt{\$}10), (1, \texttt{\$}0.30), (0.3, \texttt{\$}1), (0.15, \texttt{\$}2), (0.1, \texttt{\$}3), (1, \texttt{\$}0.70), (0.7, \texttt{\$}1), (0.35, \texttt{\$}2), (0.1, \texttt{\$}7), (1, \texttt{\$}0.90), (0.9, \texttt{\$}1), (0.45, \texttt{\$}2), (0.1, \texttt{\$}9)\}. The fixed right lottery consisted of a 50\% probability of winning \texttt{\$}1.
 
 \hypertarget{behavioral-data-preprocessing}{%
 \subsection{Behavioral data preprocessing}\label{behavioral-data-preprocessing}}

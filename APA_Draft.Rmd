@@ -1,6 +1,6 @@
 ---
-title             : "Neural correlates of choosing between bundles of description and experience-based risky options"
-shorttitle        : "Description versus experience-based risk"
+title             : "Neural correlates of choosing between pairs of description and experience-based risky options"
+shorttitle        : "Decisions between pairs of risky and uncertain outcomes"
 
 author: 
   - name          : "A. Zeynep Enkavi"
@@ -10,6 +10,8 @@ author:
     email         : "zenkavi@caltech.edu"
     role:         
       - Formal Analysis
+      
+      
       - Writing - Original Draft Preparation
       - Writing - Review & Editing
   - name          : "Gabriela Tavares"
@@ -73,7 +75,7 @@ mean_age = round(mean(demog$age), 2)
 
 ## Task
 
-Participants completed the task in the fMRI scanner. The task consisted of 300 trials broken down into five runs of 60 trials. Each trial began with a central fixation cross that remained on the screen for a random inter-trial interval between four and seven seconds plus a variable amount as described below.
+Participants completed the task in the fMRI scanner. The task consisted of 300 trials broken down into five runs of 60 trials. Each trial began with a central fixation cross that remained on the screen for a random inter-trial interval (ITI) between four and seven seconds plus a variable amount depending on the participant's response time as described below.
 
 In each trial, the participant had to choose between two pairs presented on the left and right of the screen separated with a gray vertical line. Each pair contained a fractal at the top and a lottery at the bottom. The fractals were randomized across participants from a sample of 25 but they remained the same for the duration of the experiment for a given participant. Each fractal was associated with a probability of a `$`1 reward, which were not shown on the screen. These probabilities drifted slowly and independently between 0.25 and 0.75. The initial value for each probability was sampled uniformly within the bounds. After every trial the change to each probability was sampled from a Gaussian distribution centered at 0 and with $\sigma = 0.025$. If the sampled change value pushed a probability out of bounds, its sign was reversed. 
 
@@ -81,12 +83,27 @@ Participants were told that reward probabilities of the fractals drifted slowly 
 
 In addition to the fractals each pair involved a lottery. The lottery for the left option was presented as a pie chart representing its reward probability with the amount of reward listed below this. The right lottery was fixed for all trials and depicted with the text "REF". The varying left lottery was drawn from the following set of twenty probability and reward combinations, each occuring three times per run: {(1, `$`0.50), (0.25, `$`2), (0.2, `$`2.50), (0.1, `$`5), (1, `$`0.10), (0.1, `$`1), (0.05, `$`2), (0.01, `$`10), (1, `$`0.30), (0.3, `$`1), (0.15, `$`2), (0.1, `$`3), (1, `$`0.70), (0.7, `$`1), (0.35, `$`2), (0.1, `$`7), (1, `$`0.90), (0.9, `$`1), (0.45, `$`2), (0.1, `$`9)}. The fixed right lottery consisted of a 50% probability of winning `$`1.
 
+Participants had up to four seconds to respond in each trial. All choices were reported using the right hand and pressing the "2" key for the left and the "3" key for the right pair. If a choice was not indicated within this time participants saw a message that read "No response recorded!" and the experiment continued to the next trial. Trials without a response did not add any reward to the final payout. Trials where a response was recorded faster than four seconds, the remaining time was added to the ITI.
+
+Following the fixation cross and before viewing the pairs of fractals and gambles participants saw two percentages on the screen. Stacked vertically, the top percentage indicated the chance that the reward from that trial would be drawn from the fractals and the bottom percentage the chance that the reward would be drawn from the lotteries. These percentages ranged from zero to one hundred at intervals of 10% yielding eleven unique values. Values below 30% or above 70% occurred five times per run while other values occurred 6 times.
+
+After each choice two draws determined the reward amount of that trial. The first draw, based on the percentages presented following the fixation cross, determined whether the trial's reward was drawn from the fractal or the lottery of the pair chosen by the participant. Depending on the outcome of this draw the fractal or the lottery of the participant's choice was highlighted with a red circle. The second draw determined the exact reward amount based on the reward probability and amount for the fractal or the lottery of the chosen pair. The final reward amount was shown in the center of the screen in red. Thus, the participants were incentivized both to indicate their true preferences in each trial and to learn about the fractal reward probabilities. Moreover to facilitate the learning of these fractal reward probabilities the outcomes of a draw from both fractals were also shown on each fractal, regardless of whether the trial reward depended on this outcome based on the first draw. This reward screen remained for three seconds.
+
+At the end of the experiment participants received a sum of the rewards from 175 randomly chosen trials added to their base compensation, which was adjusted to be within the bounds of `$`80 and `$`120.
+
+## Neuroimaging data collection
+
+Functional imaging data was collected on a 3T Siemens Trio scanner at the Caltech Brain Imaging Center using a 32 channel coil. All five task runs were completed in a single session. Each run consisted of 882 volumes.
+
+Data can be found at ...
+
 ## Behavioral data preprocessing
 
 ## Neuroimaging data preprocessing
 
 ## Data analysis software
-The list of software packages and their versions used for analyses can be found at ...
+
+The task was programmed in .... Behavioral data were analyzed with R version .... and packages .... Neuroimaging data were converted to Nifti format using heudiconv [CITE] version 0.9.0, defaced using bidsonym [CITE] version 0.0.4, quality checked using mriqc [CITE] version ... and preprocessed using fmriprep [CITE] version ...
 
 # Results
 

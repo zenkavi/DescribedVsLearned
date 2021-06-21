@@ -127,6 +127,7 @@ tmp %>%
   theme(legend.position = "bottom")
 
 ```
+
 Re-plot this as proportion of choice using the relevant attribute
 
 ```{r}

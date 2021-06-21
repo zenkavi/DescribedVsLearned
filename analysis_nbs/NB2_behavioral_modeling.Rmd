@@ -227,42 +227,39 @@ par_ests = par_ests %>%
 
 # Examine two value systems parameters
 
-Distributions of the recovered MLE parameters
+Distribution of likelihood across iterations for each subject. Not very peaky for most.
 
 ```{r}
 par_ests %>%
-  group_by(subnum, par) %>%
-  filter(logLik == max(logLik)) %>%
-  ggplot(aes(value))+
+  filter(par == "alpha") %>%
+  ggplot(aes(logLik)) +
   geom_histogram(alpha=.5, bins=30)+
-  facet_wrap(~par, scales='free_x')+
-  xlab("MLE for all subjects")
-```
-Distributions of the recovered (median) parameters
-
-```{r}
-par_ests %>%
-  group_by(subnum, par) %>%
-  summarise(est = median(value), .groups='keep') %>%
-  ggplot(aes(est))+
-  geom_histogram(alpha=.5, bins=30)+
-  facet_wrap(~par, scales='free_x')+
-  xlab("Posterior median estimates for all subjects")
+  facet_wrap(~subnum, scales="free_x")+
+  xlab("Log Likelihood")+
+  ylab("")+
+  ggtitle("Distribution of log likelihoods across the samples for each subject")+
+  theme(axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid = element_blank())
 ```
 
-How do the ML and posterior medians differ?
+How do the ML and posterior medians differ? 
+
+**Note: posterior median estimates are from different iterations!**
 
 ```{r}
 tmp1 = par_ests %>%
   group_by(subnum, par) %>%
-  filter(logLik == min(logLik))
+  filter(logLik == max(logLik))
 
 tmp2 = par_ests %>%
   group_by(subnum, par) %>%
   summarise(est = median(value), .groups='keep')
 
-tmp2 %>%
-  left_join(tmp1, by=c("subnum", "par")) %>%
+tmp = tmp2 %>%
+  left_join(tmp1, by=c("subnum", "par")) 
+
+tmp %>%
   ggplot(aes(est, value))+
   geom_point()+
   geom_abline(slope=1, intercept = 0, linetype="dashed")+
@@ -271,10 +268,41 @@ tmp2 %>%
   ylab("Maximum likelihood")
 ```
 ```{r}
+tmp %>%
+  select(-logLik) %>%
+  gather(key, value, -subnum, -par) %>%
+  mutate(key = ifelse(key=="est", "Posterior median", "Maximum likelihood")) %>%
+  ggplot(aes(value, fill=key))+
+  geom_histogram(alpha=.5, bins=30, position="identity")+
+  facet_wrap(~par, scale='free')+
+  theme(legend.title = element_blank(),
+        legend.position = "bottom")+
+  xlab("")+
+  ylab("")
+```
+
+Where does the MLE fall on the posteriors of each parameter?
+
+```{r fig.height=8, fig.width=4}
+par_ests %>%
+  ggplot(aes(value))+
+  geom_histogram(alpha=.5, bins = 30)+
+  facet_grid(subnum~par, scale="free")+
+  geom_vline(aes(xintercept = value), tmp1)+
+  theme(axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid = element_blank(),
+        strip.text.x = element_text(size=14),
+        axis.text.x = element_text(size=14))+
+  xlab("")+
+  ylab("")
+```
+
+```{r}
 rm(tmp, tmp1, tmp2)
 ```
 
-Are there any dependencies between the parameters? gamma is correlated with both beta and delta.
+Are there any dependencies between the parameters?
 
 ```{r}
 par_ests %>%
@@ -316,6 +344,7 @@ tmp %>%
   geom_abline(slope=1, intercept=0, linetype="dashed")+
   labs(x="p(Fractal)", y="w(pFractal)", title="Distortion of p(Fractal)", color = element_blank())
 ```
+
 How does the distortion of the fractal draw probability change for different values of delta and gamma? Where do the subjects' median estimates fall on this spectrum?
 
 Facets - values of pFrac (true prob of Fractal)

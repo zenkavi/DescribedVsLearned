@@ -31,6 +31,7 @@ helpers_path = here('helpers/')
 source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 source(paste0(helpers_path, 'extract_var_for_stan.R'))
 source(paste0(helpers_path, 'get_qvals.R'))
+source(paste0(helpers_path, 'facet_wrap_equal.R'))
 ```
 
 Set theme for plots
@@ -231,7 +232,7 @@ Distributions of the recovered MLE parameters
 ```{r}
 par_ests %>%
   group_by(subnum, par) %>%
-  filter(logLik == min(logLik)) %>%
+  filter(logLik == max(logLik)) %>%
   ggplot(aes(value))+
   geom_histogram(alpha=.5, bins=30)+
   facet_wrap(~par, scales='free_x')+
@@ -265,9 +266,12 @@ tmp2 %>%
   ggplot(aes(est, value))+
   geom_point()+
   geom_abline(slope=1, intercept = 0, linetype="dashed")+
-  facet_wrap(~par, scales='free')+
+  facet_wrap_equal(~par, scales='free')+
   xlab("Posterior median")+
   ylab("Maximum likelihood")
+```
+```{r}
+rm(tmp, tmp1, tmp2)
 ```
 
 Are there any dependencies between the parameters? gamma is correlated with both beta and delta.
@@ -275,9 +279,12 @@ Are there any dependencies between the parameters? gamma is correlated with both
 ```{r}
 par_ests %>%
   group_by(subnum, par) %>%
-  summarise(est = median(value), .groups='keep') %>%
+  # summarise(est = median(value), .groups='keep') %>%
+  filter(logLik == max(logLik)) %>%
   ungroup() %>%
-  spread(par, est) %>%
+  select(-logLik)%>%
+  # spread(par, est) %>%
+  spread(par, value) %>%
   select(-subnum) %>%
   ggpairs(progress = FALSE)
 ```

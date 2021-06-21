@@ -225,9 +225,11 @@ par_ests = par_ests %>%
   select(-iter)
 ```
 
-# Examine two value systems parameters
+# Examine parameter estimates
 
-Distribution of likelihood across iterations for each subject. Not very peaky for most.
+## Log likelihood distributions
+
+Distribution of likelihood across iterations for each subject. Not very peaky for most. Suggests that MLE might not be very well differentiated from other combinations of parameters.
 
 ```{r}
 par_ests %>%
@@ -242,6 +244,8 @@ par_ests %>%
         axis.ticks.y=element_blank(),
         panel.grid = element_blank())
 ```
+
+## MLE vs median estimates
 
 How do the ML and posterior medians differ? 
 
@@ -302,6 +306,8 @@ par_ests %>%
 rm(tmp, tmp1, tmp2)
 ```
 
+## Covariance between parameters
+
 Are there any dependencies between the parameters?
 
 ```{r}
@@ -317,6 +323,8 @@ par_ests %>%
   ggpairs(progress = FALSE)
 ```
 
+## Probability distortion
+
 How do the median estimates suggest the probability of a fractal draw is distorted for each subject?
 
 Using Gonzalez and Wu's (1999) terminology the fact that almost all subjects probability weighting functions are below the 45-degree line (i.e. objective probability) regardless of the inverse-S shape is not about diminishing sensitivy/discriminability (slope) but about **attractiveness** (intercept, elevation). The fractal is almost always less attractive to subjects than it really should be given its probability in determining their reward.
@@ -326,9 +334,11 @@ Unlike the simple case where the probability weighting function represents the p
 ```{r}
 tmp = par_ests %>%
   group_by(subnum, par) %>%
-  summarise(est = median(value), .groups='keep') %>%
+  # summarise(est = median(value), .groups='keep') %>%
+  filter(logLik == max(logLik)) %>%
   filter(par != "beta" & par != "alpha") %>%
-  spread(par, est)
+  # spread(par, est)
+  spread(par, value)
 
 tmp = do.call("rbind", replicate(11, tmp, simplify = FALSE)) %>%
   arrange(subnum) %>%
@@ -337,40 +347,11 @@ tmp = do.call("rbind", replicate(11, tmp, simplify = FALSE)) %>%
          wpFrac = (delta*pFrac^gamma)/(delta*pFrac^gamma + (1-pFrac)^gamma)) 
 
 tmp %>%
-  mutate(delta_gt_1 = ifelse(delta>=1, 1, 0),
+  mutate(delta_gt_1 = ifelse(delta>=1, "delta >= 1", "delta < 0 "),
          gamma_gt_1 = ifelse(gamma>=1,"gamma >= 1", "gamma < 0")) %>%
   ggplot(aes(pFrac, wpFrac, group=subnum))+
-  geom_line(aes(col = as.factor(gamma_gt_1)))+
+  geom_line(aes(col = as.factor(gamma_gt_1), linetype=as.factor(delta_gt_1)))+
   geom_abline(slope=1, intercept=0, linetype="dashed")+
-  labs(x="p(Fractal)", y="w(pFractal)", title="Distortion of p(Fractal)", color = element_blank())
+  labs(x="p(Fractal)", y="w(pFractal)", title="Distortion of p(Fractal)", color = element_blank(), linetype=element_blank())
 ```
 
-How does the distortion of the fractal draw probability change for different values of delta and gamma? Where do the subjects' median estimates fall on this spectrum?
-
-Facets - values of pFrac (true prob of Fractal)
-Blue w(pFrac)>pFrac - overweighting prob fractal
-Red pFrac>w(pFrac) - underweighting prob fractal
-
-```{r}
-tmp = par_ests %>%
-  group_by(subnum, par) %>%
-  summarise(est = median(value), .groups='keep') %>%
-  spread(par, est)
-
-expand.grid(rep(list(seq(0,1.5,.1)), 3)) %>%
-  rename(delta=Var1, gamma=Var2, pFrac=Var3)%>%
-  mutate(wpFrac = (delta*(pFrac^gamma)) / ((delta*(pFrac^gamma) + ((1-pFrac)^gamma))), 
-         distortion = pFrac-wpFrac) %>%
-  filter(pFrac > 0 & pFrac < 1) %>%
-  mutate(pFrac = paste0("p(Fractal) = ", pFrac)) %>%
-  ggplot2::ggplot(aes(as.factor(delta), as.factor(gamma)))+
-  geom_raster(aes(fill=distortion))+
-  facet_wrap(~as.factor(pFrac))+
-  labs(x="\U03B4", y="\U03B3", 
-       fill="Overestimation -> underestimation", 
-       title="Distortion of p(Fractal)")+
-  scale_fill_gradient2(low = scales::muted("blue"), high=scales::muted("red"))+
-  theme(axis.ticks = element_blank(), axis.text.x = element_text(angle=90), legend.position="bottom")+
-  scale_y_discrete(breaks=seq(0, 1.5, .3))+
-  annotate("point", x = 10*tmp$delta, y=10*tmp$gamma)
-```

@@ -8,7 +8,7 @@ output:
 
 # Set up environment and load in data
 
-```{r}
+```{r include=FALSE}
 library(tidyverse)
 library(DT)
 library(here)

@@ -1,20 +1,24 @@
 ---
-title: "Experience vs. description based decision-making project: RL model fits onto behavioral data"
-output: 
+title: 'Experience vs. description based decision-making project: RL model fits onto
+  behavioral data'
+output:
   html_document:
-    toc: true
-    toc_float: true
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
 ---
 
 # Set up environment and load in data
 
-```{r}
+```{r include=FALSE}
 library(tidyverse)
 library(gridExtra)
 library(rstan)
 library(brms)
 library(GGally)
 library(here)
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 ```
 
 ```{r}
@@ -76,28 +80,28 @@ Bayesian multilevel model checking if the slopes in the above figure are differe
 
 When looking at all trials (left figure) the overall slope of all sessions is not different than 0 (not shown below). When including an interaction term with session number then there is a very small but non-zero increase in the probability of choosing the better fractal (i.e. learning) in sessions 1 and 3 but not in the other sessions.
 
-```{r}
+```{r eval=FALSE}
 # The default prior for population parameters is an improper flat prior over the reals
 m = brm(choseBetterFractal ~ trialNum*as.factor(session) + (1|subnum),
         data=tmp, family=bernoulli(link="logit"))
 ```
 
-```{r}
+```{r eval=FALSE}
 summary(m)
 ```
 
 Filtering only trials where probability of a fractal draw is >.5, i.e. trials where learning about the fractal values would be more consequential we find a slightly stronger increase in the probability of choosing the better fractal later in the session in sessions 1 through 3 though still no effect for the other sessions.
 
-```{r}
+```{r eval=FALSE}
 m2= brm(choseBetterFractal ~ trialNum*as.factor(session) + (1|subnum),
         data=tmp %>% filter(probFractalDraw>.5), family=bernoulli(link="logit"))
 ```
 
-```{r}
+```{r eval=FALSE}
 summary(m2)
 ```
 
-```{r}
+```{r eval=FALSE}
 rm(m, m2, tmp)
 ```
 
@@ -175,6 +179,7 @@ rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fra
 ```{r}
 if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))){
   fit = readRDS(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))
+  rm(m_data)
 } else {
   m = stan_model(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.stan'))
   fit = sampling(m, data=m_data)
@@ -194,13 +199,44 @@ par_ests = data.frame(extract(fit, c("alpha","gamma", "delta", "beta")))  %>%
 par_ests = data.frame(subnum = unique(clean_beh_data$subnum)) %>%
   mutate(subj = as.character(1:n())) %>%
   right_join(par_ests, by='subj') %>%
-  select(-subj)
+  select(-subj) %>%
+  group_by(subnum, par) %>%
+  mutate(iter = 1:n()) %>%
+  ungroup()
+
+log_liks = data.frame(extract(fit, c("logLikelihood")))  %>%
+  gather(key, value) %>%
+  separate(key, c('par', 'subj'), sep='\\.')
+
+# Add correct subject identifiers
+log_liks = data.frame(subnum = unique(clean_beh_data$subnum)) %>%
+  mutate(subj = as.character(1:n())) %>%
+  right_join(log_liks, by='subj') %>%
+  select(-subj) %>%
+  group_by(subnum, par) %>%
+  mutate(iter = 1:n()) %>%
+  ungroup() %>%
+  select(-par) %>%
+  rename(logLik=value)
+
+par_ests = par_ests %>%
+  left_join(log_liks, by=c("subnum", "iter")) %>%
+  select(-iter)
 ```
 
 # Examine two value systems parameters
 
-**ARE MEDIAN ESTIMATES THE SAME AS THOSE THAT YIELD THE HIGHEST LIKELIHOOD OF THE SAMPLED VALUES?**
+Distributions of the recovered MLE parameters
 
+```{r}
+par_ests %>%
+  group_by(subnum, par) %>%
+  filter(logLik == min(logLik)) %>%
+  ggplot(aes(value))+
+  geom_histogram(alpha=.5, bins=30)+
+  facet_wrap(~par, scales='free_x')+
+  xlab("MLE for all subjects")
+```
 Distributions of the recovered (median) parameters
 
 ```{r}
@@ -210,7 +246,28 @@ par_ests %>%
   ggplot(aes(est))+
   geom_histogram(alpha=.5, bins=30)+
   facet_wrap(~par, scales='free_x')+
-  xlab("Median estimates for all subjects")
+  xlab("Posterior median estimates for all subjects")
+```
+
+How do the ML and posterior medians differ?
+
+```{r}
+tmp1 = par_ests %>%
+  group_by(subnum, par) %>%
+  filter(logLik == min(logLik))
+
+tmp2 = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = median(value), .groups='keep')
+
+tmp2 %>%
+  left_join(tmp1, by=c("subnum", "par")) %>%
+  ggplot(aes(est, value))+
+  geom_point()+
+  geom_abline(slope=1, intercept = 0, linetype="dashed")+
+  facet_wrap(~par, scales='free')+
+  xlab("Posterior median")+
+  ylab("Maximum likelihood")
 ```
 
 Are there any dependencies between the parameters? gamma is correlated with both beta and delta.

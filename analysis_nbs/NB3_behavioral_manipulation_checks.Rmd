@@ -8,11 +8,12 @@ output:
 
 # Set up environment and load in data
 
-```{r}
+```{r include=FALSE}
 library(tidyverse)
 library(gridExtra)
 library(brms)
 library(here)
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 ```
 
 ```{r}
@@ -62,7 +63,7 @@ tmp %>%
 
 Multilevel model checking if the slopes of the top row above are different than 0.
 
-```{r}
+```{r eval=FALSE}
 m1 = brm(choiceLeft ~ leftQVAdv + leftEVAdv + (1|subnum),
         data=tmp %>% filter(probFractalDraw == 0), family=bernoulli(link="logit"))
 ```
@@ -71,13 +72,13 @@ When probability of a fractal is 0 the expected value (EV) difference between th
 
 There is also a much smaller negative effect of the Q-value difference even though the fractal values should be irrelevant. 
 
-```{r}
+```{r eval=FALSE}
 summary(m1)
 ```
 
 Multilevel model checking if the slopes of the bottom row above are different than 0.
 
-```{r}
+```{r eval=FALSE}
 m2 = brm(choiceLeft ~ leftQVAdv + leftEVAdv + (1|subnum),
         data=tmp %>% filter(probFractalDraw == 1), family=bernoulli(link="logit"))
 ```
@@ -86,12 +87,12 @@ When the probability of the fractal draw is 1 so the reward only depends on the 
 
 Note: these Q-values are from model fits where choice is only modeled as a function of the fractal values. Joint modeling of all relevant attributes in each bundle is done in the next notebook.
 
-```{r}
+```{r eval=FALSE}
 summary(m2)
 ```
 
 
-```{r}
+```{r eval=FALSE}
 rm(tmp, m1, m2)
 ```
 
@@ -126,7 +127,6 @@ tmp %>%
   theme(legend.position = "bottom")
 
 ```
-
 Re-plot this as proportion of choice using the relevant attribute
 
 ```{r}
@@ -160,18 +160,18 @@ Multilevel model checking if subjects chose based on the relevant attribute rega
 
 A choice is less likely to be based on the relevant attribute in conflict trials when the relevant attribute is the fractal. In other words, people rely more the description-based attribute (lotteries) than the experience-based ones (fractals) even when their reward is more likely to depend on the experience-based attribute.
 
-```{r}
+```{r eval=FALSE}
 m1 = brm(choseRelevant ~ as.factor(fractalRelevant) + (1|subnum),
         data=tmp, family=bernoulli(link="logit"))
 ```
 
 When the fractal is the relevant option subjects chose less frequently based on the relevant option.
 
-```{r}
+```{r eval=FALSE}
 summary(m1)
 ```
 
-```{r}
+```{r eval=FALSE}
 rm(tmp, m1)
 ```
 
@@ -201,17 +201,17 @@ tmp %>%
   theme(legend.position = "none")
 ```
 
-```{r}
+```{r eval=FALSE}
 m1 = brm(meanChoseRelevant ~ alpha+delta+gamma,
         data=tmp)
 ```
 
 We find that only the slope with delta estimates is reliably > 0. Delta primarily controls the intercept of the probability distortion function. Higher values of delta suggests that a subject find choosing based on fractals more "attractive."
 
-```{r}
+```{r eval=FALSE}
 summary(m1)
 ```
 
-```{r}
+```{r eval=FALSE}
 rm(tmp, m1)
 ```

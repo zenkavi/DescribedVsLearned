@@ -57,6 +57,9 @@ output            : papaja::apa6_pdf
 
 ```{r setup, include = FALSE}
 library("papaja")
+library(tidyverse)
+library(here)
+theme_set(theme_bw())
 ```
 
 # Introduction
@@ -65,13 +68,17 @@ library("papaja")
 
 ## Participants
 
-```{r echo=FALSE}
+```{r include=FALSE}
 demog = read.table('/Users/zeynepenkavi/Downloads/GTavares_2017_arbitration/bids_nifti_wface/participants.tsv', sep='\t', header=TRUE)
 num_female = sum(demog$sex == "F")
 mean_age = round(mean(demog$age), 2)
 ```
 
 27 Caltech undergraduates were recruited for the experiment. Two subjects could not be scanned due to discomfort in the scanner so data from 25 subjects  (`r num_female` female, mean age = `r mean_age`) are analyzed. Each subjects completed 300 trials broken down to five runs completed in a single sessions. Participants were compensated $30 for their time and received additional earnings based on their performance as described below. All procedures were approved by the Caltech's IRB and all subjects provided informed consent prior to participation.
+
+```{r include=FALSE}
+rm(demog, num_female, mean_age)
+```
 
 ## Task
 
@@ -93,11 +100,30 @@ At the end of the experiment participants received a sum of the rewards from 175
 
 ## Neuroimaging data collection
 
-Functional imaging data was collected on a 3T Siemens Trio scanner at the Caltech Brain Imaging Center using a 32 channel coil. All five task runs were completed in a single session. Each run consisted of 882 volumes.
+Functional imaging data was collected on a 3T Siemens Trio scanner at the Caltech Brain Imaging Center using a 32 channel coil. All five task runs were completed in a single session.
 
 Data can be found at ...
 
 ## Behavioral data preprocessing
+
+```{r include=FALSE}
+source(paste0(helpers_path,'00_get_behavioral_data.R'))
+clean_beh_data = beh_data %>%
+  filter(responded == 1,
+         reactionTime > .2)
+num_timeout = nrow(beh_data) - sum(beh_data$responded)
+num_toofast = nrow(beh_data %>% filter(reactionTime>0 & reactionTime<.2))
+num_subj_w_exclusion = nrow(clean_beh_data %>% group_by(subnum) %>% tally() %>% filter(n != 300))
+tmp = clean_beh_data %>% group_by(subnum) %>% tally() %>% ungroup() %>% summarise(mean_t = mean(n), sd_t = sd(n))
+mean_num_trial = tmp$mean_t
+sd_num_trial = tmp$sd_t
+```
+
+Participants had up to four seconds to make their choices. There were `r num_timeout` trials where participants did not make a choice within this time limit. Additionally `r num_tofast` trials were excluded for having response times faster than 200 ms. No individual subject had more than 5% of their excluded. This left `r num_subj_w_exclusion` subjects with at least one excluded trial and on average `r mean_num_trial` trials per subject ($sd$ = `r sd_num_trial`).
+
+```{r include=FALSE}
+rm(beh_data, num_timeout, num_toofast, num_subj_w_exclusion, mean_num_trial, sd_num_trial, tmp)
+```
 
 ## Neuroimaging data preprocessing
 

@@ -22,7 +22,7 @@ helpers_path = here('helpers/')
 Read in clean data with Q-learning parameter estimates
 
 ```{r}
-source(paste0(helpers_path,'fit_qlearning.R'))
+source(paste0(helpers_path,'02_fit_twoValSystemsWithRL.R'))
 ```
 
 Set theme for plots
@@ -158,6 +158,8 @@ tmp %>%
 
 Multilevel model checking if subjects chose based on the relevant attribute regardless of what attribute was relevant.
 
+A choice is less likely to be based on the relevant attribute in conflict trials when the relevant attribute is the fractal. In other words, people rely more the description-based attribute (lotteries) than the experience-based ones (fractals) even when their reward is more likely to depend on the experience-based attribute.
+
 ```{r}
 m1 = brm(choseRelevant ~ as.factor(fractalRelevant) + (1|subnum),
         data=tmp, family=bernoulli(link="logit"))
@@ -173,9 +175,43 @@ summary(m1)
 rm(tmp, m1)
 ```
 
-Why don't people choose using the relevant attribute all the time? Why do they overuse description-based attributes even when experience-based ones are more relevant for reward?
+Is the over-reliance on the description-based attribute due to distortion of the probability that the reward will depend on the experience-based attribute or the distortion/ bad learning of the experience-based attributes value?
 
-- Do they not learn the fractal values well?
-  - The fractal Q-values in this notebook are based on modeling choice behavior
-  - First order of business: Model both attributes together and see if these effects hold with RL parameter estimates from the join model.
-- Do they distort the probability of fractal and think it is less likely to get a reward from a fractal?
+To examine this we compute the proportion of choices that align with the relevant attribute in conflict trials where the experience-based attribute is more relevant. These subject-level estimates are then correlated with parameters from the two valuation systems model. Specifically a non-zero slope between the proportion of choices and delta or gamma would suggest that the bias is due to distorted probability estimates. On the other hand a non-zero slope with learning rates would point towards distorted values.
+
+```{r}
+tmp = tmp %>%
+  filter(probFractalDraw > 0.5 & probFractalDraw < 1) %>%
+  group_by(subnum) %>%
+  summarise(meanChoseRelevant = mean(choseRelevant),
+            alpha = mean(alpha),
+            delta = mean(delta), 
+            gamma = mean(gamma),
+            .groups = 'keep') 
+
+tmp %>%
+  gather(key, value, -subnum, -meanChoseRelevant) %>%
+  ggplot(aes(value, meanChoseRelevant)) +
+  geom_point()+
+  geom_smooth(method="lm", formula = 'y ~ x', color=cbbPalette[2])+
+  facet_wrap(~key, scale = "free_x")+
+  labs(x="", y="Proportion of choices based on the relevant option",
+       title = "Conflict trials where 1>p(Fractal)>.5")+
+  geom_hline(yintercept = .5, linetype = "dashed")+
+  theme(legend.position = "none")
+```
+
+```{r}
+m1 = brm(meanChoseRelevant ~ alpha+delta+gamma,
+        data=tmp)
+```
+
+We find that only the slope with delta estimates is reliably > 0. Delta primarily controls the intercept of the probability distortion function. Higher values of delta suggests that a subject find choosing based on fractals more "attractive."
+
+```{r}
+summary(m1)
+```
+
+```{r}
+rm(tmp, m1)
+```

@@ -61,21 +61,20 @@ beh_data %>%
 How many trials have negative RTs?
 
 ```{r}
-beh_data %>% 
-  filter(reactionTime < 0) %>%
-  datatable()
+nrow(beh_data %>% 
+  filter(reactionTime < 0))
 ```
 
-How many trials have RT<.2 seconds?
+How many trials have very fast RTs (RT<.2 sec)?
 
 ```{r}
 nrow(beh_data %>% 
-  filter(reactionTime <.2))
+  filter(reactionTime >0 & reactionTime <.2))
 ```
 
 Are trials with RT<.2 disproportionately from one subject?
 
-There is one subject with more trials with unrealistic RTs (07) but even for this subject the number of trials-to-be-excluded is <5% of their data so not excluding any subjects entirely based on RT data. Will exclude individual trials (23+8=31) that have unrealistic RTs.
+There is one subject with more trials with unrealistic RTs (07) but even for this subject the number of trials-to-be-excluded is <5% of their data so not excluding any subjects entirely based on RT data. Will exclude individual trials that have unrealistic RTs.
 
 ```{r}
 beh_data %>% 
@@ -104,7 +103,7 @@ beh_data %>%
 
 # Missing values
 
-Are there missing values anywhere
+Are there missing values anywhere?
 
 ```{r}
 summary(beh_data)

@@ -135,7 +135,29 @@ $$EV_{i, t} = p_{i, t} V{i_t}$$
 The Q-value of each fractal is adjusted in each trial by a reward prediction error weighted by a learning rate ($\alpha$).
 
 $$QV_{i,t} = QV_{i, t-1} + \alpha(R_{i, t-1}- QV_{i, t-1})$$
-## Fit Q learning + two value system simultaneously
+# TO DO: Identifiability analysis
+
+What does the likelihood surface look like for various combinations of parameters?
+
+- Choose a grid for each parameter
+  - alpha 0-1 by 0.1 (11 values)
+  - beta 0-6 by 0.5 (13 values)
+  - gamma 0-1.5 by 0.1 (16 values)
+  - delta 0-1.5 by 0.1 (16 values)
+  - total = 11 * 13 * 16 * 16 = 36608 simulations
+- Fake trials structure
+  - There is a random component to this too since the fractal probabilities are drifting
+- Plug in parameter for each trial and computer likelihood
+bernoulli_logit_lpmf - computes prob mass of y for inv.logit(alpha) = exp(alpha)/(1+exp(alpha))
+y = choiceLeft
+alpha = beta * (opt_val_left - opt_val_right)
+- Sum likelihood for all trials
+
+
+```{r}
+```
+
+# Non-hierarchical fit
 
 Organize data
 
@@ -176,7 +198,7 @@ m_data=list(num_subjs = num_subjs,
 rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac)
 ```
 
-## Fit model for all subjects separately
+Fit model for all subjects separately
 
 ```{r}
 if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))){
@@ -189,15 +211,11 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))){
   rm(m, m_data)}
 ```
 
-## Organize model output
-
 ```{r}
 out = organize_stan_output(fit, subj_par_names = c("alpha","gamma", "delta", "beta"))
 par_ests = out$par_ests
 rm(out)
 ```
-
-# Examine parameter estimates
 
 ## Log likelihood distributions
 
@@ -310,11 +328,6 @@ par_ests %>%
 rm(tmp, tmp1, tmp2, tmp3)
 ```
 
-### TO DO: Prediction of empirical data
-
-```{r}
-
-```
 
 ## Covariance between parameters
 
@@ -331,38 +344,6 @@ par_ests %>%
   # spread(par, value) %>%
   select(-subnum) %>%
   ggpairs(progress = FALSE)
-```
-
-## Probability distortion
-
-How do the median estimates suggest the probability of a fractal draw is distorted for each subject?
-
-Using Gonzalez and Wu's (1999) terminology the fact that almost all subjects probability weighting functions are below the 45-degree line (i.e. objective probability) regardless of the inverse-S shape is not about diminishing sensitivy/discriminability (slope) but about **attractiveness** (intercept, elevation). The fractal is almost always less attractive to subjects than it really should be given its probability in determining their reward.
-
-Unlike the simple case where the probability weighting function represents the probability of a reward, however, in this case the probability of a reward is the joint probability of p(Fractal)*p(chosen Fractal's reward)
-
-```{r}
-tmp = par_ests %>%
-  group_by(subnum, par) %>%
-  summarise(est = median(value), .groups='keep') %>%
-  # filter(logLik == max(logLik)) %>%
-  filter(par != "beta" & par != "alpha") %>%
-  spread(par, est)
-  # spread(par, value)
-
-tmp = do.call("rbind", replicate(11, tmp, simplify = FALSE)) %>%
-  arrange(subnum) %>%
-  ungroup() %>%
-  mutate(pFrac = rep(seq(0, 1, .1), 25), 
-         wpFrac = (delta*pFrac^gamma)/(delta*pFrac^gamma + (1-pFrac)^gamma)) 
-
-tmp %>%
-  mutate(delta_gt_1 = ifelse(delta>=1, "delta >= 1", "delta < 0 "),
-         gamma_gt_1 = ifelse(gamma>=1,"gamma >= 1", "gamma < 0")) %>%
-  ggplot(aes(pFrac, wpFrac, group=subnum))+
-  geom_line(aes(col = as.factor(gamma_gt_1), linetype=as.factor(delta_gt_1)))+
-  geom_abline(slope=1, intercept=0, linetype="dashed")+
-  labs(x="p(Fractal)", y="w(pFractal)", title="Distortion of p(Fractal)", color = element_blank(), linetype=element_blank())
 ```
 
 # Hierarchical model
@@ -404,8 +385,6 @@ m_data=list(num_subjs = num_subjs,
 rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac)
 ```
 
-## Fit model for all subjects hierarchically
-
 ```{r}
 if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarchical.RDS'))){
   fit = readRDS(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarchical.RDS'))
@@ -416,8 +395,6 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarch
   saveRDS(fit, paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarchical.RDS'))
   rm(m, m_data)}
 ```
-
-## Organize model output
 
 ```{r}
 out = organize_stan_output(fit, 
@@ -430,4 +407,70 @@ rm(out)
 
 ```{r}
 par_ests
+```
+
+## Log likelihood distribution
+
+```{r}
+par_ests %>%
+  filter(par == "alpha") %>%
+  ggplot(aes(logLik)) +
+  geom_histogram(alpha=.5, bins=30)+
+  facet_wrap(~subnum, scales="free_x")+
+  xlab("Log Likelihood")+
+  ylab("")+
+  ggtitle("Distribution of log likelihoods across the samples for each subject")+
+  theme(axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid = element_blank())
+```
+
+## MLE vs median posterior estimates
+
+```{r}
+tmp1 = par_ests %>%
+  group_by(subnum, par) %>%
+  filter(logLik == max(logLik))
+
+tmp2 = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = median(value), .groups='keep')
+
+tmp = tmp2 %>%
+  left_join(tmp1, by=c("subnum", "par")) 
+
+tmp %>%
+  ggplot(aes(est, value))+
+  geom_point()+
+  geom_abline(slope=1, intercept = 0, linetype="dashed")+
+  facet_wrap_equal(~par, scales='free')+
+  xlab("Posterior median")+
+  ylab("Maximum likelihood")
+```
+
+```{r fig.height=8, fig.width=4}
+par_ests %>%
+  ggplot(aes(value))+
+  geom_histogram(alpha=.5, bins = 30)+
+  facet_grid(subnum~par, scale="free")+
+  geom_vline(aes(xintercept = value), tmp1, color=cbbPalette[5])+
+  theme(axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid = element_blank(),
+        strip.text.x = element_text(size=14),
+        axis.text.x = element_text(size=14))+
+  xlab("")+
+  ylab("")
+```
+
+## Covariance between parameters
+
+# TO DO: Posterior predictive checks
+
+Sample parameters from posterior
+Simulate choice data with sampled parameters
+
+
+```{r}
+
 ```

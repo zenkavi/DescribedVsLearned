@@ -96,6 +96,42 @@ summary(m2)
 rm(tmp, m1, m2)
 ```
 
+## Probability distortion
+
+How do the median estimates suggest the probability of a fractal draw is distorted for each subject?
+
+Using Gonzalez and Wu's (1999) terminology the fact that almost all subjects probability weighting functions are below the 45-degree line (i.e. objective probability) regardless of the inverse-S shape is not about diminishing sensitivy/discriminability (slope) but about **attractiveness** (intercept, elevation). The fractal is almost always less attractive to subjects than it really should be given its probability in determining their reward.
+
+Unlike the simple case where the probability weighting function represents the probability of a reward, however, in this case the probability of a reward is the joint probability of p(Fractal)*p(chosen Fractal's reward)
+
+```{r}
+tmp = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = median(value), .groups='keep') %>%
+  # filter(logLik == max(logLik)) %>%
+  filter(par != "beta" & par != "alpha") %>%
+  spread(par, est)
+  # spread(par, value)
+
+tmp = do.call("rbind", replicate(11, tmp, simplify = FALSE)) %>%
+  arrange(subnum) %>%
+  ungroup() %>%
+  mutate(pFrac = rep(seq(0, 1, .1), 25), 
+         wpFrac = (delta*pFrac^gamma)/(delta*pFrac^gamma + (1-pFrac)^gamma)) 
+
+tmp %>%
+  mutate(delta_gt_1 = ifelse(delta>=1, "delta >= 1", "delta < 0 "),
+         gamma_gt_1 = ifelse(gamma>=1,"gamma >= 1", "gamma < 0")) %>%
+  ggplot(aes(pFrac, wpFrac, group=subnum))+
+  geom_line(aes(col = as.factor(gamma_gt_1), linetype=as.factor(delta_gt_1)))+
+  geom_abline(slope=1, intercept=0, linetype="dashed")+
+  labs(x="p(Fractal)", y="w(pFractal)", title="Distortion of p(Fractal)", color = element_blank(), linetype=element_blank())
+```
+
+```{r}
+rm(tmp)
+```
+
 ## Lottery bias in conflict trials
 
 When the better lottery and the better fractal (based on the learned Q value) suggest different options do subjects choose more frequently based on the lottery or their fractal Q Value? Yes, there is a general tendency towards choosing the option with the better lottery even when the trial reward depends less on the lottery and more on the fractal (p(Fractal) >=.5). Only when the outcome depend entirely on the fractal are people more likely to choose the option with the better fractal but even then there is a non-negligible portion of choices determined by the lottery EV. 

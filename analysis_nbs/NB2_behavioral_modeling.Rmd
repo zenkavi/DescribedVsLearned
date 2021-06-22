@@ -175,7 +175,7 @@ m_data=list(num_subjs = num_subjs,
 rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac)
 ```
 
-## Fit model for all subjects
+## Fit model for all subjects separately
 
 ```{r}
 if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))){
@@ -285,14 +285,14 @@ tmp %>%
   ylab("")
 ```
 
-Where does the MLE fall on the posteriors of each parameter?
+Where does the MLE fall on the posteriors of each parameter? **Often not in a very representative part of the full posterior.**
 
 ```{r fig.height=8, fig.width=4}
 par_ests %>%
   ggplot(aes(value))+
   geom_histogram(alpha=.5, bins = 30)+
   facet_grid(subnum~par, scale="free")+
-  geom_vline(aes(xintercept = value), tmp1)+
+  geom_vline(aes(xintercept = value), tmp1, color=cbbPalette[5])+
   theme(axis.text.y=element_blank(),
         axis.ticks.y=element_blank(),
         panel.grid = element_blank(),
@@ -302,8 +302,46 @@ par_ests %>%
   ylab("")
 ```
 
+How far are the likelihoods of the median estimates from the maximum likelihood?
+
 ```{r}
-rm(tmp, tmp1, tmp2)
+tmp3 = par_ests %>%
+  group_by(subnum, par) %>%
+  mutate(est = median(value), 
+         diff_from_med = abs(value - est)) %>%
+  filter(diff_from_med == min(diff_from_med)) %>%
+  filter(logLik == max(logLik)) %>%
+  select(subnum, par, logLik) %>%
+  spread(par, logLik)
+
+par_ests %>%
+  filter(par == "alpha") %>%
+  ggplot(aes(logLik)) +
+  geom_histogram(alpha=.5, bins=30)+
+  facet_wrap(~subnum, scales="free_x")+
+  xlab("Log Likelihood")+
+  ylab("")+
+  ggtitle("Distribution of log likelihoods across the samples for each subject")+
+  theme(axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid = element_blank(),
+        legend.position="bottom")+
+  geom_vline(aes(xintercept = alpha, color="alpha"), tmp3)+
+  geom_vline(aes(xintercept = beta, color="beta"), tmp3)+
+  geom_vline(aes(xintercept = delta, color="delta"), tmp3)+
+  geom_vline(aes(xintercept = gamma, color="gamma"), tmp3)+
+    scale_color_manual(name="",values = c(alpha = cbbPalette[1], beta=cbbPalette[2], delta=cbbPalette[3], gamma=cbbPalette[4]))
+
+```
+
+```{r}
+rm(tmp, tmp1, tmp2, tmp3)
+```
+
+### Prediction of empirical data
+
+```{r}
+
 ```
 
 ## Covariance between parameters
@@ -353,5 +391,57 @@ tmp %>%
   geom_line(aes(col = as.factor(gamma_gt_1), linetype=as.factor(delta_gt_1)))+
   geom_abline(slope=1, intercept=0, linetype="dashed")+
   labs(x="p(Fractal)", y="w(pFractal)", title="Distortion of p(Fractal)", color = element_blank(), linetype=element_blank())
+```
+
+# Hierarchical model
+
+```{r}
+num_subjs = length(unique(clean_beh_data$subnum))
+
+num_trials = clean_beh_data %>%
+  count(subnum) %>%
+  select(n)
+num_trials = num_trials$n
+
+#subjects in rows, trials in columns
+choices = extract_var_for_stan(clean_beh_data, choiceLeft)
+
+clean_beh_data = clean_beh_data %>%
+  mutate(leftLotteryEV = lotteryValue*lotteryProb,
+         rightLotteryEV = referenceValue*referenceProb)
+
+ev_left = extract_var_for_stan(clean_beh_data, leftLotteryEV)
+
+ev_right = extract_var_for_stan(clean_beh_data, rightLotteryEV)
+
+fractal_outcomes_left = extract_var_for_stan(clean_beh_data, leftFractalReward)
+
+fractal_outcomes_right = extract_var_for_stan(clean_beh_data, rightFractalReward)
+
+trial_pFrac = extract_var_for_stan(clean_beh_data, probFractalDraw)
+
+m_data=list(num_subjs = num_subjs,
+            num_trials = num_trials,
+            choices = choices,
+            ev_left = ev_left,
+            ev_right = ev_right,
+            fractal_outcomes_left = fractal_outcomes_left,
+            fractal_outcomes_right = fractal_outcomes_right,
+            trial_pFrac = trial_pFrac)
+
+rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac)
+```
+
+## Fit model for all subjects hierarchically
+
+```{r}
+if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarchical.RDS'))){
+  fit = readRDS(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarchical.RDS'))
+  rm(m_data)
+} else {
+  m = stan_model(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarchical.stan'))
+  fit = sampling(m, data=m_data)
+  saveRDS(fit, paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarchical.RDS'))
+  rm(m, m_data)}
 ```
 

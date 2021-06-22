@@ -17,10 +17,10 @@ transformed data {
 
 parameters {
   // Declare all parameters as vectors for vectorizing
-  real<lower=0, upper=1> g_alpha[num_subjs];
-  real<lower=0, upper=20> g_gamma[num_subjs];
-  real<lower=0, upper=20> g_delta[num_subjs];
-  real<lower=0, upper=5> g_beta[num_subjs];
+  real<lower=0, upper=1> g_alpha;
+  real<lower=0, upper=20> g_gamma;
+  real<lower=0, upper=20> g_delta;
+  real<lower=0, upper=5> g_beta;
   real<lower=0, upper=1> alpha[num_subjs];
   real<lower=0, upper=20> gamma[num_subjs];
   real<lower=0, upper=20> delta[num_subjs];
@@ -43,7 +43,7 @@ model {
   alpha ~ normal(g_alpha, 1);
   gamma ~ normal(g_gamma, 1);
   delta ~ normal(g_delta, 1);
-  beta~ normal(g_alpha, 1);
+  beta ~ normal(g_beta, 1);
   
   for(i in 1:num_subjs){
     num_trials_for_subj = num_trials[i];

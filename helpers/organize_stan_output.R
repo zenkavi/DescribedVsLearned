@@ -1,14 +1,15 @@
 library(tidyverse)
 library(here)
 
-if(!exists(clean_beh_data)){
+if(!exists("clean_beh_data")){
   helpers_path = here('helpers/')
   source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 }
 
-organize_stan_output = function(fit, par_names, subnums=unique(clean_beh_data$subnum)){
+organize_stan_output = function(fit, subj_par_names, subnums=unique(clean_beh_data$subnum), group_par_names=NA){
+  
   # Extract parameters from fit object
-  par_ests = data.frame(extract(fit, par_names))  %>%
+  par_ests = data.frame(extract(fit, subj_par_names))  %>%
     gather(key, value) %>%
     separate(key, c('par', 'subj'), sep='\\.')
   
@@ -21,12 +22,13 @@ organize_stan_output = function(fit, par_names, subnums=unique(clean_beh_data$su
     mutate(iter = 1:n()) %>%
     ungroup()
   
+  # Extract loglikelihoods from fit object
   log_liks = data.frame(extract(fit, c("logLikelihood")))  %>%
     gather(key, value) %>%
     separate(key, c('par', 'subj'), sep='\\.')
   
   # Add correct subject identifiers
-  log_liks = data.frame(subnum = unique(clean_beh_data$subnum)) %>%
+  log_liks = data.frame(subnum = subnums) %>%
     mutate(subj = as.character(1:n())) %>%
     right_join(log_liks, by='subj') %>%
     select(-subj) %>%
@@ -36,9 +38,21 @@ organize_stan_output = function(fit, par_names, subnums=unique(clean_beh_data$su
     select(-par) %>%
     rename(logLik=value)
   
+  # Add log likelihoods to subject par estimates
   par_ests = par_ests %>%
     left_join(log_liks, by=c("subnum", "iter")) %>%
     select(-iter)
   
-  return (par_ests)
+  # Extract group parameters if any
+  if (!is.na(group_par_names[1])){
+    
+    g_par_ests = data.frame(extract(fit, group_par_names))  %>%
+      gather(key, value)
+    
+    out = list(par_ests = par_ests,
+               g_par_ests = g_par_ests)
+  } else{
+    out = list(par_ests = par_ests)}
+  
+  return (out)
 }

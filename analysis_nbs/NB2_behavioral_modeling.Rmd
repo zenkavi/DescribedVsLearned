@@ -32,6 +32,7 @@ source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 source(paste0(helpers_path, 'extract_var_for_stan.R'))
 source(paste0(helpers_path, 'get_qvals.R'))
 source(paste0(helpers_path, 'facet_wrap_equal.R'))
+source(paste0(helpers_path, 'organize_stan_output.R'))
 ```
 
 Set theme for plots
@@ -191,38 +192,9 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))){
 ## Organize model output
 
 ```{r}
-# Extract parameters from fit object
-par_ests = data.frame(extract(fit, c("alpha","gamma", "delta", "beta")))  %>%
-  gather(key, value) %>%
-  separate(key, c('par', 'subj'), sep='\\.')
-
-# Add correct subject identifiers
-par_ests = data.frame(subnum = unique(clean_beh_data$subnum)) %>%
-  mutate(subj = as.character(1:n())) %>%
-  right_join(par_ests, by='subj') %>%
-  select(-subj) %>%
-  group_by(subnum, par) %>%
-  mutate(iter = 1:n()) %>%
-  ungroup()
-
-log_liks = data.frame(extract(fit, c("logLikelihood")))  %>%
-  gather(key, value) %>%
-  separate(key, c('par', 'subj'), sep='\\.')
-
-# Add correct subject identifiers
-log_liks = data.frame(subnum = unique(clean_beh_data$subnum)) %>%
-  mutate(subj = as.character(1:n())) %>%
-  right_join(log_liks, by='subj') %>%
-  select(-subj) %>%
-  group_by(subnum, par) %>%
-  mutate(iter = 1:n()) %>%
-  ungroup() %>%
-  select(-par) %>%
-  rename(logLik=value)
-
-par_ests = par_ests %>%
-  left_join(log_liks, by=c("subnum", "iter")) %>%
-  select(-iter)
+out = organize_stan_output(fit, subj_par_names = c("alpha","gamma", "delta", "beta"))
+par_ests = out$par_ests
+rm(out)
 ```
 
 # Examine parameter estimates
@@ -338,7 +310,7 @@ par_ests %>%
 rm(tmp, tmp1, tmp2, tmp3)
 ```
 
-### Prediction of empirical data
+### TO DO: Prediction of empirical data
 
 ```{r}
 
@@ -351,12 +323,12 @@ Are there any dependencies between the parameters?
 ```{r}
 par_ests %>%
   group_by(subnum, par) %>%
-  # summarise(est = median(value), .groups='keep') %>%
-  filter(logLik == max(logLik)) %>%
+  summarise(est = median(value), .groups='keep') %>%
+  # filter(logLik == max(logLik)) %>%
   ungroup() %>%
-  select(-logLik)%>%
-  # spread(par, est) %>%
-  spread(par, value) %>%
+  # select(-logLik)%>%
+  spread(par, est) %>%
+  # spread(par, value) %>%
   select(-subnum) %>%
   ggpairs(progress = FALSE)
 ```
@@ -372,11 +344,11 @@ Unlike the simple case where the probability weighting function represents the p
 ```{r}
 tmp = par_ests %>%
   group_by(subnum, par) %>%
-  # summarise(est = median(value), .groups='keep') %>%
-  filter(logLik == max(logLik)) %>%
+  summarise(est = median(value), .groups='keep') %>%
+  # filter(logLik == max(logLik)) %>%
   filter(par != "beta" & par != "alpha") %>%
-  # spread(par, est)
-  spread(par, value)
+  spread(par, est)
+  # spread(par, value)
 
 tmp = do.call("rbind", replicate(11, tmp, simplify = FALSE)) %>%
   arrange(subnum) %>%
@@ -448,9 +420,14 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarch
 ## Organize model output
 
 ```{r}
-par_ests = organize_stan_output(fit, c("alpha","gamma", "delta", "beta", "g_alpha","g_gamma", "g_delta", "g_beta"))
+out = organize_stan_output(fit, 
+                           subj_par_names=c("alpha","gamma", "delta", "beta"),
+                           group_par_names=c("g_alpha","g_gamma", "g_delta", "g_beta"))
+par_ests = out$par_ests
+g_par_ests = out$g_par_ests
+rm(out)
 ```
 
 ```{r}
-names(data.frame(extract(fit, c("alpha","gamma", "delta", "beta", "g_alpha","g_gamma", "g_delta", "g_beta"))))
+par_ests
 ```

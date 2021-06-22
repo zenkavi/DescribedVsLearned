@@ -147,11 +147,12 @@ What does the likelihood surface look like for various combinations of parameter
   - total = 11 * 13 * 16 * 16 = 36608 simulations
 - Fake trials structure
   - There is a random component to this too since the fractal probabilities are drifting
-- Plug in parameter for each trial and computer likelihood
+- Plug in parameter for each trial and compute log likelihood
 bernoulli_logit_lpmf - computes prob mass of y for inv.logit(alpha) = exp(alpha)/(1+exp(alpha))
 y = choiceLeft
 alpha = beta * (opt_val_left - opt_val_right)
-- Sum likelihood for all trials
+dbinom(choiceLeft[trial], 1, prob = inv.logit(alpha), log=T)
+- Sum log likelihood for all trials
 
 
 ```{r}

@@ -5,20 +5,20 @@ helpers_path = here('helpers/')
 
 source(paste0(helpers_path, 'sim_logLiks.R'))
 
-alphas = seq(0, 1, .1)
-betas = seq(0, 5, .5)
-deltas = seq(0, 1.6, .2)
-gammas = seq(0, 1.6, .2)
+alphas = seq(0.1, 1, .1)
+betas = seq(0.1, 5, .5)
+deltas = seq(0.1, 1.6, .2)
+gammas = seq(0.1, 1.6, .2)
 
-numSims = 50
+numSims = 25
 
 sim_out = data.frame(alpha=NA, beta=NA, delta=NA, gamma=NA, logLik=NA)
 x = length(betas)*length(deltas)*length(gammas)
-y = (length(alphas)*length(betas)*length(deltas)*length(gammas)
+y = length(alphas)*length(betas)*length(deltas)*length(gammas)
 
 for(i in 1:length(alphas)){
-  done_pct = ((i-1)*x)/(y)
-  print(paste0())
+  done_pct = round(((i-1)*x)/(y),2)
+  print(paste0(done_pct, "% done!") )
   for(j in 1:length(betas)){
     for(k in 1:length(deltas)){
       for(l in 1:length(gammas)){
@@ -33,3 +33,5 @@ for(i in 1:length(alphas)){
 
 sim_out = sim_out %>%
   drop_na()
+
+saveRDS(sim_out, paste0(helpers_path, 'identiiability_analysis_sim_out.RDS'))

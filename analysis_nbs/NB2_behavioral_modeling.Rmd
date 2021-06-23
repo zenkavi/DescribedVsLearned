@@ -151,12 +151,12 @@ Plot heatmaps of loglikelihood with alpha vs beta on axes for combinations of ga
 First get a sense of trial variability
 
 ```{r}
-pars = data.frame(alpha=, beta= , delta=, gamma=)
-numSims = 20
+pars = data.frame(alpha=.4, beta=1.2, delta=.7, gamma=.9)
+numSims = 50
 logLiks = sim_logLiks(numSims, pars)
 data.frame(logLiks) %>%
   ggplot(aes(logLiks))+
-  geom_histogram()
+  geom_histogram(bins=40)
 ```
 
 # Non-hierarchical fit

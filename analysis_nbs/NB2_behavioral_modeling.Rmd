@@ -141,21 +141,22 @@ What does the likelihood surface look like for various combinations of parameter
 
 - Choose a grid for each parameter
   - alpha 0-1 by 0.1 (11 values)
-  - beta 0-6 by 0.5 (13 values)
-  - gamma 0-1.5 by 0.1 (16 values)
-  - delta 0-1.5 by 0.1 (16 values)
-  - total = 11 * 13 * 16 * 16 = 36608 simulations
-- Fake trials structure
-  - There is a random component to this too since the fractal probabilities are drifting
-- Plug in parameter for each trial and compute log likelihood
-bernoulli_logit_lpmf - computes prob mass of y for inv.logit(alpha) = exp(alpha)/(1+exp(alpha))
-y = choiceLeft
-alpha = beta * (opt_val_left - opt_val_right)
-dbinom(choiceLeft[trial], 1, prob = inv.logit(alpha), log=T)
-- Sum log likelihood for all trials
+  - beta 0-5 by 0.5 (11 values)
+  - gamma 0-1.6 by 0.2 (9 values)
+  - delta 0-1.6 by 0.2 (9 values)
+  - total = 9803 simulations
+  
+Plot heatmaps of loglikelihood with alpha vs beta on axes for combinations of gamma and delta. This would be 256 plots!
 
+First get a sense of trial variability
 
 ```{r}
+pars = data.frame(alpha=, beta= , delta=, gamma=)
+numSims = 20
+logLiks = sim_logLiks(numSims, pars)
+data.frame(logLiks) %>%
+  ggplot(aes(logLiks))+
+  geom_histogram()
 ```
 
 # Non-hierarchical fit

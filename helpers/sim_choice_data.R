@@ -31,7 +31,7 @@ sim_choice_data = function(trials, pars){
   # Inverse logit of value difference weighted by beta
   x = b * (data$optValLeft - data$optValRight)
   choice_prob = exp(x)/(1+exp(x))
-  data$choiceLeft = rbinom(1, 1, choice_prob)
+  data$choiceLeft = rbinom(nrow(data), 1, choice_prob)
   data$logLik = dbinom(data$choiceLeft, 1, prob = choice_prob, log=T)
 
   logLik = sum(data$logLik)

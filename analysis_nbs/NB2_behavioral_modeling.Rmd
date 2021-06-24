@@ -139,7 +139,9 @@ $$QV_{i,t} = QV_{i, t-1} + \alpha(R_{i, t-1}- QV_{i, t-1})$$
 
 What does the likelihood surface look like for various combinations of parameters? Are they distinct enough to be identified successfully?
 
-For each parameter combination the simulations below are for 25 subjects completing 5 runs of 60 trials with the same drift parameters for the fractal reward probabilities.
+For each parameter combination the simulations below are for 25 subjects completing 5 runs of 60 trials with the same drift parameters for the fractal reward probabilities (i.e. the same task structure as the empirical data).
+
+Lighter colors are higher log likelihood.
 
 ```{r}
 tmp = sim_out %>%
@@ -162,7 +164,7 @@ tmp %>%
        y = "\u03b2",
        fill="")
 ```
-Since each cell in the plot below is the average of 25 subjects there is variability in the likelihoods. The plot below depicts this variability as a combination of  
+Since each cell in the plot below is the average of 25 subjects there is variability in the likelihoods. The plot below depicts this variability for each parameter combination.
 
 ```{r}
 tmp %>%
@@ -183,7 +185,50 @@ tmp %>%
 Does anything else become apparent when looking at delta and gamma on the axes?
 
 ```{r}
+tmp %>%
+  mutate(gamma = as.factor(gamma),
+         delta = as.factor(delta),
+         alpha = paste0("\u03b1= ", alpha),
+         beta = paste0("\u03b2= ", beta)) %>%
+  ggplot(aes(gamma, delta, fill=logLik_m))+
+  geom_tile()+
+  facet_grid(alpha~beta)+
+  theme(legend.position = "bottom")+
+  labs(title = "Mean log likelihood from 25 simulations per cell", 
+       x = "\u03b3",
+       y = "\u03b4",
+       fill="")
+```
 
+```{r}
+tmp %>%
+  mutate(gamma = as.factor(gamma),
+         delta = as.factor(delta),
+         alpha = paste0("\u03b1= ", alpha),
+         beta = paste0("\u03b2= ", beta)) %>%
+  ggplot(aes(gamma, delta, fill=logLik_sd))+
+  geom_tile()+
+  facet_grid(alpha~beta)+
+  theme(legend.position = "bottom")+
+  labs(title = "SD of log likelihood from 25 simulations per cell", 
+       x = "\u03b3",
+       y = "\u03b4",
+       fill="")
+```
+
+Why are the likelihoods both higher on average but also more variable for large values of beta combined with large values of alpha?
+
+What happens when beta is large? No left choice.
+
+```{r}
+pars = data.frame(alpha=.5, beta=4.5, delta=0.7, gamma=0.3)
+trials = sim_trials()
+tmp = sim_choice_data(trials, pars)
+tmp = tmp$data
+tmp %>%
+  mutate(leftBetter = 4.5*(optValLeft-optValRight),
+         choiceProb = exp(leftBetter)/(1+exp(leftBetter)),
+         flip=rbinom(300,1,choiceProb)) 
 ```
 
 Are things better with more data?

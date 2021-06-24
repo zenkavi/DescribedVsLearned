@@ -151,12 +151,41 @@ Plot heatmaps of loglikelihood with alpha vs beta on axes for combinations of ga
 First get a sense of trial variability
 
 ```{r}
-pars = data.frame(alpha=.4, beta=1.2, delta=.7, gamma=.9)
-numSims = 50
-logLiks = sim_logLiks(numSims, pars)
-data.frame(logLiks) %>%
-  ggplot(aes(logLiks))+
-  geom_histogram(bins=40)
+tmp = sim_out %>%
+  group_by(alpha, beta, delta, gamma) %>%
+  summarise(logLik_m = mean(logLik),
+            logLik_sd = sd(logLik),
+            .groups='keep')
+
+tmp %>%
+  mutate(alpha = as.factor(alpha),
+         beta=as.factor(beta),
+         gamma = paste0("\u03b3= ", gamma),
+         delta = paste0("\u03b4= ", delta)) %>%
+  ggplot(aes(alpha, beta, fill=logLik_m))+
+  geom_tile()+
+  facet_grid(gamma~delta)+
+  theme(legend.position = "bottom")+
+  labs(title = "Mean log likelihood from 25 simulations per cell", 
+       x = "\u03b1",
+       y = "\u03b2",
+       fill="")
+```
+
+```{r}
+tmp %>%
+  mutate(alpha = as.factor(alpha),
+         beta=as.factor(beta),
+         gamma = paste0("\u03b3= ", gamma),
+         delta = paste0("\u03b4= ", delta)) %>%
+  ggplot(aes(alpha, beta, fill=logLik_sd))+
+  geom_tile()+
+  facet_grid(gamma~delta)+
+  theme(legend.position = "bottom")+
+  labs(title = "SD of log likelihood from 25 simulations per cell", 
+       x = "\u03b1",
+       y = "\u03b2",
+       fill="")
 ```
 
 # Non-hierarchical fit

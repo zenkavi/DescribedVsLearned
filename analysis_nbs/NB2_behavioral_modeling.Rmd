@@ -135,20 +135,11 @@ $$EV_{i, t} = p_{i, t} V{i_t}$$
 The Q-value of each fractal is adjusted in each trial by a reward prediction error weighted by a learning rate ($\alpha$).
 
 $$QV_{i,t} = QV_{i, t-1} + \alpha(R_{i, t-1}- QV_{i, t-1})$$
-# TO DO: Identifiability analysis
+# Identifiability analysis
 
-What does the likelihood surface look like for various combinations of parameters?
+What does the likelihood surface look like for various combinations of parameters? Are they distinct enough to be identified successfully?
 
-- Choose a grid for each parameter
-  - alpha 0-1 by 0.1 (11 values)
-  - beta 0-5 by 0.5 (11 values)
-  - gamma 0-1.6 by 0.2 (9 values)
-  - delta 0-1.6 by 0.2 (9 values)
-  - total = 9803 simulations
-  
-Plot heatmaps of loglikelihood with alpha vs beta on axes for combinations of gamma and delta. This would be 256 plots!
-
-First get a sense of trial variability
+For each parameter combination the simulations below are for 25 subjects completing 5 runs of 60 trials with the same drift parameters for the fractal reward probabilities.
 
 ```{r}
 tmp = sim_out %>%
@@ -171,6 +162,7 @@ tmp %>%
        y = "\u03b2",
        fill="")
 ```
+Since each cell in the plot below is the average of 25 subjects there is variability in the likelihoods. The plot below depicts this variability as a combination of  
 
 ```{r}
 tmp %>%
@@ -186,6 +178,18 @@ tmp %>%
        x = "\u03b1",
        y = "\u03b2",
        fill="")
+```
+
+Does anything else become apparent when looking at delta and gamma on the axes?
+
+```{r}
+
+```
+
+Are things better with more data?
+
+```{r}
+
 ```
 
 # Non-hierarchical fit

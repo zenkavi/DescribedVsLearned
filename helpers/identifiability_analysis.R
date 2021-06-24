@@ -34,4 +34,4 @@ for(i in 1:length(alphas)){
 sim_out = sim_out %>%
   drop_na()
 
-saveRDS(sim_out, paste0(helpers_path, 'identiiability_analysis_sim_out.RDS'))
+saveRDS(sim_out, paste0(helpers_path, 'identifiability_analysis_sim_out.RDS'))

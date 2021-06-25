@@ -454,7 +454,7 @@ For each parameter combination the simulations below are for 25 subjects complet
 Lighter colors are higher log likelihood.
 
 ```{r}
-truePars=data.frame(alpha=.3, beta=4.6, gamma=.2, delta = 0.4)
+truePars=data.frame(alpha=.3, beta=4.6, gamma=.3, delta = 0.5)
 numSims = 1
 sim_out = identifiability_analysis(numSims= numSims, truePars = truePars)
 ```
@@ -471,7 +471,7 @@ tmp = sim_out %>%
   summarise(logLik_m = mean(logLik),
             logLik_sd = sd(logLik),
             .groups='keep') %>%
-  mutate(logLik_m_bin = ifelse(abs(logLik_m)> 210, NA, logLik_m))
+  mutate(logLik_m_bin = ifelse(abs(logLik_m)> 200, NA, logLik_m))
 
 
 tmp %>%
@@ -487,7 +487,7 @@ tmp %>%
        x = "\u03b1",
        y = "\u03b2",
        fill="")+
-  annotate("point", x=3, y=5)
+  annotate("point", x=3, y=9)
 ```
 
 Does anything else become apparent when looking at delta and gamma on the axes?

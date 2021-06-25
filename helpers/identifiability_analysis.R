@@ -3,51 +3,87 @@ library(here)
 library(tidyverse)
 helpers_path = here('helpers/')
 
-source(paste0(helpers_path, 'sim_logLiks.R'))
 source(paste0(helpers_path, 'sim_trials.R'))
+source(paste0(helpers_path, 'sim_choice_data.R.R'))
 
-identifiability_analysis = function(numSims = 10,
-                                    truePars,
+identifiability_analysis = function(truePars,
+                                    modelName,
+                                    numSims = 10,
                                     numTrials = 60, 
                                     numRuns = 5,
                                     randomWalkSigma = .025,
                                     randomWalkLowBound= 0.25,
                                     randomWalkUpBound= 0.75,
-                                    alphas = seq(0.1, 1, .1),
-                                    betas = seq(0.1, 5, .5),
-                                    deltas = seq(0.1, 1.6, .2),
-                                    gammas = seq(0.1, 1.6, .2)){
+                                    subj_par_names = c("alpha","gamma", "delta", "beta"), 
+                                    group_par_names=NA){
   
-  
-  sim_out = data.frame(alpha=NA, beta=NA, delta=NA, gamma=NA, logLik=NA)
-  x = length(betas)*length(deltas)*length(gammas)
-  y = length(alphas)*length(betas)*length(deltas)*length(gammas)
-  
-  for(i in 1:length(alphas)){
-    done_pct = round(((i-1)*x)/(y),2)
-    print(paste0(done_pct, "% done!") )
-    for(j in 1:length(betas)){
-      for(k in 1:length(deltas)){
-        for(l in 1:length(gammas)){
-          curPars = data.frame(alpha=alphas[i], beta=betas[j], delta=deltas[k], gamma=gammas[l])
-          logLiks = sim_logLiks(numSims, curPars, truePars, numTrials, numRuns, randomWalkSigma, randomWalkLowBound, randomWalkUpBound)
-          cur_out = data.frame(alpha=alphas[i], beta = betas[j], delta=deltas[k], gamma=gammas[l], logLik = logLiks)
-          sim_out = rbind(sim_out, cur_out)
-        }
-      }
+  for(i in 1:numSims){
+    trials = sim_trials(numSims,
+                        numTrials, 
+                        numRuns,
+                        randomWalkSigma,
+                        randomWalkLowBound,
+                        randomWalkUpBound)
+    
+    if(i == 1){
+      data = sim_choice_data(trials, truePars)
+      data = data %>% mutate(subnum=1)
+    } else{
+      cur_data = sim_choice_data(trials, truePars)
+      cur_data = cur_data %>% mutate(subnum=i)
+      data = rbind(data, cur_data)
     }
+    
   }
   
-  sim_out = sim_out %>%
-    drop_na() %>%
-    mutate(true_alpha = truePars$alpha,
-           true_beta = truePars$beta,
-           true_gamma = truePars$gamma,
-           true_delta = truePars$delta)
   
-  fn = paste0('identifiability_analysis_a', truePars$alpha, '_b', truePars$beta, '_g', truePars$gamma,'_d',truePars$delta,'.RDS')
-  saveRDS(sim_out, paste0(helpers_path, fn))
+  num_subjs = numSims
   
-  return(sim_out)
+  num_trials = numTrials * numRuns
+  
+  #subjects in rows, trials in columns
+  choices = extract_var_for_stan(data, choiceLeft)
+  
+  ev_left = extract_var_for_stan(data, leftLotteryEV)
+  
+  ev_right = extract_var_for_stan(data, rightLotteryEV)
+  
+  fractal_outcomes_left = extract_var_for_stan(data, leftFractalReward)
+  
+  fractal_outcomes_right = extract_var_for_stan(data, rightFractalReward)
+  
+  trial_pFrac = extract_var_for_stan(data, probFractalDraw)
+  
+  m_data=list(num_subjs = num_subjs,
+              num_trials = num_trials,
+              choices = choices,
+              ev_left = ev_left,
+              ev_right = ev_right,
+              fractal_outcomes_left = fractal_outcomes_left,
+              fractal_outcomes_right = fractal_outcomes_right,
+              trial_pFrac = trial_pFrac)
+  
+  rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac)
+  
+  if(file.exists(paste0(helpers_path, 'stanModels/ida_', modelName,'.RDS'))){
+    fit = readRDS(paste0(helpers_path, 'stanModels/ida_', modeName, '.RDS'))
+    rm(m_data)
+  } else {
+    m = stan_model(paste0(helpers_path, 'stanModels/', modelName, '.stan'))
+    fit = sampling(m, data=m_data)
+    saveRDS(fit, paste0(helpers_path, 'stanModels/ida_', modelName, '.RDS'))
+    rm(m, m_data)}
+  
+  if(is.na(group_par_names)){
+    out = organize_stan_output(fit, subj_par_names=subj_par_names, group_par_names=group_par_names)
+    par_ests = out$par_ests
+    return(par_ests)
+  } else{
+    out = organize_stan_output(fit, subj_par_names=subj_par_names, group_par_names=group_par_names)
+    pout = organize_stan_output(fit, subj_par_names=subj_par_names, group_par_names=group_par_names)
+    par_ests = out$par_ests
+    g_par_ests = out$g_par_ests
+    return(list(par_ests=par_ests, g_par_ests = g_par_ests))
+  }
 }
 

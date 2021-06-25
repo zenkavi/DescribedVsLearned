@@ -22,8 +22,8 @@ sim_choice_data = function(trials, pars, logLik=F, data=NA){
     
   }
   
-  leftEV = data$leftLotteryValue * data$leftLotteryProb
-  rightEV = data$rightLotteryValue * data$rightLotteryProb
+  data$leftEV = data$leftLotteryValue * data$leftLotteryProb
+  data$rightEV = data$rightLotteryValue * data$rightLotteryProb
 
   wProbFrac = (d * (data$probFractalDraw^g) ) / ( (d * (data$probFractalDraw^g)) + (1-data$probFractalDraw)^g )
 

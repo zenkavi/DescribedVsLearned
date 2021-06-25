@@ -1,10 +1,13 @@
 set.seed(2394239)
 library(here)
 library(tidyverse)
+library(rstan)
 helpers_path = here('helpers/')
 
 source(paste0(helpers_path, 'sim_trials.R'))
-source(paste0(helpers_path, 'sim_choice_data.R.R'))
+source(paste0(helpers_path, 'sim_choice_data.R'))
+source(paste0(helpers_path, 'extract_var_for_stan.R'))
+source(paste0(helpers_path, 'organize_stan_output.R'))
 
 identifiability_analysis = function(truePars,
                                     modelName,
@@ -18,8 +21,7 @@ identifiability_analysis = function(truePars,
                                     group_par_names=NA){
   
   for(i in 1:numSims){
-    trials = sim_trials(numSims,
-                        numTrials, 
+    trials = sim_trials(numTrials, 
                         numRuns,
                         randomWalkSigma,
                         randomWalkLowBound,
@@ -36,7 +38,6 @@ identifiability_analysis = function(truePars,
     
   }
   
-  
   num_subjs = numSims
   
   num_trials = numTrials * numRuns
@@ -44,9 +45,9 @@ identifiability_analysis = function(truePars,
   #subjects in rows, trials in columns
   choices = extract_var_for_stan(data, choiceLeft)
   
-  ev_left = extract_var_for_stan(data, leftLotteryEV)
+  ev_left = extract_var_for_stan(data, leftEV)
   
-  ev_right = extract_var_for_stan(data, rightLotteryEV)
+  ev_right = extract_var_for_stan(data, rightEV)
   
   fractal_outcomes_left = extract_var_for_stan(data, leftFractalReward)
   
@@ -75,12 +76,11 @@ identifiability_analysis = function(truePars,
     rm(m, m_data)}
   
   if(is.na(group_par_names)){
-    out = organize_stan_output(fit, subj_par_names=subj_par_names, group_par_names=group_par_names)
+    out = organize_stan_output(fit, subnums = 1:numSims, subj_par_names=subj_par_names, group_par_names=group_par_names)
     par_ests = out$par_ests
     return(par_ests)
   } else{
-    out = organize_stan_output(fit, subj_par_names=subj_par_names, group_par_names=group_par_names)
-    pout = organize_stan_output(fit, subj_par_names=subj_par_names, group_par_names=group_par_names)
+    out = organize_stan_output(fit, subnums = 1:numSims, subj_par_names=subj_par_names, group_par_names=group_par_names)
     par_ests = out$par_ests
     g_par_ests = out$g_par_ests
     return(list(par_ests=par_ests, g_par_ests = g_par_ests))

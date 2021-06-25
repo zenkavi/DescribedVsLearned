@@ -447,70 +447,12 @@ par_ests %>%
 
 # Identifiability analysis
 
-What does the likelihood surface look like for various combinations of parameters? Are they distinct enough to be identified successfully?
-
-For each parameter combination the simulations below are for 25 subjects completing 5 runs of 60 trials with the same drift parameters for the fractal reward probabilities (i.e. the same task structure as the empirical data).
-
-Lighter colors are higher log likelihood.
+Simulate 10 subjects with the following true parameters
 
 ```{r}
-truePars=data.frame(alpha=.3, beta=4.6, gamma=.3, delta = 0.5)
-numSims = 1
-sim_out = identifiability_analysis(numSims= numSims, truePars = truePars)
-```
-
-```{r}
-sim_out
-```
-
-Change color scale such that mean log likelihoods more than 2 SD's of all mean log likelihoods away are completely dark and we see variability only in the close likelihoods
-
-```{r}
-tmp = sim_out %>%
-  group_by(alpha, beta, delta, gamma) %>%
-  summarise(logLik_m = mean(logLik),
-            logLik_sd = sd(logLik),
-            .groups='keep') %>%
-  mutate(logLik_m_bin = ifelse(abs(logLik_m)> 200, NA, logLik_m))
-
-
-tmp %>%
-  mutate(alpha = as.factor(alpha),
-         beta=as.factor(beta),
-         gamma = paste0("\u03b3= ", gamma),
-         delta = paste0("\u03b4= ", delta)) %>%
-  ggplot(aes(alpha, beta, fill=logLik_m))+
-  geom_tile()+
-  facet_grid(gamma~delta)+
-  theme(legend.position = "bottom")+
-  labs(title = paste0("Mean of log likelihood from ", numSims, " simulations per cell"), 
-       x = "\u03b1",
-       y = "\u03b2",
-       fill="")+
-  annotate("point", x=3, y=9)
-```
-
-Does anything else become apparent when looking at delta and gamma on the axes?
-
-```{r}
-tmp %>%
-  mutate(gamma = as.factor(gamma),
-         delta = as.factor(delta),
-         alpha = paste0("\u03b1= ", alpha),
-         beta = paste0("\u03b2= ", beta)) %>%
-  ggplot(aes(gamma, delta, fill=logLik_m))+
-  geom_tile()+
-  facet_grid(alpha~beta)+
-  theme(legend.position = "bottom")+
-  labs(title = "Mean log likelihood from 25 simulations per cell", 
-       x = "\u03b3",
-       y = "\u03b4",
-       fill="")
-```
-Are things better with more data?
-
-```{r}
-
+truePars = data.frame(alpha=0.3, beta=4, gamma=0.4, delta=0.5)
+modelName = 'fit_twoValSystemsWithRL'
+id_par_ests = identifiability_analysis(truePars, modelName)
 ```
 
 

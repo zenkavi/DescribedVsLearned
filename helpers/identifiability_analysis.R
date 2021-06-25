@@ -40,12 +40,12 @@ identifiability_analysis = function(numSims = 10,
   
   sim_out = sim_out %>%
     drop_na() %>%
-    mutate(true_alpha = true_pars$alpha,
-           true_beta = true_pars$beta,
-           true_gamma = true_pars$gamma,
-           true_delta = true_pars$delta)
+    mutate(true_alpha = truePars$alpha,
+           true_beta = truePars$beta,
+           true_gamma = truePars$gamma,
+           true_delta = truePars$delta)
   
-  fn = paste0('identifiability_analysis_a', true_pars$alpha, '_b', true_pars$beta, '_g', true_pars$gamma,'_d',true_pars$delta,'.RDS')
+  fn = paste0('identifiability_analysis_a', truePars$alpha, '_b', truePars$beta, '_g', truePars$gamma,'_d',truePars$delta,'.RDS')
   saveRDS(sim_out, paste0(helpers_path, fn))
   
   return(sim_out)

@@ -145,8 +145,9 @@ For each parameter combination the simulations below are for 25 subjects complet
 Lighter colors are higher log likelihood.
 
 ```{r}
-sim_out = identifiability_analysis(true_pars=data.frame(alpha=.3, beta=2.1, gamma=.6, delta = 0.8), 
-                                   numSims = 5)
+truePars=data.frame(alpha=.3, beta=2.1, gamma=.6, delta = 0.8)
+numSims = 3
+sim_out = identifiability_analysis(numSims= numSims, truePars = truePars)
 ```
 
 ```{r}
@@ -158,7 +159,8 @@ tmp = sim_out %>%
   group_by(alpha, beta, delta, gamma) %>%
   summarise(logLik_m = mean(logLik),
             logLik_sd = sd(logLik),
-            .groups='keep')
+            .groups='keep') %>%
+  mutate(label=ifelse(alpha==true_pars$alpha & beta==true_pars$beta & delta==true_pars$delta & gamma == true_pars$gamma, "x", NA))
 
 tmp %>%
   mutate(alpha = as.factor(alpha),
@@ -169,14 +171,13 @@ tmp %>%
   geom_tile()+
   facet_grid(gamma~delta)+
   theme(legend.position = "bottom")+
-  labs(title = "Mean log likelihood from 1 simulations per cell", 
+  labs(title = paste0("Mean of log likelihood from ", numSims, "simulations per cell"), 
        x = "\u03b1",
        y = "\u03b2",
        fill="")+
   annotate("point", x=3, y=5)
 ```
 
-Since each cell in the plot below is the average of 25 subjects there is variability in the likelihoods. The plot below depicts this variability for each parameter combination.
 
 ```{r}
 tmp %>%
@@ -188,7 +189,7 @@ tmp %>%
   geom_tile()+
   facet_grid(gamma~delta)+
   theme(legend.position = "bottom")+
-  labs(title = "SD of log likelihood from 25 simulations per cell", 
+  labs(title = paste0("SD of log likelihood from ", numSims, "simulations per cell"), 
        x = "\u03b1",
        y = "\u03b2",
        fill="")

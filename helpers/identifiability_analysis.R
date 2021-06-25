@@ -6,7 +6,8 @@ helpers_path = here('helpers/')
 source(paste0(helpers_path, 'sim_logLiks.R'))
 source(paste0(helpers_path, 'sim_trials.R'))
 
-identifiability_analysis = function(true_pars,
+identifiability_analysis = function(numSims = 10,
+                                    truePars,
                                     numTrials = 60, 
                                     numRuns = 5,
                                     randomWalkSigma = .025,
@@ -15,14 +16,8 @@ identifiability_analysis = function(true_pars,
                                     alphas = seq(0.1, 1, .1),
                                     betas = seq(0.1, 5, .5),
                                     deltas = seq(0.1, 1.6, .2),
-                                    gammas = seq(0.1, 1.6, .2),
-                                    numSims = 10){
-  trials = sim_trials(numTrials,
-                      numRuns,
-                      randomWalkSigma,
-                      randomWalkLowBound,
-                      randomWalkUpBound)
-  true_data = sim_choice_data(trials, true_pars)
+                                    gammas = seq(0.1, 1.6, .2)){
+  
   
   sim_out = data.frame(alpha=NA, beta=NA, delta=NA, gamma=NA, logLik=NA)
   x = length(betas)*length(deltas)*length(gammas)
@@ -34,8 +29,8 @@ identifiability_analysis = function(true_pars,
     for(j in 1:length(betas)){
       for(k in 1:length(deltas)){
         for(l in 1:length(gammas)){
-          cur_pars = data.frame(alpha=alphas[i], beta=betas[j], delta=deltas[k], gamma=gammas[l])
-          logLiks = sim_logLiks(numSims, cur_pars, true_data)
+          curPars = data.frame(alpha=alphas[i], beta=betas[j], delta=deltas[k], gamma=gammas[l])
+          logLiks = sim_logLiks(numSims, curPars, truePars, numTrials, numRuns, randomWalkSigma, randomWalkLowBound, randomWalkUpBound)
           cur_out = data.frame(alpha=alphas[i], beta = betas[j], delta=deltas[k], gamma=gammas[l], logLik = logLiks)
           sim_out = rbind(sim_out, cur_out)
         }

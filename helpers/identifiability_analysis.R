@@ -67,7 +67,7 @@ identifiability_analysis = function(truePars,
   rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac)
   
   if(file.exists(paste0(helpers_path, 'stanModels/ida_', modelName,'.RDS'))){
-    fit = readRDS(paste0(helpers_path, 'stanModels/ida_', modeName, '.RDS'))
+    fit = readRDS(paste0(helpers_path, 'stanModels/ida_', modelName, '.RDS'))
     rm(m_data)
   } else {
     m = stan_model(paste0(helpers_path, 'stanModels/', modelName, '.stan'))
@@ -75,7 +75,7 @@ identifiability_analysis = function(truePars,
     saveRDS(fit, paste0(helpers_path, 'stanModels/ida_', modelName, '.RDS'))
     rm(m, m_data)}
   
-  if(is.na(group_par_names)){
+  if(is.na(group_par_names[1])){
     out = organize_stan_output(fit, subnums = 1:numSims, subj_par_names=subj_par_names, group_par_names=group_par_names)
     par_ests = out$par_ests
     return(par_ests)

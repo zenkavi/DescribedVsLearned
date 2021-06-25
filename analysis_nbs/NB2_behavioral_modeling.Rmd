@@ -494,9 +494,24 @@ id_par_ests %>%
 ```{r}
 truePars = data.frame(alpha=0.3, beta=4, gamma=0.4, delta=0.5)
 modelName = 'fit_twoValSystemsWithRL_hierarchical'
-id_par_ests = identifiability_analysis(truePars, modelName)
+group_par_names=c("g_alpha","g_gamma", "g_delta", "g_beta")
+id_par_ests = identifiability_analysis(truePars, modelName, group_par_names = group_par_names)
 ```
 
+```{r}
+id_par_ests$par_ests %>%
+  ggplot(aes(value))+
+  geom_histogram(alpha=.5, bins = 30)+
+  facet_grid(subnum~par, scale="free")+
+  geom_vline(aes(xintercept = value), tmp, color=cbbPalette[5])+
+  theme(axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid = element_blank(),
+        strip.text.x = element_text(size=14),
+        axis.text.x = element_text(size=14))+
+  xlab("")+
+  ylab("")
+```
 
 # TO DO: Posterior predictive checks
 

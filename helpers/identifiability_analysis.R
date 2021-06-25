@@ -4,6 +4,7 @@ library(tidyverse)
 helpers_path = here('helpers/')
 
 source(paste0(helpers_path, 'sim_logLiks.R'))
+source(paste0(helpers_path, 'sim_trials.R'))
 
 identifiability_analysis = function(true_pars,
                                     numTrials = 60, 
@@ -21,7 +22,7 @@ identifiability_analysis = function(true_pars,
                       randomWalkSigma,
                       randomWalkLowBound,
                       randomWalkUpBound)
-  data = sim_choice_data(trials, true_pars)
+  true_data = sim_choice_data(trials, true_pars)
   
   sim_out = data.frame(alpha=NA, beta=NA, delta=NA, gamma=NA, logLik=NA)
   x = length(betas)*length(deltas)*length(gammas)
@@ -52,6 +53,6 @@ identifiability_analysis = function(true_pars,
   fn = paste0('identifiability_analysis_a', true_pars$alpha, '_b', true_pars$beta, '_g', true_pars$gamma,'_d',true_pars$delta,'.RDS')
   saveRDS(sim_out, paste0(helpers_path, fn))
   
-  return(out)
+  return(sim_out)
 }
 

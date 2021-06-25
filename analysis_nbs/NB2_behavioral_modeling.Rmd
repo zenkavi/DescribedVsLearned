@@ -33,6 +33,7 @@ source(paste0(helpers_path, 'extract_var_for_stan.R'))
 source(paste0(helpers_path, 'get_qvals.R'))
 source(paste0(helpers_path, 'facet_wrap_equal.R'))
 source(paste0(helpers_path, 'organize_stan_output.R'))
+source(paste0(helpers_path, 'identifiability_analysis.R'))
 ```
 
 Set theme for plots
@@ -144,6 +145,15 @@ For each parameter combination the simulations below are for 25 subjects complet
 Lighter colors are higher log likelihood.
 
 ```{r}
+sim_out = identifiability_analysis(true_pars=data.frame(alpha=.3, beta=2.1, gamma=.6, delta = 0.8), 
+                                   numSims = 5)
+```
+
+```{r}
+sim_out
+```
+
+```{r}
 tmp = sim_out %>%
   group_by(alpha, beta, delta, gamma) %>%
   summarise(logLik_m = mean(logLik),
@@ -159,11 +169,12 @@ tmp %>%
   geom_tile()+
   facet_grid(gamma~delta)+
   theme(legend.position = "bottom")+
-  labs(title = "Mean log likelihood from 25 simulations per cell", 
+  labs(title = "Mean log likelihood from 1 simulations per cell", 
        x = "\u03b1",
        y = "\u03b2",
        fill="")
 ```
+
 Since each cell in the plot below is the average of 25 subjects there is variability in the likelihoods. The plot below depicts this variability for each parameter combination.
 
 ```{r}

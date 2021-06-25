@@ -16,16 +16,16 @@ sim_choice_data = function(trials, pars, logLik=F, data=NA){
   for (i in 1:nrow(data)){
     
     if(i < nrow(data)){
-      leftQV[i+1] = leftQV[i] + a * (leftFractalReward[i] - leftQV[i])
-      rightQV[i+1] = rightQV[i] + a * (rightFractalReward[i] - rightQV[i])
+      leftQV[i+1] = leftQV[i] + a * (data$leftFractalReward[i] - leftQV[i])
+      rightQV[i+1] = rightQV[i] + a * (data$rightFractalReward[i] - rightQV[i])
     }
     
   }
   
-  leftEV = leftLotteryValue * leftLotteryProb
-  rightEV = rightLotteryValue * rightLotteryProb
+  leftEV = data$leftLotteryValue * data$leftLotteryProb
+  rightEV = data$rightLotteryValue * data$rightLotteryProb
 
-  wProbFrac = (d * (probFractalDraw^g) ) / ( (d * (probFractalDraw^g)) + (1-probFractalDraw)^g )
+  wProbFrac = (d * (data$probFractalDraw^g) ) / ( (d * (data$probFractalDraw^g)) + (1-data$probFractalDraw)^g )
 
   optValLeft = (1-wProbFrac)*leftEV + wProbFrac*leftQV
   optValRight = (1-wProbFrac)*rightEV + wProbFrac*rightQV
@@ -36,7 +36,7 @@ sim_choice_data = function(trials, pars, logLik=F, data=NA){
   
   if(logLik){
     logLik = dbinom(data$choiceLeft, 1, prob = choice_prob, log=T)
-    logLik = sum(data$logLik)
+    logLik = sum(logLik)
     return(logLik)
   } else{
     data$choiceLeft = rbinom(nrow(data), 1, choice_prob)

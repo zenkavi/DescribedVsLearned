@@ -172,7 +172,8 @@ tmp %>%
   labs(title = "Mean log likelihood from 1 simulations per cell", 
        x = "\u03b1",
        y = "\u03b2",
-       fill="")
+       fill="")+
+  annotate("point", x=3, y=5)
 ```
 
 Since each cell in the plot below is the average of 25 subjects there is variability in the likelihoods. The plot below depicts this variability for each parameter combination.

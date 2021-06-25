@@ -240,6 +240,8 @@ tmp %>%
   xlab("Posterior median")+
   ylab("Maximum likelihood")
 ```
+
+
 ```{r}
 tmp %>%
   select(-logLik) %>%
@@ -455,12 +457,52 @@ modelName = 'fit_twoValSystemsWithRL'
 id_par_ests = identifiability_analysis(truePars, modelName)
 ```
 
+```{r}
+id_par_ests %>%
+filter(par == "alpha") %>%
+  ggplot(aes(logLik)) +
+  geom_histogram(alpha=.5, bins=30)+
+  facet_wrap(~subnum, scales="free_x")+
+  xlab("Log Likelihood")+
+  ylab("")+
+  ggtitle("Distribution of log likelihoods across the samples for each subject")+
+  theme(axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid = element_blank())
+```
+
+```{r}
+tmp = do.call("rbind", replicate(numSims, truePars, simplify = FALSE))
+tmp = tmp %>% mutate(subnum =1:n())
+tmp = tmp %>%
+  gather(par, value, -subnum)
+
+id_par_ests %>%
+  ggplot(aes(value))+
+  geom_histogram(alpha=.5, bins = 30)+
+  facet_grid(subnum~par, scale="free")+
+  geom_vline(aes(xintercept = value), tmp, color=cbbPalette[5])+
+  theme(axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid = element_blank(),
+        strip.text.x = element_text(size=14),
+        axis.text.x = element_text(size=14))+
+  xlab("")+
+  ylab("")
+```
+
+```{r}
+truePars = data.frame(alpha=0.3, beta=4, gamma=0.4, delta=0.5)
+modelName = 'fit_twoValSystemsWithRL_hierarchical'
+id_par_ests = identifiability_analysis(truePars, modelName)
+```
+
 
 # TO DO: Posterior predictive checks
 
 Sample parameters from posterior
 Simulate choice data with sampled parameters
-
+Which features of the data are we interested in comparing these to?
 
 ```{r}
 

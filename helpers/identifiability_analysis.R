@@ -40,7 +40,7 @@ identifiability_analysis = function(truePars,
   
   num_subjs = numSims
   
-  num_trials = numTrials * numRuns
+  num_trials = rep(numTrials * numRuns, numSims)
   
   #subjects in rows, trials in columns
   choices = extract_var_for_stan(data, choiceLeft)

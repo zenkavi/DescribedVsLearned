@@ -110,9 +110,9 @@ rm(m, m2, tmp)
 
 # Define two systems model
 
-On each trial is subjects process not only the two fractals but also their relevance to the trial's reward, as well as, the lottery information. So to describe the choice process in this task, including accounting for learning about fractals across trials, the computational model must include all of these factors.
+On each trial subjects process not only the two fractals but also their relevance to the trial's reward, as well as, the lottery information. So to describe the choice process in this task, including accounting for learning about fractals across trials, the computational model must include all of these factors.
 
-In this model the probability of choosing the option on the left is described as a softmax temperature that depends on the value difference between the left and right pairs. The free parameter $\beta$ controls the extent to which the choice depends on this value difference instead of chance.
+In this model the probability of choosing the option on the left is described as a softmax function that depends on the value difference between the left and right pairs. The free parameter $\beta$ controls the extent to which the choice depends on this value difference instead of chance.
 
 $$p(choice = left) = \frac{1}{1+e^{-\beta(V_{left} - V_{right})}}$$
 The value of each pair is defined as a weighted average of both of its components. The two components of each pair, the lottery and the fractal is weighted proportional to their relevance for that trial.
@@ -123,10 +123,7 @@ Given the large amount of evidence from behavioral economics suggesting that peo
 $$w(pFrac) = \frac{\delta*pFrac^{\gamma}}{\delta*pFrac^{\gamma}+(1- pFrac)^{\gamma}}$$
 where $\delta$ (primarily) controls the elevation/intercept to capture attractiveness of the outcome weighted by the distorted probability and $\gamma$ (primarily) controls curvature to capture the discriminability of distorted probabilities from each other. They call this shape "linear in log odds." Note the parameters control the two aspects of the curve primarily and not completely because the ends of the curves are fixed at 0 and 1 ("pinching").
 
-This is not the only probability distortion function that could have been used. An alternative proposed by Prelec (1998) is
-
-$$w(pFrac) = exp(-\delta(-log(pFrac))^\gamma)$$
-which is very similar in shape to the previous one. This one has the key property of "compound invariance" and only studies specifically designed to pit the two functions each other can discriminate them.
+This is not the only probability distortion function that could have been used. An alternative proposed by Prelec (1998) is $w(pFrac) = exp(-\delta(-log(pFrac))^\gamma)$ which is very similar in shape to the previous one. This one has the key property of "compound invariance" and only studies specifically designed to pit the two functions each other can discriminate them.
 
 While these two models with two parameters each are often indistinguishable models with only one parameter for the probability distortion function is often a worse fit.
 
@@ -218,7 +215,7 @@ par_ests %>%
 
 How do the ML and posterior medians differ? 
 
-**Note: posterior median estimates are from different iterations!**
+**Note: posterior median estimates are from different iterations/samples whereas the estimates that have the highest likelihood are from the same sample.**
 
 ```{r}
 tmp1 = par_ests %>%
@@ -239,21 +236,6 @@ tmp %>%
   facet_wrap_equal(~par, scales='free')+
   xlab("Posterior median")+
   ylab("Maximum likelihood")
-```
-
-
-```{r}
-tmp %>%
-  select(-logLik) %>%
-  gather(key, value, -subnum, -par) %>%
-  mutate(key = ifelse(key=="est", "Posterior median", "Maximum likelihood")) %>%
-  ggplot(aes(value, fill=key))+
-  geom_histogram(alpha=.5, bins=30, position="identity")+
-  facet_wrap(~par, scale='free')+
-  theme(legend.title = element_blank(),
-        legend.position = "bottom")+
-  xlab("")+
-  ylab("")
 ```
 
 Where does the MLE fall on the posteriors of each parameter? **Often not in a very representative part of the full posterior.**
@@ -312,19 +294,23 @@ rm(tmp, tmp1, tmp2, tmp3)
 
 ## Covariance between parameters
 
-Are there any dependencies between the parameters?
+Are there any dependencies between the parameters? Looking at estimates from the **same** sampling iteration.
 
 ```{r}
-par_ests %>%
+tmp = par_ests %>%
   group_by(subnum, par) %>%
-  summarise(est = median(value), .groups='keep') %>%
-  # filter(logLik == max(logLik)) %>%
-  ungroup() %>%
-  # select(-logLik)%>%
-  spread(par, est) %>%
-  # spread(par, value) %>%
-  select(-subnum) %>%
-  ggpairs(progress = FALSE)
+  mutate(iter = 1:n()) %>%
+  select(-logLik) %>%
+  group_by(iter) %>%
+  spread(par, value) %>%
+  ungroup()%>%
+  select(-subnum, -iter) 
+
+round(cor(tmp), 3)
+```
+
+```{r}
+rm(tmp)
 ```
 
 # Hierarchical model
@@ -446,6 +432,18 @@ par_ests %>%
 
 ## Covariance between parameters
 
+````{r}
+tmp = par_ests %>%
+  group_by(subnum, par) %>%
+  mutate(iter = 1:n()) %>%
+  select(-logLik) %>%
+  group_by(iter) %>%
+  spread(par, value) %>%
+  ungroup()%>%
+  select(-subnum, -iter) 
+
+round(cor(tmp), 3)
+```
 
 # Identifiability analysis
 

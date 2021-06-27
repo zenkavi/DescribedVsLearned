@@ -9,7 +9,7 @@ output:
     toc: yes
 ---
 
-# Set up environment and load in data
+# Set up
 
 ```{r include=FALSE}
 library(tidyverse)
@@ -25,9 +25,9 @@ cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00"
 helpers_path = here('helpers/')
 ```
 
-# Read in *clean* behavioral data
+# Read in data
 
-```{r}
+```{r include=FALSE}
 source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 source(paste0(helpers_path, 'extract_var_for_stan.R'))
 source(paste0(helpers_path, 'get_qvals.R'))
@@ -42,7 +42,7 @@ Set theme for plots
 theme_set(theme_bw())
 ```
 
-# Evidence for "learning" fractal values
+# Manipulation check
 
 Is there evidence if "learning" to justify the fitting of an RL model?
 
@@ -105,10 +105,14 @@ summary(m2)
 ```
 
 ```{r eval=FALSE}
-rm(m, m2, tmp)
+rm(m, m2)
 ```
 
-# Define two systems model
+```{r echo=FALSE}
+rm(tmp)
+```
+
+# Define model
 
 On each trial subjects process not only the two fractals but also their relevance to the trial's reward, as well as, the lottery information. So to describe the choice process in this task, including accounting for learning about fractals across trials, the computational model must include all of these factors.
 
@@ -133,64 +137,15 @@ $$EV_{i, t} = p_{i, t} V{i_t}$$
 The Q-value of each fractal is adjusted in each trial by a reward prediction error weighted by a learning rate ($\alpha$).
 
 $$QV_{i,t} = QV_{i, t-1} + \alpha(R_{i, t-1}- QV_{i, t-1})$$
-# Non-hierarchical fit
-
-Organize data
+# Model fit
 
 ```{r}
-num_subjs = length(unique(clean_beh_data$subnum))
-
-num_trials = clean_beh_data %>%
-  count(subnum) %>%
-  select(n)
-num_trials = num_trials$n
-
-#subjects in rows, trials in columns
-choices = extract_var_for_stan(clean_beh_data, choiceLeft)
-
-clean_beh_data = clean_beh_data %>%
-  mutate(leftLotteryEV = lotteryValue*lotteryProb,
-         rightLotteryEV = referenceValue*referenceProb)
-
-ev_left = extract_var_for_stan(clean_beh_data, leftLotteryEV)
-
-ev_right = extract_var_for_stan(clean_beh_data, rightLotteryEV)
-
-fractal_outcomes_left = extract_var_for_stan(clean_beh_data, leftFractalReward)
-
-fractal_outcomes_right = extract_var_for_stan(clean_beh_data, rightFractalReward)
-
-trial_pFrac = extract_var_for_stan(clean_beh_data, probFractalDraw)
-
-m_data=list(num_subjs = num_subjs,
-            num_trials = num_trials,
-            choices = choices,
-            ev_left = ev_left,
-            ev_right = ev_right,
-            fractal_outcomes_left = fractal_outcomes_left,
-            fractal_outcomes_right = fractal_outcomes_right,
-            trial_pFrac = trial_pFrac)
-
-rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac)
-```
-
-Fit model for all subjects separately
-
-```{r}
-if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))){
-  fit = readRDS(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))
-  rm(m_data)
-} else {
-  m = stan_model(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.stan'))
-  fit = sampling(m, data=m_data)
-  saveRDS(fit, paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL.RDS'))
-  rm(m, m_data)}
-```
-
-```{r}
-out = organize_stan_output(fit, subj_par_names = c("alpha","gamma", "delta", "beta"))
-par_ests = out$par_ests
-rm(out)
+source(paste0(helpers_path, '02_fit_twoValSystemsWithRL.R'))
+# Rename objects 
+par_ests_nh = par_ests
+fit_nh = fit
+rm(par_ests, fit)
+source(paste0(helpers_path, 'fit_twoValSystemsWithRL_hierarchical.R'))
 ```
 
 ## Log likelihood distributions
@@ -211,7 +166,7 @@ par_ests %>%
         panel.grid = element_blank())
 ```
 
-## MLE vs median estimates
+## Parameter point estimates
 
 How do the ML and posterior medians differ? 
 
@@ -291,7 +246,6 @@ par_ests %>%
 rm(tmp, tmp1, tmp2, tmp3)
 ```
 
-
 ## Covariance between parameters
 
 Are there any dependencies between the parameters? Looking at estimates from the **same** sampling iteration.
@@ -316,64 +270,7 @@ rm(tmp)
 # Hierarchical model
 
 ```{r}
-num_subjs = length(unique(clean_beh_data$subnum))
-
-num_trials = clean_beh_data %>%
-  count(subnum) %>%
-  select(n)
-num_trials = num_trials$n
-
-#subjects in rows, trials in columns
-choices = extract_var_for_stan(clean_beh_data, choiceLeft)
-
-clean_beh_data = clean_beh_data %>%
-  mutate(leftLotteryEV = lotteryValue*lotteryProb,
-         rightLotteryEV = referenceValue*referenceProb)
-
-ev_left = extract_var_for_stan(clean_beh_data, leftLotteryEV)
-
-ev_right = extract_var_for_stan(clean_beh_data, rightLotteryEV)
-
-fractal_outcomes_left = extract_var_for_stan(clean_beh_data, leftFractalReward)
-
-fractal_outcomes_right = extract_var_for_stan(clean_beh_data, rightFractalReward)
-
-trial_pFrac = extract_var_for_stan(clean_beh_data, probFractalDraw)
-
-m_data=list(num_subjs = num_subjs,
-            num_trials = num_trials,
-            choices = choices,
-            ev_left = ev_left,
-            ev_right = ev_right,
-            fractal_outcomes_left = fractal_outcomes_left,
-            fractal_outcomes_right = fractal_outcomes_right,
-            trial_pFrac = trial_pFrac)
-
-rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac)
-```
-
-```{r}
-if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarchical.RDS'))){
-  fit = readRDS(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarchical.RDS'))
-  rm(m_data)
-} else {
-  m = stan_model(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarchical.stan'))
-  fit = sampling(m, data=m_data)
-  saveRDS(fit, paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarchical.RDS'))
-  rm(m, m_data)}
-```
-
-```{r}
-out = organize_stan_output(fit, 
-                           subj_par_names=c("alpha","gamma", "delta", "beta"),
-                           group_par_names=c("g_alpha","g_gamma", "g_delta", "g_beta"))
-par_ests = out$par_ests
-g_par_ests = out$g_par_ests
-rm(out)
-```
-
-```{r}
-par_ests
+source(paste0(helpers_path, 'fit_twoValSystemsWithRL_hierarchical.R'))
 ```
 
 ## Log likelihood distribution
@@ -393,6 +290,14 @@ par_ests %>%
 ```
 
 ## MLE vs median posterior estimates
+
+### Group parameters
+
+```{r}
+
+```
+
+### Individual parameters
 
 ```{r}
 tmp1 = par_ests %>%

@@ -208,6 +208,8 @@ g_par_ests %>%
 
 How do the ML and posterior medians differ? 
 
+Most pronounced differences are on $\beta$.
+
 **Note: posterior median estimates are from different iterations/samples whereas the estimates that have the highest likelihood are from the same sample.**
 
 ```{r}
@@ -231,7 +233,7 @@ tmp %>%
   ylab("Maximum likelihood")
 ```
 
-Where does the MLE fall on the posteriors of each parameter? **Often not in a very representative part of the full posterior.**
+Where does the MLE fall on the posteriors of each parameter? 
 
 ```{r fig.height=8, fig.width=4}
 par_ests %>%
@@ -267,7 +269,7 @@ par_ests %>%
   facet_wrap(~subnum, scales="free_x")+
   xlab("Log Likelihood")+
   ylab("")+
-  ggtitle("Distribution of log likelihoods across the samples for each subject")+
+  ggtitle("Distribution of log likelihoods across the samples for each subject \noverlaid with likelihoods of posterior median parameter estimates")+
   theme(axis.text.y=element_blank(),
         axis.ticks.y=element_blank(),
         panel.grid = element_blank(),
@@ -284,9 +286,21 @@ par_ests %>%
 rm(tmp, tmp1, tmp2, tmp3)
 ```
 
+**MLE**
+- Point estimates from the same sampling iteration  
+- MLE estimates differ most from point estimates for beta and gamma so choosing these as point estimates doesn't yield different data for all parameters.  
+
+**Median of posterior**
+- Point estimates from the different sampling iteration  
+- Median estimates have likelihoods that fall in the middle (instead of the max) of the   likelihood distributions.
+
+When would we need point estimates?  
+- Individual difference analyses  
+- Prediction error estimates for imaging  
+
 ## Covariance between parameters
 
-Are there any dependencies between the parameters? Looking at estimates from the **same** sampling iteration.
+Are there any dependencies between the parameters? Looking at correlations between samples from the **same** iteration.
 
 ```{r}
 tmp = par_ests %>%
@@ -311,7 +325,7 @@ Simulate 10 subjects with the following true parameters
 
 ```{r}
 truePars = data.frame(alpha=0.3, beta=4, gamma=0.4, delta=0.5)
-modelName = 'fit_twoValSystemsWithRL'
+modelName = 'fit_twoValSystemsWithRL_hierarchical'
 id_par_ests = identifiability_analysis(truePars, modelName)
 ```
 

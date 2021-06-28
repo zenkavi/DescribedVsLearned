@@ -327,25 +327,36 @@ Plot proportion of choiceLeft as a function of probFractalDraw
 
 ```{r}
 modelName = 'fit_twoValSystemsWithRL_hierarchical'
-pp_data = make_posterior_predictive_data(numDraws = 100, modelName = modelName)
+
+if(file.exists(paste0(helpers_path, 'pp_data_', modelName, '.RDS'))){
+  pp_data = readRDS(paste0(helpers_path, 'pp_data_', modelName, '.RDS'))
+} else{
+  pp_data = make_posterior_predictive_data(numDraws = 100, modelName = modelName) 
+}
 ```
 
 ```{r}
 tmp = clean_beh_data %>%
   group_by(subnum, probFractalDraw) %>%
-  summarise(propLeft = mean(choiceLeft), .groups='keep')
+  summarise(propLeft = mean(choiceLeft), .groups='keep') %>%
+  mutate(data_type = "actual")
 
 pp_data %>%
   group_by(subnum, sampleNum, probFractalDraw) %>%
   summarise(propLeft = mean(choiceLeft), .groups='keep') %>%
-  arrange(probFractalDraw) %>%
-  ggplot(aes(factor(probFractalDraw), propLeft))+
-  geom_boxplot()+
-  geom_point(data=tmp, aes(factor(probFractalDraw), propLeft), color="red")+
-  facet_wrap(~subnum)+
-  theme(panel.grid = element_blank())+
+  mutate(data_type = "predicted") %>%
+  rbind(tmp) %>%
+  ggplot(aes(factor(probFractalDraw), propLeft, color=data_type, alpha=data_type, shape=data_type, size=data_type))+
+  # geom_boxplot(position=position_dodge(width = 0))+
+  geom_point()+
+  facet_wrap(~subnum) + 
+  theme(panel.grid = element_blank(), legend.position = "bottom", legend.title = element_blank())+
   xlab("Probability of a Fractal Draw")+
-  ylab("Proportion of left choices")
+  ylab("Proportion of left choices")+
+  scale_color_manual(values=c(cbbPalette[2], "gray"))+
+  scale_alpha_manual(values=c(1, .5))+
+  scale_shape_manual(values=c(19, 1))+
+  scale_size_manual(values=c(2, 1))
   
 ```
 

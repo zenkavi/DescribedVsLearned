@@ -13,10 +13,6 @@ output:
 
 ```{r include=FALSE}
 library(tidyverse)
-library(gridExtra)
-library(rstan)
-library(brms)
-library(GGally)
 library(here)
 cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 ```
@@ -29,87 +25,15 @@ helpers_path = here('helpers/')
 
 ```{r include=FALSE}
 source(paste0(helpers_path,'01_clean_behavioral_data.R'))
-source(paste0(helpers_path, 'extract_var_for_stan.R'))
-source(paste0(helpers_path, 'get_qvals.R'))
 source(paste0(helpers_path, 'facet_wrap_equal.R'))
-source(paste0(helpers_path, 'organize_stan_output.R'))
 source(paste0(helpers_path, 'identifiability_analysis.R'))
+source(paste0(helpers_path, 'make_posterior_predictive_data.R'))
 ```
 
 Set theme for plots
 
 ```{r}
 theme_set(theme_bw())
-```
-
-# Manipulation check
-
-Is there evidence if "learning" to justify the fitting of an RL model?
-
-As time goes by are subjects more likely to choose the fractal with the higher reward probability? There is a subtle increase in the probability of choosing the fractal with the higher reward probability. This change in probability of choosing the fractal with the higher reward probability is larger when the reward depends only on fractals (except for the last session, which bizarrely has the opposite pattern).
-
-```{r}
-tmp = clean_beh_data %>%
-  mutate(leftFractalBetter = fractalLeftProb>fractalRightProb,
-         choseBetterFractal = ifelse(leftFractalBetter & choiceLeft == 1, 1, 
-                                     ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0)))
-p1 = tmp %>%
-  ggplot(aes(trialNum, choseBetterFractal, col=as.factor(session)))+
-  # ggplot(aes(trialNum, choseBetterFractal))+
-  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, alpha=.1)+
-  labs(title="All trials", x="Trial Number", y="p(Chose better fractal)", color="Session")+
-  coord_cartesian(ylim=c(0.4,.8))+
-  scale_color_manual(values=cbbPalette)+
-  theme(legend.position="bottom")
-
-p2 = tmp %>%
-  filter(probFractalDraw>.5) %>%
-  ggplot(aes(trialNum, choseBetterFractal, col=as.factor(session)))+
-  # ggplot(aes(trialNum, choseBetterFractal))+
-  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, alpha=.1)+
-  labs(title="p(Fractal)>.5", x="Trial Number", y="p(Chose better fractal)", color="Session")+
-  coord_cartesian(ylim=c(0.4,.8))+
-  scale_color_manual(values=cbbPalette)+
-  theme(legend.position="bottom")
-
-grid.arrange(p1, p2, nrow=1, ncol=2)
-```
-
-```{r}
-rm(p1, p2)
-```
-
-Bayesian multilevel model checking if the slopes in the above figure are different than 0. 
-
-When looking at all trials (left figure) the overall slope of all sessions is not different than 0 (not shown below). When including an interaction term with session number then there is a very small but non-zero increase in the probability of choosing the better fractal (i.e. learning) in sessions 1 and 3 but not in the other sessions.
-
-```{r eval=FALSE}
-# The default prior for population parameters is an improper flat prior over the reals
-m = brm(choseBetterFractal ~ trialNum*as.factor(session) + (1|subnum),
-        data=tmp, family=bernoulli(link="logit"))
-```
-
-```{r eval=FALSE}
-summary(m)
-```
-
-Filtering only trials where probability of a fractal draw is >.5, i.e. trials where learning about the fractal values would be more consequential we find a slightly stronger increase in the probability of choosing the better fractal later in the session in sessions 1 through 3 though still no effect for the other sessions.
-
-```{r eval=FALSE}
-m2= brm(choseBetterFractal ~ trialNum*as.factor(session) + (1|subnum),
-        data=tmp %>% filter(probFractalDraw>.5), family=bernoulli(link="logit"))
-```
-
-```{r eval=FALSE}
-summary(m2)
-```
-
-```{r eval=FALSE}
-rm(m, m2)
-```
-
-```{r echo=FALSE}
-rm(tmp)
 ```
 
 # Define model
@@ -375,6 +299,7 @@ id_par_ests$g_par_ests %>%
   xlab("")+
   ylab("")
 ```
+
 Recovered individual parameter posteriors. True values in blue.
 
 ```{r fig.height=8, fig.width=8}
@@ -396,11 +321,14 @@ id_par_ests$par_ests %>%
 rm(id_par_ests, trueGroupPars, truePars)
 ```
 
-# TO DO: Posterior predictive checks
+# Posterior predictive checks
 
-Sample parameters from posterior
-Simulate choice data with sampled parameters
-Which features of the data are we interested in comparing these to?
+Plot proportion of choiceLeft as a function of probFractalDraw
+
+```{r}
+modelName = 'fit_twoValSystemsWithRL_hierarchical'
+pp_data = make_posterior_predictive_data(numDraws = 10, modelName = modelName)
+```
 
 ```{r}
 

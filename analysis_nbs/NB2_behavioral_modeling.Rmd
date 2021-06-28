@@ -137,6 +137,7 @@ $$EV_{i, t} = p_{i, t} V{i_t}$$
 The Q-value of each fractal is adjusted in each trial by a reward prediction error weighted by a learning rate ($\alpha$).
 
 $$QV_{i,t} = QV_{i, t-1} + \alpha(R_{i, t-1}- QV_{i, t-1})$$
+
 # Model fit
 
 ```{r}
@@ -235,7 +236,7 @@ tmp %>%
 
 Where does the MLE fall on the posteriors of each parameter? 
 
-```{r fig.height=8, fig.width=4}
+```{r fig.height=8, fig.width=8}
 par_ests %>%
   ggplot(aes(value))+
   geom_histogram(alpha=.5, bins = 30)+
@@ -252,7 +253,7 @@ par_ests %>%
 
 How far are the likelihoods of the median estimates from the maximum likelihood?
 
-```{r}
+```{r fig.height=5, fig.width=8}
 tmp3 = par_ests %>%
   group_by(subnum, par) %>%
   mutate(est = median(value), 
@@ -286,11 +287,11 @@ par_ests %>%
 rm(tmp, tmp1, tmp2, tmp3)
 ```
 
-**MLE**
+**MLE**  
 - Point estimates from the same sampling iteration  
 - MLE estimates differ most from point estimates for beta and gamma so choosing these as point estimates doesn't yield different data for all parameters.  
 
-**Median of posterior**
+**Median of posterior**  
 - Point estimates from the different sampling iteration  
 - Median estimates have likelihoods that fall in the middle (instead of the max) of the   likelihood distributions.
 
@@ -303,16 +304,15 @@ When would we need point estimates?
 Are there any dependencies between the parameters? Looking at correlations between samples from the **same** iteration.
 
 ```{r}
-tmp = par_ests %>%
-  group_by(subnum, par) %>%
+tmp = g_par_ests %>%
+  group_by(key) %>%
   mutate(iter = 1:n()) %>%
-  select(-logLik) %>%
   group_by(iter) %>%
-  spread(par, value) %>%
-  ungroup()%>%
-  select(-subnum, -iter) 
+  spread(key, value) %>%
+  ungroup() %>%
+  select(-iter)
 
-round(cor(tmp), 3)
+round(cor(tmp), 3)  
 ```
 
 ```{r}

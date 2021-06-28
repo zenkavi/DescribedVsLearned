@@ -100,7 +100,7 @@ par_ests %>%
   scale_fill_manual(values=c(cbbPalette[1], cbbPalette[2]))
 ```
 
-```{r}
+```{r echo=FALSE}
 rm(par_ests_nh, fit_nh)
 ```
 
@@ -317,7 +317,7 @@ id_par_ests$par_ests %>%
   ylab("")
 ```
 
-```{r}
+```{r echo=FALSE}
 rm(id_par_ests, trueGroupPars, truePars)
 ```
 
@@ -327,9 +327,28 @@ Plot proportion of choiceLeft as a function of probFractalDraw
 
 ```{r}
 modelName = 'fit_twoValSystemsWithRL_hierarchical'
-pp_data = make_posterior_predictive_data(numDraws = 10, modelName = modelName)
+pp_data = make_posterior_predictive_data(numDraws = 100, modelName = modelName)
 ```
 
 ```{r}
+tmp = clean_beh_data %>%
+  group_by(subnum, probFractalDraw) %>%
+  summarise(propLeft = mean(choiceLeft), .groups='keep')
 
+pp_data %>%
+  group_by(subnum, sampleNum, probFractalDraw) %>%
+  summarise(propLeft = mean(choiceLeft), .groups='keep') %>%
+  arrange(probFractalDraw) %>%
+  ggplot(aes(factor(probFractalDraw), propLeft))+
+  geom_boxplot()+
+  geom_point(data=tmp, aes(factor(probFractalDraw), propLeft), color="red")+
+  facet_wrap(~subnum)+
+  theme(panel.grid = element_blank())+
+  xlab("Probability of a Fractal Draw")+
+  ylab("Proportion of left choices")
+  
+```
+
+```{r echo=FALSE}
+rm(modelName, tmp)
 ```

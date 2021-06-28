@@ -220,7 +220,7 @@ tmp1 = par_ests %>%
 
 tmp2 = par_ests %>%
   group_by(subnum, par) %>%
-  summarise(est = median(value), .groups='keep')
+  summarise(est = mean(value), .groups='keep')
 
 tmp = tmp2 %>%
   left_join(tmp1, by=c("subnum", "par")) 
@@ -230,7 +230,7 @@ tmp %>%
   geom_point()+
   geom_abline(slope=1, intercept = 0, linetype="dashed")+
   facet_wrap_equal(~par, scales='free')+
-  xlab("Posterior median")+
+  xlab("Posterior mean")+
   ylab("Maximum likelihood")
 ```
 
@@ -250,7 +250,6 @@ par_ests %>%
   xlab("")+
   ylab("")
 ```
-
 How far are the likelihoods of the median estimates from the maximum likelihood?
 
 ```{r fig.height=5, fig.width=8}
@@ -270,7 +269,7 @@ par_ests %>%
   facet_wrap(~subnum, scales="free_x")+
   xlab("Log Likelihood")+
   ylab("")+
-  ggtitle("Distribution of log likelihoods across the samples for each subject \noverlaid with likelihoods of posterior median parameter estimates")+
+  ggtitle("Distribution of log likelihoods across the samples for each subject \noverlaid with likelihoods of posterior mean parameter estimates")+
   theme(axis.text.y=element_blank(),
         axis.ticks.y=element_blank(),
         panel.grid = element_blank(),
@@ -283,7 +282,7 @@ par_ests %>%
 
 ```
 
-```{r}
+```{r echo=FALSE}
 rm(tmp, tmp1, tmp2, tmp3)
 ```
 
@@ -291,9 +290,9 @@ rm(tmp, tmp1, tmp2, tmp3)
 - Point estimates from the same sampling iteration  
 - MLE estimates differ most from point estimates for beta and gamma so choosing these as point estimates doesn't yield different data for all parameters.  
 
-**Median of posterior**  
+**Mean of posterior**  
 - Point estimates from the different sampling iteration  
-- Median estimates have likelihoods that fall in the middle (instead of the max) of the   likelihood distributions.
+- Mean estimates have likelihoods that fall in the middle (instead of the max) of the likelihood distributions.
 
 When would we need point estimates?  
 - Individual difference analyses  
@@ -315,7 +314,7 @@ tmp = g_par_ests %>%
 round(cor(tmp), 3)  
 ```
 
-```{r}
+```{r echo=FALSE}
 rm(tmp)
 ```
 
@@ -360,6 +359,8 @@ filter(par == "alpha") %>%
         panel.grid = element_blank())
 ```
 
+Recovered group parameter posteriors. True values in blue.
+
 ```{r}
 id_par_ests$g_par_ests %>%
   ggplot(aes(value))+
@@ -374,8 +375,9 @@ id_par_ests$g_par_ests %>%
   xlab("")+
   ylab("")
 ```
+Recovered individual parameter posteriors. True values in blue.
 
-```{r}
+```{r fig.height=8, fig.width=8}
 id_par_ests$par_ests %>%
   ggplot(aes(value))+
   geom_histogram(alpha=.5, bins = 30)+
@@ -388,6 +390,10 @@ id_par_ests$par_ests %>%
         axis.text.x = element_text(size=14))+
   xlab("")+
   ylab("")
+```
+
+```{r}
+rm(id_par_ests, trueGroupPars, truePars)
 ```
 
 # TO DO: Posterior predictive checks

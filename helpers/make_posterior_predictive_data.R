@@ -57,7 +57,7 @@ make_posterior_predictive_data = function(numDraws,
     }
   }
   
-  saveRDS(fit, paste0(helpers_path, 'pp_data_', modelName, '.RDS'))
+  saveRDS(pp_data, paste0(helpers_path, 'pp_data_', modelName, '.RDS'))
   
   return(pp_data)
 }

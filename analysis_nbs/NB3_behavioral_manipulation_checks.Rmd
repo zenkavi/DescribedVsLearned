@@ -4,6 +4,7 @@ output:
   html_document:
     toc: true
     toc_float: true
+    code_folding: 'hide'
 ---
 
 # Set up environment and load in data
@@ -23,7 +24,7 @@ helpers_path = here('helpers/')
 Read in clean data with Q-learning parameter estimates
 
 ```{r}
-source(paste0(helpers_path,'02_fit_twoValSystemsWithRL.R'))
+source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical.R'))
 ```
 
 Set theme for plots

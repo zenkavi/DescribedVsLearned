@@ -140,7 +140,7 @@ $$QV_{i,t} = QV_{i, t-1} + \alpha(R_{i, t-1}- QV_{i, t-1})$$
 # Model fit
 
 ```{r}
-source(paste0(helpers_path, '02_fit_twoValSystemsWithRL.R'))
+source(paste0(helpers_path, 'fit_twoValSystemsWithRL.R'))
 # Rename objects 
 par_ests_nh = par_ests
 fit_nh = fit
@@ -321,16 +321,33 @@ rm(tmp)
 
 # Identifiability analysis
 
-Simulate 10 subjects with the following true parameters
+Simulate 25 subjects using the median posterior group parameters as true parameters
 
 ```{r}
-truePars = data.frame(alpha=0.3, beta=4, gamma=0.4, delta=0.5)
+trueGroupPars = g_par_ests %>%
+  group_by(key) %>%
+  summarise(median_value = round(median(value), 2)) %>%
+  spread(key, median_value)
+
+numSims = 25
+
+set.seed(2349813)
+
+truePars = data.frame(alpha=truncnorm::rtruncnorm(numSims, mean=trueGroupPars$g_alpha, a=0, b=1), 
+                      beta=truncnorm::rtruncnorm(numSims, mean=trueGroupPars$g_beta, a=0, b=5), 
+                      gamma=truncnorm::rtruncnorm(numSims, mean=trueGroupPars$g_gamma, a=0),  
+                      delta=truncnorm::rtruncnorm(numSims, mean=trueGroupPars$g_delta, a=0))
+
 modelName = 'fit_twoValSystemsWithRL_hierarchical'
-id_par_ests = identifiability_analysis(truePars, modelName)
+
+group_par_names=c("g_alpha","g_gamma", "g_delta", "g_beta")
+id_par_ests = identifiability_analysis(truePars, modelName, group_par_names = group_par_names)
+
+rm(modelName)
 ```
 
 ```{r}
-id_par_ests %>%
+id_par_ests$par_ests %>%
 filter(par == "alpha") %>%
   ggplot(aes(logLik)) +
   geom_histogram(alpha=.5, bins=30)+
@@ -344,16 +361,11 @@ filter(par == "alpha") %>%
 ```
 
 ```{r}
-tmp = do.call("rbind", replicate(numSims, truePars, simplify = FALSE))
-tmp = tmp %>% mutate(subnum =1:n())
-tmp = tmp %>%
-  gather(par, value, -subnum)
-
-id_par_ests %>%
+id_par_ests$g_par_ests %>%
   ggplot(aes(value))+
   geom_histogram(alpha=.5, bins = 30)+
-  facet_grid(subnum~par, scale="free")+
-  geom_vline(aes(xintercept = value), tmp, color=cbbPalette[5])+
+  geom_vline(aes(xintercept = value), trueGroupPars %>% gather(key, value), color=cbbPalette[5])+
+  facet_wrap(~key, scale="free")+
   theme(axis.text.y=element_blank(),
         axis.ticks.y=element_blank(),
         panel.grid = element_blank(),
@@ -364,18 +376,11 @@ id_par_ests %>%
 ```
 
 ```{r}
-truePars = data.frame(alpha=0.3, beta=4, gamma=0.4, delta=0.5)
-modelName = 'fit_twoValSystemsWithRL_hierarchical'
-group_par_names=c("g_alpha","g_gamma", "g_delta", "g_beta")
-id_par_ests = identifiability_analysis(truePars, modelName, group_par_names = group_par_names)
-```
-
-```{r}
 id_par_ests$par_ests %>%
   ggplot(aes(value))+
   geom_histogram(alpha=.5, bins = 30)+
   facet_grid(subnum~par, scale="free")+
-  geom_vline(aes(xintercept = value), tmp, color=cbbPalette[5])+
+  geom_vline(aes(xintercept = value), truePars %>% mutate(subnum =1:n()) %>% gather(par, value, -subnum), color=cbbPalette[5])+
   theme(axis.text.y=element_blank(),
         axis.ticks.y=element_blank(),
         panel.grid = element_blank(),

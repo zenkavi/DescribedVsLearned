@@ -20,6 +20,13 @@ identifiability_analysis = function(truePars,
                                     subj_par_names = c("alpha","gamma", "delta", "beta"), 
                                     group_par_names=NA){
   
+  if(nrow(truePars>1)){
+    numSims = nrow(truePars)
+  } else{
+    #Reshape to correctly index in the next loop
+    truePars = do.call("rbind", replicate(numSims, truePars, simplify = FALSE))
+  }
+  
   for(i in 1:numSims){
     trials = sim_trials(numTrials, 
                         numRuns,
@@ -28,10 +35,10 @@ identifiability_analysis = function(truePars,
                         randomWalkUpBound)
     
     if(i == 1){
-      data = sim_choice_data(trials, truePars)
+      data = sim_choice_data(trials, truePars[i,])
       data = data %>% mutate(subnum=1)
     } else{
-      cur_data = sim_choice_data(trials, truePars)
+      cur_data = sim_choice_data(trials, truePars[i,])
       cur_data = cur_data %>% mutate(subnum=i)
       data = rbind(data, cur_data)
     }

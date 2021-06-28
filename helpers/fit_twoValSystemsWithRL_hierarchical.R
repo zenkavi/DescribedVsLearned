@@ -63,13 +63,7 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarch
   rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac)
   
   ## Fit model for all subjects
-  m = stan_model('stanModels/fit_twoValSystemsWithRL_hierarchical.stan')
-  
-  m_data=list(num_subjs = num_subjs,
-              num_trials = num_trials,
-              choices = choices,
-              outcomes_left = outcomes_left,
-              outcomes_right=outcomes_right)
+  m = stan_model(paste0(helpers_path,'stanModels/fit_twoValSystemsWithRL_hierarchical.stan'))
   
   fit = sampling(m, data=m_data)
   saveRDS(fit, paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarchical.RDS'))

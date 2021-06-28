@@ -14,7 +14,7 @@ parameters {
   // Declare all parameters as vectors for vectorizing
   real<lower=0, upper=20> gamma[num_subjs];
   real<lower=0, upper=20> delta[num_subjs];
-  real<lower=0, upper=5> beta[num_subjs];
+  real<lower=0> beta[num_subjs];
 }
 
 

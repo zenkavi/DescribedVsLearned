@@ -20,7 +20,7 @@ parameters {
   real<lower=0, upper=1> alpha[num_subjs];
   real<lower=0, upper=20> gamma[num_subjs];
   real<lower=0, upper=20> delta[num_subjs];
-  real<lower=0, upper=5> beta[num_subjs];
+  real<lower=0> beta[num_subjs];
 }
 
 

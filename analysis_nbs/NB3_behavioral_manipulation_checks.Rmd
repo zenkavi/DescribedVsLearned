@@ -15,27 +15,20 @@ library(gridExtra)
 library(brms)
 library(here)
 cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+theme_set(theme_bw())
 ```
 
 ```{r}
 helpers_path = here('helpers/')
 ```
 
-Read in clean data with Q-learning parameter estimates
-
-```{r}
+```{r include=FALSE}
 source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical.R'))
-```
-
-Set theme for plots
-
-```{r}
-theme_set(theme_bw())
 ```
 
 # Manipulation checks
 
-## Correct interpretation of p(Fractal)$
+## Correct interpretation of p(Fractal)
 
 - When p of fractal is 0 do subjects choose based on the EV difference between lotteries? Does the QV difference matter at all?
 
@@ -155,11 +148,11 @@ tmp = clean_beh_data %>%
   mutate(leftLotteryEV = lotteryValue*lotteryProb,
   			 rightLotteryEV = referenceValue*referenceProb,
   			 leftLotteryBetter = leftLotteryEV>rightLotteryEV,
-         choseBetterLottery = ifelse(leftLotteryBetter & choiceLeft == 1, 1, 
-                                     ifelse(!leftLotteryBetter & choiceLeft == 0, 1, 0)),
+         choseBetterLottery = ifelse(leftLotteryBetter == 1 & choiceLeft == 1, 1, 
+                                     ifelse(leftLotteryBetter == 0 & choiceLeft == 0, 1, 0)),
          leftFractalBetter = leftQValue>rightQValue,
-         choseBetterFractal = ifelse(leftFractalBetter & choiceLeft == 1, 1, 
-                                     ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0))) %>%
+         choseBetterFractal = ifelse(leftFractalBetter == 1 & choiceLeft == 1, 1, 
+                                     ifelse(leftFractalBetter == 0 & choiceLeft == 0, 1, 0))) %>%
   filter(leftFractalBetter != leftLotteryBetter) #filter conflict trials
 
 tmp %>% 
@@ -182,14 +175,14 @@ Re-plot this as proportion of choice using the relevant attribute
 
 ```{r}
 tmp = tmp %>%
-  filter(probFractalDraw != .5) %>% #filter trials where relevant attribute is clear
   mutate(fractalRelevant = ifelse(probFractalDraw <.5, 0, 1),
-         choseRelevant = ifelse(fractalRelevant & choseBetterFractal, 1,
-                                ifelse(fractalRelevant == 0 & choseBetterLottery, 1, 0)))
+         choseRelevant = ifelse(fractalRelevant == 1 & choseBetterFractal == 1, 1,
+                                ifelse(fractalRelevant == 0 & choseBetterLottery == 1, 1, 0)))
 tmp %>%
   group_by(probFractalDraw, subnum) %>%
   summarise(choseRelevant = mean(choseRelevant),
             .groups = 'keep') %>%
+  filter(probFractalDraw != .5) %>%
   ggplot(aes(as.factor(probFractalDraw), choseRelevant))+
   geom_hline(yintercept = .5, linetype="dashed", color= cbbPalette[2], size = 1.5)+
   geom_boxplot()+

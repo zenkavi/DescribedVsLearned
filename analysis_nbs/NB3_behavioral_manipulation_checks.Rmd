@@ -42,6 +42,21 @@ theme_set(theme_bw())
 - When p of fractal is 1 do subjects choose based on the QV difference between fractals? Does the EV difference matter at all?
 
 ```{r}
+## Save posteroior mean estimates to `clean_beh_data`
+clean_beh_data = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = mean(value), .groups='keep') %>%
+  spread(par, est) %>%
+  left_join(clean_beh_data, by='subnum')
+
+## Add Q values to each trial
+clean_beh_data = clean_beh_data %>%
+  group_by(subnum) %>%
+  do(get_qvals(.)) %>%
+  ungroup()
+```
+
+```{r}
 tmp = clean_beh_data %>%
   filter(probFractalDraw == 1 | probFractalDraw == 0) %>%
   mutate(leftQVAdv = leftQValue - rightQValue,
@@ -108,11 +123,9 @@ Unlike the simple case where the probability weighting function represents the p
 ```{r}
 tmp = par_ests %>%
   group_by(subnum, par) %>%
-  summarise(est = median(value), .groups='keep') %>%
-  # filter(logLik == max(logLik)) %>%
+  summarise(est = mean(value), .groups='keep') %>%
   filter(par != "beta" & par != "alpha") %>%
   spread(par, est)
-  # spread(par, value)
 
 tmp = do.call("rbind", replicate(11, tmp, simplify = FALSE)) %>%
   arrange(subnum) %>%
@@ -121,8 +134,8 @@ tmp = do.call("rbind", replicate(11, tmp, simplify = FALSE)) %>%
          wpFrac = (delta*pFrac^gamma)/(delta*pFrac^gamma + (1-pFrac)^gamma)) 
 
 tmp %>%
-  mutate(delta_gt_1 = ifelse(delta>=1, "delta >= 1", "delta < 0 "),
-         gamma_gt_1 = ifelse(gamma>=1,"gamma >= 1", "gamma < 0")) %>%
+  mutate(delta_gt_1 = ifelse(delta>=1, "delta >= 1", "delta < 1 "),
+         gamma_gt_1 = ifelse(gamma>=1,"gamma >= 1", "gamma < 1")) %>%
   ggplot(aes(pFrac, wpFrac, group=subnum))+
   geom_line(aes(col = as.factor(gamma_gt_1), linetype=as.factor(delta_gt_1)))+
   geom_abline(slope=1, intercept=0, linetype="dashed")+
@@ -192,6 +205,41 @@ tmp %>%
   annotate("segment", x = 6, xend = 6, y = .78, yend = .83, colour = cbbPalette[1])+
   annotate("segment", x = 10, xend = 10, y = .78, yend = .83, colour = cbbPalette[1])
   
+```
+
+```{r}
+tmp %>%
+  group_by(probFractalDraw, subnum, delta, gamma) %>%
+  summarise(choseRelevant = mean(choseRelevant),
+            .groups = 'keep') %>%
+  filter(probFractalDraw != 0 & probFractalDraw != 1) %>%
+  mutate(wpFrac = (delta*probFractalDraw^gamma)/(delta*probFractalDraw^gamma + (1-probFractalDraw)^gamma),
+         wpFracBin = factor(round(wpFrac, 1), labels = c(seq(0, 1, .1)), levels=c(seq(0, 1, .1)))) %>%
+  filter(wpFracBin != .5) %>%
+  ggplot(aes(wpFracBin, choseRelevant))+
+  geom_boxplot()+
+  geom_hline(yintercept = .5, linetype="dashed", color= cbbPalette[2], size = 1.5)+
+  labs(y = "Proportion of choices based on relevant attribute",
+       x = "Subjective probability [w(p(Fractal))]",
+       title="Lottery bias in conflict trials with unambiguous relevant option")
+  
+```
+```{r}
+tmp %>%
+  group_by(probFractalDraw, subnum, delta, gamma) %>%
+  summarise(choseRelevant = mean(choseRelevant),
+            .groups = 'keep') %>%
+  filter(probFractalDraw != 0 & probFractalDraw != 1) %>%
+  mutate(wpFrac = (delta*probFractalDraw^gamma)/(delta*probFractalDraw^gamma + (1-probFractalDraw)^gamma),
+         pFracDistortion = wpFrac-probFractalDraw,
+         probFractalDraw = as.factor(probFractalDraw)) %>%
+  ggplot(aes(pFracDistortion, choseRelevant))+
+  geom_point()+
+  geom_smooth(method="lm", formula = 'y ~ x', color=cbbPalette[2])+
+  facet_wrap(~probFractalDraw)+
+  labs(y = "Proportion of choices based on relevant attribute",
+       x = "w(p(Fractal)) - p(Fractal)",
+       title="Conflict trials with clear relevant attribute")
 ```
 
 Multilevel model checking if subjects chose based on the relevant attribute regardless of what attribute was relevant.

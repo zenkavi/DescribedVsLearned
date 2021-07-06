@@ -224,23 +224,6 @@ tmp %>%
        title="Lottery bias in conflict trials with unambiguous relevant option")
   
 ```
-```{r}
-tmp %>%
-  group_by(probFractalDraw, subnum, delta, gamma) %>%
-  summarise(choseRelevant = mean(choseRelevant),
-            .groups = 'keep') %>%
-  filter(probFractalDraw != 0 & probFractalDraw != 1) %>%
-  mutate(wpFrac = (delta*probFractalDraw^gamma)/(delta*probFractalDraw^gamma + (1-probFractalDraw)^gamma),
-         pFracDistortion = wpFrac-probFractalDraw,
-         probFractalDraw = as.factor(probFractalDraw)) %>%
-  ggplot(aes(pFracDistortion, choseRelevant))+
-  geom_point()+
-  geom_smooth(method="lm", formula = 'y ~ x', color=cbbPalette[2])+
-  facet_wrap(~probFractalDraw)+
-  labs(y = "Proportion of choices based on relevant attribute",
-       x = "w(p(Fractal)) - p(Fractal)",
-       title="Conflict trials with clear relevant attribute")
-```
 
 Multilevel model checking if subjects chose based on the relevant attribute regardless of what attribute was relevant.
 

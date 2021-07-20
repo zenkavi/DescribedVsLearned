@@ -338,7 +338,7 @@ if(file.exists(paste0(helpers_path, 'pp_data_', modelName, '.RDS'))){
 }
 ```
 
-```{r}
+```{r  fig.height=8, fig.width=8}
 tmp = clean_beh_data %>%
   group_by(subnum, probFractalDraw) %>%
   summarise(propLeft = mean(choiceLeft), .groups='keep') %>%

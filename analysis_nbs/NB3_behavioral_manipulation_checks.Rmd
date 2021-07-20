@@ -18,21 +18,10 @@ cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00"
 theme_set(theme_bw())
 ```
 
-```{r}
-helpers_path = here('helpers/')
-```
-
 ```{r include=FALSE}
+helpers_path = here('helpers/')
 source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical.R'))
 ```
-
-# Manipulation checks
-
-## Correct interpretation of p(Fractal)
-
-- When p of fractal is 0 do subjects choose based on the EV difference between lotteries? Does the QV difference matter at all?
-
-- When p of fractal is 1 do subjects choose based on the QV difference between fractals? Does the EV difference matter at all?
 
 ```{r}
 ## Save posteroior mean estimates to `clean_beh_data`
@@ -42,21 +31,54 @@ clean_beh_data = par_ests %>%
   spread(par, est) %>%
   left_join(clean_beh_data, by='subnum')
 
-## Add Q values to each trial
+## Add Q values of fractals to each trial
 clean_beh_data = clean_beh_data %>%
   group_by(subnum) %>%
   do(get_qvals(.)) %>%
   ungroup()
+
+## Add EVs for lotteries to each trial
+clean_beh_data = clean_beh_data %>%
+  mutate(leftLotteryEV = lotteryValue*lotteryProb,
+         rightLotteryEV = referenceValue*referenceProb)
 ```
+
+# Manipulation checks
+
+## Choice depending on value difference
+
+Psychometric curve for all trials with weighted value difference
+
+```{r}
+clean_beh_data %>%
+  mutate(wpFrac = (delta*probFractalDraw^gamma)/(delta*probFractalDraw^gamma + (1-probFractalDraw)^gamma),
+         leftBundleVal = (1-wpFrac)*leftLotteryEV + wpFrac*leftQValue,
+         rightBundleVal = (1-wpFrac)*rightLotteryEV + wpFrac*rightQValue,
+         bundleValDiff = leftBundleVal - rightBundleVal) %>%
+  ggplot(aes(bundleValDiff, choiceLeft))+
+  geom_line(aes(group=subnum),stat="smooth",formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, se=FALSE, alpha=.2, size=1, color=cbbPalette[1])+
+  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[2], alpha=.75)+
+  labs(y = "p(Left)", x = "V(left)-V(right)", title="Psychometric choice curve based on weighted value difference between bundles")
+```
+
+## Trials with unambiguous reward attribute
+
+What percentage of all trials have clear reward attribute?
 
 ```{r}
 tmp = clean_beh_data %>%
   filter(probFractalDraw == 1 | probFractalDraw == 0) %>%
   mutate(leftQVAdv = leftQValue - rightQValue,
-         leftLotteryEV = lotteryValue*lotteryProb,
-         rightLotteryEV = referenceValue*referenceProb,
          leftEVAdv = leftLotteryEV - rightLotteryEV)
 
+round(nrow(tmp)/nrow(clean_beh_data), 3)
+```
+
+- When p of fractal is 0 do subjects choose based on the EV difference between lotteries? Does the QV difference matter at all?
+
+- When p of fractal is 1 do subjects choose based on the QV difference between fractals? Does the EV difference matter at all?
+
+```{r}
 tmp %>%
   select(leftQVAdv, leftEVAdv, choiceLeft, probFractalDraw) %>%
   gather(key, value, -choiceLeft, -probFractalDraw) %>%  
@@ -107,11 +129,15 @@ rm(tmp, m1, m2)
 
 ## Probability distortion
 
-How do the median estimates suggest the probability of a fractal draw is distorted for each subject?
+$$V_i = (1-w(pFrac))EV_i + w(pFrac)QV_i, \:i \in \{left, right\}$$
 
-Using Gonzalez and Wu's (1999) terminology the fact that almost all subjects probability weighting functions are below the 45-degree line (i.e. objective probability) regardless of the inverse-S shape is not about diminishing sensitivy/discriminability (slope) but about **attractiveness** (intercept, elevation). The fractal is almost always less attractive to subjects than it really should be given its probability in determining their reward.
+$$w(pFrac) = \frac{\delta*pFrac^{\gamma}}{\delta*pFrac^{\gamma}+(1- pFrac)^{\gamma}}$$
 
-Unlike the simple case where the probability weighting function represents the probability of a reward, however, in this case the probability of a reward is the joint probability of p(Fractal)*p(chosen Fractal's reward)
+How do the mean posterior estimates suggest the probability of a fractal draw is distorted for each subject?
+
+Using Gonzalez and Wu's (1999) terminology the fact that for most subjects the probability weighting functions are below the 45-degree line (i.e. objective probability) regardless of the inverse-S shape is not about diminishing sensitivy/discriminability (slope) but about **attractiveness** (intercept, elevation). The fractal is almost always less attractive to subjects than it really should be given its probability in determining their reward.
+
+Note also that for many subject the probability weighting function does not have the traditional inverse S-shape (i.e. $\gamma \geq 1$). I'm not sure why this might be but it might have something to do with what these probabilities pertain to. Unlike most studies that investigate this curve where the probability refers directly to the reward, in this case the probability of a reward is the joint probability of p(Fractal)*p(chosen Fractal's reward)
 
 ```{r}
 tmp = par_ests %>%
@@ -135,35 +161,48 @@ tmp %>%
   labs(x="p(Fractal)", y="w(pFractal)", title="Distortion of p(Fractal)", color = element_blank(), linetype=element_blank())
 ```
 
-```{r}
+```{r echo=FALSE}
 rm(tmp)
 ```
 
-## Lottery bias in conflict trials
+Proportion of trials for each value of p(Fractal)?
 
-When the better lottery and the better fractal (based on the learned Q value) suggest different options do subjects choose more frequently based on the lottery or their fractal Q Value? Yes, there is a general tendency towards choosing the option with the better lottery even when the trial reward depends less on the lottery and more on the fractal (p(Fractal) >=.5). Only when the outcome depend entirely on the fractal are people more likely to choose the option with the better fractal but even then there is a non-negligible portion of choices determined by the lottery EV. 
+```{r}
+round(table(clean_beh_data$probFractalDraw)/nrow(clean_beh_data), 3)
+```
+
+## Conflict and non-conflict trials
+
+What proportion of each trial is there?
 
 ```{r}
 tmp = clean_beh_data %>%
-  mutate(leftLotteryEV = lotteryValue*lotteryProb,
-  			 rightLotteryEV = referenceValue*referenceProb,
-  			 leftLotteryBetter = leftLotteryEV>rightLotteryEV,
+  mutate(leftLotteryBetter = leftLotteryEV>rightLotteryEV,
          choseBetterLottery = ifelse(leftLotteryBetter == 1 & choiceLeft == 1, 1, 
                                      ifelse(leftLotteryBetter == 0 & choiceLeft == 0, 1, 0)),
          leftFractalBetter = leftQValue>rightQValue,
          choseBetterFractal = ifelse(leftFractalBetter == 1 & choiceLeft == 1, 1, 
-                                     ifelse(leftFractalBetter == 0 & choiceLeft == 0, 1, 0))) %>%
-  filter(leftFractalBetter != leftLotteryBetter) #filter conflict trials
+                                     ifelse(leftFractalBetter == 0 & choiceLeft == 0, 1, 0)),
+         conflictTrial = ifelse(leftFractalBetter != leftLotteryBetter, "conflict", "no conflict")) 
+```
 
+```{r}
+round(prop.table(table(tmp$conflictTrial, tmp$subnum), margin=2), 2)
+```
+
+When the better lottery and the better fractal (based on the learned Q value) suggest different options do subjects choose more frequently based on the lottery or their fractal Q Value? Yes, there is a general tendency towards choosing the option with the better lottery even when the trial reward depends less on the lottery and more on the fractal (p(Fractal) >=.5). Only when the outcome depend entirely on the fractal are people more likely to choose the option with the better fractal but even then there is a non-negligible portion of choices determined by the lottery EV. 
+
+```{r}
 tmp %>% 
-  group_by(probFractalDraw, subnum) %>%
+  group_by(probFractalDraw, subnum, conflictTrial) %>%
   summarise(choseBetterLottery = mean(choseBetterLottery),
             choseBetterFractal = mean(choseBetterFractal),
             .groups='keep') %>%
-  gather(key, value, -probFractalDraw, -subnum) %>%
+  gather(key, value, -probFractalDraw, -subnum, -conflictTrial) %>%
   mutate(key = ifelse(key == "choseBetterFractal", "Chose Better Fractal", "Chose Better Lottery")) %>%
   ggplot(aes(as.factor(probFractalDraw), value, color=key))+
   geom_boxplot()+
+  facet_grid(conflictTrial~.)+
  labs(x="p(Fractal)",y="Proportion of choices",color="", 
       title="Lottery bias in conflict trials (EV and QV difference suggest opposite choices)")+
   scale_color_manual(values=cbbPalette)+
@@ -175,46 +214,37 @@ Re-plot this as proportion of choice using the relevant attribute
 
 ```{r}
 tmp = tmp %>%
-  mutate(fractalRelevant = ifelse(probFractalDraw <.5, 0, 1),
-         choseRelevant = ifelse(fractalRelevant == 1 & choseBetterFractal == 1, 1,
-                                ifelse(fractalRelevant == 0 & choseBetterLottery == 1, 1, 0)))
+  mutate(relevantAttr = ifelse(probFractalDraw <.5, "lottery", ifelse(probFractalDraw >.5, "fractal", "both")),
+         choseRelevant = ifelse(relevantAttr == "fractal" & choseBetterFractal == 1, 1,
+                                ifelse(relevantAttr == "lottery" & choseBetterLottery == 1, 1, 0)))
 tmp %>%
-  group_by(probFractalDraw, subnum) %>%
+  group_by(probFractalDraw, subnum, conflictTrial) %>%
   summarise(choseRelevant = mean(choseRelevant),
             .groups = 'keep') %>%
   filter(probFractalDraw != .5) %>%
   ggplot(aes(as.factor(probFractalDraw), choseRelevant))+
   geom_hline(yintercept = .5, linetype="dashed", color= cbbPalette[2], size = 1.5)+
   geom_boxplot()+
+  facet_grid(conflictTrial~.)+
   labs(y = "Proportion of choices based on relevant attribute",
-       x = "p(Fractal)",
-       title = "Lottery bias in conflict trials with unambiguous relevant option")+
-  annotate("text", x = 3, y = .25, label = "Lottery relevant")+
-  annotate("segment", x = 1, xend = 5, y = .28, yend = .28, colour = cbbPalette[1])+
-  annotate("segment", x = 1, xend = 1, y = .28, yend = .33, colour = cbbPalette[1])+
-  annotate("segment", x = 5, xend = 5, y = .28, yend = .33, colour = cbbPalette[1])+
-  annotate("text", x = 8, y = .86, label = "Fractal relevant")+
-  annotate("segment", x = 6, xend = 10, y = .83, yend = .83, colour = cbbPalette[1])+
-  annotate("segment", x = 6, xend = 6, y = .78, yend = .83, colour = cbbPalette[1])+
-  annotate("segment", x = 10, xend = 10, y = .78, yend = .83, colour = cbbPalette[1])
+       x = "p(Fractal)")
   
 ```
 
 ```{r}
 tmp %>%
-  group_by(probFractalDraw, subnum, delta, gamma) %>%
+  group_by(probFractalDraw, subnum, delta, gamma, conflictTrial) %>%
   summarise(choseRelevant = mean(choseRelevant),
             .groups = 'keep') %>%
-  filter(probFractalDraw != 0 & probFractalDraw != 1) %>%
+  filter(probFractalDraw != 0 & probFractalDraw != 1) %>% #filter out probabilities that are not distorted
   mutate(wpFrac = (delta*probFractalDraw^gamma)/(delta*probFractalDraw^gamma + (1-probFractalDraw)^gamma),
          wpFracBin = factor(round(wpFrac, 1), labels = c(seq(0, 1, .1)), levels=c(seq(0, 1, .1)))) %>%
-  filter(wpFracBin != .5) %>%
   ggplot(aes(wpFracBin, choseRelevant))+
   geom_boxplot()+
+  facet_grid(conflictTrial~.)+
   geom_hline(yintercept = .5, linetype="dashed", color= cbbPalette[2], size = 1.5)+
   labs(y = "Proportion of choices based on relevant attribute",
-       x = "Subjective probability [w(p(Fractal))]",
-       title="Lottery bias in conflict trials with unambiguous relevant option")
+       x = "Subjective probability [w(p(Fractal))]")
   
 ```
 

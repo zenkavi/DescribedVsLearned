@@ -173,7 +173,7 @@ round(table(clean_beh_data$probFractalDraw)/nrow(clean_beh_data), 3)
 
 ## Conflict and non-conflict trials
 
-What proportion of each trial is there?
+What proportion of each type of trial is there? About half of the trials for each subject are conflict trials.
 
 ```{r}
 tmp = clean_beh_data %>%
@@ -183,14 +183,17 @@ tmp = clean_beh_data %>%
          leftFractalBetter = leftQValue>rightQValue,
          choseBetterFractal = ifelse(leftFractalBetter == 1 & choiceLeft == 1, 1, 
                                      ifelse(leftFractalBetter == 0 & choiceLeft == 0, 1, 0)),
-         conflictTrial = ifelse(leftFractalBetter != leftLotteryBetter, "conflict", "no conflict")) 
+         conflictTrial = ifelse(leftFractalBetter != leftLotteryBetter, "conflict", "no conflict")) %>%
+  mutate(relevantAttr = ifelse(probFractalDraw <.5, "lottery", ifelse(probFractalDraw >.5, "fractal", "both")),
+         choseRelevant = ifelse(relevantAttr == "fractal" & choseBetterFractal == 1, 1,
+                                ifelse(relevantAttr == "lottery" & choseBetterLottery == 1, 1, 0)))
 ```
 
 ```{r}
 round(prop.table(table(tmp$conflictTrial, tmp$subnum), margin=2), 2)
 ```
 
-When the better lottery and the better fractal (based on the learned Q value) suggest different options do subjects choose more frequently based on the lottery or their fractal Q Value? Yes, there is a general tendency towards choosing the option with the better lottery even when the trial reward depends less on the lottery and more on the fractal (p(Fractal) >=.5). Only when the outcome depend entirely on the fractal are people more likely to choose the option with the better fractal but even then there is a non-negligible portion of choices determined by the lottery EV. 
+
 
 ```{r}
 tmp %>% 
@@ -203,33 +206,50 @@ tmp %>%
   ggplot(aes(as.factor(probFractalDraw), value, color=key))+
   geom_boxplot()+
   facet_grid(conflictTrial~.)+
- labs(x="p(Fractal)",y="Proportion of choices",color="", 
-      title="Lottery bias in conflict trials (EV and QV difference suggest opposite choices)")+
-  scale_color_manual(values=cbbPalette)+
+  labs(x="p(Fractal)",y="Proportion of choices",color="")+
+  scale_color_manual(values=c(cbbPalette[2], cbbPalette[1]))+
   theme(legend.position = "bottom")
 
 ```
 
-Re-plot this as proportion of choice using the relevant attribute
+```{r}
+tmp %>%
+  filter(probFractalDraw != .5) %>%
+    mutate(leftQVAdv = leftQValue - rightQValue,
+         leftEVAdv = leftLotteryEV - rightLotteryEV) %>%
+  select(choiceLeft, leftQVAdv, leftEVAdv, probFractalDraw, conflictTrial) %>%
+  gather(key, value, -choiceLeft, -probFractalDraw, -conflictTrial)%>%
+  mutate(key = ifelse(key == "leftEVAdv", "EV(left)-EV(right)", "QV(left)-QV(right)"))%>%
+  ggplot(aes(value, choiceLeft, color=key))+
+  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE)+
+  facet_grid(conflictTrial~probFractalDraw)+
+  theme(legend.position = "bottom")+
+  xlab("")+
+  labs(color="")+
+  scale_color_manual(values=c(cbbPalette[2], cbbPalette[1]))
+```
+
+Plot choice based on relevant attribute
 
 ```{r}
-tmp = tmp %>%
-  mutate(relevantAttr = ifelse(probFractalDraw <.5, "lottery", ifelse(probFractalDraw >.5, "fractal", "both")),
-         choseRelevant = ifelse(relevantAttr == "fractal" & choseBetterFractal == 1, 1,
-                                ifelse(relevantAttr == "lottery" & choseBetterLottery == 1, 1, 0)))
 tmp %>%
   group_by(probFractalDraw, subnum, conflictTrial) %>%
   summarise(choseRelevant = mean(choseRelevant),
             .groups = 'keep') %>%
   filter(probFractalDraw != .5) %>%
-  ggplot(aes(as.factor(probFractalDraw), choseRelevant))+
-  geom_hline(yintercept = .5, linetype="dashed", color= cbbPalette[2], size = 1.5)+
+  mutate(relevantAttr = ifelse(probFractalDraw <.5, "lottery", ifelse(probFractalDraw >.5, "fractal", "both"))) %>%
+  ggplot(aes(as.factor(probFractalDraw), choseRelevant, col=relevantAttr))+
+  geom_hline(yintercept = .5, linetype="dashed", color= "black", size = 1.5)+
   geom_boxplot()+
   facet_grid(conflictTrial~.)+
   labs(y = "Proportion of choices based on relevant attribute",
-       x = "p(Fractal)")
+       x = "p(Fractal)", col="")+
+  theme(legend.position = "none")+
+  scale_color_manual(values=c(cbbPalette[1], cbbPalette[2]))
   
 ```
+
+Plot the above as a function of subjective probability.
 
 ```{r}
 tmp %>%
@@ -238,14 +258,38 @@ tmp %>%
             .groups = 'keep') %>%
   filter(probFractalDraw != 0 & probFractalDraw != 1) %>% #filter out probabilities that are not distorted
   mutate(wpFrac = (delta*probFractalDraw^gamma)/(delta*probFractalDraw^gamma + (1-probFractalDraw)^gamma),
-         wpFracBin = factor(round(wpFrac, 1), labels = c(seq(0, 1, .1)), levels=c(seq(0, 1, .1)))) %>%
-  ggplot(aes(wpFracBin, choseRelevant))+
+         wpFracBin = factor(round(wpFrac, 1), labels = c(seq(0, 1, .1)), levels=c(seq(0, 1, .1))), 
+         relevantAttr = ifelse(wpFrac <.5, "a_lottery", ifelse(wpFrac >.5, "b_fractal", "both"))) %>%
+  ggplot(aes(wpFracBin, choseRelevant, col=relevantAttr))+
   geom_boxplot()+
   facet_grid(conflictTrial~.)+
-  geom_hline(yintercept = .5, linetype="dashed", color= cbbPalette[2], size = 1.5)+
+  geom_hline(yintercept = .5, linetype="dashed", color= "black", size = 1.5)+
   labs(y = "Proportion of choices based on relevant attribute",
-       x = "Subjective probability [w(p(Fractal))]")
+       x = "Subjective probability [w(p(Fractal))]")+
+  theme(legend.position = "none")+
+  scale_color_manual(values=c(cbbPalette[2], cbbPalette[1]))
   
+```
+
+### Lottery bias logit
+
+Logit analysis. What is the picture?
+
+```{r}
+tmp %>%
+  filter(probFractalDraw != .5) %>%
+    mutate(leftQVAdv = leftQValue - rightQValue,
+         leftEVAdv = leftLotteryEV - rightLotteryEV) %>%
+  select(choseRelevant, leftQVAdv, leftEVAdv, probFractalDraw, conflictTrial) %>%
+  gather(key, value, -choseRelevant, -probFractalDraw, -conflictTrial)%>%
+  mutate(key = ifelse(key == "leftEVAdv", "EV(left)-EV(right)", "QV(left)-QV(right)"))%>%
+  ggplot(aes(value, choseRelevant, color=key))+
+  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE)+
+  facet_grid(conflictTrial~probFractalDraw)+
+  theme(legend.position = "bottom")+
+  xlab("")+
+  labs(color="")+
+  scale_color_manual(values=c(cbbPalette[1], cbbPalette[2]))
 ```
 
 Multilevel model checking if subjects chose based on the relevant attribute regardless of what attribute was relevant.

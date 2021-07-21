@@ -200,7 +200,7 @@ In conflict trials:
 
 In no conflict trials:  
 - when reward depends more on lotteries people correctly choose the bundle that has both the better fractal and the better lottery.  
-- when reward depends more on fractals people *incorrectly* choose the bundle with the better fractal and better lottery less frequently. Their decision correctly depends less on the lottery and more on the fractals but their inference about the fractal values are more noisy because it involves learning and cannot be read off the screen.
+- when reward depends more on fractals people *incorrectly* choose the bundle with the better fractal and better lottery less frequently (i.e. the last five bars in the bottom row are lower than the first five) Their decision correctly depends less on the lottery and more on the fractals but their inference about the fractal values are more noisy because it involves learning and cannot be read off the screen.
 
 
 ```{r}
@@ -228,9 +228,11 @@ In no conflict trials
 when reward depends more on lotteries
 when reward depends more on fractals
 
+The confusing thing about this graph is how the effect of the Q-value difference seems to persist in no conflict trials regardless of pFrac. I initially expected the Q-value difference not to have an effect when it is not relevant pFrac < 0.5. But it seems to have as strong of an effect as the EV difference.
+
 ```{r}
 tmp %>%
-  filter(probFractalDraw != .5) %>%
+  # filter(probFractalDraw != .5) %>%
     mutate(leftQVAdv = leftQValue - rightQValue,
          leftEVAdv = leftLotteryEV - rightLotteryEV) %>%
   select(choiceLeft, leftQVAdv, leftEVAdv, probFractalDraw, conflictTrial) %>%

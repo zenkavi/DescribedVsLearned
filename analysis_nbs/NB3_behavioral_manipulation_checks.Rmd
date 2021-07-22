@@ -314,14 +314,6 @@ out_choiceLeft %>%
   labs(color="", y="Logit slope estimate (DV = choiceLeft)", x="p(Frac)")
 ```
 
-
-```{r}
-m = brm(choiceLeft ~ leftEVAdv + leftQVAdv + (1|subnum),
-              data=dat %>% filter(conflictTrial==curConflictTrial), family=bernoulli(link="logit"), silent=2, refresh=0)
-
-coef(m)
-```
-
 ### Choosing based on relevant attribute
 
 Plot choice based on relevant attribute
@@ -429,7 +421,7 @@ if(file.exists(paste0(helpers_path, 'logitOut_choseRelevant.RDS'))){
       
       curConflictTrial = conflictTrialTypes[j]
       
-      m = brm(choseRelevant ~ leftQVAdv + (1|subnum),
+      m = brm(choseRelevant ~ leftQVAdv + leftEVAdv + (1|subnum),
               data=dat %>% filter(conflictTrial==curConflictTrial), family=bernoulli(link="logit"), silent=2, refresh=0)
       
       est = coef(m)$subnum[1,1,2]
@@ -438,12 +430,9 @@ if(file.exists(paste0(helpers_path, 'logitOut_choseRelevant.RDS'))){
       
       out_choseRelevant = rbind(out_choseRelevant, c(curProbFractalDraw, curConflictTrial, "leftQVAdv", est, u95, l95))
       
-      m = brm(choseRelevant ~ leftEVAdv + (1|subnum),
-              data=dat %>% filter(conflictTrial==curConflictTrial), family=bernoulli(link="logit"), silent=2, refresh=0)
-      
-      est = coef(m)$subnum[1,1,2]
-      u95 = coef(m)$subnum[1,3,2]
-      l95 = coef(m)$subnum[1,4,2]
+      est = coef(m)$subnum[1,1,3]
+      u95 = coef(m)$subnum[1,3,3]
+      l95 = coef(m)$subnum[1,4,3]
       
       out_choseRelevant = rbind(out_choseRelevant, c(curProbFractalDraw, curConflictTrial, "leftEVAdv", est, u95, l95))
       
@@ -457,6 +446,22 @@ if(file.exists(paste0(helpers_path, 'logitOut_choseRelevant.RDS'))){
 }
 ```
 
+
+```{r}
+out_choseRelevant %>%
+  mutate(est = as.numeric(est),
+         l95 = as.numeric(l95),
+         u95 = as.numeric(u95)) %>%
+  ggplot(aes(probFractalDraw, est, col=iv))+
+  geom_point()+
+  geom_line(aes(group=iv))+
+  geom_errorbar(aes(ymin=l95, ymax=u95), width=0.1)+
+  geom_hline(yintercept=0,linetype="dashed")+
+  facet_grid(conflictTrial ~ .)+
+  theme(legend.position = "bottom")+
+  scale_color_manual(values=c(cbbPalette[2], cbbPalette[1]))+
+  labs(color="", y="Logit slope estimate (DV = choseRelevant)", x="p(Frac)")
+```
 
 # OLD: NEEDS REVIEW
 

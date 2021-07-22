@@ -226,9 +226,6 @@ In conflict trials
 - when reward depends more on fractals people choose the bundle with the better fractal only when the probability the reward's dependence on the lottery is very low
 
 In no conflict trials  
-- when reward depends more on lotteries  
-- when reward depends more on fractals
-
 In no conflict trials the bundle with the better lottery is the same as the bundle with the better fractal. The QV difference is positively correlated with the EV difference for all levels of pFrac. **Then how does one of these IVs predict choice better than the other?**
 
 The previous graph shows that in no conflict trials when the reward relies mostly on the fractal people incorrectly choose the better bundle less frequently. Does this explain it?
@@ -255,8 +252,8 @@ tmp %>%
 Run logits in above graph
 
 ```{r}
-if(file.exists(paste0(helpers_path, 'logitOut_choseLeft.RDS'))){
-  fit = readRDS(paste0(helpers_path, 'logitOut_choseLeft.RDS'))
+if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft.RDS'))){
+  fit = readRDS(paste0(helpers_path, 'logitOut_choiceLeft.RDS'))
 } else {
   
   probFractalDrawVals = unique(tmp$probFractalDraw)
@@ -283,7 +280,7 @@ if(file.exists(paste0(helpers_path, 'logitOut_choseLeft.RDS'))){
       u95 = coef(m)$subnum[1,3,2]
       l95 = coef(m)$subnum[1,4,2]
       
-      out_choiceLeft = rbind(out, c(curProbFractalDraw, curConflictTrial, "leftQVAdv", est, u95, l95))
+      out_choiceLeft = rbind(out_choiceLeft, c(curProbFractalDraw, curConflictTrial, "leftQVAdv", est, u95, l95))
       
       m = brm(choiceLeft ~ leftEVAdv + (1|subnum),
               data=dat %>% filter(conflictTrial==curConflictTrial), family=bernoulli(link="logit"), silent=2, refresh=0)
@@ -292,9 +289,12 @@ if(file.exists(paste0(helpers_path, 'logitOut_choseLeft.RDS'))){
       u95 = coef(m)$subnum[1,3,2]
       l95 = coef(m)$subnum[1,4,2]
       
-      out_choiceLeft = rbind(out, c(curProbFractalDraw, curConflictTrial, "leftEVAdv", est, u95, l95))
+      out_choiceLeft = rbind(out_choiceLeft, c(curProbFractalDraw, curConflictTrial, "leftEVAdv", est, u95, l95))
     }
   }
+  
+  out_choiceLeft = out_choiceLeft %>%
+    drop_na()
   
   saveRDS(fit, paste0(helpers_path, 'logitOut_choiceLeft.RDS'))
 }
@@ -391,42 +391,52 @@ tmp %>%
 Run the logits in the graph above
 
 ```{r}
-probFractalDrawVals = unique(tmp$probFractalDraw)
-conflictTrialTypes = unique(tmp$conflictTrial)
-out_choseRelevant = data.frame(probFractalDraw=NA,conflictTrial=NA,iv=NA,est=NA,u95=NA,l95=NA)
-
-for(i in 1:length(probFractalDrawVals)){
-  curProbFractalDraw = probFractalDrawVals[i]
+if(file.exists(paste0(helpers_path, 'logitOut_choseRelevant.RDS'))){
+  fit = readRDS(paste0(helpers_path, 'logitOut_choiceLeft.RDS'))
+} else {
   
-  dat = tmp %>%
-    filter(probFractalDraw == curProbFractalDraw) %>%
-    mutate(leftQVAdv = leftQValue - rightQValue,
-           leftEVAdv = leftLotteryEV - rightLotteryEV) %>%
-    select(choseRelevant, leftQVAdv, leftEVAdv, probFractalDraw, conflictTrial, subnum)
+  probFractalDrawVals = unique(tmp$probFractalDraw)
+  conflictTrialTypes = unique(tmp$conflictTrial)
+  out_choseRelevant = data.frame(probFractalDraw=NA,conflictTrial=NA,iv=NA,est=NA,u95=NA,l95=NA)
   
-  for(j in 1:length(conflictTrialTypes)){
+  for(i in 1:length(probFractalDrawVals)){
+    curProbFractalDraw = probFractalDrawVals[i]
     
-    curConflictTrial = conflictTrialTypes[j]
+    dat = tmp %>%
+      filter(probFractalDraw == curProbFractalDraw) %>%
+      mutate(leftQVAdv = leftQValue - rightQValue,
+             leftEVAdv = leftLotteryEV - rightLotteryEV) %>%
+      select(choseRelevant, leftQVAdv, leftEVAdv, probFractalDraw, conflictTrial, subnum)
     
-    m = brm(choseRelevant ~ leftQVAdv + (1|subnum),
-            data=dat %>% filter(conflictTrial==curConflictTrial), family=bernoulli(link="logit"), silent=2, refresh=0)
-    
-    est = coef(m)$subnum[1,1,2]
-    u95 = coef(m)$subnum[1,3,2]
-    l95 = coef(m)$subnum[1,4,2]
-    
-    out_choseRelevant = rbind(out, c(curProbFractalDraw, curConflictTrial, "leftQVAdv", est, u95, l95))
-    
-     m = brm(choseRelevant ~ leftEVAdv + (1|subnum),
-            data=dat %>% filter(conflictTrial==curConflictTrial), family=bernoulli(link="logit"), silent=2, refresh=0)
-    
-    est = coef(m)$subnum[1,1,2]
-    u95 = coef(m)$subnum[1,3,2]
-    l95 = coef(m)$subnum[1,4,2]
-    
-    out_choseRelevant = rbind(out, c(curProbFractalDraw, curConflictTrial, "leftEVAdv", est, u95, l95))
-  
+    for(j in 1:length(conflictTrialTypes)){
+      
+      curConflictTrial = conflictTrialTypes[j]
+      
+      m = brm(choseRelevant ~ leftQVAdv + (1|subnum),
+              data=dat %>% filter(conflictTrial==curConflictTrial), family=bernoulli(link="logit"), silent=2, refresh=0)
+      
+      est = coef(m)$subnum[1,1,2]
+      u95 = coef(m)$subnum[1,3,2]
+      l95 = coef(m)$subnum[1,4,2]
+      
+      out_choseRelevant = rbind(out_choseRelevant, c(curProbFractalDraw, curConflictTrial, "leftQVAdv", est, u95, l95))
+      
+      m = brm(choseRelevant ~ leftEVAdv + (1|subnum),
+              data=dat %>% filter(conflictTrial==curConflictTrial), family=bernoulli(link="logit"), silent=2, refresh=0)
+      
+      est = coef(m)$subnum[1,1,2]
+      u95 = coef(m)$subnum[1,3,2]
+      l95 = coef(m)$subnum[1,4,2]
+      
+      out_choseRelevant = rbind(out_choseRelevant, c(curProbFractalDraw, curConflictTrial, "leftEVAdv", est, u95, l95))
+      
+    }
   }
+  
+  out_choseRelevant = out_choseRelevant %>%
+    drop_na()
+  
+  saveRDS(fit, paste0(helpers_path, 'logitOut_choseRelevant.RDS'))
 }
 ```
 

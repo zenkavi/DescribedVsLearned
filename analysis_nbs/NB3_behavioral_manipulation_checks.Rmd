@@ -59,7 +59,7 @@ clean_beh_data %>%
   labs(y = "p(Left)", x = "V(left)-V(right)", title="Psychometric choice curve based on weighted value difference between bundles")
 ```
 
-# Single relevant attribute trials
+## Single relevant attribute trials
 
 What percentage of all trials' rewards depend entirely either on the lottery or the fractals?
 
@@ -126,8 +126,11 @@ summary(m2)
 rm(tmp, m1, m2)
 ```
 
+# Attribute weights
 
-# Conflict and non-conflict trials
+Since there are two attributes in each bundle the observed and learned values of these attributes can agree or disagree on which bundle is better to choose. Trials where the fractal and lottery value difference favors the same bundle are called *no conflict* trials and trials where they favor different bundles are called *conflict* trials. Subjects 
+
+Whether they weight each attribute appropriately depends on the experimenter-controlled relevance of that attribute for that trial's reward.
 
 What proportion of each type of trial is there? About half of the trials for each subject are conflict trials.
 
@@ -142,7 +145,13 @@ tmp = clean_beh_data %>%
          conflictTrial = ifelse(leftFractalBetter != leftLotteryBetter, "conflict", "no conflict")) %>%
   mutate(relevantAttr = ifelse(probFractalDraw <.5, "lottery", ifelse(probFractalDraw >.5, "fractal", "both")),
          choseRelevant = ifelse(relevantAttr == "fractal" & choseBetterFractal == 1, 1,
-                                ifelse(relevantAttr == "lottery" & choseBetterLottery == 1, 1, 0)))
+                                ifelse(relevantAttr == "lottery" & choseBetterLottery == 1, 1, 0))) %>%
+  mutate(leftQVAdv = leftQValue - rightQValue,
+         leftEVAdv = leftLotteryEV - rightLotteryEV,
+         wpFrac = (delta*probFractalDraw^gamma)/(delta*probFractalDraw^gamma + (1-probFractalDraw)^gamma),
+         leftBundleVal = (1-wpFrac)*leftLotteryEV + wpFrac*leftQValue,
+         rightBundleVal = (1-wpFrac)*rightLotteryEV + wpFrac*rightQValue,
+         leftbundleValAdv = leftBundleVal - rightBundleVal)
 ```
 
 ```{r}
@@ -152,27 +161,23 @@ round(prop.table(table(tmp$conflictTrial, tmp$subnum), margin=2), 2)
 In conflict trials:  
 - when reward depends more on lotteries people correctly choose the bundle with the better lottery.  
 - when reward depends equally on both attributes people are *biased* towards the bundle with the better lottery.  
-- when reward depends more on fractals people choose the bundle with the better fractal more frequently *but not as much as they choose the better lottery for the equivalent levels of relevance* (i.e. last five blue bars on the top row are not as high as the first five yellow bars)
+- when reward depends more on fractals people choose the bundle with the better fractal more frequently *but not as much as they choose the better lottery for the equivalent levels of relevance* 
 
 In no conflict trials:  
 - when reward depends more on lotteries people correctly choose the bundle that has both the better fractal and the better lottery.  
-- when reward depends more on fractals people *incorrectly* choose the bundle with the better fractal and better lottery less frequently (i.e. the last five bars in the bottom row are lower than the first five) Their decision correctly depends less on the lottery and more on the fractals but their inference about the fractal values are more noisy because it involves learning and cannot be read off the screen.
+- when reward depends more on fractals people *incorrectly* choose the bundle with the better fractal and better lottery less frequently. Their decision correctly depends less on the lottery and more on the fractals but their inference about the fractal values are more noisy because it involves learning and cannot be read off the screen.
 
 
 ```{r}
 tmp %>% 
   group_by(probFractalDraw, subnum, conflictTrial) %>%
   summarise(choseBetterLottery = mean(choseBetterLottery),
-            choseBetterFractal = mean(choseBetterFractal),
             .groups='keep') %>%
-  gather(key, value, -probFractalDraw, -subnum, -conflictTrial) %>%
-  mutate(key = ifelse(key == "choseBetterFractal", "Chose Better Fractal", "Chose Better Lottery")) %>%
-  ggplot(aes(as.factor(probFractalDraw), value, color=key))+
-  geom_boxplot()+
+  ggplot(aes(as.factor(probFractalDraw), choseBetterLottery))+
+  geom_boxplot(color=cbbPalette[2])+
+  geom_hline(yintercept=0.5, linetype="dashed", size=2)+
   facet_grid(conflictTrial~.)+
-  labs(x="p(Fractal)",y="Proportion of choices",color="")+
-  scale_color_manual(values=c(cbbPalette[1], cbbPalette[2]))+
-  theme(legend.position = "bottom")
+  labs(x="p(Fractal)",y="Proportion of better lottery choices")
 
 ```
 
@@ -190,26 +195,23 @@ The previous graph shows that in no conflict trials when the reward relies mostl
 
 ```{r}
 tmp %>%
-  # filter(probFractalDraw != .5) %>%
-    mutate(leftQVAdv = leftQValue - rightQValue,
-         leftEVAdv = leftLotteryEV - rightLotteryEV) %>%
-  select(choiceLeft, leftQVAdv, leftEVAdv, probFractalDraw, conflictTrial) %>%
-  gather(key, value, -choiceLeft, -probFractalDraw, -conflictTrial)%>%
-  mutate(key = ifelse(key == "leftEVAdv", "EV(left)-EV(right)", "QV(left)-QV(right)"))%>%
+  select(choiceLeft, leftQVAdv, leftEVAdv, leftbundleValAdv, probFractalDraw, conflictTrial) %>%
+  gather(key, value, -choiceLeft, -probFractalDraw, -conflictTrial) %>%
+  mutate(key = ifelse(key == "leftEVAdv", "EV(left)-EV(right)", ifelse(key == "leftQVAdv","QV(left)-QV(right)", "V(left) - V(right)"))) %>%
   ggplot(aes(value, choiceLeft, color=key))+
   geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE)+
   facet_grid(conflictTrial~probFractalDraw)+
   theme(legend.position = "bottom")+
   xlab("")+
   labs(color="")+
-  scale_color_manual(values=c(cbbPalette[2], cbbPalette[1]))
+  scale_color_manual(values=c(cbbPalette[2], cbbPalette[1], cbbPalette[3]))
 ```
 
 Run logits in above graph
 
 ```{r}
-if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft.RDS'))){
-  fit = readRDS(paste0(helpers_path, 'logitOut_choiceLeft.RDS'))
+if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft_3DVs.RDS'))){
+  fit = readRDS(paste0(helpers_path, 'logitOut_choiceLeft_3DVs.RDS'))
 } else {
   
   probFractalDrawVals = unique(tmp$probFractalDraw)
@@ -220,16 +222,13 @@ if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft.RDS'))){
     curProbFractalDraw = probFractalDrawVals[i]
     
     dat = tmp %>%
-      filter(probFractalDraw == curProbFractalDraw) %>%
-      mutate(leftQVAdv = leftQValue - rightQValue,
-             leftEVAdv = leftLotteryEV - rightLotteryEV) %>%
-      select(choiceLeft, leftQVAdv, leftEVAdv, probFractalDraw, conflictTrial, subnum)
+      filter(probFractalDraw == curProbFractalDraw)
     
     for(j in 1:length(conflictTrialTypes)){
       
       curConflictTrial = conflictTrialTypes[j]
       
-      m = brm(choiceLeft ~ leftQVAdv + leftEVAdv + (1|subnum),
+      m = brm(choiceLeft ~ leftQVAdv + leftEVAdv + leftbundleValAdv + (1|subnum),
               data=dat %>% filter(conflictTrial==curConflictTrial), family=bernoulli(link="logit"), silent=2, refresh=0)
       
       est = coef(m)$subnum[1,1,2]
@@ -243,13 +242,19 @@ if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft.RDS'))){
       l95 = coef(m)$subnum[1,4,3]
       
       out_choiceLeft = rbind(out_choiceLeft, c(curProbFractalDraw, curConflictTrial, "leftEVAdv", est, u95, l95))
+      
+      est = coef(m)$subnum[1,1,4]
+      u95 = coef(m)$subnum[1,3,4]
+      l95 = coef(m)$subnum[1,4,4]
+      
+      out_choiceLeft = rbind(out_choiceLeft, c(curProbFractalDraw, curConflictTrial, "leftbundleValAdv", est, u95, l95))
     }
   }
   
   out_choiceLeft = out_choiceLeft %>%
     drop_na()
   
-  saveRDS(fit, paste0(helpers_path, 'logitOut_choiceLeft.RDS'))
+  saveRDS(fit, paste0(helpers_path, 'logitOut_choiceLeft_3DVs.RDS'))
 }
 ```
 

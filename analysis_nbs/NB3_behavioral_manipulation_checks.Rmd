@@ -204,8 +204,8 @@ if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft.RDS'))){
   out_choiceLeft = readRDS(paste0(helpers_path, 'logitOut_choiceLeft.RDS'))
 } else {
   
-  probFractalDrawVals = unique(tmp$probFractalDraw)
-  conflictTrialTypes = unique(tmp$conflictTrial)
+  probFractalDrawVals = unique(clean_beh_data$probFractalDraw)
+  conflictTrialTypes = unique(clean_beh_data$conflictTrial)
   out_choiceLeft = data.frame(probFractalDraw=NA,conflictTrial=NA,iv=NA,est=NA,u95=NA,l95=NA)
   
   for(i in 1:length(probFractalDrawVals)){
@@ -311,8 +311,8 @@ if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft_randomEffects.RDS'))){
   out_choiceLeft = readRDS(paste0(helpers_path, 'logitOut_choiceLeft_randomEffects.RDS'))
 } else {
   
-  probFractalDrawVals = unique(tmp$probFractalDraw)
-  conflictTrialTypes = unique(tmp$conflictTrial)
+  probFractalDrawVals = unique(clean_beh_data$probFractalDraw)
+  conflictTrialTypes = unique(clean_beh_data$conflictTrial)
   out_choiceLeft = data.frame(Estimate=NA, Est.Error=NA, Q2.5=NA, Q97.5=NA, subnum=NA, var=NA, probFractalDraw=NA, conflictTrial=NA)
 
   for(i in 1:length(probFractalDrawVals)){

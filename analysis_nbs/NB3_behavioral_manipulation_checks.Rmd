@@ -24,7 +24,7 @@ source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical.R'))
 ```
 
 ```{r}
-## Save posteroior mean estimates to `clean_beh_data`
+## Save posterior mean estimates to `clean_beh_data`
 clean_beh_data = par_ests %>%
   group_by(subnum, par) %>%
   summarise(est = mean(value), .groups='keep') %>%
@@ -43,11 +43,9 @@ clean_beh_data = clean_beh_data %>%
          rightLotteryEV = referenceValue*referenceProb)
 ```
 
-# Manipulation checks
+# Psychometric choice curves
 
-## Choice depending on value difference
-
-Psychometric curve for all trials with weighted value difference
+Psychometric curve for all trials with weighted value difference. Q-values for the fractals and the weights for the two attributes are determined by the posterior means of the hierarchically fit two systems model.
 
 ```{r}
 clean_beh_data %>%
@@ -61,9 +59,9 @@ clean_beh_data %>%
   labs(y = "p(Left)", x = "V(left)-V(right)", title="Psychometric choice curve based on weighted value difference between bundles")
 ```
 
-## Trials with unambiguous reward attribute
+# Single relevant attribute trials
 
-What percentage of all trials have clear reward attribute?
+What percentage of all trials' rewards depend entirely either on the lottery or the fractals?
 
 ```{r}
 tmp = clean_beh_data %>%
@@ -74,19 +72,22 @@ tmp = clean_beh_data %>%
 round(nrow(tmp)/nrow(clean_beh_data), 3)
 ```
 
+If subjects have understood the task then in these trials only the value difference of the relevant attribute should have an effect on choice.
+
 - When p of fractal is 0 do subjects choose based on the EV difference between lotteries? Does the QV difference matter at all?
 
 - When p of fractal is 1 do subjects choose based on the QV difference between fractals? Does the EV difference matter at all?
 
-```{r}
+```{r warning=FALSE}
 tmp %>%
-  select(leftQVAdv, leftEVAdv, choiceLeft, probFractalDraw) %>%
-  gather(key, value, -choiceLeft, -probFractalDraw) %>%  
+  select(subnum, leftQVAdv, leftEVAdv, choiceLeft, probFractalDraw) %>%
+  gather(key, value, -choiceLeft, -probFractalDraw, -subnum) %>%  
   mutate(key = ifelse(key == "leftEVAdv", "EV_left - EV_right", "QV_left - QV_right"),
          probFractalDraw = ifelse(probFractalDraw == 0, "p(Fractal)=0", "p(Fractal)=1")) %>%
   ggplot(aes(value, choiceLeft))+
-  geom_jitter(width=0.03, height=0.08, alpha = 0.05)+
-  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE)+
+  # geom_jitter(width=0.03, height=0.08, alpha = 0.05)+
+  geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, se=FALSE, alpha=.2, size=1, color=cbbPalette[1])+
+  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[2])+
   facet_grid(probFractalDraw~key)+
   xlab("")+
   ylab("p(Left)")
@@ -114,9 +115,7 @@ m2 = brm(choiceLeft ~ leftQVAdv + leftEVAdv + (1|subnum),
         data=tmp %>% filter(probFractalDraw == 1), family=bernoulli(link="logit"))
 ```
 
-When the probability of the fractal draw is 1 so the reward only depends on the fractals only the learned Q-values for the fractals have an effect on choice (the lotter EV difference has no effect).
-
-Note: these Q-values are from model fits where choice is only modeled as a function of the fractal values. Joint modeling of all relevant attributes in each bundle is done in the next notebook.
+When the probability of the fractal draw is 1 so the reward only depends on the fractals only the learned Q-values for the fractals have an effect on choice (the lottery EV difference has no effect).
 
 ```{r eval=FALSE}
 summary(m2)
@@ -127,51 +126,8 @@ summary(m2)
 rm(tmp, m1, m2)
 ```
 
-## Probability distortion
 
-$$V_i = (1-w(pFrac))EV_i + w(pFrac)QV_i, \:i \in \{left, right\}$$
-
-$$w(pFrac) = \frac{\delta*pFrac^{\gamma}}{\delta*pFrac^{\gamma}+(1- pFrac)^{\gamma}}$$
-
-How do the mean posterior estimates suggest the probability of a fractal draw is distorted for each subject?
-
-Using Gonzalez and Wu's (1999) terminology the fact that for most subjects the probability weighting functions are below the 45-degree line (i.e. objective probability) regardless of the inverse-S shape is not about diminishing sensitivy/discriminability (slope) but about **attractiveness** (intercept, elevation). The fractal is almost always less attractive to subjects than it really should be given its probability in determining their reward.
-
-Note also that for many subject the probability weighting function does not have the traditional inverse S-shape (i.e. $\gamma \geq 1$). I'm not sure why this might be but it might have something to do with what these probabilities pertain to. Unlike most studies that investigate this curve where the probability refers directly to the reward, in this case the probability of a reward is the joint probability of p(Fractal)*p(chosen Fractal's reward)
-
-```{r}
-tmp = par_ests %>%
-  group_by(subnum, par) %>%
-  summarise(est = mean(value), .groups='keep') %>%
-  filter(par != "beta" & par != "alpha") %>%
-  spread(par, est)
-
-tmp = do.call("rbind", replicate(11, tmp, simplify = FALSE)) %>%
-  arrange(subnum) %>%
-  ungroup() %>%
-  mutate(pFrac = rep(seq(0, 1, .1), 25), 
-         wpFrac = (delta*pFrac^gamma)/(delta*pFrac^gamma + (1-pFrac)^gamma)) 
-
-tmp %>%
-  mutate(delta_gt_1 = ifelse(delta>=1, "delta >= 1", "delta < 1 "),
-         gamma_gt_1 = ifelse(gamma>=1,"gamma >= 1", "gamma < 1")) %>%
-  ggplot(aes(pFrac, wpFrac, group=subnum))+
-  geom_line(aes(col = as.factor(gamma_gt_1), linetype=as.factor(delta_gt_1)))+
-  geom_abline(slope=1, intercept=0, linetype="dashed")+
-  labs(x="p(Fractal)", y="w(pFractal)", title="Distortion of p(Fractal)", color = element_blank(), linetype=element_blank())
-```
-
-```{r echo=FALSE}
-rm(tmp)
-```
-
-Proportion of trials for each value of p(Fractal)?
-
-```{r}
-round(table(clean_beh_data$probFractalDraw)/nrow(clean_beh_data), 3)
-```
-
-## Conflict and non-conflict trials
+# Conflict and non-conflict trials
 
 What proportion of each type of trial is there? About half of the trials for each subject are conflict trials.
 
@@ -220,7 +176,7 @@ tmp %>%
 
 ```
 
-### Psychometric curves by conflict type
+## Psychometric curves by conflict type
 
 In conflict trials  
 - when reward depends more on lotteries people correctly choose the bundle with the better lottery
@@ -231,8 +187,6 @@ In no conflict trials
 In no conflict trials the bundle with the better lottery is the same as the bundle with the better fractal. The QV difference is positively correlated with the EV difference for all levels of pFrac. **Then how does one of these IVs predict choice better than the other?**
 
 The previous graph shows that in no conflict trials when the reward relies mostly on the fractal people incorrectly choose the better bundle less frequently. Does this explain it?
-
-**Does it work with the heuristic: when no conflict go with lottery?**
 
 ```{r}
 tmp %>%
@@ -319,7 +273,7 @@ out_choiceLeft %>%
   labs(color="", y="Logit slope estimate (DV = choiceLeft)", x="p(Frac)")
 ```
 
-### Choosing based on relevant attribute
+## Choosing based on relevant attribute
 
 Plot choice based on relevant attribute
 
@@ -348,6 +302,51 @@ tmp %>%
   scale_color_manual(values=c(cbbPalette[1], cbbPalette[2]))
   
 ```
+
+## Probability distortion
+
+$$V_i = (1-w(pFrac))EV_i + w(pFrac)QV_i, \:i \in \{left, right\}$$
+
+$$w(pFrac) = \frac{\delta*pFrac^{\gamma}}{\delta*pFrac^{\gamma}+(1- pFrac)^{\gamma}}$$
+
+How do the mean posterior estimates suggest the probability of a fractal draw is distorted for each subject?
+
+Using Gonzalez and Wu's (1999) terminology the fact that for most subjects the probability weighting functions are below the 45-degree line (i.e. objective probability) regardless of the inverse-S shape is not about diminishing sensitivy/discriminability (slope) but about **attractiveness** (intercept, elevation). The fractal is almost always less attractive to subjects than it really should be given its probability in determining their reward.
+
+Note also that for many subject the probability weighting function does not have the traditional inverse S-shape (i.e. $\gamma \geq 1$). I'm not sure why this might be but it might have something to do with what these probabilities pertain to. Unlike most studies that investigate this curve where the probability refers directly to the reward, in this case the probability of a reward is the joint probability of p(Fractal)*p(chosen Fractal's reward)
+
+```{r}
+tmp = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = mean(value), .groups='keep') %>%
+  filter(par != "beta" & par != "alpha") %>%
+  spread(par, est)
+
+tmp = do.call("rbind", replicate(11, tmp, simplify = FALSE)) %>%
+  arrange(subnum) %>%
+  ungroup() %>%
+  mutate(pFrac = rep(seq(0, 1, .1), 25), 
+         wpFrac = (delta*pFrac^gamma)/(delta*pFrac^gamma + (1-pFrac)^gamma)) 
+
+tmp %>%
+  mutate(delta_gt_1 = ifelse(delta>=1, "delta >= 1", "delta < 1 "),
+         gamma_gt_1 = ifelse(gamma>=1,"gamma >= 1", "gamma < 1")) %>%
+  ggplot(aes(pFrac, wpFrac, group=subnum))+
+  geom_line(aes(col = as.factor(gamma_gt_1), linetype=as.factor(delta_gt_1)))+
+  geom_abline(slope=1, intercept=0, linetype="dashed")+
+  labs(x="p(Fractal)", y="w(pFractal)", title="Distortion of p(Fractal)", color = element_blank(), linetype=element_blank())
+```
+
+```{r echo=FALSE}
+rm(tmp)
+```
+
+Proportion of trials for each value of p(Fractal)?
+
+```{r}
+round(table(clean_beh_data$probFractalDraw)/nrow(clean_beh_data), 3)
+```
+
 
 # OLD: NEEDS REVIEW
 

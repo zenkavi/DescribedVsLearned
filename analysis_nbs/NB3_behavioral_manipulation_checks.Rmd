@@ -197,7 +197,7 @@ clean_beh_data %>%
   scale_color_manual(values=c(cbbPalette[2], cbbPalette[1]))
 ```
 
-Run logits in above graph
+Run logits in above graph. Fixed effects analysis allowing for random intercepts.
 
 ```{r}
 if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft.RDS'))){
@@ -239,11 +239,8 @@ if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft.RDS'))){
     drop_na()
   
   saveRDS(out_choiceLeft, paste0(helpers_path, 'logitOut_choiceLeft.RDS'))
+  rm(dat, m, conflictTrialTypes, curConflictTrial, probFractalDrawVals, curProbFractalDraw)
 }
-```
-
-```{r echo = FALSE}
-rm(dat, m, conflictTrialTypes, curConflictTrial, probFractalDrawVals, curProbFractalDraw)
 ```
 
 ```{r}
@@ -294,44 +291,71 @@ tmp %>%
   ggplot(aes(pFrac, wpFrac, group=subnum))+
   geom_line(aes(col = as.factor(gamma_gt_1), linetype=as.factor(delta_gt_1)))+
   geom_abline(slope=1, intercept=0, linetype="dashed")+
-  labs(x="p(Fractal)", y="w(pFractal)", title="Distortion of p(Fractal)", color = element_blank(), linetype=element_blank())
+  labs(x="p(Fractal)", y="w(pFractal)", title="Distortion of p(Fractal)", color = element_blank(), linetype=element_blank())+
+  scale_color_manual(values=c(cbbPalette[3], cbbPalette[7]))+
+  theme(legend.position = "bottom")
 ```
 
 ```{r echo=FALSE}
 rm(tmp)
 ```
 
-Proportion of trials for each value of p(Fractal)?
-
-```{r}
-round(table(clean_beh_data$probFractalDraw)/nrow(clean_beh_data), 3)
-```
-
-
-# OLD: NEEDS REVIEW
+# Determinants of bias
 
 Is the over-reliance on the description-based attribute due to distortion of the probability that the reward will depend on the experience-based attribute or the distortion/ bad learning of the experience-based attributes value?
 
-To examine this we compute the proportion of choices that align with the relevant attribute in conflict trials where the experience-based attribute is more relevant. These subject-level estimates are then correlated with parameters from the two valuation systems model. Specifically a non-zero slope between the proportion of choices and delta or gamma would suggest that the bias is due to distorted probability estimates. On the other hand a non-zero slope with learning rates would point towards distorted values.
+Random effects analysis 
 
 ```{r}
-tmp = tmp %>%
-  filter(probFractalDraw > 0.5 & probFractalDraw < 1) %>%
-  group_by(subnum) %>%
-  summarise(meanChoseRelevant = mean(choseRelevant),
-            alpha = mean(alpha),
-            delta = mean(delta), 
-            gamma = mean(gamma),
-            .groups = 'keep') 
+if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft_randomEffects.RDS'))){
+  out_choiceLeft = readRDS(paste0(helpers_path, 'logitOut_choiceLeft_randomEffects.RDS'))
+} else {
+  
+  probFractalDrawVals = unique(tmp$probFractalDraw)
+  conflictTrialTypes = unique(tmp$conflictTrial)
+  out_choiceLeft = data.frame(Estimate=NA, Est.Error=NA, Q2.5=NA, Q97.5=NA, subnum=NA, var=NA, probFractalDraw=NA, conflictTrial=NA)
 
-tmp %>%
-  gather(key, value, -subnum, -meanChoseRelevant) %>%
-  ggplot(aes(value, meanChoseRelevant)) +
-  geom_point()+
-  geom_smooth(method="lm", formula = 'y ~ x', color=cbbPalette[2])+
-  facet_wrap(~key, scale = "free_x")+
-  labs(x="", y="Proportion of choices based on the relevant option",
-       title = "Conflict trials where 1>p(Fractal)>.5")+
-  geom_hline(yintercept = .5, linetype = "dashed")+
-  theme(legend.position = "none")
+  for(i in 1:length(probFractalDrawVals)){
+    curProbFractalDraw = probFractalDrawVals[i]
+    
+    dat = clean_beh_data %>%
+      filter(probFractalDraw == curProbFractalDraw)
+    
+    for(j in 1:length(conflictTrialTypes)){
+      
+      curConflictTrial = conflictTrialTypes[j]
+      
+      m = brm(choiceLeft ~ (1 + leftQVAdv + leftEVAdv |subnum),
+              data=dat %>% filter(conflictTrial==curConflictTrial), family=bernoulli(link="logit"), silent=2, refresh=0)
+      
+      intercepts = data.frame(coef(m)$subnum[,,1]) %>%
+        mutate(subnum = row.names(.),
+               var = "intercept",
+               probFractalDraw = curProbFractalDraw,
+               conflictTrial = curConflictTrial)
+      
+      qv_slopes = data.frame(coef(m)$subnum[,,2]) %>%
+        mutate(subnum = row.names(.),
+               var = "qv_slopes",
+               probFractalDraw = curProbFractalDraw,
+               conflictTrial = curConflictTrial)
+      
+      ev_slopes = data.frame(coef(m)$subnum[,,3]) %>%
+        mutate(subnum = row.names(.),
+               var = "ev_slopes",
+               probFractalDraw = curProbFractalDraw,
+               conflictTrial = curConflictTrial)
+      
+      out_choiceLeft = rbind(out_choiceLeft, intercepts, qv_slopes, ev_slopes)
+    }
+  }
+  
+  out_choiceLeft = out_choiceLeft %>%
+    drop_na()
+  
+  saveRDS(out_choiceLeft, paste0(helpers_path, 'logitOut_choiceLeft_randomEffects.RDS'))
+  rm(dat, m, conflictTrialTypes, curConflictTrial, probFractalDrawVals, curProbFractalDraw)
+}
 ```
+
+# Response times

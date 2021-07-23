@@ -159,11 +159,11 @@ round(prop.table(table(tmp$conflictTrial, tmp$subnum), margin=2), 2)
 In conflict trials:  
 - when reward depends more on lotteries people correctly choose the bundle with the better lottery above chance.  
 - when reward depends equally on both attributes people are  slightly *biased* towards the bundle with the better lottery.  
-- when reward depends more on fractals people choose the bundle with the better fractal more frequently *but not as much as they choose the better lottery for the equivalent levels of relevance* 
+- when reward depends more on fractals people choose the bundle with the better fractal more frequently *but not as much as they choose the better lottery for the equivalent levels of relevance*  
 
 In no conflict trials:  
 - when reward depends more or equally on lotteries people correctly choose the bundle that has both the better fractal and the better lottery.  
-- when reward depends more on fractals people *incorrectly* choose the bundle with the better fractal and better lottery less frequently. This suggests that their decision **correctly** depends less on the lottery and more on the fractals but their inference about the fractal values are more noisy and therefore error prone because it involves learning and cannot be read off the screen.
+- when reward depends more on fractals people *incorrectly* choose the bundle with the better fractal and better lottery less frequently. This suggests that their decision **correctly** depends less on the lottery and more on the fractals but their inference about the fractal values are more noisy and therefore error prone because it involves learning and cannot be read off the screen.  
 
 ```{r}
 tmp %>% 
@@ -268,9 +268,9 @@ $$w(pFrac) = \frac{\delta*pFrac^{\gamma}}{\delta*pFrac^{\gamma}+(1- pFrac)^{\gam
 
 How do the mean posterior estimates suggest the probability of a fractal draw is distorted for each subject?
 
-Using Gonzalez and Wu's (1999) terminology the fact that for most subjects the probability weighting functions are below the 45-degree line (i.e. objective probability) regardless of the inverse-S shape is not about diminishing sensitivy/discriminability (slope) but about **attractiveness** (intercept, elevation). The fractal is almost always less attractive to subjects than it really should be given its probability in determining their reward.
+Using Gonzalez and Wu's (1999) terminology the fact that for most subjects the probability weighting functions are below the 45-degree line (i.e. objective probability) regardless of shape is not about diminishing sensitivity/discriminability (slope) but about **attractiveness** (intercept, elevation). The fractal is almost always less attractive to subjects than it really should be given its probability in determining their reward.
 
-Note also that for many subject the probability weighting function does not have the traditional inverse S-shape (i.e. $\gamma \geq 1$). I'm not sure why this might be but it might have something to do with what these probabilities pertain to. Unlike most studies that investigate this curve where the probability refers directly to the reward, in this case the probability of a reward is the joint probability of p(Fractal)*p(chosen Fractal's reward)
+Note that for many subject the probability weighting function does not have the inverse S-shape observed in studies of outcome probabilities (i.e. $\gamma \geq 1$). Unlike most studies that investigate this curve where the probability refers directly to the reward, in this case the probability of a reward is the joint probability of p(Fractal)*p(chosen Fractal's reward). The probability depicted here is captures attribute weight when computing the value of a bundle.
 
 ```{r}
 tmp = par_ests %>%

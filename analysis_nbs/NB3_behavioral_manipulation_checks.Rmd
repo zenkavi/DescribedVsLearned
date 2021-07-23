@@ -41,6 +41,20 @@ clean_beh_data = clean_beh_data %>%
 clean_beh_data = clean_beh_data %>%
   mutate(leftLotteryEV = lotteryValue*lotteryProb,
          rightLotteryEV = referenceValue*referenceProb)
+
+## Add conflict trial info and value difference
+clean_beh_data = clean_beh_data %>%
+  mutate(leftLotteryBetter = leftLotteryEV>rightLotteryEV,
+         choseBetterLottery = ifelse(leftLotteryBetter == 1 & choiceLeft == 1, 1, 
+                                     ifelse(leftLotteryBetter == 0 & choiceLeft == 0, 1, 0)),
+         leftFractalBetter = leftQValue>rightQValue,
+         conflictTrial = ifelse(leftFractalBetter != leftLotteryBetter, "conflict", "no conflict")) %>%
+  mutate(leftQVAdv = leftQValue - rightQValue,
+         leftEVAdv = leftLotteryEV - rightLotteryEV,
+         wpFrac = (delta*probFractalDraw^gamma)/(delta*probFractalDraw^gamma + (1-probFractalDraw)^gamma),
+         leftBundleVal = (1-wpFrac)*leftLotteryEV + wpFrac*leftQValue,
+         rightBundleVal = (1-wpFrac)*rightLotteryEV + wpFrac*rightQValue,
+         leftbundleValAdv = leftBundleVal - rightBundleVal)
 ```
 
 # Psychometric choice curves
@@ -49,14 +63,23 @@ Psychometric curve for all trials with weighted value difference. Q-values for t
 
 ```{r}
 clean_beh_data %>%
-  mutate(wpFrac = (delta*probFractalDraw^gamma)/(delta*probFractalDraw^gamma + (1-probFractalDraw)^gamma),
-         leftBundleVal = (1-wpFrac)*leftLotteryEV + wpFrac*leftQValue,
-         rightBundleVal = (1-wpFrac)*rightLotteryEV + wpFrac*rightQValue,
-         bundleValDiff = leftBundleVal - rightBundleVal) %>%
-  ggplot(aes(bundleValDiff, choiceLeft))+
-  geom_line(aes(group=subnum),stat="smooth",formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, se=FALSE, alpha=.2, size=1, color=cbbPalette[1])+
-  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[2], alpha=.75)+
+  ggplot(aes(leftbundleValAdv, choiceLeft))+
+  geom_line(aes(group=subnum),stat="smooth",formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, se=FALSE, alpha=.1, size=1, color=cbbPalette[5])+
+  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[3], alpha=.75)+
   labs(y = "p(Left)", x = "V(left)-V(right)", title="Psychometric choice curve based on weighted value difference between bundles")
+```
+
+Note that this is true for all levels of p(Frac) and conflict trial type
+
+```{r warning=FALSE}
+clean_beh_data %>%
+  ggplot(aes(leftbundleValAdv, choiceLeft))+
+  geom_line(aes(group=subnum),stat="smooth",formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, se=FALSE, alpha=.1, size=1, color=cbbPalette[5])+
+  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[3], alpha=.75)+
+  labs(y = "p(Left)", x = "V(left)-V(right)")+
+  facet_grid(conflictTrial ~ probFractalDraw)+
+  theme(axis.ticks.x=element_blank(),
+        axis.text.x=element_blank())
 ```
 
 ## Single relevant attribute trials
@@ -86,8 +109,8 @@ tmp %>%
          probFractalDraw = ifelse(probFractalDraw == 0, "p(Fractal)=0", "p(Fractal)=1")) %>%
   ggplot(aes(value, choiceLeft))+
   # geom_jitter(width=0.03, height=0.08, alpha = 0.05)+
-  geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, se=FALSE, alpha=.2, size=1, color=cbbPalette[1])+
-  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[2])+
+  geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, se=FALSE, alpha=.1, size=1, color=cbbPalette[5])+
+  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[3])+
   facet_grid(probFractalDraw~key)+
   xlab("")+
   ylab("p(Left)")
@@ -130,30 +153,10 @@ rm(tmp, m1, m2)
 
 Since there are two attributes in each bundle the observed and learned values of these attributes can agree or disagree on which bundle is better to choose. Trials where the fractal and lottery value difference favors the same bundle are called *no conflict* trials and trials where they favor different bundles are called *conflict* trials. Subjects can choose to weight each attribute differently in each trial. Whether they weight each attribute appropriately depends on the experimenter-controlled relevance of that attribute for that trial's reward.
 
-```{r}
-tmp = clean_beh_data %>%
-  mutate(leftLotteryBetter = leftLotteryEV>rightLotteryEV,
-         choseBetterLottery = ifelse(leftLotteryBetter == 1 & choiceLeft == 1, 1, 
-                                     ifelse(leftLotteryBetter == 0 & choiceLeft == 0, 1, 0)),
-         leftFractalBetter = leftQValue>rightQValue,
-         choseBetterFractal = ifelse(leftFractalBetter == 1 & choiceLeft == 1, 1, 
-                                     ifelse(leftFractalBetter == 0 & choiceLeft == 0, 1, 0)),
-         conflictTrial = ifelse(leftFractalBetter != leftLotteryBetter, "conflict", "no conflict")) %>%
-  mutate(relevantAttr = ifelse(probFractalDraw <.5, "lottery", ifelse(probFractalDraw >.5, "fractal", "both")),
-         choseRelevant = ifelse(relevantAttr == "fractal" & choseBetterFractal == 1, 1,
-                                ifelse(relevantAttr == "lottery" & choseBetterLottery == 1, 1, 0))) %>%
-  mutate(leftQVAdv = leftQValue - rightQValue,
-         leftEVAdv = leftLotteryEV - rightLotteryEV,
-         wpFrac = (delta*probFractalDraw^gamma)/(delta*probFractalDraw^gamma + (1-probFractalDraw)^gamma),
-         leftBundleVal = (1-wpFrac)*leftLotteryEV + wpFrac*leftQValue,
-         rightBundleVal = (1-wpFrac)*rightLotteryEV + wpFrac*rightQValue,
-         leftbundleValAdv = leftBundleVal - rightBundleVal)
-```
-
 What proportion of each type of trial is there? About half of the trials for each subject are conflict trials.
 
 ```{r}
-round(prop.table(table(tmp$conflictTrial, tmp$subnum), margin=2), 2)
+round(prop.table(table(clean_beh_data$conflictTrial, clean_beh_data$subnum), margin=2), 2)
 ```
 
 In conflict trials:  
@@ -166,7 +169,7 @@ In no conflict trials:
 - when reward depends more on fractals people *incorrectly* choose the bundle with the better fractal and better lottery less frequently. This suggests that their decision **correctly** depends less on the lottery and more on the fractals but their inference about the fractal values are more noisy and therefore error prone because it involves learning and cannot be read off the screen.  
 
 ```{r}
-tmp %>% 
+clean_beh_data %>% 
   group_by(probFractalDraw, subnum, conflictTrial) %>%
   summarise(choseBetterLottery = mean(choseBetterLottery),
             .groups='keep') %>%
@@ -181,7 +184,7 @@ tmp %>%
 ## Psychometric curves by conflict type
 
 ```{r}
-tmp %>%
+clean_beh_data %>%
   select(choiceLeft, leftQVAdv, leftEVAdv, probFractalDraw, conflictTrial) %>%
   gather(key, value, -choiceLeft, -probFractalDraw, -conflictTrial) %>%
   mutate(key = ifelse(key == "leftEVAdv", "EV(left)-EV(right)", "QV(left)-QV(right)")) %>%
@@ -208,7 +211,7 @@ if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft.RDS'))){
   for(i in 1:length(probFractalDrawVals)){
     curProbFractalDraw = probFractalDrawVals[i]
     
-    dat = tmp %>%
+    dat = clean_beh_data %>%
       filter(probFractalDraw == curProbFractalDraw)
     
     for(j in 1:length(conflictTrialTypes)){
@@ -248,6 +251,7 @@ out_choiceLeft %>%
   mutate(est = as.numeric(est),
          l95 = as.numeric(l95),
          u95 = as.numeric(u95)) %>%
+  mutate(iv = ifelse(iv == "leftEVAdv", "EV(left)-EV(right)", "QV(left)-QV(right)")) %>%
   ggplot(aes(probFractalDraw, est, col=iv))+
   geom_point()+
   geom_line(aes(group=iv))+
@@ -256,8 +260,7 @@ out_choiceLeft %>%
   facet_grid(conflictTrial ~ .)+
   theme(legend.position = "bottom")+
   scale_color_manual(values=c(cbbPalette[2], cbbPalette[1]))+
-  labs(color="", y="Logit slope estimate (DV = choiceLeft)", x="p(Frac)")+
-  ylim(-10, 10)
+  labs(color="", y="Logit slope estimate (DV = choiceLeft)", x="p(Frac)")
 ```
 
 ## Probability distortion
@@ -268,7 +271,7 @@ $$w(pFrac) = \frac{\delta*pFrac^{\gamma}}{\delta*pFrac^{\gamma}+(1- pFrac)^{\gam
 
 How do the mean posterior estimates suggest the probability of a fractal draw is distorted for each subject?
 
-Using Gonzalez and Wu's (1999) terminology the fact that for most subjects the probability weighting functions are below the 45-degree line (i.e. objective probability) regardless of shape is not about diminishing sensitivity/discriminability (slope) but about **attractiveness** (intercept, elevation). The fractal is almost always less attractive to subjects than it really should be given its probability in determining their reward.
+Using Gonzalez and Wu's (1999) terminology the fact that for most subjects the probability weighting functions are below the 45-degree line (i.e. objective probability, i.e. $\delta < 1$) regardless of shape is not about diminishing sensitivity (slope) but about **attractiveness** (intercept, elevation). The fractal is almost always less attractive to subjects than it should be given its probability in determining their reward.
 
 Note that for many subject the probability weighting function does not have the inverse S-shape observed in studies of outcome probabilities (i.e. $\gamma \geq 1$). Unlike most studies that investigate this curve where the probability refers directly to the reward, in this case the probability of a reward is the joint probability of p(Fractal)*p(chosen Fractal's reward). The probability depicted here is captures attribute weight when computing the value of a bundle.
 

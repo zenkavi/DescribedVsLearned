@@ -303,57 +303,48 @@ There can be various cognitive explanations for the choice patterns we observe. 
 **Are these mutually exclusive? How can we test for each?**
 
 Does the variance (noisiness) of the QV estimates relate to how much a subject relies on the EV or QV difference?
-Random effects analysis estimating a separate slope for each subject for both regressors. This is an under-powered analysis and I did not find any systematic relationship. 
+Random effects analysis estimating a separate slope for each subject for both regressors collapsing both conflict types. This is an under-powered analysis and I did not find any systematic relationship. 
 
-```{r eval=FALSE}
-if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft_randomEffects.RDS'))){
-  out_choiceLeft = readRDS(paste0(helpers_path, 'logitOut_choiceLeft_randomEffects.RDS'))
+```{r}
+if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft_randomEffects_conflictCollapsed.RDS'))){
+  out_choiceLeft = readRDS(paste0(helpers_path, 'logitOut_choiceLeft_randomEffects_conflictCollapsed.RDS'))
 } else {
   
   probFractalDrawVals = unique(clean_beh_data$probFractalDraw)
-  conflictTrialTypes = unique(clean_beh_data$conflictTrial)
   out_choiceLeft = data.frame(Estimate=NA, Est.Error=NA, Q2.5=NA, Q97.5=NA, subnum=NA, var=NA, probFractalDraw=NA, conflictTrial=NA)
-
+  
   for(i in 1:length(probFractalDrawVals)){
     curProbFractalDraw = probFractalDrawVals[i]
     
     dat = clean_beh_data %>%
       filter(probFractalDraw == curProbFractalDraw)
     
-    for(j in 1:length(conflictTrialTypes)){
-      
-      curConflictTrial = conflictTrialTypes[j]
-      
-      m = brm(choiceLeft ~ (1 + leftQVAdv + leftEVAdv |subnum),
-              data=dat %>% filter(conflictTrial==curConflictTrial), family=bernoulli(link="logit"), silent=2, refresh=0)
-      
-      intercepts = data.frame(coef(m)$subnum[,,1]) %>%
-        mutate(subnum = row.names(.),
-               var = "intercept",
-               probFractalDraw = curProbFractalDraw,
-               conflictTrial = curConflictTrial)
-      
-      qv_slopes = data.frame(coef(m)$subnum[,,2]) %>%
-        mutate(subnum = row.names(.),
-               var = "qv_slopes",
-               probFractalDraw = curProbFractalDraw,
-               conflictTrial = curConflictTrial)
-      
-      ev_slopes = data.frame(coef(m)$subnum[,,3]) %>%
-        mutate(subnum = row.names(.),
-               var = "ev_slopes",
-               probFractalDraw = curProbFractalDraw,
-               conflictTrial = curConflictTrial)
-      
-      out_choiceLeft = rbind(out_choiceLeft, intercepts, qv_slopes, ev_slopes)
-    }
+    m = brm(choiceLeft ~ (1 + leftQVAdv + leftEVAdv |subnum),
+            data=dat, family=bernoulli(link="logit"), silent=2, refresh=0)
+    
+    intercepts = data.frame(coef(m)$subnum[,,1]) %>%
+      mutate(subnum = row.names(.),
+             var = "intercept",
+             probFractalDraw = curProbFractalDraw)
+    
+    qv_slopes = data.frame(coef(m)$subnum[,,2]) %>%
+      mutate(subnum = row.names(.),
+             var = "qv_slopes",
+             probFractalDraw = curProbFractalDraw)
+    
+    ev_slopes = data.frame(coef(m)$subnum[,,3]) %>%
+      mutate(subnum = row.names(.),
+             var = "ev_slopes",
+             probFractalDraw = curProbFractalDraw)
+    
+    out_choiceLeft = rbind(out_choiceLeft, intercepts, qv_slopes, ev_slopes)
   }
   
   out_choiceLeft = out_choiceLeft %>%
     drop_na()
   
-  saveRDS(out_choiceLeft, paste0(helpers_path, 'logitOut_choiceLeft_randomEffects.RDS'))
-  rm(dat, m, conflictTrialTypes, curConflictTrial, probFractalDrawVals, curProbFractalDraw)
+  saveRDS(out_choiceLeft, paste0(helpers_path, 'logitOut_choiceLeft_randomEffects_conflictCollapsed.RDS'))
+  rm(dat, m, probFractalDrawVals, curProbFractalDraw)
 }
 out_choiceLeft_re = out_choiceLeft
 ```
@@ -373,40 +364,23 @@ out_choiceLeft_re %>%
   scale_color_manual(values=c(cbbPalette[2], cbbPalette[1]))
 ```
 
-```{r eval=FALSE}
-clean_beh_data %>%
-  mutate(leftFractalAdv = fractalLeftProb - fractalRightProb,
-         fractalTrueVsEst = leftFractalAdv-leftQVAdv) %>%  
-  group_by(subnum, probFractalDraw, conflictTrial) %>%
-  summarise(fractalValDiffSd = sd(fractalTrueVsEst),
-            .groups='keep') %>%
-  left_join(out_choiceLeft_re %>%
-              filter(var %in% c("qv_slopes", "ev_slopes")) %>%
-              select(Estimate, subnum, var, probFractalDraw, conflictTrial) %>%
-              spread(var, Estimate), by=c("subnum", "probFractalDraw","conflictTrial")) %>%
-  gather(var, slope, -subnum, -probFractalDraw, -conflictTrial, -fractalValDiffSd) %>%
-  mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
-  ggplot(aes(fractalValDiffSd, slope, color=var))+
-  # geom_point()+
-  geom_smooth(method="lm", formula="y~x",fullrange=T)+
-  facet_grid(conflictTrial~probFractalDraw)+
-  theme(legend.position="bottom")+
-  labs(color="", y="Logit Slope Estimate", x = "Variance of fractal value distribution")+
-  scale_color_manual(values=c(cbbPalette[2], cbbPalette[1]))
-```
-Does how much one chooses the left bundle relate to how much the fractal QV of the left bundle is overestimated? This is bizarre. Why would subjects choose the left bundle less frequently the more they overestimate its fractal QV in conflict trials regardless of the relevance of the attribute?
-
 ```{r}
 clean_beh_data %>%
-  mutate(leftFractalAdv = fractalLeftProb - fractalRightProb,
-         fractalLeftOverest = leftQVAdv-leftFractalAdv) %>%
-  ggplot(aes(fractalLeftOverest, choiceLeft))+
-  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE)+
+  group_by(subnum, probFractalDraw, conflictTrial) %>%
+  summarise(alpha=mean(alpha), .groups="keep") %>%
+  left_join(out_choiceLeft_re %>%
+              filter(var %in% c("qv_slopes", "ev_slopes")) %>%
+              select(Estimate, subnum, var, probFractalDraw, conflictTrial), 
+            by=c("subnum", "probFractalDraw","conflictTrial")) %>%
+  ggplot(aes(alpha, Estimate, color=var))+
+  geom_smooth(formula = 'y~x', method = "lm",fullrange=TRUE)+
+  geom_point(alpha=.5, size=.5)+
   facet_grid(conflictTrial~probFractalDraw)+
-  labs(x = "Subjective - True left fractal value")
+  labs(color="", x="Learning rate", y="Logit slope estimate (DV = choiceLeft)")+
+  scale_color_manual(values=c(cbbPalette[2], cbbPalette[1]))+
+  theme(legend.position="bottom")
   
 ```
-
 # Response times
 
 ```{r eval=FALSE}
@@ -425,11 +399,11 @@ clean_beh_data %>%
 
 ```{r}
 clean_beh_data %>%
-  ggplot(aes(as.factor(probFractalDraw), log(reactionTime), col=conflictTrial))+
-  geom_boxplot()+
+  ggplot(aes(probFractalDraw, log(reactionTime), group=subnum))+
+  # geom_boxplot()+
+  geom_smooth(formula = y~I(x^2), method = "lm")+
   theme(legend.position="bottom")+
-  scale_color_manual(values=c(cbbPalette[1], cbbPalette[2]))+
-  labs(x = "p(Fractal Draw)", fill="", y = "Log Reaction Time")
+  labs(x = "p(Fractal Draw)", y = "Log Reaction Time")
 ```
 
 Does how fast you make a decision relate to the choice?

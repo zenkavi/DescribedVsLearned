@@ -367,3 +367,27 @@ pp_data %>%
 ```{r echo=FALSE}
 rm(modelName, tmp)
 ```
+
+# Linear w(p(Frac))
+
+```{r}
+tmp = par_ests_linearW %>%
+  group_by(subnum, par) %>%
+  summarise(est = mean(value), .groups='keep') %>%
+  filter(par != "beta" & par != "alpha") %>%
+  spread(par, est)
+
+tmp = do.call("rbind", replicate(11, tmp, simplify = FALSE)) %>%
+  arrange(subnum) %>%
+  ungroup() %>%
+  mutate(pFrac = rep(seq(0, 1, .1), 25), 
+         wpFrac = w_int+w_slope*(pFrac)) 
+
+tmp %>%
+  mutate(w_int_pos = ifelse())
+  ggplot(aes(pFrac, wpFrac, group=subnum))+
+  geom_line(color=cbbPalette[5])+
+  geom_abline(slope=1, intercept=0, linetype="dashed")
+```
+
+Comparison 

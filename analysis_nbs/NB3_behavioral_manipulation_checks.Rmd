@@ -20,8 +20,49 @@ theme_set(theme_bw())
 
 ```{r include=FALSE}
 helpers_path = here('helpers/')
+source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical_linearW.R'))
+fit_linearW = fit
+g_par_ests_linearW = g_par_ests
+par_ests_linearW = par_ests
 source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical.R'))
 ```
+
+Add estimates for model with linear w(p(Frac))
+
+```{r}
+## Save posterior mean estimates to `clean_beh_data`
+clean_beh_data_linearW = par_ests_linearW %>%
+  group_by(subnum, par) %>%
+  summarise(est = mean(value), .groups='keep') %>%
+  spread(par, est) %>%
+  left_join(clean_beh_data, by='subnum')
+
+## Add Q values of fractals to each trial
+clean_beh_data_linearW = clean_beh_data_linearW %>%
+  group_by(subnum) %>%
+  do(get_qvals(.)) %>%
+  ungroup()
+
+## Add EVs for lotteries to each trial
+clean_beh_data_linearW = clean_beh_data_linearW %>%
+  mutate(leftLotteryEV = lotteryValue*lotteryProb,
+         rightLotteryEV = referenceValue*referenceProb)
+
+## Add conflict trial info and value difference
+clean_beh_data_linearW = clean_beh_data_linearW %>%
+  mutate(leftLotteryBetter = leftLotteryEV>rightLotteryEV,
+         choseBetterLottery = ifelse(leftLotteryBetter == 1 & choiceLeft == 1, 1, 
+                                     ifelse(leftLotteryBetter == 0 & choiceLeft == 0, 1, 0)),
+         leftFractalBetter = leftQValue>rightQValue,
+         conflictTrial = ifelse(leftFractalBetter != leftLotteryBetter, "conflict", "no conflict")) %>%
+  mutate(leftQVAdv = leftQValue - rightQValue,
+         leftEVAdv = leftLotteryEV - rightLotteryEV,
+         wpFrac = w_int + w_slope*probFractalDraw,
+         leftBundleVal = (1-wpFrac)*leftLotteryEV + wpFrac*leftQValue,
+         rightBundleVal = (1-wpFrac)*rightLotteryEV + wpFrac*rightQValue,
+         leftbundleValAdv = leftBundleVal - rightBundleVal)
+```
+
 
 ```{r}
 ## Save posterior mean estimates to `clean_beh_data`
@@ -381,6 +422,17 @@ clean_beh_data %>%
   theme(legend.position="bottom")
   
 ```
+
+Linear w(p(Frac)) model
+
+```{r}
+par_ests %>%
+  ggplot(aes(value))+
+  geom_histogram(bins=30)+
+  
+```
+
+
 # Response times
 
 ```{r eval=FALSE}

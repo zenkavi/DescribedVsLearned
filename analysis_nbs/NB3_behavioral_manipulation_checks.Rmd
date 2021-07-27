@@ -299,13 +299,10 @@ There can be various cognitive explanations for the choice patterns we observe. 
 - Discounting of QVs  
 - Noisy representation of QVs  
 
-Is the over-reliance on the description-based attribute due to distortion of the probability that the reward will depend on the experience-based attribute or the distortion of the experience-based attributes value?
+**Are these mutually exclusive? How can we test for each?**
 
-To see if the degree to which a subject used the EV difference even when it 
-
-Random effects analysis 
-
-did not find any systematic relationship. This is an underpowered analysis.
+Does the variance (noisiness) of the QV estimates relate to how much a subject relies on the EV or QV difference?
+Random effects analysis estimating a separate slope for each subject for both regressors. This is an under-powered analysis and I did not find any systematic relationship. 
 
 ```{r eval=FALSE}
 if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft_randomEffects.RDS'))){
@@ -396,8 +393,7 @@ clean_beh_data %>%
   labs(color="", y="Logit Slope Estimate", x = "Variance of fractal value distribution")+
   scale_color_manual(values=c(cbbPalette[2], cbbPalette[1]))
 ```
-
-
+Does how much one chooses the left bundle relate to how much the fractal QV of the left bundle is overestimated? This is bizarre. Why would subjects choose the left bundle less frequently the more they overestimate its fractal QV in conflict trials regardless of the relevance of the attribute?
 
 ```{r}
 clean_beh_data %>%
@@ -405,22 +401,37 @@ clean_beh_data %>%
          fractalLeftOverest = leftQVAdv-leftFractalAdv) %>%
   ggplot(aes(fractalLeftOverest, choiceLeft))+
   geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE)+
-  facet_grid(conflictTrial~probFractalDraw)
+  facet_grid(conflictTrial~probFractalDraw)+
+  labs(x = "Subjective - True left fractal value")
   
+```
+
+# Response times
+
+```{r eval=FALSE}
+# Reaction time histograms
+
+clean_beh_data %>%
+  ggplot(aes(log(reactionTime),fill=conflictTrial))+
+  geom_histogram(bins=30, alpha=0.5, position="identity")+
+  theme(legend.position="bottom")+
+  scale_fill_manual(values=c(cbbPalette[1], cbbPalette[2]))+
+  labs(x = "Log Reaction Time", fill="", y = "")+
+  facet_grid(probFractalDraw~.)
+  # facet_grid(.~ probFractalDraw)+
+  # coord_flip()
 ```
 
 ```{r}
 clean_beh_data %>%
-  mutate(leftFractalAdv = fractalLeftProb - fractalRightProb,
-         fractalLeftOverest = leftQVAdv-leftFractalAdv, 
-         pFracDistortion = wpFrac - probFractalDraw) %>%
-  select(subnum, fractalLeftOverest, pFracDistortion, probFractalDraw, conflictTrial, choiceLeft) %>% 
-  gather(key, distortion, -subnum, -probFractalDraw, -conflictTrial, -choiceLeft) %>%
-  ggplot(aes(distortion, choiceLeft, color=key))+
-  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE)+
-  facet_grid(conflictTrial~probFractalDraw)+
-  theme(legend.position = "bottom")+
-  scale_color_manual(values=c(cbbPalette[3], cbbPalette[7]))
+  ggplot(aes(as.factor(probFractalDraw), log(reactionTime), col=conflictTrial))+
+  geom_boxplot()+
+  theme(legend.position="bottom")+
+  scale_color_manual(values=c(cbbPalette[1], cbbPalette[2]))+
+  labs(x = "p(Fractal Draw)", fill="", y = "Log Reaction Time")
 ```
 
-# Response times
+
+
+
+

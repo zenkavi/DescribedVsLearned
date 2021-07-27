@@ -295,9 +295,10 @@ rm(tmp)
 # Determinants of the choice bias
 
 There can be various cognitive explanations for the choice patterns we observe. E.g.  
-- Overvaluing of lotteries (what the prob weighting function above would suggest)  
-- Discounting of QVs  
-- Noisy representation of QVs  
+
+- Overvaluing of lotteries (what the prob weighting function above would suggest; how should that be related to choice since it is derived from it too)  
+- Discounting of QVs (haven't thought of a way to test this)  
+- Noisy representation of QVs (see below for attempts)  
 
 **Are these mutually exclusive? How can we test for each?**
 
@@ -431,7 +432,21 @@ clean_beh_data %>%
   labs(x = "p(Fractal Draw)", fill="", y = "Log Reaction Time")
 ```
 
+Does how fast you make a decision relate to the choice?
 
+```{r}
+clean_beh_data %>%
+  ggplot(aes(log(reactionTime), choiceLeft))+
+  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE)+
+  facet_grid(.~probFractalDraw)
+```
 
+```{r}
+m = brm(choiceLeft ~ log(reactionTime)*probFractalDraw+(1|subnum),
+              data=clean_beh_data, family=bernoulli(link="logit"), silent=2, refresh=0)
+```
 
+```{r}
+summary(m)
+```
 

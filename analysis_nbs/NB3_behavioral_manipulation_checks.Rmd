@@ -311,7 +311,7 @@ if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft_randomEffects_conflictC
 } else {
   
   probFractalDrawVals = unique(clean_beh_data$probFractalDraw)
-  out_choiceLeft = data.frame(Estimate=NA, Est.Error=NA, Q2.5=NA, Q97.5=NA, subnum=NA, var=NA, probFractalDraw=NA, conflictTrial=NA)
+  out_choiceLeft = data.frame(Estimate=NA, Est.Error=NA, Q2.5=NA, Q97.5=NA, subnum=NA, var=NA, probFractalDraw=NA)
   
   for(i in 1:length(probFractalDrawVals)){
     curProbFractalDraw = probFractalDrawVals[i]

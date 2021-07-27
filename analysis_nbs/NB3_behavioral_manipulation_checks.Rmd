@@ -358,7 +358,7 @@ out_choiceLeft_re %>%
   geom_point()+
   # geom_errorbar(aes(ymin=Q2.5, ymax=Q97.5), width=.1)+
   geom_hline(aes(yintercept=0), linetype="dashed")+
-  facet_grid(conflictTrial~.)+
+  # facet_grid(conflictTrial~.)+
   theme(legend.position = "bottom")+
   labs(color="", shape="", x="p(Fractal)", y="Logit slope estimate (DV = choiceLeft)")+
   scale_color_manual(values=c(cbbPalette[2], cbbPalette[1]))
@@ -366,16 +366,16 @@ out_choiceLeft_re %>%
 
 ```{r}
 clean_beh_data %>%
-  group_by(subnum, probFractalDraw, conflictTrial) %>%
+  group_by(subnum, probFractalDraw) %>%
   summarise(alpha=mean(alpha), .groups="keep") %>%
   left_join(out_choiceLeft_re %>%
               filter(var %in% c("qv_slopes", "ev_slopes")) %>%
-              select(Estimate, subnum, var, probFractalDraw, conflictTrial), 
-            by=c("subnum", "probFractalDraw","conflictTrial")) %>%
+              select(Estimate, subnum, var, probFractalDraw), 
+            by=c("subnum", "probFractalDraw")) %>%
   ggplot(aes(alpha, Estimate, color=var))+
   geom_smooth(formula = 'y~x', method = "lm",fullrange=TRUE)+
   geom_point(alpha=.5, size=.5)+
-  facet_grid(conflictTrial~probFractalDraw)+
+  facet_grid(.~probFractalDraw)+
   labs(color="", x="Learning rate", y="Logit slope estimate (DV = choiceLeft)")+
   scale_color_manual(values=c(cbbPalette[2], cbbPalette[1]))+
   theme(legend.position="bottom")

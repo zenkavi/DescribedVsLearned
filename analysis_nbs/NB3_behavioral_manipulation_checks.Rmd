@@ -151,13 +151,15 @@ rm(tmp, m1, m2)
 
 # Attribute weights
 
-Since there are two attributes in each bundle the observed and learned values of these attributes can agree or disagree on which bundle is better to choose. Trials where the fractal and lottery value difference favors the same bundle are called *no conflict* trials and trials where they favor different bundles are called *conflict* trials. Subjects can choose to weight each attribute differently in each trial. Whether they weight each attribute appropriately depends on the experimenter-controlled relevance of that attribute for that trial's reward.
+Since there are two attributes in each bundle the observed and learned values of these attributes can agree or disagree on which bundle is better to choose. Trials where the fractal and lottery value difference favors the same bundle are called *no conflict* trials and trials where they favor different bundles are called *conflict* trials. 
 
 What proportion of each type of trial is there? About half of the trials for each subject are conflict trials.
 
 ```{r}
 round(prop.table(table(clean_beh_data$conflictTrial, clean_beh_data$subnum), margin=2), 2)
 ```
+
+The true weight of each attribute is controlled and determined by the probability that a trial's reward would depend on a fractal or lottery draw. Subjects' choice can, however, indicate that they distort these weights. If a subjective distortion of this sort exists it should be reflected in choice as a bias towards one attribute over the other.
 
 In conflict trials:  
 - when reward depends more on lotteries people correctly choose the bundle with the better lottery above chance.  
@@ -181,23 +183,9 @@ clean_beh_data %>%
 
 ```
 
-## Psychometric curves by conflict type
+## Psychometric analysis by conflict type
 
-```{r}
-clean_beh_data %>%
-  select(choiceLeft, leftQVAdv, leftEVAdv, probFractalDraw, conflictTrial) %>%
-  gather(key, value, -choiceLeft, -probFractalDraw, -conflictTrial) %>%
-  mutate(key = ifelse(key == "leftEVAdv", "EV(left)-EV(right)", "QV(left)-QV(right)")) %>%
-  ggplot(aes(value, choiceLeft, color=key))+
-  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE)+
-  facet_grid(conflictTrial~probFractalDraw)+
-  theme(legend.position = "bottom")+
-  xlab("")+
-  labs(color="")+
-  scale_color_manual(values=c(cbbPalette[2], cbbPalette[1]))
-```
-
-Run logits in above graph. Fixed effects analysis allowing for random intercepts.
+Modeling choice of the left bundle as a function of the lottery EV **and** fractal QV difference on each trial. Fixed effects analysis allowing for subject-specific random intercepts.
 
 ```{r}
 if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft.RDS'))){
@@ -243,9 +231,9 @@ if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft.RDS'))){
 }
 ```
 
-Subjects rely on the relevant attribute and to similar degrees depending on their relevance regardless of conflict trial
-
-What they should do for conflict trials
+- Regardless of whether there is a conflict between the attributes for each bundle the effect of the fractal QV difference  **correctly increases** as fractals become more consequential for the trial's reward while the effect of the lottery EV difference **correctly decreases**.   
+- While the effect of the QV difference is **correctly 0** when the lottery matters more lottery EV difference has an **incorrect positive** effect on choice even when it is less relevant for the trial's reward than the fractals. This reduces to 0 only when the lottery values are entirely irrelevant.  
+- Consequently, for the same level of relevance lottery EV difference has a bigger effect on choice than the fractal QV difference.
 
 ```{r}
 out_choiceLeft %>%
@@ -304,7 +292,12 @@ tmp %>%
 rm(tmp)
 ```
 
-# Determinants of bias
+# Determinants of the choice bias
+
+There can be various cognitive explanations for the choice patterns we observe. E.g.  
+- Overvaluing of lotteries (what the prob weighting function above would suggest)  
+- Discounting of QVs  
+- Noisy representation of QVs  
 
 Is the over-reliance on the description-based attribute due to distortion of the probability that the reward will depend on the experience-based attribute or the distortion of the experience-based attributes value?
 

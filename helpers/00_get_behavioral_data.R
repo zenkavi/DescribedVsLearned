@@ -4,7 +4,7 @@ library(rmatio)
 data_path = '/Users/zeynepenkavi/Downloads/GTavares_2017_arbitration/behavioral_data/'
 
 #Get list of files in data_path
-file_names = list.files(data_path)
+file_names = list.files(data_path, pattern = '.mat')
 
 #Column names for the output data frame
 df_names = c('subnum','session', 'trialNum', 'referenceValue', 'referenceProb', 'numRewardedTrials', 'probFractalDraw', 'lotteryValue', 'lotteryProb', 'fractalLeftProb', 'fractalRightProb', 'fractalDraw', 'reactionTime', 'responded', 'choiceLeft', 'reward', 'leftFractalReward', 'rightFractalReward','totalReward')

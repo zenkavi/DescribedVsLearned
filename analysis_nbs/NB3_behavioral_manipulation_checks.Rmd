@@ -25,77 +25,17 @@ fit_linearW = fit
 g_par_ests_linearW = g_par_ests
 par_ests_linearW = par_ests
 source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical.R'))
+source(paste0(helpers_path,'add_inferred_pars.R'))
 ```
 
 Add estimates for model with linear w(p(Frac))
 
 ```{r}
-## Save posterior mean estimates to `clean_beh_data`
-clean_beh_data_linearW = par_ests_linearW %>%
-  group_by(subnum, par) %>%
-  summarise(est = mean(value), .groups='keep') %>%
-  spread(par, est) %>%
-  left_join(clean_beh_data, by='subnum')
-
-## Add Q values of fractals to each trial
-clean_beh_data_linearW = clean_beh_data_linearW %>%
-  group_by(subnum) %>%
-  do(get_qvals(.)) %>%
-  ungroup()
-
-## Add EVs for lotteries to each trial
-clean_beh_data_linearW = clean_beh_data_linearW %>%
-  mutate(leftLotteryEV = lotteryValue*lotteryProb,
-         rightLotteryEV = referenceValue*referenceProb)
-
-## Add conflict trial info and value difference
-clean_beh_data_linearW = clean_beh_data_linearW %>%
-  mutate(leftLotteryBetter = leftLotteryEV>rightLotteryEV,
-         choseBetterLottery = ifelse(leftLotteryBetter == 1 & choiceLeft == 1, 1, 
-                                     ifelse(leftLotteryBetter == 0 & choiceLeft == 0, 1, 0)),
-         leftFractalBetter = leftQValue>rightQValue,
-         conflictTrial = ifelse(leftFractalBetter != leftLotteryBetter, "conflict", "no conflict")) %>%
-  mutate(leftQVAdv = leftQValue - rightQValue,
-         leftEVAdv = leftLotteryEV - rightLotteryEV,
-         wpFrac = w_int + w_slope*probFractalDraw,
-         leftBundleVal = (1-wpFrac)*leftLotteryEV + wpFrac*leftQValue,
-         rightBundleVal = (1-wpFrac)*rightLotteryEV + wpFrac*rightQValue,
-         leftbundleValAdv = leftBundleVal - rightBundleVal)
+clean_beh_data_linearW = add_inferred_pars(clean_beh_data, par_ests_linearW)
 ```
 
-
 ```{r}
-## Save posterior mean estimates to `clean_beh_data`
-clean_beh_data = par_ests %>%
-  group_by(subnum, par) %>%
-  summarise(est = mean(value), .groups='keep') %>%
-  spread(par, est) %>%
-  left_join(clean_beh_data, by='subnum')
-
-## Add Q values of fractals to each trial
-clean_beh_data = clean_beh_data %>%
-  group_by(subnum) %>%
-  do(get_qvals(.)) %>%
-  ungroup()
-
-## Add EVs for lotteries to each trial
-clean_beh_data = clean_beh_data %>%
-  mutate(leftLotteryEV = lotteryValue*lotteryProb,
-         rightLotteryEV = referenceValue*referenceProb)
-
-## Add conflict trial info and value difference
-clean_beh_data = clean_beh_data %>%
-  mutate(leftLotteryBetter = leftLotteryEV>rightLotteryEV,
-         choseBetterLottery = ifelse(leftLotteryBetter == 1 & choiceLeft == 1, 1, 
-                                     ifelse(leftLotteryBetter == 0 & choiceLeft == 0, 1, 0)),
-         leftFractalBetter = leftQValue>rightQValue,
-         conflictTrial = ifelse(leftFractalBetter != leftLotteryBetter, "conflict", "no conflict")) %>%
-  mutate(leftQVAdv = leftQValue - rightQValue,
-         leftEVAdv = leftLotteryEV - rightLotteryEV,
-         wpFrac = (delta*probFractalDraw^gamma)/(delta*probFractalDraw^gamma + (1-probFractalDraw)^gamma),
-         leftBundleVal = (1-wpFrac)*leftLotteryEV + wpFrac*leftQValue,
-         rightBundleVal = (1-wpFrac)*rightLotteryEV + wpFrac*rightQValue,
-         leftbundleValAdv = leftBundleVal - rightBundleVal)
+clean_beh_data = add_inferred_pars(clean_beh_data, par_ests)
 ```
 
 # Psychometric choice curves
@@ -229,47 +169,7 @@ clean_beh_data %>%
 Modeling choice of the left bundle as a function of the lottery EV **and** fractal QV difference on each trial. Fixed effects analysis allowing for subject-specific random intercepts.
 
 ```{r}
-if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft.RDS'))){
-  out_choiceLeft = readRDS(paste0(helpers_path, 'logitOut_choiceLeft.RDS'))
-} else {
-  
-  probFractalDrawVals = unique(clean_beh_data$probFractalDraw)
-  conflictTrialTypes = unique(clean_beh_data$conflictTrial)
-  out_choiceLeft = data.frame(probFractalDraw=NA,conflictTrial=NA,iv=NA,est=NA,u95=NA,l95=NA)
-  
-  for(i in 1:length(probFractalDrawVals)){
-    curProbFractalDraw = probFractalDrawVals[i]
-    
-    dat = clean_beh_data %>%
-      filter(probFractalDraw == curProbFractalDraw)
-    
-    for(j in 1:length(conflictTrialTypes)){
-      
-      curConflictTrial = conflictTrialTypes[j]
-      
-      m = brm(choiceLeft ~ leftQVAdv + leftEVAdv + (1|subnum),
-              data=dat %>% filter(conflictTrial==curConflictTrial), family=bernoulli(link="logit"), silent=2, refresh=0)
-      
-      est = coef(m)$subnum[1,1,2]
-      u95 = coef(m)$subnum[1,3,2]
-      l95 = coef(m)$subnum[1,4,2]
-      
-      out_choiceLeft = rbind(out_choiceLeft, c(curProbFractalDraw, curConflictTrial, "leftQVAdv", est, u95, l95))
-      
-      est = coef(m)$subnum[1,1,3]
-      u95 = coef(m)$subnum[1,3,3]
-      l95 = coef(m)$subnum[1,4,3]
-      
-      out_choiceLeft = rbind(out_choiceLeft, c(curProbFractalDraw, curConflictTrial, "leftEVAdv", est, u95, l95))
-    }
-  }
-  
-  out_choiceLeft = out_choiceLeft %>%
-    drop_na()
-  
-  saveRDS(out_choiceLeft, paste0(helpers_path, 'logitOut_choiceLeft.RDS'))
-  rm(dat, m, conflictTrialTypes, curConflictTrial, probFractalDrawVals, curProbFractalDraw)
-}
+source(paste0(helpers_path,'logit_choiceLeft.R'))
 ```
 
 - Regardless of whether there is a conflict between the attributes for each bundle the effect of the fractal QV difference  **correctly increases** as fractals become more consequential for the trial's reward while the effect of the lottery EV difference **correctly decreases**.   
@@ -347,47 +247,7 @@ Does the variance (noisiness) of the QV estimates relate to how much a subject r
 Random effects analysis estimating a separate slope for each subject for both regressors collapsing both conflict types. This is an under-powered analysis and I did not find any systematic relationship. 
 
 ```{r}
-if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft_randomEffects_conflictCollapsed.RDS'))){
-  out_choiceLeft = readRDS(paste0(helpers_path, 'logitOut_choiceLeft_randomEffects_conflictCollapsed.RDS'))
-} else {
-  
-  probFractalDrawVals = unique(clean_beh_data$probFractalDraw)
-  out_choiceLeft = data.frame(Estimate=NA, Est.Error=NA, Q2.5=NA, Q97.5=NA, subnum=NA, var=NA, probFractalDraw=NA)
-  
-  for(i in 1:length(probFractalDrawVals)){
-    curProbFractalDraw = probFractalDrawVals[i]
-    
-    dat = clean_beh_data %>%
-      filter(probFractalDraw == curProbFractalDraw)
-    
-    m = brm(choiceLeft ~ (1 + leftQVAdv + leftEVAdv |subnum),
-            data=dat, family=bernoulli(link="logit"), silent=2, refresh=0)
-    
-    intercepts = data.frame(coef(m)$subnum[,,1]) %>%
-      mutate(subnum = row.names(.),
-             var = "intercept",
-             probFractalDraw = curProbFractalDraw)
-    
-    qv_slopes = data.frame(coef(m)$subnum[,,2]) %>%
-      mutate(subnum = row.names(.),
-             var = "qv_slopes",
-             probFractalDraw = curProbFractalDraw)
-    
-    ev_slopes = data.frame(coef(m)$subnum[,,3]) %>%
-      mutate(subnum = row.names(.),
-             var = "ev_slopes",
-             probFractalDraw = curProbFractalDraw)
-    
-    out_choiceLeft = rbind(out_choiceLeft, intercepts, qv_slopes, ev_slopes)
-  }
-  
-  out_choiceLeft = out_choiceLeft %>%
-    drop_na()
-  
-  saveRDS(out_choiceLeft, paste0(helpers_path, 'logitOut_choiceLeft_randomEffects_conflictCollapsed.RDS'))
-  rm(dat, m, probFractalDrawVals, curProbFractalDraw)
-}
-out_choiceLeft_re = out_choiceLeft
+source(paste0(helpers_path,'logit_choiceLeft_randomEffects_conflictCollapsed.R'))
 ```
 
 ```{r eval=FALSE}

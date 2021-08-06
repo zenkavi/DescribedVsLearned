@@ -16,6 +16,7 @@ library(brms)
 library(here)
 cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 theme_set(theme_bw())
+sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 ```
 
 ```{r include=FALSE}
@@ -251,6 +252,8 @@ source(paste0(helpers_path,'logit_choiceLeft_randomEffects_conflictCollapsed.R')
 ```
 
 ```{r eval=FALSE}
+#Plot of random effects similar to the logit slopes graph above
+
 out_choiceLeft_re %>%
   filter(var %in% c("qv_slopes", "ev_slopes")) %>%
   mutate(probFractalDraw = as.factor(probFractalDraw),
@@ -265,7 +268,8 @@ out_choiceLeft_re %>%
   scale_color_manual(values=c(cbbPalette[2], cbbPalette[1]))
 ```
 
-```{r}
+```{r eval=FALSE}
+# A messier graph of the fast and slow learner difference in relying on the relevant attribute
 clean_beh_data %>%
   group_by(subnum, probFractalDraw) %>%
   summarise(alpha=mean(alpha), .groups="keep") %>%
@@ -283,15 +287,28 @@ clean_beh_data %>%
   
 ```
 
-Linear w(p(Frac)) model
-
 ```{r}
-par_ests %>%
-  ggplot(aes(value))+
-  geom_histogram(bins=30)+
-  
+clean_beh_data %>%
+  group_by(subnum, probFractalDraw) %>%
+  summarise(alpha=mean(alpha), .groups="keep") %>%
+  left_join(out_choiceLeft_re %>%
+              filter(var %in% c("qv_slopes", "ev_slopes")) %>%
+              select(Estimate, subnum, var, probFractalDraw), 
+            by=c("subnum", "probFractalDraw")) %>%
+  ungroup() %>%
+  mutate(alpha_group = ifelse(alpha > median(alpha), "fast learner", "slow learner")) %>%
+  group_by(var, alpha_group, probFractalDraw) %>%
+  summarise(mean_est = mean(Estimate),
+            sem_est = sem(Estimate), .groups='keep') %>%
+  ggplot(aes(as.factor(probFractalDraw), mean_est, col=alpha_group))+
+    geom_point(position=position_dodge(width=0.75), size=2)+
+    geom_errorbar(aes(ymin = mean_est - sem_est, ymax = mean_est+sem_est), width=0.25, position=position_dodge(width=0.75))+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+ facet_grid(.~var)+
+  labs(color="", x="", y="Logit slope estimate (DV = choiceLeft)")+
+  scale_color_manual(values=c(cbbPalette[3], cbbPalette[7]))+
+  theme(legend.position="bottom")
 ```
-
 
 # Response times
 

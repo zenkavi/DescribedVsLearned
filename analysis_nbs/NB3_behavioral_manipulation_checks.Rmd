@@ -22,9 +22,6 @@ sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 ```{r include=FALSE}
 helpers_path = here('helpers/')
 source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical_linearW.R'))
-fit_linearW = fit
-g_par_ests_linearW = g_par_ests
-par_ests_linearW = par_ests
 source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical.R'))
 source(paste0(helpers_path,'add_inferred_pars.R'))
 ```
@@ -320,6 +317,31 @@ clean_beh_data %>%
   labs(color="", x="p(Frac)", y="Logit slope estimate (DV = choiceLeft)")+
   scale_color_manual(values=c(cbbPalette[3], cbbPalette[7]))+
   theme(legend.position="bottom")
+```
+
+Rule out it's not due to distortion of p(Frac)
+
+```{r}
+tmp = par_ests_linearW %>%
+  group_by(subnum, par) %>%
+  summarise(est = mean(value), .groups='keep') %>%
+  filter(par != "beta" & par != "alpha") %>%
+  spread(par, est)
+
+tmp = do.call("rbind", replicate(11, tmp, simplify = FALSE)) %>%
+  arrange(subnum) %>%
+  ungroup() %>%
+  mutate(pFrac = rep(seq(0, 1, .1), 25),
+         wpFrac = w_int+w_slope*pFrac)
+tmp %>%
+  mutate(w_slope_gt_1 = ifelse(w_slope>=1, "w_slope >= 1", "w_slope < 1 "),
+         overest_fractal = ifelse( (w_int+w_slope*.5) > .5, "overestimate fractal", "underestimate fractal")) %>%
+  ggplot(aes(pFrac, wpFrac, group=subnum))+
+  geom_line(aes(linetype = w_slope_gt_1, color = overest_fractal), alpha=.5)+
+  geom_abline(slope=1, intercept=0, linetype="dashed")+
+  labs(x="p(Fractal)", y="w(pFractal)", title="Distortion of p(Fractal) with linear fit", color = element_blank(), linetype=element_blank())+
+  scale_color_manual(values=c(cbbPalette[3], cbbPalette[7]))+
+  theme(legend.position = "bottom")
 ```
 
 # Response times

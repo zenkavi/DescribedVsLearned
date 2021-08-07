@@ -1,5 +1,6 @@
 library(tidyverse)
 library(here)
+library(brms)
 helpers_path = here('helpers/')
 
 if (!exists('clean_beh_data')){

@@ -184,7 +184,7 @@ out_choiceLeft %>%
          u95 = as.numeric(u95)) %>%
   mutate(iv = ifelse(iv == "leftEVAdv", "EV(left)-EV(right)", "QV(left)-QV(right)")) %>%
   ggplot(aes(probFractalDraw, est, col=iv))+
-  geom_point()+
+  geom_point(size=2)+
   geom_line(aes(group=iv))+
   geom_errorbar(aes(ymin=l95, ymax=u95), width=0.1)+
   geom_hline(yintercept=0,linetype="dashed")+
@@ -236,16 +236,9 @@ rm(tmp)
 
 # Determinants of the choice bias
 
-There can be various cognitive explanations for the choice patterns we observe. E.g.  
+Hypothesis: is the bias due to noisy/bad estimates of the learned Q values?
 
-- Overvaluing of lotteries (what the prob weighting function above would suggest; how should that be related to choice since it is derived from it too)  
-- Discounting of QVs (haven't thought of a way to test this)  
-- Noisy representation of QVs (see below for attempts)  
-
-**Are these mutually exclusive? How can we test for each?**
-
-Does the variance (noisiness) of the QV estimates relate to how much a subject relies on the EV or QV difference?
-Random effects analysis estimating a separate slope for each subject for both regressors collapsing both conflict types. This is an under-powered analysis and I did not find any systematic relationship. 
+Rule out it's not due to probability distortion by showing .... with parameters estimates from linear prob distortion function
 
 ```{r}
 source(paste0(helpers_path,'logit_choiceLeft_randomEffects_conflictCollapsed.R'))
@@ -287,6 +280,25 @@ clean_beh_data %>%
   
 ```
 
+Create learning groups by median split of learning rates.
+
+```{r}
+clean_beh_data %>%
+  group_by(subnum) %>%
+  summarise(alpha=unique(alpha)) %>%
+  ungroup() %>%
+  mutate(alpha_group = ifelse(alpha>median(alpha), "fast learner", "slow learner")) %>%
+  ggplot(aes(alpha, fill=alpha_group))+
+  geom_histogram(alpha=.5, position = "identity", bins = 5)+
+  scale_fill_manual(values=c(cbbPalette[3], cbbPalette[7]))+
+  theme(legend.position = "bottom")+
+  labs(fill="", x="Learning rate")
+```
+
+When p(Frac) = 0.5 and there is no clear relevant attribute slow learners rely more on the EV difference and less on the QV difference compared to learners.  
+
+When p(Frac) = 1 and the choice should only depend on the fractal values slow learners correctly ignore the EV difference like the learners but rely less on the QV difference compared to learners when making their decision.  
+
 ```{r}
 clean_beh_data %>%
   group_by(subnum, probFractalDraw) %>%
@@ -305,7 +317,7 @@ clean_beh_data %>%
     geom_errorbar(aes(ymin = mean_est - sem_est, ymax = mean_est+sem_est), width=0.25, position=position_dodge(width=0.75))+
   geom_hline(aes(yintercept=0), linetype="dashed")+
  facet_grid(.~var)+
-  labs(color="", x="", y="Logit slope estimate (DV = choiceLeft)")+
+  labs(color="", x="p(Frac)", y="Logit slope estimate (DV = choiceLeft)")+
   scale_color_manual(values=c(cbbPalette[3], cbbPalette[7]))+
   theme(legend.position="bottom")
 ```

@@ -21,7 +21,7 @@ sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 
 ```{r include=FALSE}
 helpers_path = here('helpers/')
-source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical_linearW.R'))
+source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical_noProbDistortion.R'))
 source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical.R'))
 source(paste0(helpers_path,'add_inferred_pars.R'))
 ```
@@ -29,7 +29,7 @@ source(paste0(helpers_path,'add_inferred_pars.R'))
 Add estimates for model with linear w(p(Frac))
 
 ```{r}
-clean_beh_data_linearW = add_inferred_pars(clean_beh_data, par_ests_linearW)
+clean_beh_data_noProbDistortion = add_inferred_pars(clean_beh_data, par_ests_noProbDistortion)
 ```
 
 ```{r}
@@ -297,7 +297,7 @@ When p(Frac) = 0.5 and there is no clear relevant attribute slow learners rely m
 When p(Frac) = 1 and the choice should only depend on the fractal values slow learners correctly ignore the EV difference like the learners but rely less on the QV difference compared to learners when making their decision.  
 
 ```{r}
-clean_beh_data %>%
+clean_beh_data_noProbDistortion %>%
   group_by(subnum, probFractalDraw) %>%
   summarise(alpha=mean(alpha), .groups="keep") %>%
   left_join(out_choiceLeft_re %>%
@@ -326,7 +326,7 @@ source(paste0(helpers_path,'logit_choiceLeft_randomEffects_conflictCollapsed_noP
 ```
 
 ```{r}
-clean_beh_data %>%
+clean_beh_data_noProbDistortion %>%
   group_by(subnum, probFractalDraw) %>%
   summarise(alpha=mean(alpha), .groups="keep") %>%
   left_join(out_choiceLeft_re_noProbDistortion %>%

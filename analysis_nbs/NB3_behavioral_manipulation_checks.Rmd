@@ -15,7 +15,8 @@ library(gridExtra)
 library(brms)
 library(here)
 cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
-theme_set(theme_bw())
+# theme_set(theme_bw())
+theme_set(theme_classic())
 sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 ```
 
@@ -26,7 +27,7 @@ source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical.R'))
 source(paste0(helpers_path,'add_inferred_pars.R'))
 ```
 
-Add estimates for model with linear w(p(Frac))
+Add estimated model parameters and inferred bundle values using those parameters.
 
 ```{r}
 clean_beh_data_noProbDistortion = add_inferred_pars(clean_beh_data, par_ests_noProbDistortion)
@@ -38,7 +39,7 @@ clean_beh_data = add_inferred_pars(clean_beh_data, par_ests)
 
 # Psychometric choice curves
 
-Psychometric curve for all trials with weighted value difference. Q-values for the fractals and the weights for the two attributes are determined by the posterior means of the hierarchically fit two systems model.
+Psychometric curve for all trials with weighted value difference. Q-values for the fractals and the weights for the two attributes are determined by the posterior means of the hierarchically fit two systems model. Blue lines indicate individual subjects.
 
 ```{r}
 clean_beh_data %>%
@@ -48,9 +49,9 @@ clean_beh_data %>%
   labs(y = "p(Left)", x = "V(left)-V(right)", title="Psychometric choice curve based on weighted value difference between bundles")
 ```
 
-Note that this is true for all levels of p(Frac) and conflict trial type
+The dependence of choice on the bundle value difference holds for all levels of p(Frac) and conflict trial type (figure not shown below).
 
-```{r warning=FALSE}
+```{r warning=FALSE, eval=FALSE}
 clean_beh_data %>%
   ggplot(aes(leftbundleValAdv, choiceLeft))+
   geom_line(aes(group=subnum),stat="smooth",formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, se=FALSE, alpha=.1, size=1, color=cbbPalette[5])+
@@ -74,11 +75,7 @@ tmp = clean_beh_data %>%
 round(nrow(tmp)/nrow(clean_beh_data), 3)
 ```
 
-If subjects have understood the task then in these trials only the value difference of the relevant attribute should have an effect on choice.
-
-- When p of fractal is 0 do subjects choose based on the EV difference between lotteries? Does the QV difference matter at all?
-
-- When p of fractal is 1 do subjects choose based on the QV difference between fractals? Does the EV difference matter at all?
+If subjects have understood the task then in these trials only the value difference of the relevant attribute should have an effect on choice. This is true on average as shown in the figure below but the blue lines depicting individual subjects suggest that there are individual differences in how much the choice relies on the Q-value difference even when it is the only relevant attribute. This will be explored more below.
 
 ```{r warning=FALSE}
 tmp %>%
@@ -141,21 +138,30 @@ round(prop.table(table(clean_beh_data$conflictTrial, clean_beh_data$subnum), mar
 The true weight of each attribute is controlled and determined by the probability that a trial's reward would depend on a fractal or lottery draw. Subjects' choice can, however, indicate that they distort these weights. If a subjective distortion of this sort exists it should be reflected in choice as a bias towards one attribute over the other.
 
 In conflict trials:  
-- when reward depends more on lotteries people correctly choose the bundle with the better lottery above chance.  
-- when reward depends equally on both attributes people are  slightly *biased* towards the bundle with the better lottery.  
-- when reward depends more on fractals people choose the bundle with the better fractal more frequently *but not as much as they choose the better lottery for the equivalent levels of relevance*  
+- when reward depends more on lotteries (p(Fractal)<.5) people correctly choose the bundle with the better lottery above chance.  
+- when reward depends equally on both attributes (p(Fractal)=.5) people are slightly *biased* towards the bundle with the better lottery.  
+- when reward depends more on fractals (p(Fractal)>.5) people choose the bundle with the better fractal more frequently than when the reward depended more on lotteries *but not as much as they choose the better lottery for the equivalent levels of relevance*  
 
 In no conflict trials:  
 - when reward depends more or equally on lotteries people correctly choose the bundle that has both the better fractal and the better lottery.  
-- when reward depends more on fractals people *incorrectly* choose the bundle with the better fractal and better lottery less frequently. This suggests that their decision **correctly** depends less on the lottery and more on the fractals but their inference about the fractal values are more noisy and therefore error prone because it involves learning and cannot be read off the screen.  
+- when reward depends more on fractals people *incorrectly* choose the bundle with the better fractal and better lottery less frequently. 
+
+Choice patterns for both conflict and no conflict trials when p(Fractal)>.5 suggests that subjects' decision **correctly** relies less on the lottery and more on the fractal values but the inference about the inference about the fractal values is more error prone. This might be due to noise in the fractal value representation because it involves learning and cannot be read off the screen.  
 
 ```{r}
 clean_beh_data %>% 
   group_by(probFractalDraw, subnum, conflictTrial) %>%
   summarise(choseBetterLottery = mean(choseBetterLottery),
             .groups='keep') %>%
+  ungroup() %>%
+  group_by(probFractalDraw, conflictTrial) %>%
+  summarise(sem_choseBetterLottery = sem(choseBetterLottery),
+            choseBetterLottery = mean(choseBetterLottery),
+            .groups='keep') %>%
   ggplot(aes(as.factor(probFractalDraw), choseBetterLottery))+
-  geom_boxplot(color=cbbPalette[2])+
+  geom_point(color=cbbPalette[3], size = 2)+
+  geom_errorbar(aes(ymax=choseBetterLottery + sem_choseBetterLottery, ymin=choseBetterLottery - sem_choseBetterLottery), width = 0.2, color=cbbPalette[3])+
+  geom_line(group=1, color=cbbPalette[3])+
   geom_hline(yintercept=0.5, linetype="dashed", size=1.5)+
   facet_grid(conflictTrial~.)+
   labs(x="p(Fractal)",y="Choice of bundle with better lottery")
@@ -164,14 +170,14 @@ clean_beh_data %>%
 
 ## Psychometric analysis by conflict type
 
-Modeling choice of the left bundle as a function of the lottery EV **and** fractal QV difference on each trial. Fixed effects analysis allowing for subject-specific random intercepts.
+To confirm that subjects' choice relied more on the relevant attribute regardless of conflict type we ran a logit analysis where we modeled choice as a function of both the expected value and the learned Q-value difference. We used a fixed effects analysis allowing for subject-specific random intercepts.
 
 ```{r}
 source(paste0(helpers_path,'logit_choiceLeft.R'))
 ```
 
 - Regardless of whether there is a conflict between the attributes for each bundle the effect of the fractal QV difference  **correctly increases** as fractals become more consequential for the trial's reward while the effect of the lottery EV difference **correctly decreases**.   
-- While the effect of the QV difference is **correctly 0** when the lottery matters more lottery EV difference has an **incorrect positive** effect on choice even when it is less relevant for the trial's reward than the fractals. This reduces to 0 only when the lottery values are entirely irrelevant.  
+- While the effect of the QV difference is **correctly 0** when the lottery matters more lottery EV difference has an **biasing positive** effect on choice even when it is less relevant for the trial's reward than the fractals. This reduces to 0 only when the lottery values are entirely irrelevant.  
 - Consequently, for the same level of relevance lottery EV difference has a bigger effect on choice than the fractal QV difference.
 
 ```{r}
@@ -188,54 +194,9 @@ out_choiceLeft %>%
   facet_grid(conflictTrial ~ .)+
   theme(legend.position = "bottom")+
   scale_color_manual(values=c(cbbPalette[2], cbbPalette[1]))+
-  labs(color="", y="Logit slope estimate (DV = choiceLeft)", x="p(Frac)")
+  labs(color="", y="Logit slope estimate (DV = choiceLeft)", x="p(Fractal)")
 ```
-
-## Probability distortion
-
-$$V_i = (1-w(pFrac))EV_i + w(pFrac)QV_i, \:i \in \{left, right\}$$
-
-$$w(pFrac) = \frac{\delta*pFrac^{\gamma}}{\delta*pFrac^{\gamma}+(1- pFrac)^{\gamma}}$$
-
-How do the mean posterior estimates suggest the probability of a fractal draw is distorted for each subject?
-
-Using Gonzalez and Wu's (1999) terminology the fact that for most subjects the probability weighting functions are below the 45-degree line (i.e. objective probability, i.e. $\delta < 1$) regardless of shape is not about diminishing sensitivity (slope) but about **attractiveness** (intercept, elevation). The fractal is almost always less attractive to subjects than it should be given its probability in determining their reward.
-
-Note that for many subject the probability weighting function does not have the inverse S-shape observed in studies of outcome probabilities (i.e. $\gamma \geq 1$). Unlike most studies that investigate this curve where the probability refers directly to the reward, in this case the probability of a reward is the joint probability of p(Fractal)*p(chosen Fractal's reward). The probability depicted here is captures attribute weight when computing the value of a bundle.
-
-```{r}
-tmp = par_ests %>%
-  group_by(subnum, par) %>%
-  summarise(est = mean(value), .groups='keep') %>%
-  filter(par != "beta" & par != "alpha") %>%
-  spread(par, est)
-
-tmp = do.call("rbind", replicate(11, tmp, simplify = FALSE)) %>%
-  arrange(subnum) %>%
-  ungroup() %>%
-  mutate(pFrac = rep(seq(0, 1, .1), 25), 
-         wpFrac = (delta*pFrac^gamma)/(delta*pFrac^gamma + (1-pFrac)^gamma)) 
-
-tmp %>%
-  mutate(delta_gt_1 = ifelse(delta>=1, "delta >= 1", "delta < 1 "),
-         gamma_gt_1 = ifelse(gamma>=1,"gamma >= 1", "gamma < 1")) %>%
-  ggplot(aes(pFrac, wpFrac, group=subnum))+
-  geom_line(aes(col = as.factor(gamma_gt_1), linetype=as.factor(delta_gt_1)))+
-  geom_abline(slope=1, intercept=0, linetype="dashed")+
-  labs(x="p(Fractal)", y="w(pFractal)", title="Distortion of p(Fractal)", color = element_blank(), linetype=element_blank())+
-  scale_color_manual(values=c(cbbPalette[3], cbbPalette[7]))+
-  theme(legend.position = "bottom")
-```
-
-```{r echo=FALSE}
-rm(tmp)
-```
-
-# Determinants of the choice bias
-
-Hypothesis: is the bias due to noisy/bad estimates of the learned Q values?
-
-Rule out it's not due to probability distortion by showing .... with parameters estimates from linear prob distortion function
+## Determinants of the choice bias
 
 ```{r}
 source(paste0(helpers_path,'logit_choiceLeft_randomEffects_conflictCollapsed.R'))
@@ -277,9 +238,7 @@ clean_beh_data %>%
   
 ```
 
-Create learning groups by median split of learning rates.
-
-```{r}
+```{r eval= FALSE}
 clean_beh_data %>%
   group_by(subnum) %>%
   summarise(alpha=unique(alpha)) %>%
@@ -291,6 +250,10 @@ clean_beh_data %>%
   theme(legend.position = "bottom")+
   labs(fill="", x="Learning rate")
 ```
+
+The logit analysis confirmed that subjects largely relied on the relevant attribute regardless of conflict or relevant attribute type. To check the second part of the hypothesis that the inference is more error-prone when the relevant attribute is fractals due to noise in the learning process we examined the relationship between learning rates and the choice bias.
+
+To do this we median split the sample based on learning rates and ran a random effects analysis collapsing across conflict conditions.
 
 When p(Frac) = 0.5 and there is no clear relevant attribute slow learners rely more on the EV difference and less on the QV difference compared to learners.  
 
@@ -305,21 +268,23 @@ clean_beh_data_noProbDistortion %>%
               select(Estimate, subnum, var, probFractalDraw), 
             by=c("subnum", "probFractalDraw")) %>%
   ungroup() %>%
-  mutate(alpha_group = ifelse(alpha > median(alpha), "fast learner", "slow learner")) %>%
+  mutate(alpha_group = ifelse(alpha > median(alpha), "fast learner", "slow learner"),
+         var = ifelse(var == "qv_slopes", "QV(left)-QV(right)",  "EV(left)-EV(right)")) %>%
   group_by(var, alpha_group, probFractalDraw) %>%
   summarise(mean_est = mean(Estimate),
             sem_est = sem(Estimate), .groups='keep') %>%
   ggplot(aes(as.factor(probFractalDraw), mean_est, col=alpha_group))+
     geom_point(position=position_dodge(width=0.75), size=2)+
     geom_errorbar(aes(ymin = mean_est - sem_est, ymax = mean_est+sem_est), width=0.25, position=position_dodge(width=0.75))+
+  geom_line(aes(group=alpha_group), position=position_dodge(width=0.75))+
   geom_hline(aes(yintercept=0), linetype="dashed")+
  facet_grid(.~var)+
-  labs(color="", x="p(Frac)", y="Logit slope estimate (DV = choiceLeft)")+
+  labs(color="", x="p(Fractal)", y="Logit slope estimate (DV = choiceLeft)")+
   scale_color_manual(values=c(cbbPalette[3], cbbPalette[7]))+
   theme(legend.position="bottom")
 ```
 
-Rule out it's not due to distortion of p(Frac): same graph using parameter estimates from a model without probability distortion
+Note: slow learners' overreliance on the EV difference when both attributes matter equally and underreliance on the QV difference when the fractals are the only relevant attribute holds even when bundle values are estimated using parameters from a model that doesn't allow for the p(Fractal) to be subjectively distorted (w(p(Fractal))). This suggests that the bias is not due to a distorted perception of how much the reward relies on which attribute but to slow updating of the learned Q-values.
 
 ```{r}
 source(paste0(helpers_path,'logit_choiceLeft_randomEffects_conflictCollapsed_noProbDistortion.R'))
@@ -334,16 +299,18 @@ clean_beh_data_noProbDistortion %>%
               select(Estimate, subnum, var, probFractalDraw), 
             by=c("subnum", "probFractalDraw")) %>%
   ungroup() %>%
-  mutate(alpha_group = ifelse(alpha > median(alpha), "fast learner", "slow learner")) %>%
+  mutate(alpha_group = ifelse(alpha > median(alpha), "fast learner", "slow learner"),
+         var = ifelse(var == "qv_slopes", "QV(left)-QV(right)",  "EV(left)-EV(right)")) %>%
   group_by(var, alpha_group, probFractalDraw) %>%
   summarise(mean_est = mean(Estimate),
             sem_est = sem(Estimate), .groups='keep') %>%
   ggplot(aes(as.factor(probFractalDraw), mean_est, col=alpha_group))+
     geom_point(position=position_dodge(width=0.75), size=2)+
     geom_errorbar(aes(ymin = mean_est - sem_est, ymax = mean_est+sem_est), width=0.25, position=position_dodge(width=0.75))+
+    geom_line(aes(group=alpha_group), position=position_dodge(width=0.75))+
   geom_hline(aes(yintercept=0), linetype="dashed")+
  facet_grid(.~var)+
-  labs(color="", x="p(Frac)", y="Logit slope estimate (DV = choiceLeft)")+
+  labs(color="", x="p(Fractal)", y="Logit slope estimate (DV = choiceLeft)")+
   scale_color_manual(values=c(cbbPalette[3], cbbPalette[7]))+
   theme(legend.position="bottom")
 ```

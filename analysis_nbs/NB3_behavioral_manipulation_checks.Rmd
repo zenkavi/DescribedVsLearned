@@ -260,7 +260,7 @@ When p(Frac) = 0.5 and there is no clear relevant attribute slow learners rely m
 When p(Frac) = 1 and the choice should only depend on the fractal values slow learners correctly ignore the EV difference like the learners but rely less on the QV difference compared to learners when making their decision.  
 
 ```{r}
-clean_beh_data_noProbDistortion %>%
+clean_beh_data %>%
   group_by(subnum, probFractalDraw) %>%
   summarise(alpha=mean(alpha), .groups="keep") %>%
   left_join(out_choiceLeft_re %>%

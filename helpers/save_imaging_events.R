@@ -3,37 +3,9 @@ library(here)
 
 helpers_path = here('helpers/')
 source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical.R'))
+source(paste0(helpers_path,'add_inferred_pars.R'))
 
-## Save posterior mean estimates to `clean_beh_data`
-clean_beh_data = par_ests %>%
-  group_by(subnum, par) %>%
-  summarise(est = mean(value), .groups='keep') %>%
-  spread(par, est) %>%
-  left_join(clean_beh_data, by='subnum')
-
-## Add Q values of fractals to each trial
-clean_beh_data = clean_beh_data %>%
-  group_by(subnum) %>%
-  do(get_qvals(.)) %>%
-  ungroup()
-
-## Add EVs for lotteries, conflict trial info and value difference
-clean_beh_data = clean_beh_data %>%
-  mutate(leftLotteryEV = lotteryValue*lotteryProb,
-         rightLotteryEV = referenceValue*referenceProb,
-         leftLotteryBetter = leftLotteryEV>rightLotteryEV,
-         choseBetterLottery = ifelse(leftLotteryBetter == 1 & choiceLeft == 1, 1, 
-                                     ifelse(leftLotteryBetter == 0 & choiceLeft == 0, 1, 0)),
-         leftFractalBetter = leftQValue>rightQValue,
-         conflictTrial = ifelse(leftFractalBetter != leftLotteryBetter, "conflict", "no conflict")) %>%
-  mutate(leftQVAdv = leftQValue - rightQValue,
-         leftEVAdv = leftLotteryEV - rightLotteryEV,
-         wpFrac = (delta*probFractalDraw^gamma)/(delta*probFractalDraw^gamma + (1-probFractalDraw)^gamma),
-         leftBundleVal = (1-wpFrac)*leftLotteryEV + wpFrac*leftQValue,
-         rightBundleVal = (1-wpFrac)*rightLotteryEV + wpFrac*rightQValue,
-         leftbundleValAdv = leftBundleVal - rightBundleVal) %>%
-  mutate(rpe = ifelse(choiceLeft, reward - leftBundleVal, reward - rightBundleVal),
-         junk = 0)
+clean_beh_data = add_inferred_pars(clean_beh_data, par_ests)
 
 # Read in data with excluded trials
 source(paste0(helpers_path,'00_get_behavioral_data.R'))

@@ -1,6 +1,11 @@
-
-library(tidyverse)
+library(tidyr)
 library(here)
+
+helpers_path = here('helpers/')
+
+if(!exists('get_qvals')){
+  source(paste0(helpers_path, 'get_qvals.R'))
+}
 
 add_inferred_pars = function(clean_beh_data, par_ests){
   clean_beh_data = par_ests %>%
@@ -35,7 +40,7 @@ add_inferred_pars = function(clean_beh_data, par_ests){
       mutate(wpFrac = (delta*probFractalDraw^gamma)/(delta*probFractalDraw^gamma + (1-probFractalDraw)^gamma),
              leftBundleVal = (1-wpFrac)*leftLotteryEV + wpFrac*leftQValue,
              rightBundleVal = (1-wpFrac)*rightLotteryEV + wpFrac*rightQValue,
-             leftbundleValAdv = leftBundleVal - rightBundleVal)
+             leftbundleValAdv = leftBundleVal - rightBundleVal) 
     
   } else if("w_int" %in% names(clean_beh_data)){
     clean_beh_data = clean_beh_data %>%
@@ -49,6 +54,10 @@ add_inferred_pars = function(clean_beh_data, par_ests){
              rightBundleVal = (1-probFractalDraw)*rightLotteryEV + probFractalDraw*rightQValue,
              leftbundleValAdv = leftBundleVal - rightBundleVal)
   }
+  
+  clean_beh_data = clean_beh_data %>%
+    mutate(rpe = ifelse(choiceLeft, reward - leftBundleVal, reward - rightBundleVal),
+           junk = 0)
   
   return(clean_beh_data)
 }

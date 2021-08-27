@@ -13,10 +13,6 @@ if(!exists('extract_var_for_stan')){
   source(paste0(helpers_path, 'extract_var_for_stan.R'))
 }
 
-if(!exists('get_qvals')){
-  source(paste0(helpers_path, 'get_qvals.R'))
-}
-
 if(!exists('organize_stan_output')){
   source(paste0(helpers_path, 'organize_stan_output.R'))
 }

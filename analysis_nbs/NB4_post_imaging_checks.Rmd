@@ -58,6 +58,7 @@ Looking at the bundle values regardless of what is chosen we see the same patter
 ```{r}
 with(tmp, cor(leftBundleVal, rightBundleVal))
 tmp %>%
+  filter(wpFrac == 1) %>%
   ggplot(aes(leftBundleVal, rightBundleVal, col=wpFrac))+
   geom_point()+
   geom_abline(aes(intercept=0, slope = 1), linetype="dashed")
@@ -66,6 +67,7 @@ tmp %>%
 ```{r}
 with(tmp, cor(leftQValue, rightQValue))
 tmp %>%
+    filter(wpFrac == 1) %>%
   ggplot(aes(leftQValue, rightQValue, col=wpFrac))+
   geom_point()+
   geom_abline(aes(intercept=0, slope = 1), linetype="dashed")

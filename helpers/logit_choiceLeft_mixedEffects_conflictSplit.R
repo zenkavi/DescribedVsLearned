@@ -9,8 +9,8 @@ if (!exists('clean_beh_data')){
   clean_beh_data = add_inferred_pars(clean_beh_data, par_ests)
 }
 
-if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft.RDS'))){
-  out_choiceLeft = readRDS(paste0(helpers_path, 'logitOut_choiceLeft.RDS'))
+if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft_mixedEffects_conflictSplitt.RDS'))){
+  out_choiceLeft = readRDS(paste0(helpers_path, 'logitOut_choiceLeft_mixedEffects_conflictSplit.RDS'))
 } else {
   
   probFractalDrawVals = unique(clean_beh_data$probFractalDraw)
@@ -47,6 +47,6 @@ if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft.RDS'))){
   out_choiceLeft = out_choiceLeft %>%
     drop_na()
   
-  saveRDS(out_choiceLeft, paste0(helpers_path, 'logitOut_choiceLeft.RDS'))
+  saveRDS(out_choiceLeft, paste0(helpers_path, 'logitOut_choiceLeft_mixedEffects_conflictSplit.RDS'))
   rm(dat, m, conflictTrialTypes, curConflictTrial, probFractalDrawVals, curProbFractalDraw)
 }

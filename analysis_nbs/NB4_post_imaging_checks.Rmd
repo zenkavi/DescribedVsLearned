@@ -7,7 +7,7 @@ output:
     code_folding: 'hide'
 ---
 
-# Set up environment and load in data
+Set up environment and load in data
 
 ```{r include=FALSE}
 library(tidyverse)
@@ -32,23 +32,29 @@ Add estimated model parameters and inferred bundle values using those parameters
 clean_beh_data = add_inferred_pars(clean_beh_data, par_ests)
 ```
 
+## Correlation between values
+
 Is there a correlation between valChosen and valUnchosen? Yes.
 
 ```{r}
-tmp = clean_beh_data %>%
+clean_beh_data = clean_beh_data %>%
   mutate(valChosen = ifelse(choiceLeft, leftBundleVal, rightBundleVal),
-         valUnchosen = ifelse(choiceLeft == 0, leftBundleVal, rightBundleVal)) 
+         valUnchosen = ifelse(choiceLeft == 0, leftBundleVal, rightBundleVal),
+         wpFracBins = as.factor(round(wpFrac,1)),
+         leftQVAdvWeighted = leftQVAdv*wpFrac,
+         leftEVAdvWeighted = leftEVAdv*(1-wpFrac)) 
 ```
 
 The values of the bundles also depend on the distorted probabilities. The more a subject thinks the reward depends on the fractal (lighter colors) the lowers both bundles' value.
 
 ```{r}
-with(tmp, cor(valChosen, valUnchosen))
-tmp %>%
+with(clean_beh_data, cor(valChosen, valUnchosen))
+clean_beh_data %>%
   ggplot(aes(valChosen, valUnchosen, col=wpFrac))+
   geom_point()+
   geom_abline(aes(intercept=0, slope = 1), linetype="dashed")
 ```
+
 Why is there a correlation between valChosen and valUnchosen?  
 
 Is the correlation there for the components that go into valChosen and valUnchosen?  
@@ -56,41 +62,110 @@ Is the correlation there for the components that go into valChosen and valUnchos
 Looking at the bundle values regardless of what is chosen we see the same pattern as above where the bundles' values are higher overall the less the reward is thought to rely on the fractals.
 
 ```{r}
-with(tmp, cor(leftBundleVal, rightBundleVal))
-tmp %>%
-  filter(wpFrac == 1) %>%
+with(clean_beh_data, cor(leftBundleVal, rightBundleVal))
+clean_beh_data %>%
+  # filter(wpFrac == 1) %>%
   ggplot(aes(leftBundleVal, rightBundleVal, col=wpFrac))+
   geom_point()+
   geom_abline(aes(intercept=0, slope = 1), linetype="dashed")
 ```
 
 ```{r}
-with(tmp, cor(leftQValue, rightQValue))
-tmp %>%
-    filter(wpFrac == 1) %>%
-  ggplot(aes(leftQValue, rightQValue, col=wpFrac))+
+with(clean_beh_data, cor(leftQValue, rightQValue))
+clean_beh_data %>%
+    # filter(wpFrac == 1) %>%
+  ggplot(aes(leftQValue, rightQValue, color=wpFrac))+
   geom_point()+
+  facet_grid(~as.factor(leftLotteryEV))+
   geom_abline(aes(intercept=0, slope = 1), linetype="dashed")
 ```
+
 ```{r}
-with(tmp, cor(leftQValue, leftBundleVal))
-tmp %>%
+with(clean_beh_data, cor(leftQValue, rightQValue))
+clean_beh_data %>%
+    # filter(wpFrac == 1) %>%
+  ggplot(aes(leftQValue, rightQValue))+
+  geom_point()+
+  facet_grid(~wpFracBins)+
+  geom_abline(aes(intercept=0, slope = 1), linetype="dashed")
+```
+
+
+```{r}
+with(clean_beh_data, cor(leftQValue, leftBundleVal))
+clean_beh_data %>%
   ggplot(aes(leftQValue, leftBundleVal, col=wpFrac))+
   geom_point()+
   geom_abline(aes(intercept=0, slope = 1), linetype="dashed")
 ```
 
 ```{r}
-with(tmp, cor(leftLotteryEV, leftBundleVal))
-tmp %>%
+with(clean_beh_data, cor(leftLotteryEV, leftBundleVal))
+clean_beh_data %>%
   ggplot(aes(leftLotteryEV, leftBundleVal, col=wpFrac))+
   geom_jitter(width=.01)+
   # geom_point()+
   geom_abline(aes(intercept=0, slope = 1), linetype="dashed")
 ```
 
-Is a model where choice depends only on the lottery value difference explain data better than a model that include the fractal value difference?
+```{r}
+with(clean_beh_data, cor(leftLotteryEV, leftQValue))
+clean_beh_data %>%
+  ggplot(aes(leftLotteryEV, leftQValue, col=wpFrac))+
+  geom_jitter(width=.01)+
+  # geom_point()+
+  geom_abline(aes(intercept=0, slope = 1), linetype="dashed")
+```
 
 ```{r}
+clean_beh_data %>%
+  filter(reward < 5) %>%
+  ggplot(aes(reward, valChosen, color=rpe))+
+  geom_jitter(height=0.1)
+```
 
+## Logit model comparison
+
+Is a model where choice depends only on the lottery value difference explain data better than a model that doesn't include the fractal value difference?
+
+```{r}
+m1 = brm(choiceLeft ~ leftQVAdv + leftEVAdv + probFractalDraw + leftQVAdv:probFractalDraw + leftEVAdv:probFractalDraw + (1|subnum),
+            data=clean_beh_data, family=bernoulli(link="logit"), silent=2, refresh=0)
+m1 = add_criterion(m1, "waic")
+
+m2 = brm(choiceLeft ~ leftEVAdv * probFractalDraw + (1|subnum),
+            data=clean_beh_data, family=bernoulli(link="logit"), silent=2, refresh=0)
+m2 = add_criterion(m2, "waic")
+```
+
+```{r}
+m3 = brm(choiceLeft ~ leftbundleValAdv * probFractalDraw + (1|subnum),
+            data=clean_beh_data, family=bernoulli(link="logit"), silent=2, refresh=0)
+m3 = add_criterion(m3, "waic")
+```
+
+```{r}
+m1a = brm(choiceLeft ~ leftQVAdvWeighted + leftEVAdvWeighted + (1|subnum),
+            data=clean_beh_data, family=bernoulli(link="logit"), silent=2, refresh=0)
+m1a = add_criterion(m1a, "waic")
+```
+
+```{r}
+loo_compare(m1, m1a, m2, m3, criterion = "waic")
+```
+
+```{r}
+m3$criteria
+```
+
+```{r}
+m1a$criteria
+```
+
+```{r}
+m3
+```
+
+```{r}
+m1a
 ```

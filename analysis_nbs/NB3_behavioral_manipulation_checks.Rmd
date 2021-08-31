@@ -129,12 +129,6 @@ rm(tmp, m1, m2)
 
 Since there are two attributes in each bundle the observed and learned values of these attributes can agree or disagree on which bundle is better to choose. Trials where the fractal and lottery value difference favors the same bundle are called *no conflict* trials and trials where they favor different bundles are called *conflict* trials. 
 
-What proportion of each type of trial is there? About half of the trials for each subject are conflict trials.
-
-```{r}
-round(prop.table(table(clean_beh_data$conflictTrial, clean_beh_data$subnum), margin=2), 2)
-```
-
 The true weight of each attribute is controlled and determined by the probability that a trial's reward would depend on a fractal or lottery draw. Subjects' choice can, however, indicate that they distort these weights. If a subjective distortion of this sort exists it should be reflected in choice as a bias towards one attribute over the other.
 
 In conflict trials:  
@@ -173,7 +167,7 @@ clean_beh_data %>%
 To confirm that subjects' choice relied more on the relevant attribute regardless of conflict type we ran a logit analysis where we modeled choice as a function of both the expected value and the learned Q-value difference. We used a fixed effects analysis allowing for subject-specific random intercepts.
 
 ```{r}
-source(paste0(helpers_path,'logit_choiceLeft.R'))
+source(paste0(helpers_path,'logit_choiceLeft_mixedEffects_conflictCollapsed.R'))
 ```
 
 - Regardless of whether there is a conflict between the attributes for each bundle the effect of the fractal QV difference  **correctly increases** as fractals become more consequential for the trial's reward while the effect of the lottery EV difference **correctly decreases**.   
@@ -191,11 +185,11 @@ out_choiceLeft %>%
   geom_line(aes(group=iv))+
   geom_errorbar(aes(ymin=l95, ymax=u95), width=0.1)+
   geom_hline(yintercept=0,linetype="dashed")+
-  facet_grid(conflictTrial ~ .)+
   theme(legend.position = "bottom")+
   scale_color_manual(values=c(cbbPalette[2], cbbPalette[1]))+
   labs(color="", y="Logit slope estimate (DV = choiceLeft)", x="p(Fractal)")
 ```
+
 ## Determinants of the choice bias
 
 ```{r}

@@ -32,7 +32,7 @@ Add estimated model parameters and inferred bundle values using those parameters
 clean_beh_data = add_inferred_pars(clean_beh_data, par_ests)
 ```
 
-## Correlation between values
+## Correlation between reggressors
 
 Is there a correlation between valChosen and valUnchosen? Yes.
 
@@ -168,4 +168,62 @@ m3
 
 ```{r}
 m1a
+```
+
+# Where is QV in the brain?
+
+Are we not finding a neural correlate for fractal value regressors because they are more variable across subjects?
+
+```{r}
+source(paste0(helpers_path,'logit_choiceLeft_randomEffects_conflictCollapsed.R'))
+source(paste0(helpers_path,'logit_choiceLeft_randomEffects_conflictCollapsed_pFracWeightedValDiff.R'))
+```
+
+```{r}
+out_choiceLeft_re_pfw %>%
+  filter(var != "intercept") %>%
+  pivot_wider(values_from = c("Estimate", "Q2.5", "Q97.5"),
+              id_cols = c(subnum, probFractalDraw),
+              names_from = var) %>%
+  ggplot(aes(Estimate_qv_slopes, Estimate_ev_slopes))+
+  geom_point()+
+  geom_errorbar(aes(ymin=Q2.5_ev_slopes, ymax=Q97.5_ev_slopes), alpha=.5, color=cbbPalette[2])+
+  geom_errorbarh(aes(xmin=Q2.5_qv_slopes, xmax=Q97.5_qv_slopes), alpha=.5, color=cbbPalette[1])+
+  facet_wrap(~probFractalDraw)+
+  labs(x="Logit slope for QV(left)-QV(right)", y="Logit slope for EV(left)-EV(right)")+
+  theme_bw()
+```
+
+```{r}
+out_choiceLeft_re %>%
+  filter(var != "intercept") %>%
+  pivot_wider(values_from = c("Estimate", "Q2.5", "Q97.5"),
+              id_cols = c(subnum, probFractalDraw),
+              names_from = var) %>%
+  ggplot(aes(Estimate_qv_slopes, Estimate_ev_slopes))+
+  geom_point()+
+  geom_errorbar(aes(ymin=Q2.5_ev_slopes, ymax=Q97.5_ev_slopes), alpha=.5, color=cbbPalette[2])+
+  geom_errorbarh(aes(xmin=Q2.5_qv_slopes, xmax=Q97.5_qv_slopes), alpha=.5, color=cbbPalette[1])+
+  facet_wrap(~probFractalDraw)+
+  labs(x="Logit slope for QV(left)-QV(right)", y="Logit slope for EV(left)-EV(right)")+
+  theme_bw()
+```
+
+Compare width of errorbars more directly?
+You're trying to capture where there is more individual variability.
+Not where an individual's estimates might be more variable.
+So what you should look at is the variance of estimates for each slope at each pfractal level.
+
+```{r}
+out_choiceLeft_re_pfw %>%
+  filter(var != "intercept") %>%
+  ggplot(aes(as.factor(probFractalDraw), Estimate, color=var))+
+  geom_boxplot()
+```
+
+```{r}
+out_choiceLeft_re %>%
+  filter(var != "intercept") %>%
+  ggplot(aes(as.factor(probFractalDraw), Estimate, color=var))+
+  geom_boxplot()
 ```

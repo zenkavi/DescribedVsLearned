@@ -22,16 +22,11 @@ sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 
 ```{r include=FALSE}
 helpers_path = here('helpers/')
-source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical_noProbDistortion.R'))
 source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical.R'))
 source(paste0(helpers_path,'add_inferred_pars.R'))
 ```
 
 Add estimated model parameters and inferred bundle values using those parameters.
-
-```{r}
-clean_beh_data_noProbDistortion = add_inferred_pars(clean_beh_data, par_ests_noProbDistortion)
-```
 
 ```{r}
 clean_beh_data = add_inferred_pars(clean_beh_data, par_ests)
@@ -64,21 +59,11 @@ clean_beh_data %>%
 
 ## Single relevant attribute trials
 
-What percentage of all trials' rewards depend entirely either on the lottery or the fractals?
-
-```{r}
-tmp = clean_beh_data %>%
-  filter(probFractalDraw == 1 | probFractalDraw == 0) %>%
-  mutate(leftQVAdv = leftQValue - rightQValue,
-         leftEVAdv = leftLotteryEV - rightLotteryEV)
-
-round(nrow(tmp)/nrow(clean_beh_data), 3)
-```
-
 If subjects have understood the task then in these trials only the value difference of the relevant attribute should have an effect on choice. This is true on average as shown in the figure below but the blue lines depicting individual subjects suggest that there are individual differences in how much the choice relies on the Q-value difference even when it is the only relevant attribute. This will be explored more below.
 
 ```{r warning=FALSE}
-tmp %>%
+clean_beh_data %>%
+   filter(probFractalDraw == 1 | probFractalDraw == 0) %>%
   select(subnum, leftQVAdv, leftEVAdv, choiceLeft, probFractalDraw) %>%
   gather(key, value, -choiceLeft, -probFractalDraw, -subnum) %>%  
   mutate(key = ifelse(key == "leftEVAdv", "EV_left - EV_right", "QV_left - QV_right"),
@@ -162,7 +147,7 @@ clean_beh_data %>%
 
 ```
 
-## Psychometric analysis by conflict type
+## Psychometric analysis
 
 To confirm that subjects' choice relied more on the relevant attribute regardless of conflict type we ran a logit analysis where we modeled choice as a function of both the expected value and the learned Q-value difference. We used a fixed effects analysis allowing for subject-specific random intercepts.
 
@@ -189,7 +174,6 @@ out_choiceLeft %>%
   scale_color_manual(values=c(cbbPalette[2], cbbPalette[1]))+
   labs(color="", y="Logit slope estimate (DV = choiceLeft)", x="p(Fractal)")
 ```
-
 ## Determinants of the choice bias
 
 ```{r}
@@ -280,11 +264,11 @@ clean_beh_data %>%
 
 Note: slow learners' overreliance on the EV difference when both attributes matter equally and underreliance on the QV difference when the fractals are the only relevant attribute holds even when bundle values are estimated using parameters from a model that doesn't allow for the p(Fractal) to be subjectively distorted (w(p(Fractal))). This suggests that the bias is not due to a distorted perception of how much the reward relies on which attribute but to slow updating of the learned Q-values.
 
-```{r}
+```{r eval=FALSE}
+source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical_noProbDistortion.R'))
+clean_beh_data_noProbDistortion = add_inferred_pars(clean_beh_data, par_ests_noProbDistortion)
 source(paste0(helpers_path,'logit_choiceLeft_randomEffects_conflictCollapsed_noProbDistortion.R'))
-```
 
-```{r}
 clean_beh_data_noProbDistortion %>%
   group_by(subnum, probFractalDraw) %>%
   summarise(alpha=mean(alpha), .groups="keep") %>%

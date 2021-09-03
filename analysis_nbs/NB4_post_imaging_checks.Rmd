@@ -30,13 +30,7 @@ Add estimated model parameters and inferred bundle values using those parameters
 
 ```{r}
 clean_beh_data = add_inferred_pars(clean_beh_data, par_ests)
-```
 
-## Correlation between reggressors
-
-Is there a correlation between valChosen and valUnchosen? Yes.
-
-```{r}
 clean_beh_data = clean_beh_data %>%
   mutate(valChosen = ifelse(choiceLeft, leftBundleVal, rightBundleVal),
          valUnchosen = ifelse(choiceLeft == 0, leftBundleVal, rightBundleVal),
@@ -45,14 +39,24 @@ clean_beh_data = clean_beh_data %>%
          leftEVAdvWeighted = leftEVAdv*(1-wpFrac)) 
 ```
 
-The values of the bundles also depend on the distorted probabilities. The more a subject thinks the reward depends on the fractal (lighter colors) the lowers both bundles' value.
+## Correlation between reggressors
+
+### Value
+
+Is there a correlation between valChosen and valUnchosen? Yes.
 
 ```{r}
 with(clean_beh_data, cor(valChosen, valUnchosen))
+```
+    
+The values of the bundles also depend on the distorted probabilities. The more a subject thinks the reward depends on the fractal (lighter colors) the lowers both bundles' value.
+
+```{r}
 clean_beh_data %>%
   ggplot(aes(valChosen, valUnchosen, col=wpFrac))+
   geom_point()+
-  geom_abline(aes(intercept=0, slope = 1), linetype="dashed")
+  geom_abline(aes(intercept=0, slope = 1), linetype="dashed") + 
+  facet_wrap(~as.factor(leftEVAdv))
 ```
 
 Why is there a correlation between valChosen and valUnchosen?  
@@ -62,60 +66,56 @@ Is the correlation there for the components that go into valChosen and valUnchos
 Looking at the bundle values regardless of what is chosen we see the same pattern as above where the bundles' values are higher overall the less the reward is thought to rely on the fractals.
 
 ```{r}
-with(clean_beh_data, cor(leftBundleVal, rightBundleVal))
 clean_beh_data %>%
-  # filter(wpFrac == 1) %>%
   ggplot(aes(leftBundleVal, rightBundleVal, col=wpFrac))+
+  # ggplot(aes(leftBundleVal, rightBundleVal, col=alpha))+
   geom_point()+
-  geom_abline(aes(intercept=0, slope = 1), linetype="dashed")
+  geom_abline(aes(intercept=0, slope = 1), linetype="dashed")+
+  facet_wrap(~subnum)
 ```
+How much the value of the bundles correlate with each other is associated with learning.
 
 ```{r}
-with(clean_beh_data, cor(leftQValue, rightQValue))
 clean_beh_data %>%
-    # filter(wpFrac == 1) %>%
-  ggplot(aes(leftQValue, rightQValue, color=wpFrac))+
+  group_by(subnum) %>%
+  summarise(val_cor = cor(leftBundleVal, rightBundleVal),
+            alpha = unique(alpha)) %>%
+  ggplot(aes(alpha, val_cor))+
   geom_point()+
-  facet_grid(~as.factor(leftLotteryEV))+
-  geom_abline(aes(intercept=0, slope = 1), linetype="dashed")
+  geom_smooth(method="lm", formula='y~x')
 ```
+The Q values have little to no variance for small learning rates.
 
 ```{r}
-with(clean_beh_data, cor(leftQValue, rightQValue))
 clean_beh_data %>%
-    # filter(wpFrac == 1) %>%
-  ggplot(aes(leftQValue, rightQValue))+
+  mutate(lab_col = paste0(subnum, ", alpha = ",round(alpha, 3))) %>%
+  ggplot(aes(leftQValue, rightQValue, color=alpha))+
   geom_point()+
-  facet_grid(~wpFracBins)+
+  facet_wrap(~lab_col)+
   geom_abline(aes(intercept=0, slope = 1), linetype="dashed")
 ```
 
+Change in Q Values by learning rate
+
+Do this accounting for the true value
 
 ```{r}
-with(clean_beh_data, cor(leftQValue, leftBundleVal))
 clean_beh_data %>%
-  ggplot(aes(leftQValue, leftBundleVal, col=wpFrac))+
+  mutate(trueValDiffLeft = fractalLeftProb - leftQValue,
+         trueValDiffRight = fractalRightProb - rightQValue,
+         session=as.factor(session)) %>%
+  select(trialNum, leftQValue, rightQValue, subnum, session) %>%
+  gather(key, value, -trialNum, -subnum, -session) %>%
+  filter(key == "rightQValue",
+         subnum %in% c("02","07","19")) %>%
+  ggplot(aes(trialNum, value))+
+  # geom_line(aes(group=session))+
   geom_point()+
-  geom_abline(aes(intercept=0, slope = 1), linetype="dashed")
+  facet_grid(subnum~session)+
+  theme(legend.position = "none")
 ```
 
-```{r}
-with(clean_beh_data, cor(leftLotteryEV, leftBundleVal))
-clean_beh_data %>%
-  ggplot(aes(leftLotteryEV, leftBundleVal, col=wpFrac))+
-  geom_jitter(width=.01)+
-  # geom_point()+
-  geom_abline(aes(intercept=0, slope = 1), linetype="dashed")
-```
-
-```{r}
-with(clean_beh_data, cor(leftLotteryEV, leftQValue))
-clean_beh_data %>%
-  ggplot(aes(leftLotteryEV, leftQValue, col=wpFrac))+
-  geom_jitter(width=.01)+
-  # geom_point()+
-  geom_abline(aes(intercept=0, slope = 1), linetype="dashed")
-```
+### Reward and rpe
 
 ```{r}
 clean_beh_data %>%
@@ -124,7 +124,7 @@ clean_beh_data %>%
   geom_jitter(height=0.1)
 ```
 
-## Logit model comparison
+## Logit model comparison: what effects choice?
 
 Is a model where choice depends only on the lottery value difference explain data better than a model that doesn't include the fractal value difference?
 
@@ -170,7 +170,9 @@ m3
 m1a
 ```
 
-# Where is QV in the brain?
+
+
+## Where is QV in the brain?
 
 Are we not finding a neural correlate for fractal value regressors because they are more variable across subjects?
 

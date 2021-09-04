@@ -49,7 +49,9 @@ Is there a correlation between valChosen and valUnchosen? Yes.
 with(clean_beh_data, cor(valChosen, valUnchosen))
 ```
     
-The values of the bundles also depend on the distorted probabilities. The more a subject thinks the reward depends on the fractal (lighter colors) the lowers both bundles' value.
+The values of the bundles also depend on the distorted probabilities. The more a subject thinks the reward depends on the fractal (lighter colors) the lowers both bundles' value. Below they are broken down by the five levels of the lottery EV difference.
+
+Also choices above the diagonal where the value of the unchosen bundle is higher than the value of the chosen bundle must be trials where subjects chose differently than what the value difference suggested.
 
 ```{r}
 clean_beh_data %>%
@@ -68,12 +70,22 @@ Looking at the bundle values regardless of what is chosen we see the same patter
 ```{r}
 clean_beh_data %>%
   ggplot(aes(leftBundleVal, rightBundleVal, col=wpFrac))+
-  # ggplot(aes(leftBundleVal, rightBundleVal, col=alpha))+
+  geom_point()+
+  geom_abline(aes(intercept=0, slope = 1), linetype="dashed") + 
+  facet_wrap(~as.factor(leftEVAdv))
+```
+
+The five prawns are for the levels of lottery value difference (can confirm by coloring by that).
+
+```{r}
+clean_beh_data %>%
+  mutate(lab_col = paste0(subnum, ", alpha = ",round(alpha, 3))) %>%
+  ggplot(aes(leftBundleVal, rightBundleVal, col=wpFrac))+
   geom_point()+
   geom_abline(aes(intercept=0, slope = 1), linetype="dashed")+
-  facet_wrap(~subnum)
+  facet_wrap(~lab_col)
 ```
-How much the value of the bundles correlate with each other is associated with learning.
+How much the value of the bundles correlate with each other is associated with learning. The higher the learning rate the less the values of the bundles correlate with each other.
 
 ```{r}
 clean_beh_data %>%
@@ -89,30 +101,41 @@ The Q values have little to no variance for small learning rates.
 ```{r}
 clean_beh_data %>%
   mutate(lab_col = paste0(subnum, ", alpha = ",round(alpha, 3))) %>%
-  ggplot(aes(leftQValue, rightQValue, color=alpha))+
+  ggplot(aes(leftQValue*wpFrac, rightQValue*wpFrac, color=alpha))+
   geom_point()+
   facet_wrap(~lab_col)+
-  geom_abline(aes(intercept=0, slope = 1), linetype="dashed")
+  geom_abline(aes(intercept=0, slope = 1), linetype="dashed")+
+  theme(legend.position = "none")
 ```
+Things to note/explain:
+1. Correlation between bundle values
+--> Depends on learning rates. No variance in Q values for small learning rates translates to high correlation between bundle values
 
-Change in Q Values by learning rate
-
-Do this accounting for the true value
+2. Higher bundle values for lower wpFrac
+This is true even for people with high learning rates. So where is it coming from?
+Since it is there for everybody it shouldn't depend on the prob distortion parameters beta or gamma either.
+When wpFrac = 1 the bundle value depends only on the lottery value
+--> Lottery EV's are higher than QV's in general
 
 ```{r}
 clean_beh_data %>%
-  mutate(trueValDiffLeft = fractalLeftProb - leftQValue,
-         trueValDiffRight = fractalRightProb - rightQValue,
-         session=as.factor(session)) %>%
-  select(trialNum, leftQValue, rightQValue, subnum, session) %>%
-  gather(key, value, -trialNum, -subnum, -session) %>%
-  filter(key == "rightQValue",
-         subnum %in% c("02","07","19")) %>%
-  ggplot(aes(trialNum, value))+
-  # geom_line(aes(group=session))+
-  geom_point()+
-  facet_grid(subnum~session)+
-  theme(legend.position = "none")
+  select(leftLotteryEV, leftQValue, rightQValue) %>%
+  gather(key, value) %>%
+  ggplot(aes(value, fill=key))+
+  geom_histogram(position = "identity", alpha = 0.5, bins=30)+
+  scale_fill_manual(values=cbbPalette[1:3])+
+  labs(fill="")
+```
+Is this by design? Are true fractal values also lower than the EVs?
+
+```{r}
+clean_beh_data %>%
+  select(leftLotteryEV, fractalLeftProb, fractalRightProb) %>%
+  gather(key, value) %>%
+  ggplot(aes(value, fill=key))+
+  geom_histogram(position = "identity", alpha = 0.5, bins=30)+
+  scale_fill_manual(values=cbbPalette[3:1])+
+  labs(fill="")
 ```
 
 ### Reward and rpe

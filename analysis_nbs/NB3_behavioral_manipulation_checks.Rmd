@@ -44,7 +44,7 @@ clean_beh_data %>%
   labs(y = "p(Left)", x = "V(left)-V(right)", title="Psychometric choice curve based on weighted value difference between bundles")
 ```
 
-The dependence of choice on the bundle value difference holds for all levels of p(Frac) and conflict trial type (figure not shown below).
+The dependence of choice on the bundle value difference holds for all levels of p(Frac).
 
 ```{r warning=FALSE, eval=FALSE}
 clean_beh_data %>%
@@ -52,7 +52,7 @@ clean_beh_data %>%
   geom_line(aes(group=subnum),stat="smooth",formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, se=FALSE, alpha=.1, size=1, color=cbbPalette[5])+
   geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[3], alpha=.75)+
   labs(y = "p(Left)", x = "V(left)-V(right)")+
-  facet_grid(conflictTrial ~ probFractalDraw)+
+  facet_grid(. ~ probFractalDraw)+
   theme(axis.ticks.x=element_blank(),
         axis.text.x=element_blank())
 ```
@@ -123,7 +123,6 @@ In conflict trials:
 
 In no conflict trials:  
 - when reward depends more or equally on lotteries people correctly choose the bundle that has both the better fractal and the better lottery.  
-- when reward depends more on fractals people *incorrectly* choose the bundle with the better fractal and better lottery less frequently. 
 
 Choice patterns for both conflict and no conflict trials when p(Fractal)>.5 suggests that subjects' decision **correctly** relies less on the lottery and more on the fractal values but the inference about the inference about the fractal values is more error prone. This might be due to noise in the fractal value representation because it involves learning and cannot be read off the screen.  
 
@@ -233,10 +232,6 @@ The logit analysis confirmed that subjects largely relied on the relevant attrib
 
 To do this we median split the sample based on learning rates and ran a random effects analysis collapsing across conflict conditions.
 
-When p(Frac) = 0.5 and there is no clear relevant attribute slow learners rely more on the EV difference and less on the QV difference compared to learners.  
-
-When p(Frac) = 1 and the choice should only depend on the fractal values slow learners correctly ignore the EV difference like the learners but rely less on the QV difference compared to learners when making their decision.  
-
 ```{r}
 clean_beh_data %>%
   group_by(subnum, probFractalDraw) %>%
@@ -266,7 +261,12 @@ Note: slow learners' overreliance on the EV difference when both attributes matt
 
 ```{r eval=FALSE}
 source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical_noProbDistortion.R'))
-clean_beh_data_noProbDistortion = add_inferred_pars(clean_beh_data, par_ests_noProbDistortion)
+source(paste0(helpers_path,'00_get_behavioral_data.R'))
+clean_beh_data_noProbDistortion = beh_data %>%
+  filter(responded == 1,
+         reactionTime > .2)
+rm(beh_data)
+clean_beh_data_noProbDistortion = add_inferred_pars(clean_beh_data_noProbDistortion, par_ests_noProbDistortion)
 source(paste0(helpers_path,'logit_choiceLeft_randomEffects_conflictCollapsed_noProbDistortion.R'))
 
 clean_beh_data_noProbDistortion %>%

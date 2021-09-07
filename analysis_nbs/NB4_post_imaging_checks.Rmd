@@ -209,11 +209,6 @@ clean_beh_data %>%
 
 ```{r}
 clean_beh_data %>%
-  filter(subnum == "19" & session == 2 & trialNum > 45)
-```
-
-```{r}
-clean_beh_data %>%
   filter(subnum == "02") %>%
   select(session, leftQValue, fractalLeftProb, rightQValue, fractalRightProb, trialNum) %>%
   gather(key, value, -session, -trialNum) %>%

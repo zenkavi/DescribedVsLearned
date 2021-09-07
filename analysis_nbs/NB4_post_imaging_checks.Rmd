@@ -60,11 +60,15 @@ clean_beh_data %>%
   ggplot(aes(valChosen, valUnchosen, col=wpFrac))+
   geom_point()+
   geom_abline(aes(intercept=0, slope = 1), linetype="dashed") + 
-  facet_grid(.~as.factor(leftEVAdv))+
+  # facet_grid(.~as.factor(leftEVAdv))+
   theme(legend.position="bottom")
 ```
 
-What are the two prawns in the graph above? The split is by choice side.
+What are the two prongs in the graph above? The split is by choice side.
+
+Left choices (blue) when leftEVAdvantage<0 and right (yellow) choices when leftEVAdvantage>0 are also those where valUnchosen > valChosen (above diagonal).
+
+This suggests that the bundle value is mostly determined by the lottery value.
 
 ```{r}
 clean_beh_data %>%
@@ -76,21 +80,22 @@ clean_beh_data %>%
   labs(color="choiceLeft")+
   scale_color_manual(values=cbbPalette[1:2])
 ```
+Back to the correlation between valChosen and valUnchosen.  
 
-Why is there a correlation between valChosen and valUnchosen?  
+valChosen and valUnchosen is the left and right bundle values rearranged by choice. What does the relationship between the bundle values look like regardless of choice.
 
-Looking at the bundle values regardless of what is chosen we see the same pattern as above where the bundles' values are higher overall the less the reward is thought to rely on the fractals.
+Both the correlation between the bundle values and its interaction with subjective probability remains.
 
 ```{r}
 clean_beh_data %>%
   ggplot(aes(leftBundleVal, rightBundleVal, col=wpFrac))+
   geom_point()+
   geom_abline(aes(intercept=0, slope = 1), linetype="dashed") + 
-  facet_wrap(~as.factor(leftEVAdv))
+  facet_grid(.~as.factor(leftEVAdv))+
+  theme(legend.position = "bottom")
 ```
-Is the correlation there for the components that go into valChosen and valUnchosen?  
 
-The five prawns are for the levels of lottery value difference (can confirm by coloring by that).
+Is this relationship the same for all subjects? No.
 
 ```{r}
 clean_beh_data %>%
@@ -100,6 +105,7 @@ clean_beh_data %>%
   geom_abline(aes(intercept=0, slope = 1), linetype="dashed")+
   facet_wrap(~lab_col)
 ```
+
 How much the value of the bundles correlate with each other is associated with learning. The higher the learning rate the less the values of the bundles correlate with each other.
 
 ```{r}
@@ -109,9 +115,12 @@ clean_beh_data %>%
             alpha = unique(alpha)) %>%
   ggplot(aes(alpha, val_cor))+
   geom_point()+
-  geom_smooth(method="lm", formula='y~x')
+  geom_smooth(method="lm", formula='y~x')+
+  labs(y="Bundle value correlation", x="Learning rate")
 ```
-The Q values have little to no variance for small learning rates.
+Why does the bundle values correlate highly for low learning rates?
+
+Because Q values have little to no variance for small learning rates.
 
 ```{r}
 clean_beh_data %>%
@@ -122,13 +131,24 @@ clean_beh_data %>%
   geom_abline(aes(intercept=0, slope = 1), linetype="dashed")+
   theme(legend.position = "none")
 ```
-Things to note/explain:
-1. Correlation between bundle values
---> Depends on learning rates. No variance in Q values for small learning rates translates to high correlation between bundle values
+So the relationship between bundle values is determined entirely by the weighted lottery EVs.
 
-2. Higher bundle values for lower wpFrac
+```{r}
+clean_beh_data %>%
+  mutate(lab_col = paste0(subnum, ", alpha = ",round(alpha, 3))) %>%
+  ggplot(aes(leftLotteryEV*(1-wpFrac), rightLotteryEV*(1-wpFrac), col=alpha))+
+  geom_point()+
+  geom_abline(aes(intercept=0, slope = 1), linetype="dashed")+
+  facet_wrap(~lab_col)+
+  theme(legend.position="none")
+```
+
+The second thing to explain regarding the relationship between the bundle values was the interaction with weighted probabilities. Above we saw the trend that bundle values were higher for lower weighted probabilities.
+
 This is true even for people with high learning rates. So where is it coming from?
+
 Since it is there for everybody it shouldn't depend on the prob distortion parameters beta or gamma either.
+
 When wpFrac = 1 the bundle value depends only on the lottery value
 --> Lottery EV's are higher than QV's in general
 
@@ -151,6 +171,61 @@ clean_beh_data %>%
   geom_histogram(position = "identity", alpha = 0.5, bins=30)+
   scale_fill_manual(values=cbbPalette[3:1])+
   labs(fill="")
+```
+
+The Q value distribution is not the same for all subjects. As expected from the above exploration they are more variable for better learners.
+
+But the range is more limited compared to lottery EVs regardless of learning rates.
+
+```{r}
+clean_beh_data %>%
+  mutate(lab_col = paste0(subnum, ", alpha = ",round(alpha, 3))) %>%
+  select(lab_col, leftQValue, rightQValue) %>%
+  gather(key, value, -lab_col) %>%
+  ggplot(aes(value, fill=key))+
+  geom_histogram(position = "identity", alpha = 0.5, bins=30)+
+  scale_fill_manual(values=cbbPalette[1:2])+
+  labs(fill="", x="", y = "")+
+  facet_wrap(~lab_col)+
+  theme(legend.position = "bottom")
+```
+
+Trial by trial Q value for a good learner
+
+```{r}
+clean_beh_data %>%
+  filter(subnum == "19") %>%
+  select(session, leftQValue, fractalLeftProb, rightQValue, fractalRightProb, trialNum) %>%
+  gather(key, value, -session, -trialNum) %>%
+  mutate(side = ifelse(grepl("eft", key), "left", "right"),
+         learned = ifelse(grepl("fractal", key), "true", "learned")) %>%
+  ggplot(aes(trialNum, value, color=learned))+
+  geom_point()+
+  geom_line()+
+  facet_grid(session~side)+
+  labs(color="", title="High alpha (subnum 19)")+
+  scale_color_manual(values=cbbPalette[5:6])
+```
+
+```{r}
+clean_beh_data %>%
+  filter(subnum == "19" & session == 2 & trialNum > 45)
+```
+
+```{r}
+clean_beh_data %>%
+  filter(subnum == "02") %>%
+  select(session, leftQValue, fractalLeftProb, rightQValue, fractalRightProb, trialNum) %>%
+  gather(key, value, -session, -trialNum) %>%
+  mutate(side = ifelse(grepl("eft", key), "left", "right"),
+         learned = ifelse(grepl("fractal", key), "true", "learned")) %>%
+  ggplot(aes(trialNum, value, color=learned))+
+  geom_point()+
+  geom_line()+
+  facet_grid(session~side)+
+  labs(color="", title="Low alpha (subnum 02)")+
+  scale_color_manual(values=cbbPalette[5:6])
+
 ```
 
 ### Reward and rpe

@@ -49,21 +49,35 @@ Is there a correlation between valChosen and valUnchosen? Yes.
 with(clean_beh_data, cor(valChosen, valUnchosen))
 ```
     
-The values of the bundles also depend on the distorted probabilities. The more a subject thinks the reward depends on the fractal (lighter colors) the lowers both bundles' value. Below they are broken down by the five levels of the lottery EV difference.
+A second thing to note about the correlation between the bundle values is that they also depend on the distorted probabilities. The more a subject thinks the reward depends on the fractal (lighter colors) the lower both bundles' value. 
 
-Also choices above the diagonal where the value of the unchosen bundle is higher than the value of the chosen bundle must be trials where subjects chose differently than what the value difference suggested.
+A third interesting pattern is that choices above the diagonal where the value of the unchosen bundle is higher than the value of the chosen bundle must be trials where subjects chose differently than what the value difference suggested.
+
+Below they are broken down by the five levels of the lottery EV difference. Facet values < 0 are trials where the right/reference lottery is better.
 
 ```{r}
 clean_beh_data %>%
   ggplot(aes(valChosen, valUnchosen, col=wpFrac))+
   geom_point()+
   geom_abline(aes(intercept=0, slope = 1), linetype="dashed") + 
-  facet_wrap(~as.factor(leftEVAdv))
+  facet_grid(.~as.factor(leftEVAdv))+
+  theme(legend.position="bottom")
+```
+
+What are the two prawns in the graph above? The split is by choice side.
+
+```{r}
+clean_beh_data %>%
+  ggplot(aes(valChosen, valUnchosen, col=as.factor(choiceLeft)))+
+  geom_point()+
+  geom_abline(aes(intercept=0, slope = 1), linetype="dashed") + 
+  facet_grid(.~as.factor(leftEVAdv))+
+  theme(legend.position="bottom")+
+  labs(color="choiceLeft")+
+  scale_color_manual(values=cbbPalette[1:2])
 ```
 
 Why is there a correlation between valChosen and valUnchosen?  
-
-Is the correlation there for the components that go into valChosen and valUnchosen?  
 
 Looking at the bundle values regardless of what is chosen we see the same pattern as above where the bundles' values are higher overall the less the reward is thought to rely on the fractals.
 
@@ -74,6 +88,7 @@ clean_beh_data %>%
   geom_abline(aes(intercept=0, slope = 1), linetype="dashed") + 
   facet_wrap(~as.factor(leftEVAdv))
 ```
+Is the correlation there for the components that go into valChosen and valUnchosen?  
 
 The five prawns are for the levels of lottery value difference (can confirm by coloring by that).
 

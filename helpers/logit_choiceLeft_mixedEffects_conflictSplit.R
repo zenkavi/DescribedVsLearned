@@ -9,7 +9,7 @@ if (!exists('clean_beh_data')){
   clean_beh_data = add_inferred_pars(clean_beh_data, par_ests)
 }
 
-if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft_mixedEffects_conflictSplitt.RDS'))){
+if(file.exists(paste0(helpers_path, 'logitOut_choiceLeft_mixedEffects_conflictSplit.RDS'))){
   out_choiceLeft = readRDS(paste0(helpers_path, 'logitOut_choiceLeft_mixedEffects_conflictSplit.RDS'))
 } else {
   

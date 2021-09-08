@@ -43,67 +43,47 @@ clean_beh_data = clean_beh_data %>%
 
 ### Value
 
-Is there a correlation between valChosen and valUnchosen? Yes.
+Is there a correlation between valChosen and valUnchosen? Much smaller than before with the wrong Q-values.
 
 ```{r}
 with(clean_beh_data, cor(valChosen, valUnchosen))
 ```
     
-A second thing to note about the correlation between the bundle values is that they also depend on the distorted probabilities. The more a subject thinks the reward depends on the fractal (lighter colors) the lower both bundles' value. 
-
-A third interesting pattern is that choices above the diagonal where the value of the unchosen bundle is higher than the value of the chosen bundle must be trials where subjects chose differently than what the value difference suggested.
-
-Below they are broken down by the five levels of the lottery EV difference. Facet values < 0 are trials where the right/reference lottery is better.
+Note that choices above the diagonal where the value of the unchosen bundle is higher than the value of the chosen bundle must be trials where subjects chose differently than what the value difference suggested.
 
 ```{r}
 clean_beh_data %>%
   ggplot(aes(valChosen, valUnchosen, col=wpFrac))+
   geom_point()+
   geom_abline(aes(intercept=0, slope = 1), linetype="dashed") + 
-  # facet_grid(.~as.factor(leftEVAdv))+
   theme(legend.position="bottom")
 ```
-
-What are the two prongs in the graph above? The split is by choice side.
-
-Left choices (blue) when leftEVAdvantage<0 and right (yellow) choices when leftEVAdvantage>0 are also those where valUnchosen > valChosen (above diagonal).
-
-This suggests that the bundle value is mostly determined by the lottery value.
+valChosen and valUnchosen is the left and right bundle values rearranged by choice. What does the relationship between the bundle values look like regardless of choice? The correlation is even lower between the bundle values.
 
 ```{r}
-clean_beh_data %>%
-  ggplot(aes(valChosen, valUnchosen, col=as.factor(choiceLeft)))+
-  geom_point()+
-  geom_abline(aes(intercept=0, slope = 1), linetype="dashed") + 
-  facet_grid(.~as.factor(leftEVAdv))+
-  theme(legend.position="bottom")+
-  labs(color="choiceLeft")+
-  scale_color_manual(values=cbbPalette[1:2])
+with(clean_beh_data, cor(leftBundleVal, rightBundleVal))
 ```
-Back to the correlation between valChosen and valUnchosen.  
-
-valChosen and valUnchosen is the left and right bundle values rearranged by choice. What does the relationship between the bundle values look like regardless of choice.
-
-Both the correlation between the bundle values and its interaction with subjective probability remains.
 
 ```{r}
 clean_beh_data %>%
   ggplot(aes(leftBundleVal, rightBundleVal, col=wpFrac))+
   geom_point()+
   geom_abline(aes(intercept=0, slope = 1), linetype="dashed") + 
-  facet_grid(.~as.factor(leftEVAdv))+
+  # facet_grid(.~as.factor(leftEVAdv))+
   theme(legend.position = "bottom")
 ```
-
-Is this relationship the same for all subjects? No.
+Is this true same for all subjects? No.
 
 ```{r}
 clean_beh_data %>%
-  mutate(lab_col = paste0(subnum, ", alpha = ",round(alpha, 3))) %>%
-  ggplot(aes(leftBundleVal, rightBundleVal, col=wpFrac))+
+  group_by(subnum) %>%
+  mutate(bundleValCor = cor(rightBundleVal, leftBundleVal),
+         lab_col = paste0(subnum, ", r = ",round(bundleValCor, 3))) %>%
+  ggplot(aes(leftBundleVal, rightBundleVal, color = alpha))+
   geom_point()+
   geom_abline(aes(intercept=0, slope = 1), linetype="dashed")+
-  facet_wrap(~lab_col)
+  facet_wrap(~lab_col)+
+  theme(legend.position="bottom")
 ```
 
 How much the value of the bundles correlate with each other is associated with learning. The higher the learning rate the less the values of the bundles correlate with each other.
@@ -118,9 +98,9 @@ clean_beh_data %>%
   geom_smooth(method="lm", formula='y~x')+
   labs(y="Bundle value correlation", x="Learning rate")
 ```
-Why does the bundle values correlate highly for low learning rates?
+Why does the bundle value correlations higher for low learning rates?
 
-Because Q values have little to no variance for small learning rates.
+Because Q values have little variance for small learning rates.
 
 ```{r}
 clean_beh_data %>%
@@ -131,7 +111,9 @@ clean_beh_data %>%
   geom_abline(aes(intercept=0, slope = 1), linetype="dashed")+
   theme(legend.position = "none")
 ```
-So the relationship between bundle values is determined entirely by the weighted lottery EVs.
+So the relationship between bundle values is determined more by the weighted lottery EVs, which are correlated by design. 
+
+The right bundle value is affected more strongly than the left bundle value because the right lottery is fixed.
 
 ```{r}
 clean_beh_data %>%
@@ -142,15 +124,7 @@ clean_beh_data %>%
   facet_wrap(~lab_col)+
   theme(legend.position="none")
 ```
-
-The second thing to explain regarding the relationship between the bundle values was the interaction with weighted probabilities. Above we saw the trend that bundle values were higher for lower weighted probabilities.
-
-This is true even for people with high learning rates. So where is it coming from?
-
-Since it is there for everybody it shouldn't depend on the prob distortion parameters beta or gamma either.
-
-When wpFrac = 1 the bundle value depends only on the lottery value
---> Lottery EV's are higher than QV's in general
+Are lottery EVs and fractal QVs on similar scales? Yes.
 
 ```{r}
 clean_beh_data %>%
@@ -161,9 +135,9 @@ clean_beh_data %>%
   scale_fill_manual(values=cbbPalette[1:3])+
   labs(fill="")
 ```
-Is this by design? Are true fractal values also lower than the EVs?
+```{r eval=FALSE}
+#Design
 
-```{r}
 clean_beh_data %>%
   select(leftLotteryEV, fractalLeftProb, fractalRightProb) %>%
   gather(key, value) %>%
@@ -175,7 +149,7 @@ clean_beh_data %>%
 
 The Q value distribution is not the same for all subjects. As expected from the above exploration they are more variable for better learners.
 
-But the range is more limited compared to lottery EVs regardless of learning rates.
+What about the separation between the right and left Q Values for some subjects?
 
 ```{r}
 clean_beh_data %>%
@@ -195,31 +169,35 @@ Trial by trial Q value for a good learner
 ```{r}
 clean_beh_data %>%
   filter(subnum == "19") %>%
-  select(session, leftQValue, fractalLeftProb, rightQValue, fractalRightProb, trialNum) %>%
-  gather(key, value, -session, -trialNum) %>%
+  mutate(trialNumCont = 1:n()) %>%
+  select(leftQValue, fractalLeftProb, rightQValue, fractalRightProb, trialNumCont) %>%
+  gather(key, value, -trialNumCont) %>%
   mutate(side = ifelse(grepl("eft", key), "left", "right"),
          learned = ifelse(grepl("fractal", key), "true", "learned")) %>%
-  ggplot(aes(trialNum, value, color=learned))+
+  ggplot(aes(trialNumCont, value, color=learned))+
   geom_point()+
   geom_line()+
-  facet_grid(session~side)+
+  facet_grid(side~.)+
   labs(color="", title="High alpha (subnum 19)")+
-  scale_color_manual(values=cbbPalette[5:6])
+  scale_color_manual(values=cbbPalette[5:6])+
+  theme(legend.position="bottom")
 ```
 
 ```{r}
 clean_beh_data %>%
-  filter(subnum == "02") %>%
-  select(session, leftQValue, fractalLeftProb, rightQValue, fractalRightProb, trialNum) %>%
-  gather(key, value, -session, -trialNum) %>%
+  filter(subnum == "03") %>%
+  mutate(trialNumCont = 1:n()) %>%
+  select(leftQValue, fractalLeftProb, rightQValue, fractalRightProb, trialNumCont) %>%
+  gather(key, value, -trialNumCont) %>%
   mutate(side = ifelse(grepl("eft", key), "left", "right"),
          learned = ifelse(grepl("fractal", key), "true", "learned")) %>%
-  ggplot(aes(trialNum, value, color=learned))+
+  ggplot(aes(trialNumCont, value, color=learned))+
   geom_point()+
   geom_line()+
-  facet_grid(session~side)+
-  labs(color="", title="Low alpha (subnum 02)")+
-  scale_color_manual(values=cbbPalette[5:6])
+  facet_grid(side~.)+
+  labs(color="", title="subnum 03")+
+  scale_color_manual(values=cbbPalette[5:6])+
+  theme(legend.position="bottom")
 
 ```
 
@@ -227,9 +205,9 @@ clean_beh_data %>%
 
 ```{r}
 clean_beh_data %>%
-  filter(reward < 5) %>%
-  ggplot(aes(reward, valChosen, color=rpe))+
-  geom_jitter(height=0.1)
+  # filter(reward < 5) %>%
+  ggplot(aes(reward, rpe))+
+  geom_point()
 ```
 
 ## Logit model comparison: what effects choice?

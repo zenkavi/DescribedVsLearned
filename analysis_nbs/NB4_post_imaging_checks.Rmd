@@ -49,6 +49,13 @@ Is there a correlation between valChosen and valUnchosen? Much smaller than befo
 with(clean_beh_data, cor(valChosen, valUnchosen))
 ```
     
+```{r}
+clean_beh_data %>%
+  filter(subnum == "01"& session=="4") %>%
+  select(leftBundleVal, rightBundleVal) %>%
+  mutate()
+```
+    
 Note that choices above the diagonal where the value of the unchosen bundle is higher than the value of the chosen bundle must be trials where subjects chose differently than what the value difference suggested.
 
 ```{r}
@@ -203,60 +210,65 @@ clean_beh_data %>%
 
 ### Reward and rpe
 
+How is rpe computed? reward - valChosen. So if valChosen is small rpe ~ reward.And valChosen is always pretty small!
+
 ```{r}
 clean_beh_data %>%
-  # filter(reward < 5) %>%
+  mutate(lab_col = paste0("valChosen Bin = ", round(valChosen, 1))) %>%
   ggplot(aes(reward, rpe))+
-  geom_point()
-```
-
-## Logit model comparison: what effects choice?
-
-Is a model where choice depends only on the lottery value difference explain data better than a model that doesn't include the fractal value difference?
-
-```{r}
-m1 = brm(choiceLeft ~ leftQVAdv + leftEVAdv + probFractalDraw + leftQVAdv:probFractalDraw + leftEVAdv:probFractalDraw + (1|subnum),
-            data=clean_beh_data, family=bernoulli(link="logit"), silent=2, refresh=0)
-m1 = add_criterion(m1, "waic")
-
-m2 = brm(choiceLeft ~ leftEVAdv * probFractalDraw + (1|subnum),
-            data=clean_beh_data, family=bernoulli(link="logit"), silent=2, refresh=0)
-m2 = add_criterion(m2, "waic")
+  geom_point()+
+  geom_abline(aes(slope=1, intercept=0), linetype="dashed")+
+  facet_wrap(~lab_col)
 ```
 
 ```{r}
-m3 = brm(choiceLeft ~ leftbundleValAdv * probFractalDraw + (1|subnum),
-            data=clean_beh_data, family=bernoulli(link="logit"), silent=2, refresh=0)
-m3 = add_criterion(m3, "waic")
+clean_beh_data %>%
+  filter(reward < 1.1) %>%
+  ggplot(aes(reward, rpe, col=valChosen))+
+  geom_point()+
+  geom_abline(aes(slope=1, intercept=0), linetype="dashed")
+```
+
+Why is valChosen so small even for trials where the lottery reward is large?
+
+valChosen has a comprable distribution to the lottery EVs. 
+
+Lotteries that end with large reward have very low probabilities so low EVs.
+
+Each fractal's RPE is on a comparable scale with EVs/QVs.
+
+So how should you operationalize a "trial RPE", the surprise after a large reward from a lottery?
+What behavioral effect might such a surprise have? Make you more likely to choose based on the lottery regardless of how likely it is?
+
+```{r}
+names(clean_beh_data)
+
+clean_beh_data %>%
+  filter(fractalDraw == 0) %>%
+  group_by(reward, probFractalDraw) %>%
+  tally() %>%
+  filter(reward > 1) %>%
+  mutate(probLotteryDraw = 1-probFractalDraw) %>%
+  select(-probFractalDraw) %>%
+  arrange(probLotteryDraw)
+```
+
+When is a large reward "surprising"?
+
+```{r}
+clean_beh_data %>%
+  filter(fractalDraw ==0 & reward > 1 & probFractalDraw != 0) %>%
+  mutate(probLotteryDraw = 1-probFractalDraw) %>%
+  select(probLotteryDraw, lotteryProb, reward, conflictTrial, leftLotteryEV, leftQValue, rightLotteryEV, rightQValue) %>%
+  arrange(-probLotteryDraw) 
 ```
 
 ```{r}
-m1a = brm(choiceLeft ~ leftQVAdvWeighted + leftEVAdvWeighted + (1|subnum),
-            data=clean_beh_data, family=bernoulli(link="logit"), silent=2, refresh=0)
-m1a = add_criterion(m1a, "waic")
+clean_beh_data %>%
+  filter(fractalDraw == 0) %>%
+  group_by(reward) %>%
+  tally()
 ```
-
-```{r}
-loo_compare(m1, m1a, m2, m3, criterion = "waic")
-```
-
-```{r}
-m3$criteria
-```
-
-```{r}
-m1a$criteria
-```
-
-```{r}
-m3
-```
-
-```{r}
-m1a
-```
-
-
 
 ## Where is QV in the brain?
 

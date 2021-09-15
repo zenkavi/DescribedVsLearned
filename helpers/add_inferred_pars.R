@@ -39,30 +39,32 @@ add_inferred_pars = function(clean_beh_data, par_ests){
   if("delta" %in% names(clean_beh_data)){
     clean_beh_data = clean_beh_data %>%
       mutate(wpFrac = (delta*probFractalDraw^gamma)/(delta*probFractalDraw^gamma + (1-probFractalDraw)^gamma),
-             leftBundleVal = (1-wpFrac)*leftLotteryEV + wpFrac*leftQValue,
-             rightBundleVal = (1-wpFrac)*rightLotteryEV + wpFrac*rightQValue) 
+             valLeftBundle = (1-wpFrac)*leftLotteryEV + wpFrac*leftQValue,
+             valRightBundle = (1-wpFrac)*rightLotteryEV + wpFrac*rightQValue) 
     
   } else if("w_int" %in% names(clean_beh_data)){
     clean_beh_data = clean_beh_data %>%
       mutate(wpFrac = w_int + w_slope*probFractalDraw,
-             leftBundleVal = (1-wpFrac)*leftLotteryEV + wpFrac*leftQValue,
-             rightBundleVal = (1-wpFrac)*rightLotteryEV + wpFrac*rightQValue)
+             valLeftBundle = (1-wpFrac)*leftLotteryEV + wpFrac*leftQValue,
+             valRightBundle = (1-wpFrac)*rightLotteryEV + wpFrac*rightQValue)
   } else{
     clean_beh_data = clean_beh_data %>%
-      mutate(leftBundleVal = (1-probFractalDraw)*leftLotteryEV + probFractalDraw*leftQValue,
-             rightBundleVal = (1-probFractalDraw)*rightLotteryEV + probFractalDraw*rightQValue)
+      mutate(valLeftBundle = (1-probFractalDraw)*leftLotteryEV + probFractalDraw*leftQValue,
+             valRightBundle = (1-probFractalDraw)*rightLotteryEV + probFractalDraw*rightQValue)
   }
   
   ## Add value difference for bundles, val chosen and unchosen, trial rpe
   clean_beh_data = clean_beh_data %>%
-    mutate(leftbundleValAdv = leftBundleVal - rightBundleVal,
-           ppe = fractalDraw - wpFrac,
-           valChosen = ifelse(choiceLeft, leftBundleVal, rightBundleVal),
-           valUnchosen = ifelse(choiceLeft == 0, leftBundleVal, rightBundleVal),
+    mutate(leftBundleValAdv = valLeftBundle - valRightBundle,
+           valChosen = ifelse(choiceLeft, valLeftBundle, valRightBundle),
+           valUnchosen = ifelse(choiceLeft == 0, valLeftBundle, valRightBundle),
            valChosenLottery = ifelse(choiceLeft, leftLotteryEV, rightLotteryEV),
            valUnchosenLottery = ifelse(choiceLeft==0, leftLotteryEV, rightLotteryEV),
            valChosenFractal = ifelse(choiceLeft, leftQValue, rightQValue),
            valUnchosenFractal = ifelse(choiceLeft==0, leftQValue, rightQValue),
+           valBundleSum = valLeftBundle + valRightBundle,
+           valChosenMinusUnchosen = valChosen - valUnchosen,
+           rpeLeftRightSum = leftFractalRpe + rightFractalRpe,
            junk = 0)
   
   return(clean_beh_data)

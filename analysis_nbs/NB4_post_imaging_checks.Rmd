@@ -32,9 +32,7 @@ Add estimated model parameters and inferred bundle values using those parameters
 clean_beh_data = add_inferred_pars(clean_beh_data, par_ests)
 
 clean_beh_data = clean_beh_data %>%
-  mutate(valChosen = ifelse(choiceLeft, leftBundleVal, rightBundleVal),
-         valUnchosen = ifelse(choiceLeft == 0, leftBundleVal, rightBundleVal),
-         wpFracBins = as.factor(round(wpFrac,1)),
+  mutate(wpFracBins = as.factor(round(wpFrac,1)),
          leftQVAdvWeighted = leftQVAdv*wpFrac,
          leftEVAdvWeighted = leftEVAdv*(1-wpFrac)) 
 ```
@@ -49,11 +47,16 @@ Is there a correlation between valChosen and valUnchosen? Much smaller than befo
 with(clean_beh_data, cor(valChosen, valUnchosen))
 ```
     
+    
 ```{r}
 clean_beh_data %>%
-  filter(subnum == "01"& session=="4") %>%
-  select(leftBundleVal, rightBundleVal) %>%
-  mutate()
+  mutate(valChosenMinusUnchosen = valChosen - valUnchosen) %>%
+  select(valChosenMinusUnchosen, leftQVAdv)
+  
+  ggplot(aes(valChosenMinusUnchosen, leftbundleValAdv))+
+  geom_point()+
+  geom_abline(aes(slope=1, intercept=0), color="red")+
+  geom_abline(aes(slope=-1, intercept=0), color="red")
 ```
     
 Note that choices above the diagonal where the value of the unchosen bundle is higher than the value of the chosen bundle must be trials where subjects chose differently than what the value difference suggested.

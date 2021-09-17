@@ -65,7 +65,18 @@ clean_beh_data %>%
   geom_histogram(bins=30, alpha=.5, position="identity")+
   facet_grid(subnum~session)
 ```   
+
+Is RPE sum a good regressor to capture learning? 
+
+For the off diagonal trials in the plot below rpe sum would be small but is there less learning in those trials? Probably not.
     
+```{r}
+clean_beh_data %>%
+  ggplot(aes(leftFractalRpe, rightFractalRpe))+
+  geom_point()+
+  geom_abline(aes(slope=1, intercept=0), linetype="dashed")
+```
+
 Note that choices above the diagonal where the value of the unchosen bundle is higher than the value of the chosen bundle must be trials where subjects chose differently than what the value difference suggested.
 
 ```{r}

@@ -47,17 +47,24 @@ Is there a correlation between valChosen and valUnchosen? Much smaller than befo
 with(clean_beh_data, cor(valChosen, valUnchosen))
 ```
     
-    
 ```{r}
 clean_beh_data %>%
-  mutate(valChosenMinusUnchosen = valChosen - valUnchosen) %>%
-  select(valChosenMinusUnchosen, leftQVAdv)
-  
-  ggplot(aes(valChosenMinusUnchosen, leftbundleValAdv))+
-  geom_point()+
-  geom_abline(aes(slope=1, intercept=0), color="red")+
-  geom_abline(aes(slope=-1, intercept=0), color="red")
+  select(leftFractalRpe, rightFractalRpe) %>%
+  gather(key, value) %>%
+  group_by(key) %>%
+  mutate(value = scale(value, scale=F)) %>%
+  ggplot(aes(value, fill=key))+
+  geom_histogram(position = "identity", bins = 30, alpha=.5)
 ```
+   
+```{r}
+clean_beh_data %>%
+  group_by(subnum, session) %>%
+  mutate(rpeLeftRightSum = scale(rpeLeftRightSum, scale=F)) %>%
+  ggplot(aes(rpeLeftRightSum))+
+  geom_histogram(bins=30, alpha=.5, position="identity")+
+  facet_grid(subnum~session)
+```   
     
 Note that choices above the diagonal where the value of the unchosen bundle is higher than the value of the chosen bundle must be trials where subjects chose differently than what the value difference suggested.
 

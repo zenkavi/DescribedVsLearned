@@ -47,6 +47,8 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarch
   
   trial_pFrac = extract_var_for_stan(clean_beh_data, probFractalDraw)
   
+  pe_update_left = extract_var_for_stan(clean_beh_data, choiceLeft)
+  
   m_data=list(num_subjs = num_subjs,
               num_trials = num_trials,
               choices = choices,
@@ -54,9 +56,10 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarch
               ev_right = ev_right,
               fractal_outcomes_left = fractal_outcomes_left,
               fractal_outcomes_right = fractal_outcomes_right,
-              trial_pFrac = trial_pFrac)
+              trial_pFrac = trial_pFrac, 
+              pe_update_left = pe_update_left)
   
-  rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac)
+  rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac, pe_update_left)
   
   ## Fit model for all subjects
   m = stan_model(paste0(helpers_path,'stanModels/fit_twoValSystemsWithRL_hierarchical_rpeChosenBundleFractal.stan'))

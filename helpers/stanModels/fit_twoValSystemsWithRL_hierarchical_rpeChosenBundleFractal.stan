@@ -8,6 +8,7 @@ data {
   real ev_left[num_subjs, 300];
   real ev_right[num_subjs, 300];
   real trial_pFrac[num_subjs, 300];
+  real pe_update_left[num_subjs, 300];
 }
 
 transformed data {
@@ -48,7 +49,7 @@ model {
   for(i in 1:num_subjs){
     num_trials_for_subj = num_trials[i];
     qv = init_v;
-    
+
     for (t in 1:num_trials_for_subj) {
       
       w_pi = (delta[i]*(trial_pFrac[i, t]^gamma[i])) / ((delta[i]*(trial_pFrac[i, t]^gamma[i])) + (1-trial_pFrac[i, t])^gamma[i]);
@@ -64,12 +65,12 @@ model {
       // The larger abs(beta), the more the value difference is amplified
       
       // update value only for the fractal of the chosen bundle
-      if (choices[i, t] == 1){
+      if (pe_update_left[i, t] == 1){
         PE[1] = fractal_outcomes_left[i, t] - qv[1];
         qv[1] += alpha[i] * PE[1];
       } else {
-        qv[2] += alpha[i] * PE[2]; 
         PE[2] = fractal_outcomes_right[i, t] - qv[2];
+        qv[2] += alpha[i] * PE[2]; 
       }
       
     }
@@ -104,12 +105,12 @@ generated quantities {
       logLikelihood_subj_trial = bernoulli_logit_lpmf(choices[i,t] | beta[i] * (opt_val[1]-opt_val[2]));
       
       
-      if (choices[i, t] == 1){
+      if (pe_update_left[i, t] == 1){
         PE[1] = fractal_outcomes_left[i, t] - qv[1];
         qv[1] += alpha[i] * PE[1];
       } else {
-        qv[2] += alpha[i] * PE[2]; 
         PE[2] = fractal_outcomes_right[i, t] - qv[2];
+        qv[2] += alpha[i] * PE[2]; 
       }
       
       logLikelihood[i] += logLikelihood_subj_trial;

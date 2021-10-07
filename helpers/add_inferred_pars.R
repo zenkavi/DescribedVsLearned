@@ -7,7 +7,7 @@ if(!exists('get_qvals')){
   source(paste0(helpers_path, 'get_qvals.R'))
 }
 
-add_inferred_pars = function(clean_beh_data, par_ests){
+add_inferred_pars = function(clean_beh_data, par_ests, model_name="original"){
   clean_beh_data = par_ests %>%
     group_by(subnum, par) %>%
     summarise(est = mean(value), .groups='keep') %>%
@@ -17,7 +17,7 @@ add_inferred_pars = function(clean_beh_data, par_ests){
   ## Add Q values of fractals to each trial
   clean_beh_data = clean_beh_data %>%
     group_by(subnum) %>%
-    do(get_qvals(.)) %>%
+    do(get_qvals(., model_name=model_name)) %>%
     ungroup()
   
   ## Add EVs for lotteries to each trial

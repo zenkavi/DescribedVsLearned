@@ -37,6 +37,12 @@ source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical.R'))
 source(paste0(helpers_path,'add_inferred_pars.R'))
 ```
 
+```{r}
+clean_beh_data_original = add_inferred_pars(clean_beh_data, par_ests, model_name="original")
+clean_beh_data_rpeChosenBundleFractal = add_inferred_pars(clean_beh_data, par_ests_rpeChosenBundleFractal, model_name="rpeChosenBundleFractal")
+clean_beh_data_rpeWhenFractalRewarded = add_inferred_pars(clean_beh_data, par_ests_rpeWhenFractalRewarded, model_name="rpeWhenFractalRewarded")
+```
+
 # Model comparison of different RPE representations
 
 ## Behavioral fit comparison
@@ -136,15 +142,7 @@ clean_beh_data_original %>%
   
 ```
 
-## How are `rpeWhenFractalRewarded` and `rpeChosenBundleFractal` related to `rpeLeftRightSum`
-
-```{r}
-clean_beh_data_original = add_inferred_pars(clean_beh_data, par_ests, model_name="original")
-clean_beh_data_rpeChosenBundleFractal = add_inferred_pars(clean_beh_data, par_ests_rpeChosenBundleFractal, model_name="rpeChosenBundleFractal")
-clean_beh_data_rpeWhenFractalRewarded = add_inferred_pars(clean_beh_data, par_ests_rpeWhenFractalRewarded, model_name="rpeWhenFractalRewarded")
-```
-
-For `rpeLeftRightSum` regressor
+## What does `rpeLeftRightSum` look like `rpeWhenFractalRewarded` and `rpeChosenBundleFractal` compared to the original model
 
 ```{r}
 clean_beh_data_original %>%
@@ -173,12 +171,7 @@ clean_beh_data_original %>%
   
 ```
 
-How about for the relevant rpe regressor for the best fitting model?
-Original -->  rpeLeftRightSum
-rpeChosenBundleFractal --> ifelse(choiceLeft, leftFractalRpe, rightFractalRpe)
-rpeWhenFractalRewarded --> ifelse(fractalDraw, rpeLeftRightSum, 0)
-
 ```{r}
-names(clean_beh_data_original)
-str(clean_beh_data_original$fractalDraw)
+best_model_for_subj
+
 ```

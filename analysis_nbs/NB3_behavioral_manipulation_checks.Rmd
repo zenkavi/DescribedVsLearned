@@ -38,13 +38,13 @@ Psychometric curve for all trials with weighted value difference. Q-values for t
 
 ```{r}
 clean_beh_data %>%
-  ggplot(aes(leftbundleValAdv, choiceLeft))+
+  ggplot(aes(leftBundleValAdv, choiceLeft))+
   geom_line(aes(group=subnum),stat="smooth",formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, se=FALSE, alpha=.1, size=1, color=cbbPalette[5])+
   geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[3], alpha=.75)+
   labs(y = "p(Left)", x = "V(left)-V(right)", title="Psychometric choice curve based on weighted value difference between bundles")
 ```
 
-The dependence of choice on the bundle value difference holds for all levels of p(Frac).
+The dependence of choice on the bundle value difference holds for all levels of p(Frac) (not shown).
 
 ```{r warning=FALSE, eval=FALSE}
 clean_beh_data %>%
@@ -77,37 +77,60 @@ clean_beh_data %>%
   ylab("p(Left)")
 ```
 
-Multilevel model checking if the slopes of the top row above are different than 0.
+<!-- Multilevel model checking if the slopes of the top row above are different than 0. -->
 
 ```{r eval=FALSE}
 m1 = brm(choiceLeft ~ leftQVAdv + leftEVAdv + (1|subnum),
         data=tmp %>% filter(probFractalDraw == 0), family=bernoulli(link="logit"))
 ```
 
-When probability of a fractal is 0 the expected value (EV) difference between the lotteries (i.e. the only relevant attribute of each bundle) has a strong effect. The higher the EV of the left lottery the more likely the left bundle is chosen. 
+<!-- When probability of a fractal is 0 the expected value (EV) difference between the lotteries (i.e. the only relevant attribute of each bundle) has a strong effect. The higher the EV of the left lottery the more likely the left bundle is chosen.  -->
 
-There is also a much smaller negative effect of the Q-value difference even though the fractal values should be irrelevant. 
+<!-- There is also a much smaller negative effect of the Q-value difference even though the fractal values should be irrelevant.  -->
 
 ```{r eval=FALSE}
 summary(m1)
 ```
 
-Multilevel model checking if the slopes of the bottom row above are different than 0.
+<!-- Multilevel model checking if the slopes of the bottom row above are different than 0. -->
 
 ```{r eval=FALSE}
 m2 = brm(choiceLeft ~ leftQVAdv + leftEVAdv + (1|subnum),
         data=tmp %>% filter(probFractalDraw == 1), family=bernoulli(link="logit"))
 ```
 
-When the probability of the fractal draw is 1 so the reward only depends on the fractals only the learned Q-values for the fractals have an effect on choice (the lottery EV difference has no effect).
+<!-- When the probability of the fractal draw is 1 so the reward only depends on the fractals only the learned Q-values for the fractals have an effect on choice (the lottery EV difference has no effect). -->
 
 ```{r eval=FALSE}
 summary(m2)
 ```
 
-
 ```{r eval=FALSE}
 rm(tmp, m1, m2)
+```
+
+<!-- # Probability distortion -->
+
+```{r eval=FALSE, echo=FALSE}
+tmp = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = mean(value), .groups='keep') %>%
+  filter(par != "beta" & par != "alpha") %>%
+  spread(par, est)
+
+tmp = do.call("rbind", replicate(11, tmp, simplify = FALSE)) %>%
+  arrange(subnum) %>%
+  ungroup() %>%
+  mutate(pFrac = rep(seq(0, 1, .1), 25), 
+         wpFrac = (delta*pFrac^gamma)/(delta*pFrac^gamma + (1-pFrac)^gamma)) 
+
+tmp %>%
+  mutate(delta_gt_1 = ifelse(delta>=1, "delta >= 1", "delta < 1 "),
+         gamma_gt_1 = ifelse(gamma>=1,"gamma >= 1", "gamma < 1")) %>%
+  ggplot(aes(pFrac, wpFrac, group=subnum))+
+  geom_line(aes(col = as.factor(gamma_gt_1), linetype=as.factor(delta_gt_1)))+
+  geom_abline(slope=1, intercept=0, linetype="dashed")+
+  labs(x="p(Fractal)", y="w(pFractal)", title="Distortion of p(Fractal)", color = element_blank(), linetype=element_blank())
 ```
 
 # Attribute weights
@@ -293,9 +316,9 @@ clean_beh_data_noProbDistortion %>%
   theme(legend.position="bottom")
 ```
 
-# Response times
+<!-- # Response times -->
 
-```{r eval=FALSE}
+```{r eval=FALSE, echo=FALSE}
 # Reaction time histograms
 
 clean_beh_data %>%
@@ -309,7 +332,7 @@ clean_beh_data %>%
   # coord_flip()
 ```
 
-```{r}
+```{r eval=FALSE, echo=FALSE}
 clean_beh_data %>%
   ggplot(aes(probFractalDraw, log(reactionTime), group=subnum))+
   # geom_boxplot()+
@@ -318,21 +341,21 @@ clean_beh_data %>%
   labs(x = "p(Fractal Draw)", y = "Log Reaction Time")
 ```
 
-Does how fast you make a decision relate to the choice?
+<!-- Does how fast you make a decision relate to the choice? -->
 
-```{r}
+```{r eval=FALSE, echo=FALSE}
 clean_beh_data %>%
   ggplot(aes(log(reactionTime), choiceLeft))+
   geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE)+
   facet_grid(.~probFractalDraw)
 ```
 
-```{r}
+```{r eval=FALSE, echo=FALSE}
 m = brm(choiceLeft ~ log(reactionTime)*probFractalDraw+(1|subnum),
               data=clean_beh_data, family=bernoulli(link="logit"), silent=2, refresh=0)
 ```
 
-```{r}
+```{r eval=FALSE, echo=FALSE}
 summary(m)
 ```
 

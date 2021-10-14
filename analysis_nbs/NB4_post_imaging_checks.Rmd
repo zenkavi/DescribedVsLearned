@@ -175,3 +175,62 @@ clean_beh_data_original %>%
   theme_bw()
   
 ```
+
+## What would a reliability of value signal look like?
+
+Get behavioral data with the parameter estimates and RPE's from the best fitting model for each subject.
+
+```{r}
+source(paste0(helpers_path, 'save_imaging_events_wBestRpe.R'))
+```
+
+What do the RPEs look like? Is there enough variance in them if you wanted to use their absolute value as a "reliability" signal?
+
+```{r}
+clean_beh_data %>%
+  select(leftFractalRpe, rightFractalRpe) %>%
+  gather(key, value) %>%
+  ggplot(aes(value))+
+  geom_histogram(alpha=.5, bins=30)+
+  facet_wrap(~key)
+```
+
+```{r}
+clean_beh_data %>%
+  select(leftFractalRpe, rightFractalRpe) %>%
+  gather(key, value) %>%
+  ggplot(aes(abs(value)))+
+  geom_histogram(alpha=.5, bins=30)+
+  facet_wrap(~key)
+```
+Are RPE distributuons similar for both fractals for all subjects or do some learn more/less about one fractal than the other?
+
+```{r}
+clean_beh_data %>%
+  select(leftFractalRpe, rightFractalRpe, subnum) %>%
+  gather(key, value, -subnum) %>%
+  filter(abs(value)>0) %>%
+  ggplot(aes(abs(value), fill=key))+
+  geom_histogram(alpha=.5, bins=30, position="identity")+
+  facet_wrap(~subnum)+
+  theme(legend.position ="bottom")+
+  scale_fill_manual(values=c(cbbPalette[1:2]))
+```
+
+```{r}
+clean_beh_data %>%
+  select(leftFractalRpe, rightFractalRpe, subnum) %>%
+  gather(key, value, -subnum) %>%
+  mutate(value=abs(value)) %>% #reliability
+  filter(value>0) %>%
+  group_by(subnum, key) %>%
+  summarise(.groups = 'keep', 
+            sem_val = sem(value), 
+            mean_val = mean(value)) %>%
+  ggplot(aes(subnum, mean_val, fill=key))+
+  geom_bar(stat="identity",position=position_dodge(width = .9), alpha=.5)+
+  geom_errorbar(aes(ymin=mean_val-sem_val, ymax=mean_val+sem_val), position=position_dodge(width = .9), width=.25)+
+  theme(legend.position = "bottom")+
+  scale_fill_manual(values=c(cbbPalette[1:2]))+
+  labs(fill="", y="")
+```

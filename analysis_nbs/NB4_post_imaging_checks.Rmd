@@ -178,7 +178,7 @@ clean_beh_data_original %>%
 
 ## What would a reliability of value signal look like?
 
-Get behavioral data with the parameter estimates and RPE's from the best fitting model for each subject.
+Get behavioral data with the parameter estimates and **RPE's from the best fitting model for each subject**.
 
 ```{r}
 source(paste0(helpers_path, 'save_imaging_events_wBestRpe.R'))
@@ -203,7 +203,7 @@ clean_beh_data %>%
   geom_histogram(alpha=.5, bins=30)+
   facet_wrap(~key)
 ```
-Are RPE distributuons similar for both fractals for all subjects or do some learn more/less about one fractal than the other?
+Are absolute RPE distributions similar for both fractals for all subjects or do some subjects learn more/less about one fractal than the other?
 
 ```{r}
 clean_beh_data %>%
@@ -214,8 +214,10 @@ clean_beh_data %>%
   geom_histogram(alpha=.5, bins=30, position="identity")+
   facet_wrap(~subnum)+
   theme(legend.position ="bottom")+
-  scale_fill_manual(values=c(cbbPalette[1:2]))
+  scale_fill_manual(values=c(cbbPalette[1:2]))+
+  labs(fill="")
 ```
+Subjects 3, 5, 8, 10, 15, 27 might be learning differently about the two fractals.
 
 ```{r}
 clean_beh_data %>%
@@ -233,4 +235,21 @@ clean_beh_data %>%
   theme(legend.position = "bottom")+
   scale_fill_manual(values=c(cbbPalette[1:2]))+
   labs(fill="", y="")
+```
+
+## Response times vs prob fractal
+
+```{r}
+clean_beh_data %>%
+  mutate(log_rt = log(reactionTime), 
+         probFractalDraw = as.factor(probFractalDraw)) %>%
+  group_by(subnum, probFractalDraw) %>%
+  summarise(mean_log_rt = mean(log_rt), .groups='keep') %>%
+  ungroup()%>%
+  group_by(probFractalDraw)%>%
+  summarise(sem_log_rt = sem(mean_log_rt),
+            mean_log_rt = mean(mean_log_rt)) %>%
+  ggplot(aes(probFractalDraw, mean_log_rt))+
+  geom_bar(stat="identity")+
+  geom_errorbar(aes(ymin=  mean_log_rt - sem_log_rt, ymax=mean_log_rt + sem_log_rt), width=.2)
 ```

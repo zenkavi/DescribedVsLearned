@@ -1,6 +1,5 @@
 ---
-title: 'Experience vs. description based decision-making project: RL model fits onto
-  behavioral data'
+title: 'Experience vs. description based decision-making project: Two system valuation systems model fit'
 output:
   html_document:
     toc: yes

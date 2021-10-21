@@ -116,7 +116,10 @@ clean_beh_data %>%
   facet_wrap(~facetGroup)+
   theme(legend.position = "bottom")+
   guides(color=guide_legend(nrow=2,byrow=TRUE))+
-  scale_color_manual(values=c(cbbPalette[1:5], "black", cbbPalette[5:1]))
+  scale_color_manual(values=c(cbbPalette[1:5], "black", cbbPalette[5:1]))+
+  annotate(geom="text", label="Right better",x=-0.5, y=-0.5)+
+  annotate(geom="text", label="Left better",x=0.5, y=-0.5)+
+  labs(x="Left Bundle Value - Right Bundle Value")
 ```
 
 ```{r}
@@ -151,24 +154,71 @@ Does RT depend similarly on the EV and QV difference (relative preference for ea
 clean_beh_data %>%
   mutate(log_rt = log(reactionTime),
          leftEVAdvBin = as.factor(round(leftEVAdv,1))) %>%
-  group_by(subnum, leftEVAdvBin) %>%
+  group_by(subnum, leftEVAdvBin, probFractalDraw) %>%
   summarise(.groups='keep',
             mean_log_rt = mean(log_rt)) %>%
   ungroup() %>%
-  group_by(leftEVAdvBin) %>%
-  summarise(sem_log_rt = sem(mean_log_rt),
+  group_by(leftEVAdvBin, probFractalDraw) %>%
+  summarise(.groups='keep',sem_log_rt = sem(mean_log_rt),
             mean_log_rt = mean(mean_log_rt)) %>%
+  gather(key, value, -sem_log_rt, -mean_log_rt,-probFractalDraw) %>%
   rbind(clean_beh_data %>%
           mutate(log_rt = log(reactionTime),
                  leftQVAdvBin = as.factor(round(leftQVAdv,1))) %>%
-          group_by(subnum, leftQVAdvBin) %>%
+          group_by(subnum, leftQVAdvBin, probFractalDraw) %>%
           summarise(.groups='keep',
                     mean_log_rt = mean(log_rt)) %>%
           ungroup() %>%
-          group_by(leftQVAdvBin) %>%
-          summarise(sem_log_rt = sem(mean_log_rt),
+          group_by(leftQVAdvBin, probFractalDraw) %>%
+          summarise(.groups='keep',sem_log_rt = sem(mean_log_rt),
                     mean_log_rt = mean(mean_log_rt)) %>%
-          drop_na()) %>%
+          drop_na() %>%
+          gather(key, value, -sem_log_rt, -mean_log_rt, -probFractalDraw)) %>%
+  mutate(probFractalDraw=as.factor(probFractalDraw),
+         value = as.numeric(as.character(value)))%>%
+  ggplot(aes(value, mean_log_rt, color=probFractalDraw))+
+  geom_smooth(method = "lm", formula = y ~ x + I(x^2), alpha=.1)+
+  facet_wrap(~key)+
+  theme(legend.position = "bottom")+
+  guides(color=guide_legend(nrow=2,byrow=TRUE))+
+  scale_color_manual(values=c('#40004b','#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'))+
+  annotate(geom="text", label="Right better",x=-0.5, y=-0.5)+
+  annotate(geom="text", label="Left better",x=0.5, y=-0.5)+
+  labs(x="Attribute Value Difference")
+```
+
+```{r}
+clean_beh_data %>%
+  mutate(log_rt = log(reactionTime),
+         leftEVAdvBin = as.factor(round(leftEVAdv,1))) %>%
+  group_by(subnum, leftEVAdvBin, probFractalDraw) %>%
+  summarise(.groups='keep',
+            mean_log_rt = mean(log_rt)) %>%
+  ungroup() %>%
+  group_by(leftEVAdvBin, probFractalDraw) %>%
+  summarise(.groups='keep',sem_log_rt = sem(mean_log_rt),
+            mean_log_rt = mean(mean_log_rt)) %>%
+  gather(key, value, -sem_log_rt, -mean_log_rt,-probFractalDraw) %>%
+  rbind(clean_beh_data %>%
+          mutate(log_rt = log(reactionTime),
+                 leftQVAdvBin = as.factor(round(leftQVAdv,1))) %>%
+          group_by(subnum, leftQVAdvBin, probFractalDraw) %>%
+          summarise(.groups='keep',
+                    mean_log_rt = mean(log_rt)) %>%
+          ungroup() %>%
+          group_by(leftQVAdvBin, probFractalDraw) %>%
+          summarise(.groups='keep',sem_log_rt = sem(mean_log_rt),
+                    mean_log_rt = mean(mean_log_rt)) %>%
+          drop_na() %>%
+          gather(key, value, -sem_log_rt, -mean_log_rt, -probFractalDraw)) %>%
+  mutate(probFractalDraw=as.factor(probFractalDraw))%>%
+  ggplot(aes(value, mean_log_rt, color=probFractalDraw))+
+  geom_line(aes(group=probFractalDraw))+
+  # geom_errorbar(aes(ymin=mean_log_rt-sem_log_rt, ymax=mean_log_rt+sem_log_rt), width=.2)+
+  facet_wrap(~key)+
+  theme(legend.position = "bottom")+
+  guides(color=guide_legend(nrow=2,byrow=TRUE))+
+  scale_color_manual(values=c('#40004b','#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'))
   
 ```
 

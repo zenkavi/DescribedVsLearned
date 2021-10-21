@@ -1,0 +1,187 @@
+---
+title: "Experience vs. description based decision-making project: Adding arbitration to behavioral modeling"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: 'hide'
+---
+
+Set up environment and load in data
+
+```{r include=FALSE}
+library(tidyverse)
+library(gridExtra)
+library(brms)
+library(here)
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+# theme_set(theme_bw())
+theme_set(theme_classic())
+sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
+helpers_path = here('helpers/')
+```
+
+# Notes on arbitration papers
+
+## Lee, Shimojo, O'Doherty
+
+$Rel_{MB}$ is
+
+Generate possible posteriors and compute the $Rel_{MB}$ they would imply.
+
+Mean of beta distribution
+$$\frac{\alpha}{\alpha+\beta}$$
+
+Variance of beta distribution 
+$$\frac{\alpha\beta}{(\alpha+\beta)^2(\alpha+\beta+1)}$$
+
+```{r}
+get_mean = function(a, b){
+  return (a/(a+b))
+}
+
+get_var = function(a, b){
+  return ((a*b)/((a+b)^2*(a + b + 1)))
+}
+
+get_mean_var_ratio = function(a, b){
+  return (get_mean(a, b)/get_var(a, b))
+}
+```
+
+
+```{r}
+a = 2
+b = 2
+get_mean(a, b)
+get_var(a, b)
+get_mean_var_ratio(a, b)
+```
+
+```{r}
+a = .6235
+b = 2
+# b = 5
+get_mean(a, b)
+get_var(a, b)
+get_mean_var_ratio(a, b)
+```
+
+```{r}
+a = 2
+# a=.5
+b = .6235
+get_mean(a, b)
+get_var(a, b)
+get_mean_var_ratio(a, b)
+```
+
+
+```{r}
+dat = data.frame(c1=rbeta(50000, 2, 2),
+                 c2=rbeta(50000, .6235, 2),
+                 c3=rbeta(50000, 2, .6235))
+
+# dat = data.frame(c1=rbeta(50000, 2, 2),
+#                  c2=rbeta(50000, .6235, 5),
+#                  c3=rbeta(50000, .5, .6235))
+dat %>%
+  gather(key, value) %>%
+  ggplot(aes(value, color=key))+
+  geom_density()+
+  theme(legend.position="bottom")+
+  labs(color="", x="p(SPE=0)")
+
+```
+
+# Reliability of value signal
+
+Get behavioral data with the parameter estimates and **RPE's from the best fitting model for each subject**.
+
+```{r}
+source(paste0(helpers_path, 'save_imaging_events_wBestRpe.R'))
+```
+
+What do the RPEs look like? Is there enough variance in them if you wanted to use their absolute value as a "reliability" signal?
+
+```{r}
+clean_beh_data %>%
+  select(leftFractalRpe, rightFractalRpe) %>%
+  gather(key, value) %>%
+  ggplot(aes(value))+
+  geom_histogram(alpha=.5, bins=30)+
+  facet_wrap(~key)
+```
+
+```{r}
+clean_beh_data %>%
+  select(leftFractalRpe, rightFractalRpe) %>%
+  gather(key, value) %>%
+  ggplot(aes(abs(value)))+
+  geom_histogram(alpha=.5, bins=30)+
+  facet_wrap(~key)
+```
+
+Are absolute RPE distributions similar for both fractals for all subjects or do some subjects learn more/less about one fractal than the other?
+
+```{r}
+clean_beh_data %>%
+  select(leftFractalRpe, rightFractalRpe, subnum) %>%
+  gather(key, value, -subnum) %>%
+  filter(abs(value)>0) %>%
+  ggplot(aes(abs(value), fill=key))+
+  geom_histogram(alpha=.5, bins=30, position="identity")+
+  facet_wrap(~subnum)+
+  theme(legend.position ="bottom")+
+  scale_fill_manual(values=c(cbbPalette[1:2]))+
+  labs(fill="")
+```
+
+Subjects 3, 5, 8, 10, 15, 27 might be learning differently about the two fractals.
+
+```{r}
+clean_beh_data %>%
+  select(leftFractalRpe, rightFractalRpe, subnum) %>%
+  gather(key, value, -subnum) %>%
+  mutate(value=abs(value)) %>% #reliability
+  filter(value>0) %>%
+  group_by(subnum, key) %>%
+  summarise(.groups = 'keep', 
+            sem_val = sem(value), 
+            mean_val = mean(value)) %>%
+  ggplot(aes(subnum, mean_val, fill=key))+
+  geom_bar(stat="identity",position=position_dodge(width = .9), alpha=.5)+
+  geom_errorbar(aes(ymin=mean_val-sem_val, ymax=mean_val+sem_val), position=position_dodge(width = .9), width=.25)+
+  theme(legend.position = "bottom")+
+  scale_fill_manual(values=c(cbbPalette[1:2]))+
+  labs(fill="", y="")
+```
+
+When there is an rpe for at least one fractal how correlated are they for the two fractals for each subject? Would the absolute value of an average rpe be a good reliability signal?
+
+```{r}
+clean_beh_data %>%
+  select(leftFractalRpe, rightFractalRpe, subnum) %>%
+  filter(abs(leftFractalRpe)>0 | abs(rightFractalRpe)>0) %>%
+  ggplot(aes(abs(leftFractalRpe), abs(rightFractalRpe))) +
+  geom_point()+
+  geom_abline(aes(slope=1, intercept=0), linetype="dashed")+
+  facet_wrap(~subnum)
+```
+
+If learning about fractal is **model-free**    
+and  
+choosing based on lotteries in **model-based**  
+then  
+does this reliability signal (abs rpe; but from previous trial?) associate with behavior?
+
+Arbitration should only be relevant when there is a conflict. Conflict isn't just if the value difference between the lotteries and fractals point to different bundles. This would be irrelevant if the trial reward does not depend on one of the attributes as much. Should it be operationalized as high subjective uncertainty (e.g. wpFrac 0.4-0.6)?
+
+arbitration trials: 0.4 < wpFrac < 0.6
+dv: choice left? choice mf (better fractal)? choice mb (better lottery)?
+iv: reliability. absolute value of rpe but which one since there are two for each trial? start with average
+
+```{r}
+  
+```
+

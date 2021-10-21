@@ -121,6 +121,7 @@ clean_beh_data %>%
   geom_histogram(alpha=.5, bins=30)+
   facet_wrap(~key)
 ```
+
 Are absolute RPE distributions similar for both fractals for all subjects or do some subjects learn more/less about one fractal than the other?
 
 ```{r}
@@ -135,6 +136,7 @@ clean_beh_data %>%
   scale_fill_manual(values=c(cbbPalette[1:2]))+
   labs(fill="")
 ```
+
 Subjects 3, 5, 8, 10, 15, 27 might be learning differently about the two fractals.
 
 ```{r}
@@ -183,6 +185,7 @@ iv: reliability. absolute value of rpe but which one since there are two for eac
   
 ```
 
+
 # Response times 
 
 ## RT by relevant attribute
@@ -203,6 +206,14 @@ clean_beh_data %>%
   geom_bar(stat="identity")+
   geom_errorbar(aes(ymin=  mean_log_rt - sem_log_rt, ymax=mean_log_rt + sem_log_rt), width=.2)
 ```
+Same result as above but plotting it using raw rts instead of log rts.
+
+Subjects choose faster the less uncertainty there is about what the reward depends on.
+
+But why might they be additionally faster when the reward depends only on the fractals?
+
+Based on prior psychometric curves we know that when pFrac = 1 choice depends on the QV difference but not the EV difference. So is recall of cached fractal value is faster than EV computation?
+
 
 ```{r}
 clean_beh_data %>%
@@ -218,33 +229,84 @@ clean_beh_data %>%
   geom_errorbar(aes(ymin=  mean_rt - sem_rt, ymax=mean_rt + sem_rt), width=.2)
 
 ```
+Above plots with subjective probability
+
+```{r}
+clean_beh_data %>%
+  mutate(wpFracBin = as.factor(round(wpFrac,1)),
+         log_rt = log(reactionTime)) %>%
+  group_by(subnum, wpFracBin) %>%
+  summarise(mean_rt = mean(reactionTime), 
+            mean_log_rt = mean(log_rt),.groups='keep') %>%
+  ungroup()%>%
+  gather(key, value, -subnum, -wpFracBin) %>%
+  group_by(wpFracBin, key)%>%
+  summarise(sem_rt = sem(value),
+            mean_rt = mean(value),.groups = 'keep') %>%
+  ggplot(aes(wpFracBin, mean_rt))+
+  geom_bar(stat="identity")+
+  geom_errorbar(aes(ymin=  mean_rt - sem_rt, ymax=mean_rt + sem_rt), width=.2)+
+  labs(x="Subjective probFractalDraw")+
+  facet_grid(key~., scales='free_y')
+```
+
 ## RT by bundle value difference
 
 ```{r}
 clean_beh_data %>%
+  filter(abs(round(leftBundleValAdv, 1)) < .8) %>%
   mutate(probFractalDraw = as.factor(probFractalDraw),
-         logRt = log(reactionTime)) %>%
-  ggplot(aes(leftBundleValAdv, reactionTime, color=probFractalDraw))+
-  geom_smooth(method = "lm", formula = y ~ x + I(x^2), se=FALSE)+
+         leftBundleValAdvBin = as.factor(round(leftBundleValAdv, 1)),
+         log_rt = log(reactionTime)) %>%
+  group_by(subnum, probFractalDraw, leftBundleValAdvBin) %>%
+  summarise(.groups='keep',
+            mean_log_rt = mean(log_rt)) %>%
+  ungroup() %>%
+  group_by(probFractalDraw, leftBundleValAdvBin) %>%
+  summarise(.groups='keep',
+            sem_log_rt = sem(mean_log_rt),
+            mean_log_rt = mean(mean_log_rt)) %>%
+  drop_na()%>%
+  mutate(facetGroup = ifelse(as.numeric(as.character(probFractalDraw))<.6, "pFrac < .6","pFrac > .5")) %>%
+  mutate(leftBundleValAdvBin = as.numeric(as.character(leftBundleValAdvBin)))%>%
+  ggplot(aes(leftBundleValAdvBin, mean_log_rt, color=probFractalDraw))+
+  geom_smooth(method = "lm", formula = y ~ x + I(x^2), alpha=.1)+
+  facet_wrap(~facetGroup)+
   theme(legend.position = "bottom")+
-  labs(x="Bundle value difference", color="") +
-  guides(color=guide_legend(nrow=1,byrow=TRUE))
+  guides(color=guide_legend(nrow=2,byrow=TRUE))+
+  scale_color_manual(values=c(cbbPalette[1:5], "black", cbbPalette[5:1]))
 ```
-Does RT depend similarly on the EV and QV difference at each level of prob fractal draw?
 
 ```{r}
 clean_beh_data %>%
-  mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
-  select(probFractalDraw, leftQVAdv, leftEVAdv, reactionTime) %>%
-  mutate(leftQVAdv = round(leftQVAdv, 1)) %>%
-  gather(key, value, -probFractalDraw, -reactionTime) %>%
-  group_by(key, value, probFractalDraw) %>%
-  summarise(mean_rt = mean(reactionTime),
-            sem_rt = sem(reactionTime), .groups='keep') %>%
-  ggplot(aes(value, mean_rt))+
-  geom_point()+
-  geom_errorbar(aes(ymin=mean_rt-sem_rt, ymax=mean_rt+sem_rt))+
-  facet_grid()
+  # filter(abs(round(leftBundleValAdv, 1)) < .8) %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw),
+         leftBundleValAdvBin = as.factor(round(leftBundleValAdv, 1)),
+         log_rt = log(reactionTime)) %>%
+  group_by(subnum, probFractalDraw, leftBundleValAdvBin) %>%
+  summarise(.groups='keep',
+            mean_log_rt = mean(log_rt)) %>%
+  ungroup() %>%
+  group_by(probFractalDraw, leftBundleValAdvBin) %>%
+  summarise(.groups='keep',
+            sem_log_rt = sem(mean_log_rt),
+            mean_log_rt = mean(mean_log_rt)) %>%
+  mutate(facetGroup = ifelse(as.numeric(as.character(probFractalDraw))<.6, "pFrac < .6","pFrac > .5")) %>%
+  drop_na()%>%
+  ggplot(aes(leftBundleValAdvBin, mean_log_rt, color=probFractalDraw))+
+  geom_line(aes(group=probFractalDraw))+
+  geom_errorbar(aes(ymin= mean_log_rt-sem_log_rt, ymax=mean_log_rt+sem_log_rt), width=.2, alpha=.3)+
+  facet_wrap(~facetGroup)+
+  theme(legend.position = "bottom")+
+  guides(color=guide_legend(nrow=2,byrow=TRUE))+
+  scale_color_manual(values=c(cbbPalette[1:5], "black", cbbPalette[5:1]))
+```
+
+Does RT depend similarly on the EV and QV difference (relative preference for each attribute) at each level of prob fractal draw?
+
+```{r}
+clean_beh_data 
+
 ```
 
 ## RT by prob distortion 

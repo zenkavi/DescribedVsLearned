@@ -102,14 +102,12 @@ clean_beh_data %>%
   mutate(probFractalDraw = as.factor(probFractalDraw),
          leftBundleValAdvBin = as.factor(round(leftBundleValAdv, 1)),
          log_rt = log(reactionTime)) %>%
-  mutate(facetGroup = ifelse(as.numeric(as.character(probFractalDraw))<.6, "pFrac < .6","pFrac > .5")) %>%
   mutate(leftBundleValAdvBin = as.numeric(as.character(leftBundleValAdvBin)))%>%
   ggplot(aes(leftBundleValAdvBin, log_rt, color=probFractalDraw))+
   geom_smooth(method = "lm", formula = y ~ x + I(x^2), alpha=.1)+
-  facet_wrap(~facetGroup)+
   theme(legend.position = "bottom")+
   guides(color=guide_legend(nrow=2,byrow=TRUE))+
-  scale_color_manual(values=c(cbbPalette[1:5], "black", cbbPalette[5:1]))+
+  scale_color_manual(values=c('#40004b','#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'))+
   annotate(geom="text", label="Right better",x=-0.5, y=-0.8)+
   annotate(geom="text", label="Left better",x=0.5, y=-0.8)+
   labs(x="Left Bundle Value - Right Bundle Value")
@@ -130,15 +128,16 @@ clean_beh_data %>%
   summarise(.groups='keep',
             sem_log_rt = sem(mean_log_rt),
             mean_log_rt = mean(mean_log_rt)) %>%
-  mutate(facetGroup = ifelse(as.numeric(as.character(probFractalDraw))<.6, "pFrac < .6","pFrac > .5")) %>%
   drop_na()%>%
   ggplot(aes(leftBundleValAdvBin, mean_log_rt, color=probFractalDraw))+
   geom_line(aes(group=probFractalDraw))+
   geom_errorbar(aes(ymin= mean_log_rt-sem_log_rt, ymax=mean_log_rt+sem_log_rt), width=.2, alpha=.3)+
-  facet_wrap(~facetGroup)+
   theme(legend.position = "bottom")+
   guides(color=guide_legend(nrow=2,byrow=TRUE))+
-  scale_color_manual(values=c(cbbPalette[1:5], "black", cbbPalette[5:1]))
+  scale_color_manual(values=c('#40004b','#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'))+
+  annotate(geom="text", label="Right better",x=2, y=-0.8)+
+  annotate(geom="text", label="Left better",x=14, y=-0.8)+
+  labs(x="Left Bundle Value - Right Bundle Value")
 ```
 
 ### RT by attribute value difference
@@ -208,6 +207,14 @@ clean_beh_data %>%
 ### RT by relative strength of preference
 
 ```{r}
+clean_beh_data %>%
+  mutate(absEVDiff = abs(leftEVAdv),
+         absQVDiff = abs(leftQVAdv),
+         weightedAbsEVDiff = (1-probFractalDraw)*absEVDiff,
+         weightedAbsQVDiff = (probFractalDraw)*absQVDiff,
+         weightedRelPrefStr = weightedAbsEVDiff/(weightedAbsQVDiff+1e-6)) %>%
+  ggplot(aes(log(weightedRelPrefStr+1e-4)))+
+  geom_histogram(bins=30)
 
 ```
 

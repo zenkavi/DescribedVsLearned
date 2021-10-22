@@ -27,6 +27,46 @@ source(paste0(helpers_path, 'save_imaging_events_wBestRpe.R'))
 
 # Stylized facts
 
+## Relative strength of preference
+
+[Previously we briefly looked at](https://zenkavi.github.io/DescribedVsLearned_beh/analysis_nbs/NB3_psychometrics_logits.html) how trials might be grouped as conflict vs. non-conflict. This was a crude measure because it was a binary measure that checked whether both attribute values (EV and QV) for a bundle were better than the other bundle's. But it did not take into account how relevant each attribute was for that trial's reward. For example, for a trial where the probFractalDraw is 0 the fact that the fractals point to a different bundle as the better option compared to the lotteries should not matter since they have no bearing on the trial's reward.
+
+A more refined measure would be the relative strength of preference. Here we operationalize this as the ration of subjectively weighted absolute value differences for each attribute. It is plotted on a log scale due a long tail. Therefore 0 is where the weighted value difference ratio is 1 (no stronger relative preference across the attributes), positive values are where the ratio is >1 (relative preference for lotteries is larger than for relative preference for fractals), negative values are where the ration is <1 (relative preference for fractals is larger than that for lotteries).
+
+```{r}
+clean_beh_data = clean_beh_data %>%
+  mutate(absEVDiff = abs(leftEVAdv),
+         absQVDiff = abs(leftQVAdv),
+         weightedAbsEVDiff = (1-wpFrac)*absEVDiff,
+         weightedAbsQVDiff = (wpFrac)*absQVDiff,
+         weightedAbsValDiffRatio = weightedAbsEVDiff/(weightedAbsQVDiff+1e-6),
+         logWeightedAbsValDiffRatio = log(weightedAbsValDiffRatio+1e-5)) 
+```
+
+```{r}
+clean_beh_data %>%
+  ggplot(aes(log(weightedAbsValDiffRatio+1e-5)))+
+  # ggplot(aes(weightedAbsValDiffRatio))+
+  geom_histogram(bins=30)+
+  geom_vline(aes(xintercept=0), linetype="dashed", color="dark red")+
+  annotate(geom = "text", label = "Stronger fractal \nrelative preference", x=-8, y=1000)+
+  annotate(geom = "text", label = "Stronger lottery \nrelative preference", x=8, y=1000)
+```
+
+For most subjects there are more trials where the relative preference for lotteries is stronger.
+
+```{r}
+clean_beh_data %>%
+  mutate(logWeightedAbsValDiffRatio = log(weightedAbsValDiffRatio+1e-5),
+         fractalRelativePref = ifelse(logWeightedAbsValDiffRatio<0, 1, 0)) %>%
+  group_by(subnum) %>%
+  summarise(propFractalRelativePref = round(sum(fractalRelativePref)/n(), 2)) %>%
+  ggplot(aes(propFractalRelativePref))+
+  geom_histogram(bins=10)+
+  geom_vline(aes(xintercept=0.5), linetype="dashed", color="dark red", size=1.5)+
+  xlab("Proportion of trials with stronger relative preference between fractals")
+```
+
 ## Response times 
 
 ### RT by relevant attribute
@@ -44,7 +84,7 @@ clean_beh_data %>%
   summarise(sem_log_rt = sem(mean_log_rt),
             mean_log_rt = mean(mean_log_rt)) %>%
   ggplot(aes(probFractalDraw, mean_log_rt))+
-  geom_bar(stat="identity")+
+  geom_point()+
   geom_errorbar(aes(ymin=  mean_log_rt - sem_log_rt, ymax=mean_log_rt + sem_log_rt), width=.2)
 ```
 
@@ -67,7 +107,7 @@ clean_beh_data %>%
   summarise(sem_rt = sem(mean_rt),
             mean_rt = mean(mean_rt)) %>%
   ggplot(aes(probFractalDraw, mean_rt))+
-  geom_bar(stat="identity")+
+  geom_point()+
   geom_errorbar(aes(ymin=  mean_rt - sem_rt, ymax=mean_rt + sem_rt), width=.2)
 
 ```
@@ -86,7 +126,7 @@ clean_beh_data %>%
   summarise(sem_rt = sem(value),
             mean_rt = mean(value),.groups = 'keep') %>%
   ggplot(aes(wpFracBin, mean_rt))+
-  geom_bar(stat="identity")+
+  geom_point()+
   geom_errorbar(aes(ymin=  mean_rt - sem_rt, ymax=mean_rt + sem_rt), width=.2)+
   labs(x="Subjective probFractalDraw")+
   facet_grid(key~., scales='free_y')
@@ -98,11 +138,10 @@ Plot below smooths across all subjects
 
 ```{r}
 clean_beh_data %>%
-  filter(abs(round(leftBundleValAdv, 1)) < .8) %>%
+  filter(abs(round(leftBundleValAdv, 1)) < .8) %>% #Excluding one subjects trials with outlier value estimates
   mutate(probFractalDraw = as.factor(probFractalDraw),
-         leftBundleValAdvBin = as.factor(round(leftBundleValAdv, 1)),
+         leftBundleValAdvBin = round(leftBundleValAdv, 1),
          log_rt = log(reactionTime)) %>%
-  mutate(leftBundleValAdvBin = as.numeric(as.character(leftBundleValAdvBin)))%>%
   ggplot(aes(leftBundleValAdvBin, log_rt, color=probFractalDraw))+
   geom_smooth(method = "lm", formula = y ~ x + I(x^2), alpha=.1)+
   theme(legend.position = "bottom")+
@@ -167,6 +206,7 @@ clean_beh_data %>%
   annotate(geom="text", label="Left better",x=0.5, y=-1)+
   labs(x="Attribute Value Difference")
 ```
+
 Noisier version of the above graph with averaging instead of smoothing (not shown)
 
 ```{r eval=FALSE}
@@ -208,22 +248,87 @@ clean_beh_data %>%
 
 ```{r}
 clean_beh_data %>%
-  mutate(absEVDiff = abs(leftEVAdv),
-         absQVDiff = abs(leftQVAdv),
-         weightedAbsEVDiff = (1-probFractalDraw)*absEVDiff,
-         weightedAbsQVDiff = (probFractalDraw)*absQVDiff,
-         weightedRelPrefStr = weightedAbsEVDiff/(weightedAbsQVDiff+1e-6)) %>%
-  ggplot(aes(log(weightedRelPrefStr+1e-4)))+
-  geom_histogram(bins=30)
+  mutate(log_rt = log(reactionTime),
+         logWeightedAbsValDiffRatio = log(weightedAbsValDiffRatio+1e-5),
+         probFractalDraw=as.factor(probFractalDraw)) %>%
+  # filter(probFractalDraw == "0") %>%
+  # select(logWeightedAbsValDiffRatio, log_rt)
+  ggplot(aes(logWeightedAbsValDiffRatio, log_rt, color=probFractalDraw))+
+  geom_smooth(method = "lm", formula = y ~ x + I(x^2), alpha=.1)+
+  theme(legend.position = "bottom")+
+  guides(color=guide_legend(nrow=2,byrow=TRUE))+
+  scale_color_manual(values=c('#40004b','#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'))+
+  annotate(geom="text", label="Bigger fractal difference",x=-8, y=-0.2)+
+  annotate(geom="text", label="Bigger lottery difference",x=8, y=-0.2)
+```
 
+Does the relative preference for both attributes affect RT the same way?
+
+```{r}
+clean_beh_data %>%
+  mutate(weightedAbsEVDiff = (1-wpFrac)*abs(leftEVAdv),
+         weightedAbsQVDiff = (wpFrac)*abs(leftQVAdv),
+         log_rt = log(reactionTime),
+         probFractalDraw = as.factor(probFractalDraw)) %>%
+  select(weightedAbsEVDiff, weightedAbsQVDiff, log_rt, probFractalDraw) %>%
+  gather(key, value, -log_rt, -probFractalDraw) %>%
+  ggplot(aes(value, log_rt, color=probFractalDraw))+
+  geom_smooth(method = "lm", formula = y ~ x, alpha=.1)+
+  facet_wrap(~key)+
+  theme(legend.position = "bottom")+
+  guides(color=guide_legend(nrow=2,byrow=TRUE))+
+  scale_color_manual(values=c('#40004b','#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'))+
+  xlab("")
+```
+
+### RT plots from dissertation
+
+RT by absolute attribute value difference
+
+```{r}
+clean_beh_data %>%
+  mutate(absLeftEVAdvBin = as.factor(abs(round(leftEVAdv,1)))) %>%
+  select(reactionTime, absLeftEVAdvBin, probFractalDraw) %>%
+  gather(key, value, -reactionTime, -probFractalDraw) %>%
+  rbind(clean_beh_data %>%
+          mutate(absLeftQVAdvBin = as.factor(abs(round(leftQVAdv,1)))) %>%
+          select(reactionTime, absLeftQVAdvBin, probFractalDraw) %>%
+          gather(key, value, -reactionTime, -probFractalDraw)) %>%
+  mutate(probFractalDraw=as.factor(probFractalDraw),
+         value = as.numeric(as.character(value)))%>%
+  ggplot(aes(value, reactionTime, color=probFractalDraw))+
+  geom_smooth(method = "lm", formula = y ~ x, alpha=.1)+
+  facet_wrap(~key, scales='free_x')+
+  theme(legend.position = "bottom")+
+  guides(color=guide_legend(nrow=2,byrow=TRUE))+
+  scale_color_manual(values=c('#40004b','#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'))+
+  labs(x="Attribute Value Difference")
+```
+
+RT by subjective weighted value difference $(1-wpFrac)(EV_L- EV_R) + (wPFrac)*(QV_L - QV_R)$ split by conflict vs non-conflict
+
+```{r}
+clean_beh_data %>%
+  filter(abs(round(leftBundleValAdv, 1)) < .8) %>%
+  mutate(wpFracLeftBundleValAdv = (1-wpFrac)*(leftEVAdv) + (wpFrac)*(leftQVAdv)) %>%
+  ggplot(aes(wpFracLeftBundleValAdv, reactionTime, color=conflictTrial))+
+  geom_smooth(method = "lm", formula = y ~ x+ I(x^2), alpha=.1)+
+  theme(legend.position = "bottom")+
+  guides(color=guide_legend(nrow=1,byrow=TRUE))+
+  scale_color_manual(values=c(cbbPalette[1:2]))+
+  annotate(geom="text", label="Right better",x=-0.5, y=0.6)+
+  annotate(geom="text", label="Left better",x=0.5, y=0.6)+
+  labs(x="Weighted (Left Bundle Value - Right Bundle Value)")
 ```
 
 ## Choice
 
-# Relative strength of preference
-
-EV_diff/QV_diff
+Logits by relative strength of preference
 
 ```{r}
-
+m = brm(choseBetterLottery ~ probFractalDraw + logWeightedAbsValDiffRatio + (1|subnum),
+            data=clean_beh_data, family=bernoulli(link="logit"), silent=2, refresh=0)
 ```
+
+
+

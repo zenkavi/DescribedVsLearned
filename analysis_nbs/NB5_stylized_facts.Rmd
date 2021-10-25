@@ -66,6 +66,24 @@ clean_beh_data %>%
   guides(color=guide_legend(nrow=2,byrow=TRUE))+
   scale_color_manual(values=c('#40004b','#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'))
 ```
+What do the distributions of the weighted differences look like for each attribute? For Q-values it is mostly continuous whereas for the EV's there only three values for each level of relevance.
+
+```{r}
+clean_beh_data %>%
+  select(weightedAbsEVDiff, weightedAbsQVDiff, probFractalDraw) %>%
+  gather(key, value, -probFractalDraw) %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
+  ggplot(aes(value, fill=probFractalDraw))+
+  geom_histogram(bins=30, position="identity") +
+  facet_grid(probFractalDraw~key)+
+  theme(legend.position = "none")+
+  guides(fill=guide_legend(nrow=2,byrow=TRUE))+
+  scale_fill_manual(values=c('#40004b','#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'))+
+  labs(x="Weighted absolute Attribute Value Difference")
+```
+```{r}
+with(clean_beh_data, table(probFractalDraw, weightedAbsEVDiff))
+```
 
 ## Response times 
 
@@ -169,27 +187,29 @@ clean_beh_data %>%
   ggplot(aes(value, log_rt, color=probFractalDraw))+
   geom_smooth(method = "lm", formula = y ~ x, alpha=.1)+
   facet_wrap(~key, scales='free_x')+
+  # facet_grid(probFractalDraw ~ key)+
   theme(legend.position = "bottom")+
   guides(color=guide_legend(nrow=2,byrow=TRUE))+
   scale_color_manual(values=c('#40004b','#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'))+
   labs(x="Weighted absolute Attribute Value Difference")
 ```
-
+- The slope of the weightedAbsQVDiff for probFractalDraw = 0 is not different than the other levels of probFractalDraw.
+- The average slope of weightedAbsQVDiff for all levels of probFractalDraw is significantly >0 (odd) but becomes significantly <0 as probFractalDraw increases. Decisions become faster the larger the weighted value difference between the fractals as fractals become more relevant.
+- The average slope of weightedAbsEVDiff is significantly <0 (i.e. the larger the value difference the faster the choice) but it also significantly flattens out (i.e. depends less on the lottery value difference) as probFractalDraw increases and the lotteries become less relevant for the reward.
 
 ```{r}
-clean_beh_data %>%
-  mutate(weightedAbsEVDiff = as.factor(weightedAbsEVDiff)) %>%
-  group_by(weightedAbsEVDiff, subnum) %>%
-  summarise(.groups='keep',
-            meanWeightedAbsQVDiff = mean(weightedAbsQVDiff)) %>%
-  ungroup() %>%
-  group_by(weightedAbsEVDiff) %>%
-  summarise(semWeightedAbsQVDiff = sem(meanWeightedAbsQVDiff),
-            meanWeightedAbsQVDiff = mean(meanWeightedAbsQVDiff)) %>%
-  ggplot(aes(weightedAbsEVDiff, meanWeightedAbsQVDiff))+
-  geom_point()+
-  geom_errorbar(aes(ymin = meanWeightedAbsQVDiff - semWeightedAbsQVDiff, 
-                    ymax = meanWeightedAbsQVDiff + semWeightedAbsQVDiff), width=.2)
+tmp = clean_beh_data %>% mutate(pFracOne = as.factor(ifelse(probFractalDraw == 1, 1, 0)))
+
+m = brm(log_rt ~ probFractalDraw + pFracOne +
+          weightedAbsEVDiff + weightedAbsQVDiff + 
+          probFractalDraw:weightedAbsEVDiff + probFractalDraw:weightedAbsQVDiff + 
+         pFracOne:weightedAbsQVDiff + 
+          (1|subnum), 
+        data=tmp, silent=2, refresh=0)
+```
+
+```{r}
+summary(m)
 ```
 
 ## Choice
@@ -197,7 +217,7 @@ clean_beh_data %>%
 Logit by relative strength of preference
 
 ```{r}
-m = brm(choseBetterLottery ~ probFractalDraw + logWeightedAbsValDiffRatio + (1|subnum),
+m = brm(choseBetterLottery ~ probFractalDraw * logWeightedAbsValDiffRatio + (1|subnum),
             data=clean_beh_data, family=bernoulli(link="logit"), silent=2, refresh=0)
 ```
 
@@ -205,3 +225,20 @@ m = brm(choseBetterLottery ~ probFractalDraw + logWeightedAbsValDiffRatio + (1|s
 summary(m)
 ```
 
+Subjects are more likely to choose the bundle with the better lottery the larger the lottery value difference (compared to the fractal value difference) but this effect decreases as the relevance of lotteries for the trial reward decreases.
+
+```{r}
+clean_beh_data %>%
+  mutate(probFractalDraw=as.factor(probFractalDraw)) %>%
+  filter(probFractalDraw != "0" & probFractalDraw != "1") %>%
+  ggplot(aes(logWeightedAbsValDiffRatio, choseBetterLottery, color=probFractalDraw))+
+  # geom_point()+
+  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, alpha=.1)+
+  theme(legend.position = "bottom")+
+  guides(color=guide_legend(nrow=2,byrow=TRUE))+
+  scale_color_manual(values=c('#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'))+
+  annotate(geom="text", label="Bigger fractal difference",x=-8, y=0.3)+
+  annotate(geom="text", label="Bigger lottery difference",x=8, y=0.3)
+```
+
+What else has been listed as a "marker of arbitration" in papers?

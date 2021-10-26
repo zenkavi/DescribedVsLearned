@@ -241,4 +241,30 @@ clean_beh_data %>%
   annotate(geom="text", label="Bigger lottery difference",x=8, y=0.3)
 ```
 
-What else has been listed as a "marker of arbitration" in papers?
+# Behavioral analyses from "arbitration papers"
+
+## Lee, Shimojo, O'Doherty (2014):
+
+Model-based dominant condition is more sensitive to uncertainty
+
+```{r}
+
+```
+
+Choice in model-based governed trials is more "flexible"
+
+```{r}
+
+```
+
+Model-based control generates "state prediction errors"
+
+```{r}
+
+```
+
+Model-based dominant condition has slower response times than model-free dominant condition
+
+```{r}
+
+```

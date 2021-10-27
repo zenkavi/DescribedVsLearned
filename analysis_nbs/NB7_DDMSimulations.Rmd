@@ -1,0 +1,66 @@
+---
+title: "Experience vs. description based decision-making project: Adding arbitration to behavioral modeling"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: 'hide'
+---
+
+Set up environment and load in data
+
+```{r include=FALSE}
+library(tidyverse)
+library(gridExtra)
+library(brms)
+library(here)
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+# theme_set(theme_bw())
+theme_set(theme_classic())
+sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
+helpers_path = here('helpers/')
+```
+
+```{r}
+simulate_trial = function(d, sigma, EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxT=1000){
+  
+  # d : drift rate
+  # sigma: sd of the normal distribution 
+  # timeStep: in ms
+  
+  RDV = bias
+  time = 0
+  elapsedNDT = 0
+  choice = 0
+  RT = NA
+  
+  while (time<maxT){
+    
+    # If the RDV hit one of the barriers, the trial is over.
+    if RDV >= barrier or RDV <= -barrier{
+      RT = time * timeStep
+      if RDV >= barrier{
+        choice = -1
+      } else if RDV <= -barrier{
+        choice = 1
+      }
+      break
+    } 
+    
+    
+    if elapsedNDT < nonDecisionTime / timeStep{
+      mean = 0
+      elapsedNDT += 1
+    } else{
+      mean = d * (valueLeft - valueRight)
+    }
+    
+    # Sample the change in RDV from the distribution.
+    RDV += np.random.normal(mean, self.sigma)
+    
+    time += 1
+  }
+  
+  return(list(choice=choice, RT=RT))
+}
+```

@@ -212,6 +212,16 @@ m = brm(log_rt ~ probFractalDraw + pFracOne +
 summary(m)
 ```
 
+### RT distributions
+
+```{r}
+clean_beh_data %>%
+  mutate(choiceLeft = as.factor(choiceLeft)) %>%
+  ggplot(aes(reactionTime, color=choiceLeft))+
+  geom_histogram(bins=100, position="identity", fill=NA, aes(y=..density..))+
+  geom_density()
+```
+
 ## Choice
 
 Logit by relative strength of preference
@@ -250,7 +260,7 @@ Model-based dominant condition is more sensitive to uncertainty
 ```{r}
 
 ```
-
+ 
 Choice in model-based governed trials is more "flexible"
 
 ```{r}
@@ -268,3 +278,18 @@ Model-based dominant condition has slower response times than model-free dominan
 ```{r}
 
 ```
+
+## Kool, Cushman, Gershman (2016)
+
+Does this task create a trade-off between control and accuracy? Would you be more accurate if you always decided based on the lottery EVs? No.
+
+```{r}
+
+```
+
+How similar do we think the decision process in this task is to a two-step task? The subjects make one decision but do we think it is broken into steps (e.g. decide which attribute to decide by and then choose the bundle with the better attribute)?
+
+```{r}
+
+```
+

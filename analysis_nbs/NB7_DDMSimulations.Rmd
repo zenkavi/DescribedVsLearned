@@ -137,20 +137,122 @@ sub_data = clean_beh_data %>%
 Simulate data for filtered subjects with same DDM parameters for everyone
 
 ```{r}
-sim_sub_data = sim_task(sub_data = sub_data, d = .05, sigma = .05, nonDecisionTime = 300)
+sim_sub_data1 = sim_task(sub_data = sub_data, d = .05, sigma = .05, nonDecisionTime = 300)
 ```
 
 Compare simulated data to true data
 
 ```{r}
-comp_sub_df = sim_sub_data %>%
+comp_sub_df = sim_sub_data1 %>%
   mutate(choiceLeft = ifelse(choice=="left", 1, 0),
-         data_type = "sim",
+         data_type = "sim1",
          subnum = sub_data$subnum) %>%
   select(-choice) %>%
   rbind(sub_data %>%
           rename(EVLeft = leftLotteryEV, EVRight=rightLotteryEV, QVLeft=rightQValue, QVRight=leftQValue) %>%
           mutate(data_type="true"))
+```
+
+```{r}
+comp_sub_df %>%
+  drop_na() %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw),
+         log_rt = log(reactionTime)) %>%
+  group_by(data_type, probFractalDraw, subnum) %>%
+  summarise(.groups = 'keep', 
+            mean_log_rt = mean(log_rt), 
+            sem_log_rt = sem(log_rt)) %>%
+  ggplot(aes(probFractalDraw, mean_log_rt, color=data_type))+
+  geom_point(position=position_dodge(width=.75))+
+  geom_errorbar(aes(ymin = mean_log_rt - sem_log_rt, ymax = mean_log_rt + sem_log_rt), position=position_dodge(width=.75), width=.2)+
+  facet_grid(subnum~.)
+```
+
+Start integrating about the fractals before the stimulus screen is presented
+
+```{r}
+sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=1000, ...){
+  
+  # d : drift rate
+  # sigma: sd of the normal distribution 
+  # timeStep: in ms
+  # nonDecisionTime: in ms
+  # maxIter: num max samples. if a barrier isn't hit by this sampling of evidence no decision is made. If time step is 10ms and maxIter is 1000 this would be a 10sec timeout maximum
+  
+  RDV = bias
+  time = 0
+  elapsedNDT = 0
+  choice = 0
+  RT = NA
+  
+  kwargs = list(...)
+  EVLeft=kwargs$EVLeft
+  EVRight=kwargs$EVRight
+  QVLeft=kwargs$QVLeft
+  QVRight=kwargs$QVRight
+  probFractalDraw=kwargs$probFractalDraw
+  stimDelay = 2000 #Stimulus screen comes on 2 secs after the presentation of probFractalDraw
+        
+  while (time<maxIter){
+    
+    # If the RDV hit one of the barriers, the trial is over.
+    if (RDV >= barrier | RDV <= -barrier){
+      RT = (time * timeStep)/1000 #convert ms back to secs
+      if (RDV >= barrier){
+        choice = "left"
+      } else if (RDV <= -barrier){
+        choice = "right"
+      }
+      break
+    } 
+    
+    # nonDecisionTime/timeStep gives how many sampling iterations the nonDecisionTime corresponds to
+    # If elapsed time is less than the number of sampling iterations required for the nonDecisionTime set evidence sampling distribution mean to 0 so any move from starting point would only be noise
+    if (elapsedNDT < (nonDecisionTime / timeStep)){
+      mean = 0
+      elapsedNDT = elapsedNDT + 1
+    } else{
+      # NDT has passed but stim hasn't been presented yet
+      # integration begins using only QVs
+      if (time < (stimDelay / timeStep)){
+        mean = d*probFractalDraw*(QVLeft - QVRight)
+      } else{ 
+        # stim has been presented. integration of both attributes continues
+        valueLeft = probFractalDraw*QVLeft + (1-probFractalDraw)*(EVLeft)
+        valueRight = probFractalDraw*QVRight + (1-probFractalDraw)*(EVRight)
+        mean = d*(valueLeft - valueRight)
+      }
+      
+    }
+    
+    # Sample the change in RDV from the distribution.
+    RDV = RDV + rnorm(1, mean, sigma)
+    
+    # Increment sampling iteration
+    time = time + 1
+  }
+  
+  #Organize output 
+  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT)
+  return(out)
+}
+```
+
+Simulate data for filtered subjects with same DDM parameters for everyone
+
+```{r}
+sim_sub_data2 = sim_task(sub_data = sub_data, d = .05, sigma = .05, nonDecisionTime = 300)
+```
+
+Compare simulated data to true data
+
+```{r}
+comp_sub_df = sim_sub_data2 %>%
+  mutate(choiceLeft = ifelse(choice=="left", 1, 0),
+         data_type = "sim2",
+         subnum = sub_data$subnum) %>%
+  select(-choice) %>%
+  rbind(comp_sub_df)
 ```
 
 ```{r}

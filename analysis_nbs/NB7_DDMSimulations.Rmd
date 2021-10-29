@@ -35,20 +35,20 @@ Helper function that loops provided task conditions to generate simulated trials
 ```{r}
 sim_task = function(sub_data, ...){
   kwargs = list(...)
-  if (!"nonDecisionTime" %in% kwargs){
+  if (!("nonDecisionTime" %in% kwargs)){
     kwargs$nonDecisionTime = 0
   }
   
   out = data.frame(EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, probFractalDraw = NA, choice = NA, reactionTime = NA)
   for(i in 1:nrow(sub_data)) {
-
+    
     cur_out = sim_trial(d=kwargs$d, sigma = kwargs$sigma, nonDecisionTime = kwargs$nonDecisionTime,
                         EVLeft=sub_data$leftLotteryEV[i], EVRight = sub_data$rightLotteryEV[i], 
                         QVLeft = sub_data$leftQValue[i], QVRight= sub_data$rightQValue[i] , 
                         probFractalDraw = sub_data$probFractalDraw[i])
     
     out = rbind(out, cur_out)
-
+    
   }
   
   # Drops only first row instead of all NAs to keep trials where iterations timed out and a decision was not made
@@ -58,7 +58,9 @@ sim_task = function(sub_data, ...){
 }
 ```
 
-Expanded DDM that can take task specific arguments as input
+## Model 1:
+
+DDM that can take our task specific arguments as input
 
 ```{r}
 sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=1000, ...){
@@ -81,7 +83,7 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
   QVLeft=kwargs$QVLeft
   QVRight=kwargs$QVRight
   probFractalDraw=kwargs$probFractalDraw
-        
+  
   while (time<maxIter){
     
     # If the RDV hit one of the barriers, the trial is over.
@@ -137,7 +139,7 @@ sub_data = clean_beh_data %>%
 Simulate data for filtered subjects with same DDM parameters for everyone
 
 ```{r}
-sim_sub_data1 = sim_task(sub_data = sub_data, d = .05, sigma = .05, nonDecisionTime = 300)
+sim_sub_data1 = sim_task(sub_data = sub_data, d = .02, sigma = .05, nonDecisionTime = 300)
 ```
 
 Compare simulated data to true data
@@ -153,20 +155,7 @@ comp_sub_df = sim_sub_data1 %>%
           mutate(data_type="true"))
 ```
 
-```{r}
-comp_sub_df %>%
-  drop_na() %>%
-  mutate(probFractalDraw = as.factor(probFractalDraw),
-         log_rt = log(reactionTime)) %>%
-  group_by(data_type, probFractalDraw, subnum) %>%
-  summarise(.groups = 'keep', 
-            mean_log_rt = mean(log_rt), 
-            sem_log_rt = sem(log_rt)) %>%
-  ggplot(aes(probFractalDraw, mean_log_rt, color=data_type))+
-  geom_point(position=position_dodge(width=.75))+
-  geom_errorbar(aes(ymin = mean_log_rt - sem_log_rt, ymax = mean_log_rt + sem_log_rt), position=position_dodge(width=.75), width=.2)+
-  facet_grid(subnum~.)
-```
+## Model 2:
 
 Start integrating about the fractals before the stimulus screen is presented
 
@@ -192,12 +181,18 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
   QVRight=kwargs$QVRight
   probFractalDraw=kwargs$probFractalDraw
   stimDelay = 2000 #Stimulus screen comes on 2 secs after the presentation of probFractalDraw
-        
+  stimDelayIters = stimDelay / timeStep
+  
   while (time<maxIter){
     
     # If the RDV hit one of the barriers, the trial is over.
     if (RDV >= barrier | RDV <= -barrier){
       RT = (time * timeStep)/1000 #convert ms back to secs
+      
+      # if (RT<stimDelay/1000){
+      #   RT=nonDecisionTime
+      # }
+      
       if (RDV >= barrier){
         choice = "left"
       } else if (RDV <= -barrier){
@@ -206,24 +201,23 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
       break
     } 
     
-    # nonDecisionTime/timeStep gives how many sampling iterations the nonDecisionTime corresponds to
-    # If elapsed time is less than the number of sampling iterations required for the nonDecisionTime set evidence sampling distribution mean to 0 so any move from starting point would only be noise
-    if (elapsedNDT < (nonDecisionTime / timeStep)){
-      mean = 0
-      elapsedNDT = elapsedNDT + 1
-    } else{
-      # NDT has passed but stim hasn't been presented yet
-      # integration begins using only QVs
-      if (time < (stimDelay / timeStep)){
-        mean = d*probFractalDraw*(QVLeft - QVRight)
-      } else{ 
-        # stim has been presented. integration of both attributes continues
-        valueLeft = probFractalDraw*QVLeft + (1-probFractalDraw)*(EVLeft)
-        valueRight = probFractalDraw*QVRight + (1-probFractalDraw)*(EVRight)
-        mean = d*(valueLeft - valueRight)
-      }
+    # Stim hasn't been presented yet
+    # integration begins using only QVs
+    if (time < stimDelayIters){
+      mean = d*probFractalDraw*(QVLeft - QVRight)
+    } else{ 
+      if (elapsedNDT < (nonDecisionTime / timeStep)){
+        mean = 0
+        elapsedNDT = elapsedNDT + 1
+        } else{
+          # stim has been presented. integration of both attributes continues
+          valueLeft = probFractalDraw*QVLeft + (1-probFractalDraw)*(EVLeft)
+          valueRight = probFractalDraw*QVRight + (1-probFractalDraw)*(EVRight)
+          mean = d*(valueLeft - valueRight)
+        }
       
     }
+    
     
     # Sample the change in RDV from the distribution.
     RDV = RDV + rnorm(1, mean, sigma)
@@ -241,9 +235,12 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
 Simulate data for filtered subjects with same DDM parameters for everyone
 
 ```{r}
-sim_sub_data2 = sim_task(sub_data = sub_data, d = .05, sigma = .05, nonDecisionTime = 300)
+sim_sub_data2 = sim_task(sub_data = sub_data, d = .02, sigma = .05, nonDecisionTime = 300)
 ```
 
+```{r}
+summary(sim_sub_data2)
+```
 Compare simulated data to true data
 
 ```{r}
@@ -260,6 +257,7 @@ comp_sub_df %>%
   drop_na() %>%
   mutate(probFractalDraw = as.factor(probFractalDraw),
          log_rt = log(reactionTime)) %>%
+  select(data_type, probFractalDraw, subnum, log_rt) %>%
   group_by(data_type, probFractalDraw, subnum) %>%
   summarise(.groups = 'keep', 
             mean_log_rt = mean(log_rt), 

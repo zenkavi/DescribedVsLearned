@@ -19,6 +19,8 @@ cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00"
 theme_set(theme_classic())
 sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 helpers_path = here('helpers/')
+
+set.seed(385723)
 ```
 
 
@@ -28,6 +30,33 @@ source(paste0(helpers_path,'add_inferred_pars.R'))
 clean_beh_data = add_inferred_pars(clean_beh_data, par_ests, model_name="original")
 ```
 
+Helper function that loops provided task conditions to generate simulated trials
+
+```{r}
+sim_task = function(sub_data, ...){
+  kwargs = list(...)
+  if (!"nonDecisionTime" %in% kwargs){
+    kwargs$nonDecisionTime = 0
+  }
+  
+  out = data.frame(EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, probFractalDraw = NA, choice = NA, reactionTime = NA)
+  for(i in 1:nrow(sub_data)) {
+
+    cur_out = sim_trial(d=kwargs$d, sigma = kwargs$sigma, nonDecisionTime = kwargs$nonDecisionTime,
+                        EVLeft=sub_data$leftLotteryEV[i], EVRight = sub_data$rightLotteryEV[i], 
+                        QVLeft = sub_data$leftQValue[i], QVRight= sub_data$rightQValue[i] , 
+                        probFractalDraw = sub_data$probFractalDraw[i])
+    
+    out = rbind(out, cur_out)
+
+  }
+  
+  # Drops only first row instead of all NAs to keep trials where iterations timed out and a decision was not made
+  out = out[-1,]
+  
+  return(out)
+}
+```
 
 Expanded DDM that can take task specific arguments as input
 
@@ -45,8 +74,14 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
   elapsedNDT = 0
   choice = 0
   RT = NA
-  kwargs = list(...)
   
+  kwargs = list(...)
+  EVLeft=kwargs$EVLeft
+  EVRight=kwargs$EVRight
+  QVLeft=kwargs$QVLeft
+  QVRight=kwargs$QVRight
+  probFractalDraw=kwargs$probFractalDraw
+        
   while (time<maxIter){
     
     # If the RDV hit one of the barriers, the trial is over.
@@ -66,9 +101,9 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
       mean = 0
       elapsedNDT = elapsedNDT + 1
     } else{
-      toUnpack = get_valDiff(EVLeft=kwargs$EVLeft, EVRight=kwargs$EVRight, QVLeft=kwargs$QVLeft, QVRight=kwargs$QVRight, probFractalDraw=kwargs$probFractalDraw)
-      mean = d*toUnpack$valDiff
-      out = toUnpack$out
+      valueLeft = probFractalDraw*QVLeft + (1-probFractalDraw)*(EVLeft)
+      valueRight = probFractalDraw*QVRight + (1-probFractalDraw)*(EVRight)
+      mean = d*(valueLeft - valueRight)
     }
     
     # Sample the change in RDV from the distribution.
@@ -78,78 +113,40 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
     time = time + 1
   }
   
-  #Organize output
-  addToOut = data.frame(choice=choice, reactionTime = RT)
-  out = cbind(out, addToOut)
-  
+  #Organize output 
+  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT)
   return(out)
 }
-
-get_valDiff = function(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw){
-  
-  valueLeft = probFractalDraw*QVLeft + (1-probFractalDraw)*(EVLeft)
-  valueRight = probFractalDraw*QVRight + (1-probFractalDraw)*(EVRight)
-  valDiff= (valueLeft - valueRight)
-  
-  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw)
-  
-  return(list(out=out, valDiff=valDiff))
-}
 ```
 
-Simulate one trial
-
-```{r}
-sim_trial(d=.02, sigma = .1, EVLeft=.5, EVRight = .5, QVLeft = 1.5, QVRight= .5 , probFractalDraw = 1)
+```{r echo=FALSE}
+# Test function by simulating one trial
+# sim_trial(d=.01, sigma = .05, EVLeft=.5, EVRight = .5, QVLeft = 1.5, QVRight= .5 , probFractalDraw = 1, nonDecisionTime=300)
 ```
-Simulate task for one subject with their estimated QValues from the original model (with RPEs for both options on every trial)
 
-Filter subject's data
+Simulate task for a few subjects with their estimated QValues from the original model (with RPEs for both options on every trial)
 
 ```{r}
 sub_data = clean_beh_data %>%
-  filter(subnum == "01") %>%
-  select(leftQValue, rightQValue, leftLotteryEV, rightLotteryEV, probFractalDraw, reactionTime, choiceLeft)
+  filter(subnum == "01" | subnum == "10" | subnum == "19") %>%
+  select(leftQValue, rightQValue, leftLotteryEV, rightLotteryEV, probFractalDraw, reactionTime, choiceLeft, subnum)
 
-sub_data
+# sub_data
 ```
 
-Function to simulate data with the given EVs and QVs for the subject
+Simulate data for filtered subjects with same DDM parameters for everyone
 
 ```{r}
-sim_task = function(sub_data, ...){
-  
-  kwargs = list(...)
-  out = data.frame(EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, probFractalDraw = NA, choice = NA, reactionTime = NA)
-  
-  for(i in 1:nrow(sub_data)) {
-    
-    cur_out = sim_trial(d=kwargs$d, sigma = kwargs$sigma, 
-                        EVLeft=sub_data$leftLotteryEV[i], EVRight = sub_data$rightLotteryEV[i], 
-                        QVLeft = sub_data$leftQValue[i], QVRight= sub_data$rightQValue[i] , 
-                        probFractalDraw = sub_data$probFractalDraw[i])
-    
-    out = rbind(out, cur_out)
-  }
-  
-  out = out %>% drop_na()
-  
-  return(out)
-}
-```
-
-Simulate data for subject with given drift rate
-
-```{r}
-sim_sub_data = sim_task(sub_data = sub_data, d = .02, sigma = .1)
+sim_sub_data = sim_task(sub_data = sub_data, d = .05, sigma = .05, nonDecisionTime = 300)
 ```
 
 Compare simulated data to true data
 
 ```{r}
-comp_df = sim_sub_data %>%
+comp_sub_df = sim_sub_data %>%
   mutate(choiceLeft = ifelse(choice=="left", 1, 0),
-         data_type = "sim") %>%
+         data_type = "sim",
+         subnum = sub_data$subnum) %>%
   select(-choice) %>%
   rbind(sub_data %>%
           rename(EVLeft = leftLotteryEV, EVRight=rightLotteryEV, QVLeft=rightQValue, QVRight=leftQValue) %>%
@@ -157,15 +154,16 @@ comp_df = sim_sub_data %>%
 ```
 
 ```{r}
-comp_df %>%
+comp_sub_df %>%
+  drop_na() %>%
   mutate(probFractalDraw = as.factor(probFractalDraw),
          log_rt = log(reactionTime)) %>%
-  ggplot(aes(probFractalDraw, log_rt, fill=data_type))+
-  geom_boxplot(position=position_dodge(width=.75))
-```
-
-What if you feed in all subjects' data
-
-```{r}
-sim_all_data = sim_task(sub_data = clean_beh_data, d = .02, sigma = .1)
+  group_by(data_type, probFractalDraw, subnum) %>%
+  summarise(.groups = 'keep', 
+            mean_log_rt = mean(log_rt), 
+            sem_log_rt = sem(log_rt)) %>%
+  ggplot(aes(probFractalDraw, mean_log_rt, color=data_type))+
+  geom_point(position=position_dodge(width=.75))+
+  geom_errorbar(aes(ymin = mean_log_rt - sem_log_rt, ymax = mean_log_rt + sem_log_rt), position=position_dodge(width=.75), width=.2)+
+  facet_grid(subnum~.)
 ```

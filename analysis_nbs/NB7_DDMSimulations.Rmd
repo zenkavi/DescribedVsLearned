@@ -146,6 +146,8 @@ sub_data = clean_beh_data %>%
 
 Simulate data for filtered subjects with same DDM parameters for everyone
 
+**NOTE on drift rate: with a value like d=0.002 there are too many timeout trials because the scale of the value difference is much smaller than e.g. the value difference in the aDDM papers**
+
 ```{r}
 sim_sub_data1 = sim_task(sub_data = sub_data, d = .05, sigma = .02, nonDecisionTime = 0)
 ```
@@ -198,6 +200,8 @@ sim_sanity_checks = function(sim_data){
 }
 
 ```
+
+The number of timeout trials is still too high
 
 ```{r}
 sim_sanity_checks(sim_sub_data1)

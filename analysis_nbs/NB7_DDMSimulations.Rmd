@@ -64,7 +64,7 @@ sim_task = function(sub_data, ...){
 }
 ```
 
-## Model 1:
+## Model 1: Integrate both starting at stim presentation
 
 DDM that can take our task specific arguments as input
 
@@ -147,61 +147,63 @@ sub_data = clean_beh_data %>%
 Simulate data for filtered subjects with same DDM parameters for everyone
 
 ```{r}
-sim_sub_data1 = sim_task(sub_data = sub_data, d = .02, sigma = .02, nonDecisionTime = 0)
+sim_sub_data1 = sim_task(sub_data = sub_data, d = .05, sigma = .02, nonDecisionTime = 0)
 ```
 
-Sanity checks for simulated data.
-
-Proportion of trials without choice. Too high when d = .002 so reduced it by an order of magnitude. Even then it is higher than actual data.
+### Sanity checks for simulated data.
 
 ```{r}
-sum(is.na(sim_sub_data1$reactionTime))/nrow(sim_sub_data1)
-```
+sim_sanity_checks = function(sim_data){
+  #Check 1
+  print(paste0("Proportion of time out trials is: ", round(sum(is.na(sim_data$reactionTime))/nrow(sim_data), 3)))
+  
+  # Check 2
+  p = sim_data %>%
+    drop_na()%>%
+    filter(probFractalDraw == 0 | probFractalDraw == 1) %>%
+    mutate(choiceLeft =ifelse(choice == "left", 1, ifelse(choice == "right", 0, NA))) %>%
+    mutate(EVLeftMinRight = EVLeft - EVRight,
+           QVLeftMinRight = QVLeft - QVRight) %>%
+    select(-choice, -EVLeft, -EVRight, -QVLeft, -QVRight) %>%
+    gather(key, value, -probFractalDraw, -reactionTime, -choiceLeft) %>%
+    ggplot(aes(value, choiceLeft))+
+    geom_jitter(height = .1)+
+    geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, alpha=.1)+
+    facet_grid(key ~ probFractalDraw)
+  print(p)
+  
+  # Check 3
+  p = sim_data %>%
+    mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
+    ggplot(aes(reactionTime, fill=probFractalDraw)) +
+    geom_histogram(position="identity", bins=30) +
+    theme(legend.position="bottom")+
+    guides(fill=guide_legend(nrow=2,byrow=TRUE))+
+    labs(title="RT long tail?")
+  print(p)
+  
+  # Check 4
+  p = sim_data %>%
+    drop_na()%>%
+    mutate(probFractalDraw = as.factor(probFractalDraw), 
+           log_rt = log(reactionTime)) %>%
+    group_by(probFractalDraw) %>%
+    summarise(mean_log_rt = mean(log_rt),
+              sem_log_rt = sem(log_rt)) %>%
+    ggplot(aes(probFractalDraw, mean_log_rt))+
+    geom_point()+
+    geom_errorbar(aes(ymin = mean_log_rt - sem_log_rt, ymax = mean_log_rt + sem_log_rt), width=.2)+
+    labs(title="Inverse U and faster when pFrac ==1?")
+  print(p)
+}
 
-Does choice relate to value difference sensibly (psychometric curve)
+```
 
 ```{r}
-sim_sub_data1 %>%
-  filter(probFractalDraw == 0 | probFractalDraw == 1) %>%
-  mutate(choiceLeft =ifelse(choice == "left", 1, ifelse(choice == "right", 0, NA))) %>%
-  mutate(EVLeftMinRight = EVLeft - EVRight,
-         QVLeftMinRight = QVLeft - QVRight) %>%
-  select(-choice, -EVLeft, -EVRight, -QVLeft, -QVRight) %>%
-  gather(key, value, -probFractalDraw, -reactionTime, -choiceLeft) %>%
-  ggplot(aes(value, choiceLeft))+
-  geom_jitter(height = .1)+
-  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, alpha=.1)+
-  facet_grid(key ~ probFractalDraw)
-
+sim_sanity_checks(sim_sub_data1)
 ```
 
-Distribution of RTs for each probFractalDraw. Is the standard long tail there?
-
-```{r}
-sim_sub_data1 %>%
-  mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
-  ggplot(aes(reactionTime, fill=probFractalDraw)) +
-  geom_histogram(postion="identity", bins=30) +
-  theme(legend.position="bottom")+
-  guides(fill=guide_legend(nrow=2,byrow=TRUE))
-```
-
-Inverse U of RTs with probFractalDraw and categorically faster RTs when probFractalDraw == 1
-
-```{r}
-sim_sub_data1 %>%
-  drop_na()%>%
-  mutate(probFractalDraw = as.factor(probFractalDraw), 
-         log_rt = log(reactionTime)) %>%
-  group_by(probFractalDraw) %>%
-  summarise(mean_log_rt = mean(log_rt),
-            sem_log_rt = sem(log_rt)) %>%
-  ggplot(aes(probFractalDraw, mean_log_rt))+
-  geom_point()+
-  geom_errorbar(aes(ymin = mean_log_rt - sem_log_rt, ymax = mean_log_rt + sem_log_rt), width=.2)
-```
-
-## Model 2:
+## Model 2: Begin integration about Q values earlier
 
 Start integrating about the fractals before the stimulus screen is presented
 
@@ -228,6 +230,7 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
   probFractalDraw=kwargs$probFractalDraw
   stimDelay = 2000 #Stimulus screen comes on 2 secs after the presentation of probFractalDraw
   stimDelayIters = stimDelay / timeStep
+  nonDecIters = nonDecisionTime / timeStep
   
   while (time<maxIter){
     
@@ -235,9 +238,12 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
     if (RDV >= barrier | RDV <= -barrier){
       RT = (time * timeStep)/1000 #convert ms back to secs
       
-      # if (RT<stimDelay/1000){
-      #   RT=nonDecisionTime
-      # }
+      if (RT<(stimDelay/1000)){
+        RT=rnorm(1, mean = 1, sd = 0.6) #if decision is reached before the stim screen sample rt from distribution with empirical mean and sd for probFractalDraw == 1 trials
+        if(RT < 0){
+          RT = RT * (-1)
+        }
+      }
       
       if (RDV >= barrier){
         choice = "left"
@@ -252,7 +258,7 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
     if (time < stimDelayIters){
       mean = d*probFractalDraw*(QVLeft - QVRight)
     } else{ 
-      if (elapsedNDT < (nonDecisionTime / timeStep)){
+      if (elapsedNDT < nonDecIters){
         mean = 0
         elapsedNDT = elapsedNDT + 1
         } else{
@@ -263,7 +269,6 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
         }
       
     }
-    
     
     # Sample the change in RDV from the distribution.
     RDV = RDV + rnorm(1, mean, sigma)
@@ -281,19 +286,12 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
 Simulate data for filtered subjects with same DDM parameters for everyone
 
 ```{r}
-sim_sub_data2 = sim_task(sub_data = sub_data, d = .002, sigma = .02, nonDecisionTime = 150)
+sim_sub_data2 = sim_task(sub_data = sub_data, d = .05, sigma = .02, nonDecisionTime = 0)
 ```
 
-Can we replicate the patterns in the true data?
+### Sanity checks
 
 ```{r}
-
+sim_sanity_checks(sim_sub_data2)
 ```
 
-```{r}
-sim_sub_data2 %>%
-  filter(probFractalDraw == 0) %>%
-  mutate(QVDiff = QVLeft-QVRight)%>%
-  ggplot(aes(QVDiff, reactionTime))+
-  geom_point()
-```

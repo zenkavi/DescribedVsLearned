@@ -142,7 +142,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4, 5)){
       geom_line()+
       geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
       geom_hline(aes(yintercept=0), linetype="dashed")+
-      scale_color_manual(values = cbbPalette[1:2])+
+      scale_color_manual(values = cbbPalette[2:1])+
       theme(legend.position = "bottom")+
       labs(color="", title="Relevant attribute effect on choice")
   }  
@@ -225,7 +225,7 @@ Filter data for a few subjects with a range of learning rates (i.e. variance in 
 
 ```{r}
 sub_data = clean_beh_data %>%
-  filter(subnum == "01" | subnum == "10" | subnum == "19") %>%
+  filter(subnum  %in% c("01", "03", "05","07", "09", "11", "13", "15", "17", "19")) %>%
   select(leftQValue, rightQValue, leftLotteryEV, rightLotteryEV, probFractalDraw, reactionTime, choiceLeft, subnum)
 
 # sub_data

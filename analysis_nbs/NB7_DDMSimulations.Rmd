@@ -14,6 +14,7 @@ library(tidyverse)
 library(gridExtra)
 library(brms)
 library(here)
+library(broom)
 cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 # theme_set(theme_bw())
 theme_set(theme_classic())
@@ -298,4 +299,130 @@ sim_sub_data2 = sim_task(sub_data = sub_data, d = .05, sigma = .02, nonDecisionT
 ```{r}
 sim_sanity_checks(sim_sub_data2)
 ```
+## Model 3: Begin integration about Q values earlier if that is the only relevant option
 
+```{r}
+sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=1000, ...){
+  
+  # d : drift rate
+  # sigma: sd of the normal distribution 
+  # timeStep: in ms
+  # nonDecisionTime: in ms
+  # maxIter: num max samples. if a barrier isn't hit by this sampling of evidence no decision is made. If time step is 10ms and maxIter is 1000 this would be a 10sec timeout maximum
+  
+  RDV = bias
+  time = 0
+  elapsedNDT = 0
+  choice = 0
+  RT = NA
+  
+  kwargs = list(...)
+  EVLeft=kwargs$EVLeft
+  EVRight=kwargs$EVRight
+  QVLeft=kwargs$QVLeft
+  QVRight=kwargs$QVRight
+  probFractalDraw=kwargs$probFractalDraw
+  stimDelay = 2000 #Stimulus screen comes on 2 secs after the presentation of probFractalDraw
+  stimDelayIters = stimDelay / timeStep
+  nonDecIters = nonDecisionTime / timeStep
+  
+  while (time<maxIter){
+    
+    # If the RDV hit one of the barriers, the trial is over.
+    if (RDV >= barrier | RDV <= -barrier){
+      RT = (time * timeStep)/1000 #convert ms back to secs
+      
+      if (RT<(stimDelay/1000)){
+        RT=rnorm(1, mean = 1, sd = 0.6) #if decision is reached before the stim screen sample rt from distribution with empirical mean and sd for probFractalDraw == 1 trials
+        if(RT < 0){
+          RT = RT * (-1)
+        }
+      }
+      
+      if (RDV >= barrier){
+        choice = "left"
+      } else if (RDV <= -barrier){
+        choice = "right"
+      }
+      break
+    } 
+    
+    # Stim hasn't been presented yet
+    # integration begins using only QVs for trials when they are the only relevant attribute
+    if (time < stimDelayIters & probFractalDraw == 1){
+      mean = d*(QVLeft - QVRight)
+    } else{ 
+      if (elapsedNDT < nonDecIters){
+        mean = 0
+        elapsedNDT = elapsedNDT + 1
+        } else{
+          # stim has been presented. integration of both attributes continues
+          valueLeft = probFractalDraw*QVLeft + (1-probFractalDraw)*(EVLeft)
+          valueRight = probFractalDraw*QVRight + (1-probFractalDraw)*(EVRight)
+          mean = d*(valueLeft - valueRight)
+        }
+      
+    }
+    
+    # Sample the change in RDV from the distribution.
+    RDV = RDV + rnorm(1, mean, sigma)
+    
+    # Increment sampling iteration
+    time = time + 1
+  }
+  
+  #Organize output 
+  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT)
+  return(out)
+}
+```
+
+Simulate data for filtered subjects with same DDM parameters for everyone
+
+```{r}
+sim_sub_data3 = sim_task(sub_data = sub_data, d = .05, sigma = .02, nonDecisionTime = 0)
+```
+
+### Sanity checks
+
+```{r}
+sim_sanity_checks(sim_sub_data3)
+```
+
+Why do the GLMs for the simulated data have convergence issues? Note this isn't the case for actual data.
+
+```{r}
+sim_sub_data3 %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw),
+         choiceLeft = ifelse(choice == "left", 1, ifelse(choice=="right", 0, NA)),
+         EVDiff = EVLeft - EVRight, 
+         QVDiff = QVLeft - QVRight) %>%
+   nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ EVDiff + QVDiff, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)")
+
+```
+
+```{r}
+clean_beh_data %>%
+  filter(subnum == "01" | subnum == "10" | subnum == "19") %>%
+   nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ leftEVAdv + leftQVAdv, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)")
+```
+
+Are EVDiff and QVDiff perfectly correlated in simulated data? That doesn't make sense. They are 
+
+```{r}
+
+```
+
+Is there perfect separation because there isn't enough noise in the 

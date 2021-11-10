@@ -68,7 +68,7 @@ sim_task = function(sub_data, ...){
 Helper function for sanity checks on simulated data
 
 ```{r}
-sim_sanity_checks = function(sim_data, checks = c(1,2,3,4)){
+sim_sanity_checks = function(sim_data, checks = c(1,2,3,4, 5)){
   #Check 1
   if (1 %in% checks){
     print(paste0("Proportion of time out trials is: ", round(sum(is.na(sim_data$reactionTime))/nrow(sim_data), 3)))
@@ -122,6 +122,30 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4)){
   print(p)
   }
   
+  # Check 5
+  if(5 %in% checks){
+    sim_data %>%
+      mutate(probFractalDraw = as.factor(probFractalDraw),
+             choiceLeft = ifelse(choice == "left", 1, ifelse(choice=="right", 0, NA)),
+             EVDiff = EVLeft - EVRight, 
+             QVDiff = QVLeft - QVRight) %>%
+      nest(data = -probFractalDraw) %>% 
+      mutate(
+        fit = map(data, ~ glm(choiceLeft ~ EVDiff + QVDiff, data = .x, family=binomial(link="logit"))),
+        tidied = map(fit, tidy)
+      ) %>% 
+      unnest(tidied) %>%
+      filter(term != "(Intercept)") %>%
+      select(probFractalDraw, term, estimate, std.error) %>%
+      ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
+      geom_point()+
+      geom_line()+
+      geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
+      geom_hline(aes(yintercept=0), linetype="dashed")+
+      scale_color_manual(values = cbbPalette[1:2])+
+      theme(legend.position = "bottom")+
+      labs(color="", title="Relevant attribute effect on choice")
+  }  
 }
 
 ```
@@ -405,20 +429,3 @@ sim_sub_data3 = sim_task(sub_data = sub_data, d = .01, sigma = .1)
 sim_sanity_checks(sim_sub_data3)
 ```
 
-Why do the GLMs for the simulated data have convergence issues? Note this isn't the case for actual data.
-
-```{r}
-sim_sub_data3 %>%
-  mutate(probFractalDraw = as.factor(probFractalDraw),
-         choiceLeft = ifelse(choice == "left", 1, ifelse(choice=="right", 0, NA)),
-         EVDiff = EVLeft - EVRight, 
-         QVDiff = QVLeft - QVRight) %>%
-   nest(data = -probFractalDraw) %>% 
-  mutate(
-    fit = map(data, ~ glm(choiceLeft ~ EVDiff + QVDiff, data = .x, family=binomial(link="logit"))),
-    tidied = map(fit, tidy)
-  ) %>% 
-  unnest(tidied) %>%
-  filter(term != "(Intercept)")
-
-```

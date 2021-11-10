@@ -169,17 +169,17 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
     nonDecIters = nonDecisionTime / timeStep
     # If elapsed time is less than the number of sampling iterations required for the nonDecisionTime set evidence sampling distribution mean to 0 so any move from starting point would only be noise
     if (elapsedNDT < nonDecIters){
-      mean = 0
+      mu_mean = 0
       elapsedNDT = elapsedNDT + 1
     } else{
       # If the nonDecisionTime has passed set the mean of the distribution the decision variable will be sampled from to a value proportional to the value difference and the drift rate 
       valueLeft = probFractalDraw*QVLeft + (1-probFractalDraw)*(EVLeft)
       valueRight = probFractalDraw*QVRight + (1-probFractalDraw)*(EVRight)
       mu_mean = d*(valueLeft - valueRight)
-      mu = rnorm(1, mu_mean, epsilon)
     }
     
     # Sample the change in RDV from the distribution with mean proportional to the value difference
+    mu = rnorm(1, mu_mean, epsilon)
     RDV = RDV + rnorm(1, mu, sigma)
     
     # Increment sampling iteration
@@ -274,22 +274,22 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
     # Stim hasn't been presented yet
     # integration begins using only QVs
     if (time < stimDelayIters){
-      mean = d*probFractalDraw*(QVLeft - QVRight)
+      mu_mean = d*probFractalDraw*(QVLeft - QVRight)
     } else{ 
       if (elapsedNDT < nonDecIters){
-        mean = 0
+        mu_mean = 0
         elapsedNDT = elapsedNDT + 1
         } else{
           # stim has been presented. integration of both attributes continues
           valueLeft = probFractalDraw*QVLeft + (1-probFractalDraw)*(EVLeft)
           valueRight = probFractalDraw*QVRight + (1-probFractalDraw)*(EVRight)
           mu_mean = d*(valueLeft - valueRight)
-          mu = rnorm(1, mu_mean, epsilon)
         }
       
     }
     
     # Sample the change in RDV from the distribution.
+    mu = rnorm(1, mu_mean, epsilon)
     RDV = RDV + rnorm(1, mu, sigma)
     
     # Increment sampling iteration
@@ -365,22 +365,22 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
     # Stim hasn't been presented yet
     # integration begins using only QVs for trials when they are the only relevant attribute
     if (time < stimDelayIters & probFractalDraw == 1){
-      mean = d*(QVLeft - QVRight)
+      mu_mean = d*(QVLeft - QVRight)
     } else{ 
       if (elapsedNDT < nonDecIters){
-        mean = 0
+        mu_mean = 0
         elapsedNDT = elapsedNDT + 1
         } else{
           # stim has been presented. integration of both attributes continues
           valueLeft = probFractalDraw*QVLeft + (1-probFractalDraw)*(EVLeft)
           valueRight = probFractalDraw*QVRight + (1-probFractalDraw)*(EVRight)
           mu_mean = d*(valueLeft - valueRight)
-          mu = rnorm(1, mu_mean, epsilon)
         }
       
     }
     
     # Sample the change in RDV from the distribution.
+    mu = rnorm(1, mu_mean, epsilon)
     RDV = RDV + rnorm(1, mu, sigma)
     
     # Increment sampling iteration

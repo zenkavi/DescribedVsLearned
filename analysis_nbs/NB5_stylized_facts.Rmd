@@ -96,6 +96,17 @@ with(clean_beh_data, table(probFractalDraw, weightedAbsEVDiff))
 clean_beh_data %>%
   mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
   group_by(subnum, probFractalDraw) %>%
+  summarise(mean_rt = mean(reactionTime), .groups='keep') %>%
+  ungroup()%>%
+  group_by(probFractalDraw)%>%
+  summarise(sem_rt = sem(mean_rt),
+            mean_rt = mean(mean_rt))
+```
+
+```{r}
+clean_beh_data %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
+  group_by(subnum, probFractalDraw) %>%
   summarise(mean_log_rt = mean(log_rt), .groups='keep') %>%
   ungroup()%>%
   group_by(probFractalDraw)%>%

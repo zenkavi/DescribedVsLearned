@@ -65,12 +65,73 @@ sim_task = function(sub_data, ...){
 }
 ```
 
+Helper function for sanity checks on simulated data
+
+```{r}
+sim_sanity_checks = function(sim_data, checks = c(1,2,3,4)){
+  #Check 1
+  if (1 %in% checks){
+    print(paste0("Proportion of time out trials is: ", round(sum(is.na(sim_data$reactionTime))/nrow(sim_data), 3)))
+  }
+  
+  
+  # Check 2
+  if(2 %in% checks){
+    p = sim_data %>%
+    drop_na()%>%
+    filter(probFractalDraw == 0 | probFractalDraw == 1) %>%
+    mutate(choiceLeft =ifelse(choice == "left", 1, ifelse(choice == "right", 0, NA))) %>%
+    mutate(EVLeftMinRight = EVLeft - EVRight,
+           QVLeftMinRight = QVLeft - QVRight) %>%
+    select(-choice, -EVLeft, -EVRight, -QVLeft, -QVRight) %>%
+    gather(key, value, -probFractalDraw, -reactionTime, -choiceLeft) %>%
+    ggplot(aes(value, choiceLeft))+
+    geom_jitter(height = .1)+
+    geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, alpha=.1)+
+    facet_grid(key ~ probFractalDraw)
+  print(p)
+  }
+  
+  
+  # Check 3
+  if(3 %in% checks){
+    p = sim_data %>%
+    mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
+    ggplot(aes(reactionTime, fill=probFractalDraw)) +
+    geom_histogram(position="identity", bins=30) +
+    theme(legend.position="bottom")+
+    guides(fill=guide_legend(nrow=2,byrow=TRUE))+
+    labs(title="RT long tail?")
+  print(p)
+  }
+  
+  
+  # Check 4
+  if(4 %in% checks){
+    p = sim_data %>%
+    drop_na()%>%
+    mutate(probFractalDraw = as.factor(probFractalDraw), 
+           log_rt = log(reactionTime)) %>%
+    group_by(probFractalDraw) %>%
+    summarise(mean_log_rt = mean(log_rt),
+              sem_log_rt = sem(log_rt)) %>%
+    ggplot(aes(probFractalDraw, mean_log_rt))+
+    geom_point()+
+    geom_errorbar(aes(ymin = mean_log_rt - sem_log_rt, ymax = mean_log_rt + sem_log_rt), width=.2)+
+    labs(title="Inverse U and faster when pFrac ==1?")
+  print(p)
+  }
+  
+}
+
+```
+
 ## Model 1: Integrate both starting at stim presentation
 
 DDM that can take our task specific arguments as input
 
 ```{r}
-sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=1000, ...){
+sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=1000, epsilon = 0.0002, ...){
   
   # d : drift rate
   # sigma: sd of the normal distribution 
@@ -114,11 +175,12 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
       # If the nonDecisionTime has passed set the mean of the distribution the decision variable will be sampled from to a value proportional to the value difference and the drift rate 
       valueLeft = probFractalDraw*QVLeft + (1-probFractalDraw)*(EVLeft)
       valueRight = probFractalDraw*QVRight + (1-probFractalDraw)*(EVRight)
-      mean = d*(valueLeft - valueRight)
+      mu_mean = d*(valueLeft - valueRight)
+      mu = rnorm(1, mu_mean, epsilon)
     }
     
     # Sample the change in RDV from the distribution with mean proportional to the value difference
-    RDV = RDV + rnorm(1, mean, sigma)
+    RDV = RDV + rnorm(1, mu, sigma)
     
     # Increment sampling iteration
     time = time + 1
@@ -150,59 +212,10 @@ Simulate data for filtered subjects with same DDM parameters for everyone
 **NOTE on drift rate: with a value like d=0.002 there are too many timeout trials because the scale of the value difference is much smaller than e.g. the value difference in the aDDM papers**
 
 ```{r}
-sim_sub_data1 = sim_task(sub_data = sub_data, d = .05, sigma = .02, nonDecisionTime = 0)
+sim_sub_data1 = sim_task(sub_data = sub_data, d = .01, sigma = .1)
 ```
 
 ### Sanity checks for simulated data.
-
-```{r}
-sim_sanity_checks = function(sim_data){
-  #Check 1
-  print(paste0("Proportion of time out trials is: ", round(sum(is.na(sim_data$reactionTime))/nrow(sim_data), 3)))
-  
-  # Check 2
-  p = sim_data %>%
-    drop_na()%>%
-    filter(probFractalDraw == 0 | probFractalDraw == 1) %>%
-    mutate(choiceLeft =ifelse(choice == "left", 1, ifelse(choice == "right", 0, NA))) %>%
-    mutate(EVLeftMinRight = EVLeft - EVRight,
-           QVLeftMinRight = QVLeft - QVRight) %>%
-    select(-choice, -EVLeft, -EVRight, -QVLeft, -QVRight) %>%
-    gather(key, value, -probFractalDraw, -reactionTime, -choiceLeft) %>%
-    ggplot(aes(value, choiceLeft))+
-    geom_jitter(height = .1)+
-    geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, alpha=.1)+
-    facet_grid(key ~ probFractalDraw)
-  print(p)
-  
-  # Check 3
-  p = sim_data %>%
-    mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
-    ggplot(aes(reactionTime, fill=probFractalDraw)) +
-    geom_histogram(position="identity", bins=30) +
-    theme(legend.position="bottom")+
-    guides(fill=guide_legend(nrow=2,byrow=TRUE))+
-    labs(title="RT long tail?")
-  print(p)
-  
-  # Check 4
-  p = sim_data %>%
-    drop_na()%>%
-    mutate(probFractalDraw = as.factor(probFractalDraw), 
-           log_rt = log(reactionTime)) %>%
-    group_by(probFractalDraw) %>%
-    summarise(mean_log_rt = mean(log_rt),
-              sem_log_rt = sem(log_rt)) %>%
-    ggplot(aes(probFractalDraw, mean_log_rt))+
-    geom_point()+
-    geom_errorbar(aes(ymin = mean_log_rt - sem_log_rt, ymax = mean_log_rt + sem_log_rt), width=.2)+
-    labs(title="Inverse U and faster when pFrac ==1?")
-  print(p)
-}
-
-```
-
-The number of timeout trials is still too high
 
 ```{r}
 sim_sanity_checks(sim_sub_data1)
@@ -213,7 +226,7 @@ sim_sanity_checks(sim_sub_data1)
 Start integrating about the fractals before the stimulus screen is presented
 
 ```{r}
-sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=1000, ...){
+sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=1000, epsilon = 0.0002, ...){
   
   # d : drift rate
   # sigma: sd of the normal distribution 
@@ -270,13 +283,14 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
           # stim has been presented. integration of both attributes continues
           valueLeft = probFractalDraw*QVLeft + (1-probFractalDraw)*(EVLeft)
           valueRight = probFractalDraw*QVRight + (1-probFractalDraw)*(EVRight)
-          mean = d*(valueLeft - valueRight)
+          mu_mean = d*(valueLeft - valueRight)
+          mu = rnorm(1, mu_mean, epsilon)
         }
       
     }
     
     # Sample the change in RDV from the distribution.
-    RDV = RDV + rnorm(1, mean, sigma)
+    RDV = RDV + rnorm(1, mu, sigma)
     
     # Increment sampling iteration
     time = time + 1
@@ -291,7 +305,7 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
 Simulate data for filtered subjects with same DDM parameters for everyone
 
 ```{r}
-sim_sub_data2 = sim_task(sub_data = sub_data, d = .05, sigma = .02, nonDecisionTime = 0)
+sim_sub_data2 = sim_task(sub_data = sub_data, d = .01, sigma = .1)
 ```
 
 ### Sanity checks
@@ -299,10 +313,11 @@ sim_sub_data2 = sim_task(sub_data = sub_data, d = .05, sigma = .02, nonDecisionT
 ```{r}
 sim_sanity_checks(sim_sub_data2)
 ```
+
 ## Model 3: Begin integration about Q values earlier if that is the only relevant option
 
 ```{r}
-sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=1000, ...){
+sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=1000, epsilon = 0.0002,...){
   
   # d : drift rate
   # sigma: sd of the normal distribution 
@@ -359,13 +374,14 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
           # stim has been presented. integration of both attributes continues
           valueLeft = probFractalDraw*QVLeft + (1-probFractalDraw)*(EVLeft)
           valueRight = probFractalDraw*QVRight + (1-probFractalDraw)*(EVRight)
-          mean = d*(valueLeft - valueRight)
+          mu_mean = d*(valueLeft - valueRight)
+          mu = rnorm(1, mu_mean, epsilon)
         }
       
     }
     
     # Sample the change in RDV from the distribution.
-    RDV = RDV + rnorm(1, mean, sigma)
+    RDV = RDV + rnorm(1, mu, sigma)
     
     # Increment sampling iteration
     time = time + 1
@@ -380,7 +396,7 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
 Simulate data for filtered subjects with same DDM parameters for everyone
 
 ```{r}
-sim_sub_data3 = sim_task(sub_data = sub_data, d = .05, sigma = .02, nonDecisionTime = 0)
+sim_sub_data3 = sim_task(sub_data = sub_data, d = .01, sigma = .1)
 ```
 
 ### Sanity checks
@@ -406,23 +422,3 @@ sim_sub_data3 %>%
   filter(term != "(Intercept)")
 
 ```
-
-```{r}
-clean_beh_data %>%
-  filter(subnum == "01" | subnum == "10" | subnum == "19") %>%
-   nest(data = -probFractalDraw) %>% 
-  mutate(
-    fit = map(data, ~ glm(choiceLeft ~ leftEVAdv + leftQVAdv, data = .x, family=binomial(link="logit"))),
-    tidied = map(fit, tidy)
-  ) %>% 
-  unnest(tidied) %>%
-  filter(term != "(Intercept)")
-```
-
-Are EVDiff and QVDiff perfectly correlated in simulated data? That doesn't make sense. They are 
-
-```{r}
-
-```
-
-Is there perfect separation because there isn't enough noise in the 

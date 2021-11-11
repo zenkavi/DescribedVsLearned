@@ -216,19 +216,21 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
 }
 ```
 
-```{r echo=FALSE}
-# Test function by simulating one trial
-# sim_trial(d=.01, sigma = .05, EVLeft=.5, EVRight = .5, QVLeft = 1.5, QVRight= .5 , probFractalDraw = 1, nonDecisionTime=300)
-```
-
 Filter data for a few subjects with a range of learning rates (i.e. variance in QValue differences) to simulate RTs using DDM 
 
 ```{r}
 sub_data = clean_beh_data %>%
   filter(subnum  %in% c("01", "03", "05","07", "09", "11", "13", "15", "17", "19")) %>%
   select(leftQValue, rightQValue, leftLotteryEV, rightLotteryEV, probFractalDraw, reactionTime, choiceLeft, subnum)
+```
 
-# sub_data
+How do the sanity checks look in the sampled data?
+
+```{r}
+sim_sanity_checks(sub_data %>%
+                    select(-subnum) %>%
+                    rename(QVLeft = leftQValue, QVRight = rightQValue, EVLeft = leftLotteryEV, EVRight = rightLotteryEV) %>%
+                    mutate(choice = ifelse(choiceLeft == 1, "left", "right")))
 ```
 
 **NOTE on drift rate: with a value like d=0.002 there are too many timeout trials because the scale of the value difference is much smaller than e.g. the value difference in the aDDM papers**
@@ -236,22 +238,31 @@ sub_data = clean_beh_data %>%
 ### Sanity checks for simulated data.
 
 ```{r}
-sim_sub_data1 = sim_task(sub_data = sub_data, d = .01, sigma = .1)
-sim_sanity_checks(sim_sub_data1)
+sim_sub_data_m1_1 = sim_task(sub_data = sub_data, d = .01, sigma = .1)
 ```
 
-Too fast with d=0.01. Can we slow it down with d=.005. Yes (with)
+```{r}
+sim_sanity_checks(sim_sub_data_m1_1)
+```
+
+Too fast with d=0.01. Can we slow it down with d=.005?
 
 ```{r}
-sim_sub_data1 = sim_task(sub_data = sub_data, d = .005, sigma = .1)
-sim_sanity_checks(sim_sub_data1)
+sim_sub_data_m1_2 = sim_task(sub_data = sub_data, d = .005, sigma = .1)
+```
+
+```{r}
+sim_sanity_checks(sim_sub_data_m1_2)
 ```
 
 Error bars for RTs are very wide. Can we make them smaller with smaller sigma? (from .1 to .05)
 
 ```{r}
-sim_sub_data1 = sim_task(sub_data = sub_data, d = .005, sigma = .05)
-sim_sanity_checks(sim_sub_data1)
+sim_sub_data_m1_3 = sim_task(sub_data = sub_data, d = .005, sigma = .05)
+```
+
+```{r}
+sim_sanity_checks(sim_sub_data_m1_3)
 ```
 
 ## Model 2: Begin integration about Q values earlier if that is the only relevant option

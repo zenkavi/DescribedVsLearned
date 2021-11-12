@@ -208,17 +208,19 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
   while (time<maxIter){
     
     # If the RDV hit one of the barriers, the trial is over.
-    if (RDV >= barrier[time+1] | RDV <= -barrier[time+1]){
+    if (RDV >= barrier[time] | RDV <= -barrier[time]){
       RT = (time * timeStep)/1000 #convert ms back to secs
       
       #if decision is reached before the stim screen sample rt from log normal distribution similar to with empirical
-      if (time < stimDelayIters){
-        RT=rlnorm(1, mean = 0, sd = 0.5)
+      # CHANGE THIS TO A MORE MEANINGFUL WAY OF GENERATING RT; AT THE VERY LEAST BASED ON A CHOICE RT TASK RT DISTRIBUTION
+      if (time < stimDelayIters & probFractalDraw==1){
+        # RT=rlnorm(1, mean = 0, sd = 0.5)
+        RT=rlnorm(1, mean = -1, sd = 0.5)
       }
       
-      if (RDV >= barrier[time+1]){
+      if (RDV >= barrier[time]){
         choice = "left"
-      } else if (RDV <= -barrier[time+1]){
+      } else if (RDV <= -barrier[time]){
         choice = "right"
       }
       break
@@ -256,6 +258,11 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
 ```
 
 Why is rt not jumping for probFractalDraw == 1?
+- Change model to integrate a lot faster when pFrac == 1
+    - Changed the logit slope to rely more on the q value difference for pfrac == 1 trials but didn't make those trials faster compared to the other conditions
+- Change the RT distribution for decisions made pre stim presentation to be super fast
+    - Made all trials fast. I think there is a bug in the RT draws. Seems to be happening for all trials instead of only pFrac == 1 trials
+- Debug output: for each step where is RDV; is it higher for the first 20 pre stimulus iterations for trials where pFrac == 1
 
 ```{r}
 sim_data_m2_1 = sim_task(stimuli=sub_data, d = .01, sigma = .1, barrierDecay = .1)
@@ -264,6 +271,19 @@ sim_data_m2_1 = sim_task(stimuli=sub_data, d = .01, sigma = .1, barrierDecay = .
 ```{r}
 sim_sanity_checks(sim_data_m2_1)
 ```
+```{r}
+data.frame(val = rlnorm(1000, mean = 0, sd = 0.5)) %>%
+  ggplot(aes(val))+
+  geom_histogram(bins = 30)
+```
+
+```{r}
+data.frame(val = rlnorm(1000, mean = -1, sd = 0.5)) %>%
+  ggplot(aes(val))+
+  geom_histogram(bins = 30)
+```
+```
+
 Why are rt so slow even with a massive barrierDecay?
 
 ```{r}
@@ -280,4 +300,4 @@ Things to incorporate:
 - Choice bias for lotteries
 - Computation of EV for lotteries takes time
 - There is something other than EV computation going on for 1 > probFractalDraw > 0
-
+- Competition based on relative strength of preference

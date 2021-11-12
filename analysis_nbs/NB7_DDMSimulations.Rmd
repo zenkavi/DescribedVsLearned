@@ -138,7 +138,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
                log_rt = log(reactionTime)) %>%
         group_by(probFractalDraw, data_type) %>%
         summarise(mean_log_rt = mean(log_rt),
-                  sem_log_rt = sem(log_rt)) %>%
+                  sem_log_rt = sem(log_rt), .groups="keep") %>%
         ggplot(aes(probFractalDraw, mean_log_rt, color=data_type))+
         geom_point()+
         geom_errorbar(aes(ymin = mean_log_rt - sem_log_rt, ymax = mean_log_rt + sem_log_rt), width=.2)+
@@ -189,6 +189,24 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
 
 ```
 
+# True data
+
+### Motivation for competition
+
+```{r}
+clean_beh_data %>%
+  mutate(wAbsLeftEVAdv = (1-probFractalDraw)*abs(leftEVAdv),
+         wAbsLeftQVAdv = (probFractalDraw)*abs(leftQVAdv),
+         EVAdvMinQVAdv = abs(wAbsLeftEVAdv - wAbsLeftQVAdv),
+         probFractalDraw = as.factor(probFractalDraw)) %>%
+  group_by(probFractalDraw) %>%
+  summarise(meanEVAdvMinQVAdv = mean(EVAdvMinQVAdv),
+            semEVAdvMinQVAdv = sem(EVAdvMinQVAdv)) %>%
+  ggplot(aes(probFractalDraw, meanEVAdvMinQVAdv))+
+  geom_point()+
+  geom_errorbar(aes(ymin = meanEVAdvMinQVAdv - semEVAdvMinQVAdv, ymax = meanEVAdvMinQVAdv + semEVAdvMinQVAdv), width=.2)
+```
+
 Filter data for a few subjects with a range of learning rates (i.e. variance in QValue differences) to simulate RTs using DDM 
 
 ```{r}
@@ -207,7 +225,7 @@ sim_sanity_checks(sub_data %>%
                   compare_rts = FALSE)
 ```
 
-## Model 1: Integrate both starting at stim presentation
+# Model 1: Integrate both starting at stim presentation
 
 DDM that can take our task specific arguments as input
 
@@ -221,7 +239,7 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
   # maxIter: num max samples. if a barrier isn't hit by this sampling of evidence no decision is made. If time step is 10ms and maxIter is 1000 this would be a (1000 iterations * 10 ms (per iteration) / 1000 convert back to sec =) 10sec timeout maximum
   
   RDV = bias
-  time = 0
+  time = 1
   elapsedNDT = 0
   choice = 0
   RT = NA
@@ -275,8 +293,6 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
 
 **NOTE on drift rate: with a value like d=0.002 there are too many timeout trials because the scale of the value difference is much smaller than e.g. the value difference in the aDDM papers**
 
-### Sanity checks for simulated data.
-
 ```{r}
 sim_sub_data_m1_1 = sim_task(sub_data = sub_data, d = .01, sigma = .1)
 ```
@@ -284,6 +300,7 @@ sim_sub_data_m1_1 = sim_task(sub_data = sub_data, d = .01, sigma = .1)
 ```{r}
 sim_sanity_checks(sim_sub_data_m1_1)
 ```
+
 Too fast with d=0.01. Can we slow it down with d=.005? Yes but then it's too noisy and choice doesn't depend on the relevant attributes as much as it should.
 
 ```{r}
@@ -304,33 +321,12 @@ sim_sub_data_m1_3 = sim_task(sub_data = sub_data, d = .005, sigma = .05)
 sim_sanity_checks(sim_sub_data_m1_3)
 ```
 
-```{r}
-sim_sub_data_m1_3 %>%
-  mutate(data_type = "sim") %>%
-  rbind(sub_data %>%
-          rename(QVLeft = leftQValue, QVRight = rightQValue, EVLeft = leftLotteryEV, EVRight = rightLotteryEV) %>%
-          mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
-                 data_type = "true") %>%
-          select(-subnum, -choiceLeft)) %>%
-  drop_na()%>%
-  mutate(probFractalDraw = as.factor(probFractalDraw), 
-         log_rt = log(reactionTime)) %>%
-  group_by(probFractalDraw, data_type) %>%
-  summarise(mean_log_rt = mean(log_rt),
-            sem_log_rt = sem(log_rt)) %>%
-  ggplot(aes(probFractalDraw, mean_log_rt, color=data_type))+
-  geom_point()+
-  geom_errorbar(aes(ymin = mean_log_rt - sem_log_rt, ymax = mean_log_rt + sem_log_rt), width=.2)+
-  labs(title="Inverse U and faster when pFrac ==1?", color="")+
-  theme(legend.position = "bottom")
-```
-
 **Bottom line: Can get close to the choice psychometrics but not the response time distributions/relationship with attribute relevance.**
 
-## Model 2: Begin integration about Q values earlier if that is the only relevant option
+# Model 2: Begin integration about Q values earlier if that is the only relevant option
 
 ```{r}
-sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=1000, epsilon = 0.0002,...){
+sim_trial = function(d, sigma,  barrier=1, barrierDecay=.1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=1000, epsilon = 0.0002,...){
   
   # d : drift rate
   # sigma: sd of the normal distribution 
@@ -339,7 +335,7 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
   # maxIter: num max samples. if a barrier isn't hit by this sampling of evidence no decision is made. If time step is 10ms and maxIter is 1000 this would be a 10sec timeout maximum
   
   RDV = bias
-  time = 0
+  time = 1
   elapsedNDT = 0
   choice = 0
   RT = NA
@@ -354,23 +350,28 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
   stimDelayIters = stimDelay / timeStep
   nonDecIters = nonDecisionTime / timeStep
   
+  initialBarrier = barrier
+
+  # The values of the barriers can change over time.
+  barrier = rep(initialBarrier, maxIter)
+  for(t in seq(2, maxIter, 1)){
+    barrier[t] = initialBarrier / (1 + barrierDecay * (t))
+  }-b
+    
   while (time<maxIter){
     
     # If the RDV hit one of the barriers, the trial is over.
-    if (RDV >= barrier | RDV <= -barrier){
+    if (RDV >= barrier[time+1] | RDV <= -barrier[time+1]){
       RT = (time * timeStep)/1000 #convert ms back to secs
       
-      #if decision is reached before the stim screen sample rt from distribution with empirical mean and sd for probFractalDraw == 1 trials
-      if (RT<(stimDelay/1000)){
-        RT=rnorm(1, mean = 1, sd = 0.6) 
-        if(RT < 0){ #make sure RT is positive
-          RT = RT * (-1)
-        }
+      #if decision is reached before the stim screen sample rt from log normal distribution similar to with empirical
+      if (time < stimDelayIters){
+        RT=rlnorm(1, mean = 1, sd = 0.5) 
       }
       
-      if (RDV >= barrier){
+      if (RDV >= barrier[time+1]){
         choice = "left"
-      } else if (RDV <= -barrier){
+      } else if (RDV <= -barrier[time+1]){
         choice = "right"
       }
       break
@@ -378,14 +379,14 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
     
     # Stim hasn't been presented yet
     # integration begins using only QVs for trials when they are the only relevant attribute
-    if (time < stimDelayIters & probFractalDraw == 1){
+    if (probFractalDraw == 1){
       mu_mean = d*(QVLeft - QVRight)
     } else{ 
       if (elapsedNDT < nonDecIters){
         mu_mean = 0
         elapsedNDT = elapsedNDT + 1
       } else{
-        # stim has been presented. integration of both attributes continues
+        # integration begins at stim presentation using both attributes unless pFrac == 1
         valueLeft = probFractalDraw*QVLeft + (1-probFractalDraw)*(EVLeft)
         valueRight = probFractalDraw*QVRight + (1-probFractalDraw)*(EVRight)
         mu_mean = d*(valueLeft - valueRight)
@@ -407,92 +408,26 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
 }
 ```
 
-### Sanity checks
-
 ```{r}
-sim_sub_data_m2_1 = sim_task(sub_data = sub_data, d = .005, sigma = .05)
+sim_sub_data_m2_1 = sim_task(sub_data = sub_data, d = .01, sigma = .1)
 ```
-
 
 ```{r}
 sim_sanity_checks(sim_sub_data_m2_1)
 ```
-# Mode 3:
 
 ```{r}
-sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=1000, epsilon = 0.0002,...){
-  
-  # d : drift rate
-  # sigma: sd of the normal distribution 
-  # timeStep: in ms
-  # nonDecisionTime: in ms
-  # maxIter: num max samples. if a barrier isn't hit by this sampling of evidence no decision is made. If time step is 10ms and maxIter is 1000 this would be a 10sec timeout maximum
-  
-  RDV = bias
-  time = 0
-  elapsedNDT = 0
-  choice = 0
-  RT = NA
-  
-  kwargs = list(...)
-  EVLeft=kwargs$EVLeft
-  EVRight=kwargs$EVRight
-  QVLeft=kwargs$QVLeft
-  QVRight=kwargs$QVRight
-  probFractalDraw=kwargs$probFractalDraw
-  stimDelay = 2000 #Stimulus screen comes on 2 secs after the presentation of probFractalDraw
-  stimDelayIters = stimDelay / timeStep
-  nonDecIters = nonDecisionTime / timeStep
-  
-  while (time<maxIter){
-    
-    # If the RDV hit one of the barriers, the trial is over.
-    if (RDV >= barrier | RDV <= -barrier){
-      RT = (time * timeStep)/1000 #convert ms back to secs
-      
-      #if decision is reached before the stim screen sample rt from distribution with empirical mean and sd for probFractalDraw == 1 trials
-      if (RT<(stimDelay/1000)){
-        RT=rnorm(1, mean = 1, sd = 0.6) 
-        if(RT < 0){ #make sure RT is positive
-          RT = RT * (-1)
-        }
-      }
-      
-      if (RDV >= barrier){
-        choice = "left"
-      } else if (RDV <= -barrier){
-        choice = "right"
-      }
-      break
-    } 
-    
-    # Stim hasn't been presented yet
-    # integration begins using only QVs for trials when they are the only relevant attribute
-    if (time < stimDelayIters & probFractalDraw == 1){
-      mu_mean = d*(QVLeft - QVRight)
-    } else{ 
-      if (elapsedNDT < nonDecIters){
-        mu_mean = 0
-        elapsedNDT = elapsedNDT + 1
-      } else{
-        # stim has been presented. integration of both attributes continues
-        valueLeft = probFractalDraw*QVLeft + (1-probFractalDraw)*(EVLeft)
-        valueRight = probFractalDraw*QVRight + (1-probFractalDraw)*(EVRight)
-        mu_mean = d*(valueLeft - valueRight)
-      }
-      
-    }
-    
-    # Sample the change in RDV from the distribution.
-    mu = rnorm(1, mu_mean, epsilon)
-    RDV = RDV + rnorm(1, mu, sigma)
-    
-    # Increment sampling iteration
-    time = time + 1
-  }
-  
-  #Organize output 
-  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT)
-  return(out)
-}
+sim_sub_data_m2_2 = sim_task(sub_data = sub_data, d = .005, sigma = .05)
 ```
+
+```{r}
+sim_sanity_checks(sim_sub_data_m2_2)
+```
+
+# Model 3:
+
+Things to incorporate:
+- Choice bias for lotteries
+- Computation of EV for lotteries takes time
+- There is something other than EV computation going on for 1 > probFractalDraw > 0
+

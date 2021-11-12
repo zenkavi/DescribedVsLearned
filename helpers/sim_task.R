@@ -14,8 +14,7 @@ sim_task = function(stimuli, ...){
   for(i in 1:nrow(sub_data)) {
     
     # Simulate RT and choice for a single trial with given DDM parameters and trial stimulus values
-    cur_out = sim_trial(d=kwargs$d, sigma = kwargs$sigma, nonDecisionTime = kwargs$nonDecisionTime, 
-                        barrierDecay = kwargs$barrierDecay,
+    cur_out = sim_trial(d=kwargs$d, sigma = kwargs$sigma, nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
                         EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], 
                         QVLeft = stimuli$QVLeft[i], QVRight= stimuli$QVRight[i] , 
                         probFractalDraw = stimuli$probFractalDraw[i])

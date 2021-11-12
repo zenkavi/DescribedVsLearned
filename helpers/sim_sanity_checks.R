@@ -29,7 +29,6 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       p = sim_data %>%
         mutate(data_type = "sim") %>%
         rbind(sub_data %>%
-                rename(QVLeft = leftQValue, QVRight = rightQValue, EVLeft = leftLotteryEV, EVRight = rightLotteryEV) %>%
                 mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
                        data_type = "true") %>%
                 select(-subnum, -choiceLeft)) %>%
@@ -59,7 +58,6 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       p = sim_data %>%
         mutate(data_type = "sim") %>%
         rbind(sub_data %>%
-                rename(QVLeft = leftQValue, QVRight = rightQValue, EVLeft = leftLotteryEV, EVRight = rightLotteryEV) %>%
                 mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
                        data_type = "true") %>%
                 select(-subnum, -choiceLeft)) %>%

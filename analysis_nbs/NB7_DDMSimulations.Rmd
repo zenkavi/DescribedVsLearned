@@ -173,7 +173,7 @@ sim_sanity_checks(sim_data_m1_3)
 # Model 2: Begin integration about Q values earlier if that is the only relevant option
 
 ```{r}
-sim_trial = function(d, sigma,  barrier=1, barrierDecay=.1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=1000, epsilon = 0.0002,...){
+sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=1000, epsilon = 0.0002,...){
   
   # d : drift rate
   # sigma: sd of the normal distribution 
@@ -203,7 +203,7 @@ sim_trial = function(d, sigma,  barrier=1, barrierDecay=.1, nonDecisionTime=0, b
   barrier = rep(initialBarrier, maxIter)
   for(t in seq(2, maxIter, 1)){
     barrier[t] = initialBarrier / (1 + barrierDecay * (t))
-  }-b
+  }
     
   while (time<maxIter){
     
@@ -213,7 +213,7 @@ sim_trial = function(d, sigma,  barrier=1, barrierDecay=.1, nonDecisionTime=0, b
       
       #if decision is reached before the stim screen sample rt from log normal distribution similar to with empirical
       if (time < stimDelayIters){
-        RT=rlnorm(1, mean = 1, sd = 0.5) 
+        RT=rlnorm(1, mean = 0, sd = 0.5)
       }
       
       if (RDV >= barrier[time+1]){
@@ -258,15 +258,16 @@ sim_trial = function(d, sigma,  barrier=1, barrierDecay=.1, nonDecisionTime=0, b
 Why is rt not jumping for probFractalDraw == 1?
 
 ```{r}
-sim_data_m2_1 = sim_task(stimuli=sub_data, d = .01, sigma = .1)
+sim_data_m2_1 = sim_task(stimuli=sub_data, d = .01, sigma = .1, barrierDecay = .1)
 ```
 
 ```{r}
 sim_sanity_checks(sim_data_m2_1)
 ```
+Why are rt so slow even with a massive barrierDecay?
 
 ```{r}
-sim_data_m2_2 = sim_task(stimuli = sub_data, d = .005, sigma = .05)
+sim_data_m2_2 = sim_task(stimuli = sub_data, d = .0075, sigma = .05, barrierDecay = 1)
 ```
 
 ```{r}

@@ -7,6 +7,8 @@ output:
     code_folding: 'hide'
 ---
 
+# Setup
+
 Set up environment and load in data
 
 ```{r include=FALSE}
@@ -30,163 +32,8 @@ Adding in parameters from the two systems model for all subjects (i.e. not choos
 source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical.R'))
 source(paste0(helpers_path,'add_inferred_pars.R'))
 clean_beh_data = add_inferred_pars(clean_beh_data, par_ests, model_name="original")
-```
-
-Helper function that loops provided task conditions to generate simulated trials
-
-```{r}
-sim_task = function(sub_data, ...){
-  kwargs = list(...)
-  if (!("nonDecisionTime" %in% kwargs)){
-    kwargs$nonDecisionTime = 0
-  }
-  
-  # Create placeholder output df
-  out = data.frame(EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, probFractalDraw = NA, choice = NA, reactionTime = NA)
-  
-  # Loop through all trials of a subjects data (or just all the rows of the input)
-  for(i in 1:nrow(sub_data)) {
-    
-    # Simulate RT and choice for a single trial with given DDM parameters and trial stimulus values
-    cur_out = sim_trial(d=kwargs$d, sigma = kwargs$sigma, nonDecisionTime = kwargs$nonDecisionTime,
-                        EVLeft=sub_data$leftLotteryEV[i], EVRight = sub_data$rightLotteryEV[i], 
-                        QVLeft = sub_data$leftQValue[i], QVRight= sub_data$rightQValue[i] , 
-                        probFractalDraw = sub_data$probFractalDraw[i])
-    
-    # Append the trial to the rest of the output
-    out = rbind(out, cur_out)
-    
-  }
-  
-  # Drops only first row instead of all NAs to keep trials where iterations timed out and a decision was not made
-  out = out[-1,]
-  
-  return(out)
-}
-```
-
-Helper function for sanity checks on simulated data
-
-```{r}
-sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE){
-  #Check 1
-  if (1 %in% checks){
-    print(paste0("Proportion of time out trials is: ", round(sum(is.na(sim_data$reactionTime))/nrow(sim_data), 3)))
-  }
-  
-  
-  # Check 2
-  if(2 %in% checks){
-    p = sim_data %>%
-      drop_na()%>%
-      filter(probFractalDraw == 0 | probFractalDraw == 1) %>%
-      mutate(choiceLeft =ifelse(choice == "left", 1, ifelse(choice == "right", 0, NA))) %>%
-      mutate(EVLeftMinRight = EVLeft - EVRight,
-             QVLeftMinRight = QVLeft - QVRight) %>%
-      select(-choice, -EVLeft, -EVRight, -QVLeft, -QVRight) %>%
-      gather(key, value, -probFractalDraw, -reactionTime, -choiceLeft) %>%
-      ggplot(aes(value, choiceLeft))+
-      geom_jitter(height = .1)+
-      geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, alpha=.1)+
-      facet_grid(key ~ probFractalDraw)
-    print(p)
-  }
-  
-  
-  # Check 3
-  if(3 %in% checks){
-    if(compare_rts){
-      p = sim_data %>%
-        mutate(data_type = "sim") %>%
-        rbind(sub_data %>%
-                rename(QVLeft = leftQValue, QVRight = rightQValue, EVLeft = leftLotteryEV, EVRight = rightLotteryEV) %>%
-                mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
-                       data_type = "true") %>%
-                select(-subnum, -choiceLeft)) %>%
-        mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
-        ggplot(aes(reactionTime, fill=data_type)) +
-        geom_histogram(position="identity", bins=30, alpha=.5) +
-        labs(title="RT long tail?", fill="")+
-        facet_wrap(~probFractalDraw)+
-        theme(legend.position = "bottom")
-    }
-    else{
-      p = sim_data %>%
-        mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
-        ggplot(aes(reactionTime)) +
-        geom_histogram(position="identity", bins=30) +
-        labs(title="RT long tail?")+
-        facet_wrap(~probFractalDraw)
-    }
-    
-    print(p)
-  }
-  
-  
-  # Check 4
-  if(4 %in% checks){
-    if(compare_rts){
-      p = sim_data %>%
-        mutate(data_type = "sim") %>%
-        rbind(sub_data %>%
-                rename(QVLeft = leftQValue, QVRight = rightQValue, EVLeft = leftLotteryEV, EVRight = rightLotteryEV) %>%
-                mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
-                       data_type = "true") %>%
-                select(-subnum, -choiceLeft)) %>%
-        drop_na()%>%
-        mutate(probFractalDraw = as.factor(probFractalDraw), 
-               log_rt = log(reactionTime)) %>%
-        group_by(probFractalDraw, data_type) %>%
-        summarise(mean_log_rt = mean(log_rt),
-                  sem_log_rt = sem(log_rt), .groups="keep") %>%
-        ggplot(aes(probFractalDraw, mean_log_rt, color=data_type))+
-        geom_point()+
-        geom_errorbar(aes(ymin = mean_log_rt - sem_log_rt, ymax = mean_log_rt + sem_log_rt), width=.2)+
-        labs(title="Inverse U and faster when pFrac ==1?", color="")+
-        theme(legend.position = "bottom")
-    } else{
-      p = sim_data %>%
-        drop_na()%>%
-        mutate(probFractalDraw = as.factor(probFractalDraw), 
-               log_rt = log(reactionTime)) %>%
-        group_by(probFractalDraw) %>%
-        summarise(mean_log_rt = mean(log_rt),
-                  sem_log_rt = sem(log_rt)) %>%
-        ggplot(aes(probFractalDraw, mean_log_rt))+
-        geom_point()+
-        geom_errorbar(aes(ymin = mean_log_rt - sem_log_rt, ymax = mean_log_rt + sem_log_rt), width=.2)+
-        labs(title="Inverse U and faster when pFrac ==1?")
-    }
-    print(p)
-  }
-  
-  # Check 5
-  if(5 %in% checks){
-    p = sim_data %>%
-      mutate(probFractalDraw = as.factor(probFractalDraw),
-             choiceLeft = ifelse(choice == "left", 1, ifelse(choice=="right", 0, NA)),
-             EVDiff = EVLeft - EVRight, 
-             QVDiff = QVLeft - QVRight) %>%
-      nest(data = -probFractalDraw) %>% 
-      mutate(
-        fit = map(data, ~ glm(choiceLeft ~ EVDiff + QVDiff, data = .x, family=binomial(link="logit"))),
-        tidied = map(fit, tidy)
-      ) %>% 
-      unnest(tidied) %>%
-      filter(term != "(Intercept)") %>%
-      select(probFractalDraw, term, estimate, std.error) %>%
-      ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
-      geom_point()+
-      geom_line()+
-      geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
-      geom_hline(aes(yintercept=0), linetype="dashed")+
-      scale_color_manual(values = cbbPalette[2:1])+
-      theme(legend.position = "bottom")+
-      labs(color="", title="Relevant attribute effect on choice")
-    print(p)
-  }  
-}
-
+source(paste0(helpers_path,'sim_task.R'))
+source(paste0(helpers_path,'sim_sanity_checks.R'))
 ```
 
 # True data
@@ -207,12 +54,13 @@ clean_beh_data %>%
   geom_errorbar(aes(ymin = meanEVAdvMinQVAdv - semEVAdvMinQVAdv, ymax = meanEVAdvMinQVAdv + semEVAdvMinQVAdv), width=.2)
 ```
 
-Filter data for a few subjects with a range of learning rates (i.e. variance in QValue differences) to simulate RTs using DDM 
+Filter data for a few subjects with a range of learning rates (i.e. variance in QValue differences) to simulate RTs using DDM. Rename columns to work with task simulation function. 
 
 ```{r}
 sub_data = clean_beh_data %>%
   filter(subnum  %in% c("01", "03", "05","07", "09", "11", "13", "15", "17", "19")) %>%
-  select(leftQValue, rightQValue, leftLotteryEV, rightLotteryEV, probFractalDraw, reactionTime, choiceLeft, subnum)
+  select(leftQValue, rightQValue, leftLotteryEV, rightLotteryEV, probFractalDraw, reactionTime, choiceLeft, subnum) %>%
+  rename(EVLeft = leftLotteryEV, EVRight = rightLotteryEV, QVLeft = leftQValue, QVRight = rightQValue)
 ```
 
 How do the sanity checks look in the sampled data?
@@ -220,7 +68,6 @@ How do the sanity checks look in the sampled data?
 ```{r}
 sim_sanity_checks(sub_data %>%
                     select(-subnum) %>%
-                    rename(QVLeft = leftQValue, QVRight = rightQValue, EVLeft = leftLotteryEV, EVRight = rightLotteryEV) %>%
                     mutate(choice = ifelse(choiceLeft == 1, "left", "right")), 
                   compare_rts = FALSE)
 ```
@@ -294,31 +141,31 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
 **NOTE on drift rate: with a value like d=0.002 there are too many timeout trials because the scale of the value difference is much smaller than e.g. the value difference in the aDDM papers**
 
 ```{r}
-sim_sub_data_m1_1 = sim_task(sub_data = sub_data, d = .01, sigma = .1)
+sim_data_m1_1 = sim_task(stimuli = sub_data, d = .01, sigma = .1)
 ```
 
 ```{r}
-sim_sanity_checks(sim_sub_data_m1_1)
+sim_sanity_checks(sim_data_m1_1)
 ```
 
 Too fast with d=0.01. Can we slow it down with d=.005? Yes but then it's too noisy and choice doesn't depend on the relevant attributes as much as it should.
 
 ```{r}
-sim_sub_data_m1_2 = sim_task(sub_data = sub_data, d = .005, sigma = .1)
+sim_data_m1_2 = sim_task(stimuli = sub_data, d = .005, sigma = .1)
 ```
 
 ```{r}
-sim_sanity_checks(sim_sub_data_m1_2)
+sim_sanity_checks(sim_data_m1_2)
 ```
 
 Error bars for RTs are very wide. Can we make them smaller with smaller sigma? (from .1 to .05)
 
 ```{r}
-sim_sub_data_m1_3 = sim_task(sub_data = sub_data, d = .005, sigma = .05)
+sim_data_m1_3 = sim_task(stimuli = sub_data, d = .005, sigma = .05)
 ```
 
 ```{r}
-sim_sanity_checks(sim_sub_data_m1_3)
+sim_sanity_checks(sim_data_m1_3)
 ```
 
 **Bottom line: Can get close to the choice psychometrics but not the response time distributions/relationship with attribute relevance.**
@@ -408,20 +255,22 @@ sim_trial = function(d, sigma,  barrier=1, barrierDecay=.1, nonDecisionTime=0, b
 }
 ```
 
+Why is rt not jumping for probFractalDraw == 1?
+
 ```{r}
-sim_sub_data_m2_1 = sim_task(sub_data = sub_data, d = .01, sigma = .1)
+sim_data_m2_1 = sim_task(stimuli=sub_data, d = .01, sigma = .1)
 ```
 
 ```{r}
-sim_sanity_checks(sim_sub_data_m2_1)
+sim_sanity_checks(sim_data_m2_1)
 ```
 
 ```{r}
-sim_sub_data_m2_2 = sim_task(sub_data = sub_data, d = .005, sigma = .05)
+sim_data_m2_2 = sim_task(stimuli = sub_data, d = .005, sigma = .05)
 ```
 
 ```{r}
-sim_sanity_checks(sim_sub_data_m2_2)
+sim_sanity_checks(sim_data_m2_2)
 ```
 
 # Model 3:

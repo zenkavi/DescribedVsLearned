@@ -221,6 +221,9 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
       #if decision is reached before the stim screen sample rt from log normal distribution similar to with empirical
       # CHANGE THIS TO A MORE MEANINGFUL WAY OF GENERATING RT; AT THE VERY LEAST BASED ON A CHOICE RT TASK RT DISTRIBUTION
       if (RT < (stimDelay/1000)){
+        if(debug){
+          print("Sampling random RT")
+        }
         RT=rlnorm(1, mean = 0, sd = 0.5)
       }
       
@@ -236,10 +239,8 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
       mu_mean = 0
       elapsedNDT = elapsedNDT + 1
     } else{
-          
-    # Stim hasn't been presented yet
-    # integration begins using only QVs for trials when they are the only relevant attribute
       if (time < stimDelayIters){
+        # Any iteration before after fractal prob presentation but before stim presentation happens only for the probfractaldraw == 1 trials
         if (probFractalDraw == 1){
           mu_mean = d*(QVLeft - QVRight)
         } else {mu_mean = 0}
@@ -278,12 +279,18 @@ Why is rt not jumping for probFractalDraw == 1?
 - Debug output: for each step where is RDV; is it higher for the first 20 pre stimulus iterations for trials where pFrac == 1
 
 ```{r}
-sim_trial(d = .005, sigma = .05, barrierDecay = .1, EVLeft = .5, EVRight = .5, QVLeft = .5, QVRight = .5, probFractalDraw = 1, debug=TRUE)
+t(replicate(20, sim_trial(d = .005, sigma = .05, barrierDecay = .005, EVLeft = 0.7, EVRight = .5, QVLeft = 0, QVRight = 0, probFractalDraw = 0.8, debug=FALSE), simplify = 'dataframe'))
 ```
 
 ```{r}
-# sim_data_m2_1 = sim_task(stimuli=sub_data, d = .01, sigma = .1, barrierDecay = .1)
-sim_data_m2_1 = sim_task(stimuli=sub_data, d = .005, sigma = .05, barrierDecay = .1)
+sim_data_m2_1 = sim_task(stimuli=sub_data, d = .005, sigma = .05, barrierDecay = .005)
+```
+
+```{r}
+sim_data_m2_1
+```
+```{r}
+sub_data
 ```
 
 ```{r}

@@ -173,7 +173,7 @@ sim_sanity_checks(sim_data_m1_3)
 # Model 2: Begin integration about Q values earlier if that is the only relevant option
 
 ```{r}
-sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=1000, epsilon = 0.0002,...){
+sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=400, epsilon = 0.0002, debug=FALSE,...){
   
   # d : drift rate
   # sigma: sd of the normal distribution 
@@ -198,24 +198,30 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
   nonDecIters = nonDecisionTime / timeStep
   
   initialBarrier = barrier
-
+  
   # The values of the barriers can change over time.
   barrier = rep(initialBarrier, maxIter)
   for(t in seq(2, maxIter, 1)){
     barrier[t] = initialBarrier / (1 + barrierDecay * (t))
   }
-    
+  
   while (time<maxIter){
     
     # If the RDV hit one of the barriers, the trial is over.
     if (RDV >= barrier[time] | RDV <= -barrier[time]){
       RT = (time * timeStep)/1000 #convert ms back to secs
       
+      # Debugging
+      if(debug){
+        print(paste0("pre subtraction RT = ", RT))
+      }
+      
+      RT = RT - (stimDelay/1000) #subtract stimDelay
+      
       #if decision is reached before the stim screen sample rt from log normal distribution similar to with empirical
       # CHANGE THIS TO A MORE MEANINGFUL WAY OF GENERATING RT; AT THE VERY LEAST BASED ON A CHOICE RT TASK RT DISTRIBUTION
-      if (time < stimDelayIters & probFractalDraw==1){
-        # RT=rlnorm(1, mean = 0, sd = 0.5)
-        RT=rlnorm(1, mean = -1, sd = 0.5)
+      if (RT < (stimDelay/1000)){
+        RT=rlnorm(1, mean = 0, sd = 0.5)
       }
       
       if (RDV >= barrier[time]){
@@ -226,26 +232,33 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
       break
     } 
     
+    if (elapsedNDT < nonDecIters){
+      mu_mean = 0
+      elapsedNDT = elapsedNDT + 1
+    } else{
+          
     # Stim hasn't been presented yet
     # integration begins using only QVs for trials when they are the only relevant attribute
-    if (probFractalDraw == 1){
-      mu_mean = d*(QVLeft - QVRight)
-    } else{ 
-      if (elapsedNDT < nonDecIters){
-        mu_mean = 0
-        elapsedNDT = elapsedNDT + 1
+      if (time < stimDelayIters){
+        if (probFractalDraw == 1){
+          mu_mean = d*(QVLeft - QVRight)
+        } else {mu_mean = 0}
       } else{
-        # integration begins at stim presentation using both attributes unless pFrac == 1
+        # integration for both attributes begins at stim presentation
         valueLeft = probFractalDraw*QVLeft + (1-probFractalDraw)*(EVLeft)
         valueRight = probFractalDraw*QVRight + (1-probFractalDraw)*(EVRight)
         mu_mean = d*(valueLeft - valueRight)
       }
-      
     }
+    
     
     # Sample the change in RDV from the distribution.
     mu = rnorm(1, mu_mean, epsilon)
     RDV = RDV + rnorm(1, mu, sigma)
+    
+    if (debug){
+      print(paste0("time = ", time, " mu_mean = ", mu_mean, " mu = ", round(mu, 3), " RDV = ", round(RDV, 3), " barrier = ", round(barrier[time], 3)))
+    }
     
     # Increment sampling iteration
     time = time + 1
@@ -259,18 +272,24 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
 
 Why is rt not jumping for probFractalDraw == 1?
 - Change model to integrate a lot faster when pFrac == 1
-    - Changed the logit slope to rely more on the q value difference for pfrac == 1 trials but didn't make those trials faster compared to the other conditions
+- Changed the logit slope to rely more on the q value difference for pfrac == 1 trials but didn't make those trials faster compared to the other conditions
 - Change the RT distribution for decisions made pre stim presentation to be super fast
-    - Made all trials fast. I think there is a bug in the RT draws. Seems to be happening for all trials instead of only pFrac == 1 trials
+- Made all trials fast. I think there is a bug in the RT draws. Seems to be happening for all trials instead of only pFrac == 1 trials
 - Debug output: for each step where is RDV; is it higher for the first 20 pre stimulus iterations for trials where pFrac == 1
 
 ```{r}
-sim_data_m2_1 = sim_task(stimuli=sub_data, d = .01, sigma = .1, barrierDecay = .1)
+sim_trial(d = .005, sigma = .05, barrierDecay = .1, EVLeft = .5, EVRight = .5, QVLeft = .5, QVRight = .5, probFractalDraw = 1, debug=TRUE)
+```
+
+```{r}
+# sim_data_m2_1 = sim_task(stimuli=sub_data, d = .01, sigma = .1, barrierDecay = .1)
+sim_data_m2_1 = sim_task(stimuli=sub_data, d = .005, sigma = .05, barrierDecay = .1)
 ```
 
 ```{r}
 sim_sanity_checks(sim_data_m2_1)
 ```
+
 ```{r}
 data.frame(val = rlnorm(1000, mean = 0, sd = 0.5)) %>%
   ggplot(aes(val))+
@@ -281,7 +300,6 @@ data.frame(val = rlnorm(1000, mean = 0, sd = 0.5)) %>%
 data.frame(val = rlnorm(1000, mean = -1, sd = 0.5)) %>%
   ggplot(aes(val))+
   geom_histogram(bins = 30)
-```
 ```
 
 Why are rt so slow even with a massive barrierDecay?

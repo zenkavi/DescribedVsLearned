@@ -324,11 +324,19 @@ sim_trial(d = .008, sigma = .01, barrierDecay = 0, EVLeft = 0.7, EVRight = .1, Q
 ```
 
 ```{r}
-sim_data_m2_1 = sim_task(stimuli=sub_data, d = .005, sigma = .05, barrierDecay = 0.005)
+sim_data_m2_1 = sim_task(stimuli=sub_data, d = .002, sigma = .05, barrierDecay = 0.005)
 ```
 
 ```{r}
 sim_sanity_checks(sim_data_m2_1)
+```
+
+```{r}
+sim_data_m2_2 = sim_task(stimuli=sub_data, d = .001, sigma = .04, barrierDecay = 0)
+```
+
+```{r}
+sim_sanity_checks(sim_data_m2_2)
 ```
 
 ```{r}

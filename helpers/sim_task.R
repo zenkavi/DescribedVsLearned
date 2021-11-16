@@ -1,3 +1,17 @@
+rbind.all.columns <- function(x, y) {
+  
+  if(ncol(x) == 0 | ncol(y) == 0){
+    out = plyr::rbind.fill(x, y)
+  } else{
+    x.diff <- setdiff(colnames(x), colnames(y))
+    y.diff <- setdiff(colnames(y), colnames(x))
+    x[, c(as.character(y.diff))] <- NA
+    y[, c(as.character(x.diff))] <- NA
+    out = rbind(x, y)
+  }
+  return(out)
+}
+
 sim_task = function(stimuli, ...){
   kwargs = list(...)
   if (!("nonDecisionTime" %in% kwargs)){
@@ -20,7 +34,7 @@ sim_task = function(stimuli, ...){
                         probFractalDraw = stimuli$probFractalDraw[i])
     
     # Append the trial to the rest of the output
-    out = rbind(out, cur_out)
+    out = rbind.all.columns(out, cur_out)
     
   }
   

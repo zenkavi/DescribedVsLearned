@@ -2,6 +2,13 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
   #Check 1
   if (1 %in% checks){
     print(paste0("Proportion of time out trials is: ", round(sum(is.na(sim_data$reactionTime))/nrow(sim_data), 3)))
+    
+    if("decPreStim" %in% names(sim_data)){
+      
+      print(paste0("Proportion of trials with decision before stim: ", round(sum(sim_data$decPreStim)/nrow(sim_data), 3)))
+      
+      print(paste0("Proportion of time out trials with sampled RTs: ", round(sum(sim_data$timeOut)/nrow(sim_data), 3)))
+    }
   }
   
   
@@ -9,6 +16,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
   if(2 %in% checks){
     p = sim_data %>%
       drop_na()%>%
+      select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
       filter(probFractalDraw == 0 | probFractalDraw == 1) %>%
       mutate(choiceLeft =ifelse(choice == "left", 1, ifelse(choice == "right", 0, NA))) %>%
       mutate(EVLeftMinRight = EVLeft - EVRight,
@@ -27,6 +35,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
   if(3 %in% checks){
     if(compare_rts){
       p = sim_data %>%
+        select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
         mutate(data_type = "sim") %>%
         rbind(sub_data %>%
                 mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
@@ -56,6 +65,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
   if(4 %in% checks){
     if(compare_rts){
       p = sim_data %>%
+        select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
         mutate(data_type = "sim") %>%
         rbind(sub_data %>%
                 mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
@@ -91,6 +101,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
   # Check 5
   if(5 %in% checks){
     p = sim_data %>%
+      select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
       mutate(probFractalDraw = as.factor(probFractalDraw),
              choiceLeft = ifelse(choice == "left", 1, ifelse(choice=="right", 0, NA)),
              EVDiff = EVLeft - EVRight, 

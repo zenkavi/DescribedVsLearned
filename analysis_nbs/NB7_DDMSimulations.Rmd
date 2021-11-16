@@ -188,6 +188,11 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
   decPreStim = 0
   timeOut = 0
   
+  leftFractalAdv = NA
+  leftLotteryAdv = NA
+  relPrefLottery = NA
+  relPrefFractal = NA
+  
   kwargs = list(...)
   EVLeft=kwargs$EVLeft
   EVRight=kwargs$EVRight
@@ -228,9 +233,9 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
       RT = RT - (stimDelay/1000) 
       
       # If decision is reached before the stim screen sample rt from log normal distribution similar to choice RT 
-      if (RT < (stimDelay/1000)){
+      if (RT < 0){
         if(debug){
-          print("Sampling random RT")
+          print("RDV crossed barrier before stimDelay")
         }
         decPreStim = 1
         RT=rlnorm(1, mean = -.25, sd = 0.5)
@@ -268,10 +273,11 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
         } else {
           # Competition?
           # Gathering evidence based on lotteries vs fractals
-          relPrefFractal =  probFractalDraw* (QVLeft - QVRight)
-          relPrefLottery = (1-probFractalDraw) * (EVLeft - EVRight)
-          relStrenLottery = abs(relPrefLottery)/(abs(relPrefFractal)+1e-6)
-          mu_mean = d * (relPrefFractal + relStrenLottery * relPrefLottery)
+          leftFractalAdv =  probFractalDraw* (QVLeft - QVRight)
+          leftLotteryAdv = (1-probFractalDraw) * (EVLeft - EVRight)
+          relPrefLottery = abs(leftLotteryAdv)/(abs(leftFractalAdv)+1e-6)
+          relPrefFractal = abs(leftFractalAdv)/(abs(leftLotteryAdv)+1e-6)
+          mu_mean = d * (relPrefFractal * leftFractalAdv + relPrefLottery * leftLotteryAdv)
           
           # How to get the inverse U?
         }
@@ -308,19 +314,17 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
   }
   
   #Organize output 
-  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, decPreStim = decPreStim)
+  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, decPreStim = decPreStim, leftFractalAdv = leftFractalAdv, leftLotteryAdv = leftLotteryAdv,  relPrefFractal = relPrefFractal, relPrefLottery = relPrefLottery)
   return(out)
 }
 ```
 
 ```{r}
 sim_trial(d = .008, sigma = .01, barrierDecay = 0, EVLeft = 0.7, EVRight = .1, QVLeft = 0.7, QVRight = 0.1, probFractalDraw = .6, debug=TRUE)
-
-t(replicate(20, sim_trial(d = .002, sigma = .01, barrierDecay = .003, EVLeft = 0.7, EVRight = .5, QVLeft = 0, QVRight = 0, probFractalDraw = 0.2, debug=FALSE), simplify = 'dataframe'))
 ```
 
 ```{r}
-sim_data_m2_1 = sim_task(stimuli=sub_data, d = .005, sigma = .05, barrierDecay = 0.05)
+sim_data_m2_1 = sim_task(stimuli=sub_data, d = .005, sigma = .05, barrierDecay = 0.005)
 ```
 
 ```{r}

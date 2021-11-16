@@ -74,6 +74,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
         drop_na()%>%
         mutate(probFractalDraw = as.factor(probFractalDraw), 
                log_rt = log(reactionTime)) %>%
+        filter(is.finite(log_rt)) %>%
         group_by(probFractalDraw, data_type) %>%
         summarise(mean_log_rt = mean(log_rt),
                   sem_log_rt = sem(log_rt), .groups="keep") %>%

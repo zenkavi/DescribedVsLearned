@@ -168,12 +168,10 @@ sim_data_m1_3 = sim_task(stimuli = sub_data, d = .005, sigma = .05)
 sim_sanity_checks(sim_data_m1_3)
 ```
 
-**Bottom line: Can get close to the choice psychometrics but not the response time distributions/relationship with attribute relevance.**
-
 # Model 2: Begin integration about Q values earlier if that is the only relevant option
 
 ```{r}
-sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=400, epsilon = 0.0002, stimDelay = 2000, debug=FALSE,...){
+sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=400, epsilon = 0.0002, stimDelay = 2000, evCompTime = 300, debug=FALSE,...){
   
   # d : drift rate
   # sigma: sd of the normal distribution 
@@ -199,6 +197,8 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
   # Stimulus screen comes on 2 secs after the presentation of probFractalDraw
   stimDelayIters = stimDelay / timeStep
   nonDecIters = nonDecisionTime / timeStep
+  evCompIters = evCompTime / timeStep
+  
   # Integration starts before stim presentation (though meaningful move from 0 happens only for pFrac = 1 trials) but decision can only be indicated after stim. Since total iterations depend on maxIter the addition of iterations before stim presentation controls for the desired max time out for the trial. In the arguments to the function it is specified as the maximum time out duration after stim presentation
   maxIter = maxIter + stimDelayIters
   
@@ -228,7 +228,6 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
       RT = RT - (stimDelay/1000) 
       
       # If decision is reached before the stim screen sample rt from log normal distribution similar to choice RT 
-      # CHANGE THIS TO A MORE MEANINGFUL WAY OF GENERATING RT; AT THE VERY LEAST BASED ON A CHOICE RT TASK RT DISTRIBUTION
       if (RT < (stimDelay/1000)){
         if(debug){
           print("Sampling random RT")
@@ -263,11 +262,23 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
         # valueRight = probFractalDraw*QVRight + (1-probFractalDraw)*(EVRight)
         # mu_mean = d*(valueLeft - valueRight)
         
+        # Time for EV computation. Should create lottery bias
+        if (time < (stimDelayIters + evCompIters)){
+          mu_mean = d * (1-probFractalDraw) * (EVLeft - EVRight)
+        } else {
+          # Competition?
+          # Gathering evidence based on lotteries vs fractals
+          relPrefFractal =  probFractalDraw* (QVLeft - QVRight)
+          relPrefLottery = (1-probFractalDraw) * (EVLeft - EVRight)
+          relStrenLottery = abs(relPrefLottery)/(abs(relPrefFractal)+1e-6)
+          mu_mean = d * (relPrefFractal + relStrenLottery * relPrefLottery)
+          
+          # How to get the inverse U?
+        }
         
-        # Set up competition
+        
       }
     }
-    
     
     # Sample the change in RDV from the distribution.
     mu = rnorm(1, mu_mean, epsilon)
@@ -302,16 +313,14 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
 }
 ```
 
-Why is rt not jumping for probFractalDraw == 1?
-
 ```{r}
-sim_trial(d = .008, sigma = .01, barrierDecay = 0.03, EVLeft = 0.7, EVRight = .1, QVLeft = 0.7, QVRight = 0.1, probFractalDraw = 1, debug=TRUE)
+sim_trial(d = .008, sigma = .01, barrierDecay = 0, EVLeft = 0.7, EVRight = .1, QVLeft = 0.7, QVRight = 0.1, probFractalDraw = .6, debug=TRUE)
 
 t(replicate(20, sim_trial(d = .002, sigma = .01, barrierDecay = .003, EVLeft = 0.7, EVRight = .5, QVLeft = 0, QVRight = 0, probFractalDraw = 0.2, debug=FALSE), simplify = 'dataframe'))
 ```
 
 ```{r}
-sim_data_m2_1 = sim_task(stimuli=sub_data, d = .03, sigma = .03, barrierDecay = 0.1)
+sim_data_m2_1 = sim_task(stimuli=sub_data, d = .005, sigma = .05, barrierDecay = 0.05)
 ```
 
 ```{r}

@@ -54,6 +54,20 @@ clean_beh_data %>%
   geom_errorbar(aes(ymin = meanEVAdvMinQVAdv - semEVAdvMinQVAdv, ymax = meanEVAdvMinQVAdv + semEVAdvMinQVAdv), width=.2)
 ```
 
+```{r}
+clean_beh_data %>%
+  mutate(wAbsLeftEVAdv = (1-probFractalDraw)*abs(leftEVAdv),
+         wAbsLeftQVAdv = (probFractalDraw)*abs(leftQVAdv),
+         QVRelPref = wAbsLeftQVAdv/(wAbsLeftEVAdv +wAbsLeftQVAdv+1e-6),
+         probFractalDraw = as.factor(probFractalDraw)) %>%
+  group_by(probFractalDraw) %>%
+  summarise(meanQVRelPref = mean(QVRelPref),
+            semQVRelPref = sem(QVRelPref)) %>%
+  ggplot(aes(probFractalDraw, meanQVRelPref))+
+  geom_point()+
+  geom_errorbar(aes(ymin = meanQVRelPref - semQVRelPref, ymax = meanQVRelPref + semQVRelPref), width=.2)
+```
+
 Filter data for a few subjects with a range of learning rates (i.e. variance in QValue differences) to simulate RTs using DDM. Rename columns to work with task simulation function. 
 
 ```{r}
@@ -63,7 +77,7 @@ sub_data = clean_beh_data %>%
   rename(EVLeft = leftLotteryEV, EVRight = rightLotteryEV, QVLeft = leftQValue, QVRight = rightQValue)
 ```
 
-How do the sanity checks look in the sampled data?
+## Sanity checks in the sampled data
 
 ```{r}
 sim_sanity_checks(sub_data %>%
@@ -72,7 +86,9 @@ sim_sanity_checks(sub_data %>%
                   compare_rts = FALSE)
 ```
 
-# Model 1: Integrate both starting at stim presentation
+# Model 1: 
+
+Integrate both starting at stim presentation
 
 DDM that can take our task specific arguments as input
 
@@ -168,7 +184,11 @@ sim_data_m1_3 = sim_task(stimuli = sub_data, d = .005, sigma = .05)
 sim_sanity_checks(sim_data_m1_3)
 ```
 
-# Model 2: Begin integration about Q values earlier if that is the only relevant option
+
+
+# Model 2: 
+
+Begin integration about Q values earlier if that is the only relevant option. Otherwise integrate
 
 ```{r}
 sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=400, epsilon = 0.0002, stimDelay = 2000, evCompTime = 300, debug=FALSE,...){
@@ -257,16 +277,11 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
         # Integration after fractal prob presentation but before stim presentation happens ONLY for the probfractaldraw == 1 trials
         if (probFractalDraw == 1){
           mu_mean = d*(QVLeft - QVRight)
-          } else {
+        } else {
           # No integration after NDT and before stim presentation for any other trial type
           mu_mean = 0
-          }
+        }
       } else{
-        # integration for both attributes begins at stim presentation
-        # valueLeft = probFractalDraw*QVLeft + (1-probFractalDraw)*(EVLeft)
-        # valueRight = probFractalDraw*QVRight + (1-probFractalDraw)*(EVRight)
-        # mu_mean = d*(valueLeft - valueRight)
-        
         # Time for EV computation. Should create lottery bias
         if (time < (stimDelayIters + evCompIters)){
           mu_mean = d * (1-probFractalDraw) * (EVLeft - EVRight)
@@ -302,10 +317,10 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
   if(is.na(RT)){
     # Choose whatever you have most evidence for
     if (RDV >= 0){
-        choice = "left"
-      } else if (RDV <= 0){
-        choice = "right"
-      }
+      choice = "left"
+    } else if (RDV <= 0){
+      choice = "right"
+    }
     if(debug){
       print("Max iterations reached.")
     }
@@ -314,22 +329,28 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
   }
   
   #Organize output 
-  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, decPreStim = decPreStim, leftFractalAdv = leftFractalAdv, leftLotteryAdv = leftLotteryAdv,  relPrefFractal = relPrefFractal, relPrefLottery = relPrefLottery)
+  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, decPreStim = decPreStim, leftFractalAdv = leftFractalAdv, leftLotteryAdv = leftLotteryAdv,  relPrefFractal = relPrefFractal, relPrefLottery = relPrefLottery, d = d, sigma = sigma, barrierDecay = barrierDecay)
   return(out)
 }
 ```
 
 ```{r}
-sim_trial(d = .008, sigma = .01, barrierDecay = 0, EVLeft = 0.7, EVRight = .1, QVLeft = 0.7, QVRight = 0.1, probFractalDraw = .6, debug=TRUE)
+sim_trial(d = .002, sigma = .05, barrierDecay = 0.005, EVLeft = 0.7, EVRight = .5, QVLeft = 0.3, QVRight = 0.3, probFractalDraw = 0, debug=TRUE)
 ```
 
 ```{r}
-sim_data_m2_1 = sim_task(stimuli=sub_data, d = .002, sigma = .05, barrierDecay = 0.005)
+sim_data_m2_1 = sim_task(stimuli=sub_data, d = .004, sigma = .04, barrierDecay = 0.005)
 ```
 
 ```{r}
 sim_sanity_checks(sim_data_m2_1)
 ```
+```{r}
+sim_data_m2_1 %>% 
+  filter(decPreStim == 1)
+  # filter(probFractalDraw == 0)
+```
+
 
 ```{r}
 sim_data_m2_2 = sim_task(stimuli=sub_data, d = .001, sigma = .04, barrierDecay = 0)
@@ -339,18 +360,335 @@ sim_data_m2_2 = sim_task(stimuli=sub_data, d = .001, sigma = .04, barrierDecay =
 sim_sanity_checks(sim_data_m2_2)
 ```
 
+What is going on with the trials that hit decision before stimuli are presented but are not pfrac = 1? There should be no integration for these before the stimuli are presented. Seems to go down quickly with reducing sigma, though that messes up other things as well
+
+
+```{r}
+sim_data_m2_2 %>% 
+  filter(decPreStim == 1)
+```
+
+# Model 3:
+
+```{r}
+sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=400, epsilon = 0.0002, stimDelay = 2000, evCompTime = 300, debug=FALSE,...){
+  
+  # d : drift rate
+  # sigma: sd of the normal distribution 
+  # timeStep: in ms
+  # nonDecisionTime: in ms
+  # maxIter: num max samples. if a barrier isn't hit by this sampling of evidence no decision is made. If time step is 10ms and maxIter is 1000 this would be a 10sec timeout maximum
+  
+  RDV = bias
+  time = 1
+  elapsedNDT = 0
+  choice = 0
+  RT = NA
+  
+  decPreStim = 0
+  timeOut = 0
+  
+  leftFractalAdv = NA
+  leftLotteryAdv = NA
+  relPrefFractal = NA
+  
+  kwargs = list(...)
+  EVLeft=kwargs$EVLeft
+  EVRight=kwargs$EVRight
+  QVLeft=kwargs$QVLeft
+  QVRight=kwargs$QVRight
+  probFractalDraw=kwargs$probFractalDraw
+  # Stimulus screen comes on 2 secs after the presentation of probFractalDraw
+  stimDelayIters = stimDelay / timeStep
+  nonDecIters = nonDecisionTime / timeStep
+  evCompIters = evCompTime / timeStep
+  
+  # Integration starts before stim presentation (though meaningful move from 0 happens only for pFrac = 1 trials) but decision can only be indicated after stim. Since total iterations depend on maxIter the addition of iterations before stim presentation controls for the desired max time out for the trial. In the arguments to the function it is specified as the maximum time out duration after stim presentation
+  maxIter = maxIter + stimDelayIters
+  
+  initialBarrier = barrier
+  barrier = rep(initialBarrier, maxIter)
+  
+  # The values of the barriers can change over time
+  # Barrier decay starts after stim presentation. Not during any possible sampling before that
+  for(t in seq(stimDelayIters, maxIter, 1)){
+    barrier[t] = initialBarrier / (1 + barrierDecay * (t-stimDelayIters))
+  }
+  
+  while (time<maxIter){
+    
+    # If the RDV hit one of the barriers, the trial is over.
+    if (RDV >= barrier[time] | RDV <= -barrier[time]){
+      
+      # Convert ms back to secs
+      RT = (time * timeStep)/1000 
+      
+      # Debugging
+      if(debug){
+        print(paste0("pre subtraction RT = ", RT))
+      }
+      
+      #subtract stimDelay
+      RT = RT - (stimDelay/1000) 
+      
+      # If decision is reached before the stim screen sample rt from log normal distribution similar to choice RT 
+      if (RT < 0){
+        if(debug){
+          print("RDV crossed barrier before stimDelay")
+        }
+        decPreStim = 1
+        RT=rlnorm(1, mean = -.25, sd = 0.5)
+      }
+      
+      if (RDV >= barrier[time]){
+        choice = "left"
+      } else if (RDV <= -barrier[time]){
+        choice = "right"
+      }
+      break
+    } 
+    
+    if (elapsedNDT < nonDecIters){
+      mu_mean = 0
+      elapsedNDT = elapsedNDT + 1
+    } else{
+      if (time < stimDelayIters){
+        # Integration after fractal prob presentation but before stim presentation happens ONLY for the probfractaldraw == 1 trials
+        if (probFractalDraw == 1){
+          mu_mean = d*(QVLeft - QVRight)
+        } else {
+          # No integration after NDT and before stim presentation for any other trial type
+          mu_mean = 0
+        }
+      } else{
+        
+        # Time for EV computation. Should create lottery bias
+        if (time < (stimDelayIters + evCompIters)){
+          mu_mean = d * (1-probFractalDraw) * (EVLeft - EVRight)
+        } else {
+          # Competition?
+          # Gathering evidence based on lotteries vs fractals' relative strength of preference
+          leftFractalAdv =  probFractalDraw* (QVLeft - QVRight)
+          leftLotteryAdv = (1-probFractalDraw) * (EVLeft - EVRight)
+          relPrefFractal = abs(leftFractalAdv)/(abs(leftLotteryAdv)+abs(leftFractalAdv)+1e-6)
+          mu_mean = d * (relPrefFractal * leftFractalAdv + (1-relPrefFractal) * leftLotteryAdv)
+                  }
+      }
+    }
+    
+    # Sample the change in RDV from the distribution.
+    mu = rnorm(1, mu_mean, epsilon)
+    RDV = RDV + rnorm(1, mu, sigma)
+    
+    if (debug){
+      print(paste0("time = ", time, " mu_mean = ", mu_mean, " mu = ", round(mu, 3), " RDV = ", round(RDV, 3), " barrier = ", round(barrier[time], 3)))
+    }
+    
+    # Increment sampling iteration
+    time = time + 1
+  }
+  
+  #If a choice hasn't been made by the time limit
+  if(is.na(RT)){
+    # Choose whatever you have most evidence for
+    if (RDV >= 0){
+      choice = "left"
+    } else if (RDV <= 0){
+      choice = "right"
+    }
+    if(debug){
+      print("Max iterations reached.")
+    }
+    timeOut = 1
+    RT=rlnorm(1, mean = 1.25, sd = 0.1)
+  }
+  
+  #Organize output 
+  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, decPreStim = decPreStim, leftFractalAdv = leftFractalAdv, leftLotteryAdv = leftLotteryAdv,  relPrefFractal = relPrefFractal, d = d, sigma = sigma, barrierDecay = barrierDecay, barrier = barrier[time], RDV = RDV)
+  return(out)
+}
+```
+
+```{r}
+sim_trial(d = .008, sigma = .01, barrierDecay = 0, EVLeft = 0.7, EVRight = .1, QVLeft = 0.7, QVRight = 0.1, probFractalDraw = .6, debug=TRUE)
+```
+
+```{r}
+sim_data_m3_1 = sim_task(stimuli=sub_data, d = .006, sigma = .02, barrierDecay = 0.005)
+```
+
+```{r}
+sim_sanity_checks(sim_data_m3_1)
+```
+
+```{r}
+sim_data_m3_1 %>% 
+  filter(decPreStim == 1)
+```
+
+```{r}
+sim_data_m3_2 = sim_task(stimuli=sub_data, d = .020, sigma = .03, barrierDecay = 0.005)
+```
+
+```{r}
+sim_sanity_checks(sim_data_m3_2)
+```
+
+# Model 4:
+
+```{r}
+sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=400, epsilon = 0.0002, stimDelay = 2000, debug=FALSE,...){
+  
+  # d : drift rate
+  # sigma: sd of the normal distribution 
+  # timeStep: in ms
+  # nonDecisionTime: in ms
+  # maxIter: num max samples. if a barrier isn't hit by this sampling of evidence no decision is made. If time step is 10ms and maxIter is 1000 this would be a 10sec timeout maximum
+  
+  RDV = bias
+  time = 1
+  elapsedNDT = 0
+  choice = 0
+  RT = NA
+  
+  decPreStim = 0
+  timeOut = 0
+  
+  leftFractalAdv = NA
+  leftLotteryAdv = NA
+  relPrefFractal = NA
+  
+  kwargs = list(...)
+  EVLeft=kwargs$EVLeft
+  EVRight=kwargs$EVRight
+  QVLeft=kwargs$QVLeft
+  QVRight=kwargs$QVRight
+  probFractalDraw=kwargs$probFractalDraw
+  # Stimulus screen comes on 2 secs after the presentation of probFractalDraw
+  stimDelayIters = stimDelay / timeStep
+  nonDecIters = nonDecisionTime / timeStep
+  evCompIters = evCompTime / timeStep
+  
+  # Integration starts before stim presentation (though meaningful move from 0 happens only for pFrac = 1 trials) but decision can only be indicated after stim. Since total iterations depend on maxIter the addition of iterations before stim presentation controls for the desired max time out for the trial. In the arguments to the function it is specified as the maximum time out duration after stim presentation
+  maxIter = maxIter + stimDelayIters
+  
+  initialBarrier = barrier
+  barrier = rep(initialBarrier, maxIter)
+  
+  # The values of the barriers can change over time
+  # Barrier decay starts after stim presentation. Not during any possible sampling before that
+  for(t in seq(stimDelayIters, maxIter, 1)){
+    barrier[t] = initialBarrier / (1 + barrierDecay * (t-stimDelayIters))
+  }
+  
+  while (time<maxIter){
+    
+    # If the RDV hit one of the barriers, the trial is over.
+    if (RDV >= barrier[time] | RDV <= -barrier[time]){
+      
+      # Convert ms back to secs
+      RT = (time * timeStep)/1000 
+      
+      # Debugging
+      if(debug){
+        print(paste0("pre subtraction RT = ", RT))
+      }
+      
+      #subtract stimDelay
+      RT = RT - (stimDelay/1000) 
+      
+      # If decision is reached before the stim screen sample rt from log normal distribution similar to choice RT 
+      if (RT < 0){
+        if(debug){
+          print("RDV crossed barrier before stimDelay")
+        }
+        decPreStim = 1
+        RT=rlnorm(1, mean = -.25, sd = 0.5)
+      }
+      
+      if (RDV >= barrier[time]){
+        choice = "left"
+      } else if (RDV <= -barrier[time]){
+        choice = "right"
+      }
+      break
+    } 
+    
+    if (elapsedNDT < nonDecIters){
+      mu_mean = 0
+      elapsedNDT = elapsedNDT + 1
+    } else{
+      if (time < stimDelayIters){
+        # Integration after fractal prob presentation but before stim presentation happens ONLY for the probfractaldraw == 1 trials
+        if (probFractalDraw == 1){
+          mu_mean = d*(QVLeft - QVRight)
+        } else {
+          # No integration after NDT and before stim presentation for any other trial type
+          mu_mean = 0
+        }
+      } else{
+        
+        # Three integrators
+        lottery_mu = (1-probFractalDraw) * (EVLeft - EVRight)
+        lotteryRDV = lotteryRDV + rnorm(1, lottery_mu, sigma)
+        
+        fractal_mu = probFractalDraw * (QVLeft - QVRight)
+        fractalRDV = fractalRDV + rnorm(1, fractal_mu, sigma)
+        
+        arbitrator_mu = lotteryRDV - fractalRDV
+        arbitratorRDV = arbitratorRDV + rnorm(1, arbitrator_mu, sigma)
+        
+        # When is a decision reached? What happens when the arbitrator hits a bound?
+        
+      }
+    }
+  }
+  
+  # Sample the change in RDV from the distribution.
+  mu = rnorm(1, mu_mean, epsilon)
+  RDV = RDV + rnorm(1, mu, sigma)
+  
+  if (debug){
+    print(paste0("time = ", time, " mu_mean = ", mu_mean, " mu = ", round(mu, 3), " RDV = ", round(RDV, 3), " barrier = ", round(barrier[time], 3)))
+  }
+  
+  # Increment sampling iteration
+  time = time + 1
+}
+
+#If a choice hasn't been made by the time limit
+if(is.na(RT)){
+  # Choose whatever you have most evidence for
+  if (RDV >= 0){
+    choice = "left"
+  } else if (RDV <= 0){
+    choice = "right"
+  }
+  if(debug){
+    print("Max iterations reached.")
+  }
+  timeOut = 1
+  RT=rlnorm(1, mean = 1.25, sd = 0.1)
+}
+
+#Organize output 
+out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, decPreStim = decPreStim, leftFractalAdv = leftFractalAdv, leftLotteryAdv = leftLotteryAdv,  relPrefFractal = relPrefFractal)
+return(out)
+}
+```
+
+# Sandbox
+
+Proportion of pfrac == 1 trials in the sample that is being used for the simulations. Number of trials with pre stimulus decisions shouldn't exceed this.
+
 ```{r}
 nrow(sub_data %>% filter(probFractalDraw==1))/nrow(sub_data)
 ```
+
+Response time distribution for too fast decisions
 
 ```{r}
 data.frame(val = rlnorm(1000, mean = -.25, sd = 0.5)) %>%
   ggplot(aes(val))+
   geom_histogram(bins = 30)
 ```
-
-Things to incorporate:
-- Choice bias for lotteries
-- Computation of EV for lotteries takes time
-- There is something other than EV computation going on for 1 > probFractalDraw > 0
-- Competition based on relative strength of preference

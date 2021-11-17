@@ -1,13 +1,13 @@
 sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE){
   #Check 1
   if (1 %in% checks){
-    print(paste0("Proportion of time out trials is: ", round(sum(is.na(sim_data$reactionTime))/nrow(sim_data), 3)))
+    print(paste0("Proportion of time out trials if no decision made: ", round(sum(is.na(sim_data$reactionTime))/nrow(sim_data), 3)))
     
     if("decPreStim" %in% names(sim_data)){
       
       print(paste0("Proportion of trials with decision before stim: ", round(sum(sim_data$decPreStim)/nrow(sim_data), 3)))
       
-      print(paste0("Proportion of time out trials with sampled RTs: ", round(sum(sim_data$timeOut)/nrow(sim_data), 3)))
+      print(paste0("Proportion of time out trials with decision of closest boundary sampled RTs: ", round(sum(sim_data$timeOut)/nrow(sim_data), 3)))
     }
   }
   

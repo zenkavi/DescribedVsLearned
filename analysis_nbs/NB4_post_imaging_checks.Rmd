@@ -1,0 +1,172 @@
+---
+title: "Experience vs. description based decision-making project: Post imaging analyses checks"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: 'hide'
+---
+
+Set up environment and load in data
+
+```{r include=FALSE}
+library(tidyverse)
+library(gridExtra)
+library(brms)
+library(here)
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+# theme_set(theme_bw())
+theme_set(theme_classic())
+sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
+```
+
+```{r include=FALSE}
+helpers_path = here('helpers/')
+
+source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical_rpeWhenFractalRewarded.R'))
+fit_rpeWhenFractalRewarded = fit
+g_par_ests_rpeWhenFractalRewarded = g_par_ests
+par_ests_rpeWhenFractalRewarded = par_ests
+
+source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical_rpeChosenBundleFractal.R'))
+fit_rpeChosenBundleFractal = fit
+g_par_ests_rpeChosenBundleFractal = g_par_ests
+par_ests_rpeChosenBundleFractal = par_ests
+
+source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical.R'))
+source(paste0(helpers_path,'add_inferred_pars.R'))
+```
+
+```{r}
+clean_beh_data_original = add_inferred_pars(clean_beh_data, par_ests, model_name="original")
+clean_beh_data_rpeChosenBundleFractal = add_inferred_pars(clean_beh_data, par_ests_rpeChosenBundleFractal, model_name="rpeChosenBundleFractal")
+clean_beh_data_rpeWhenFractalRewarded = add_inferred_pars(clean_beh_data, par_ests_rpeWhenFractalRewarded, model_name="rpeWhenFractalRewarded")
+```
+
+# Model comparison of different RPE representations
+
+## Behavioral fit comparison
+
+There are individual differences in the best fitting model.
+
+```{r}
+par_ests %>%
+  mutate(model = "original") %>%
+  rbind(par_ests_rpeChosenBundleFractal %>% mutate(model = "rpeChosenBundleFractal")) %>%
+  rbind(par_ests_rpeWhenFractalRewarded %>% mutate(model = "rpeWhenFractalRewarded")) %>%
+  ggplot(aes(logLik, fill=model))+
+  geom_histogram(bins=30, position="identity", alpha=0.5)+
+  facet_wrap(~subnum, scales='free')+
+  scale_fill_manual(values=cbbPalette[1:3])+
+  theme(legend.position = "bottom")+
+  labs(x="",y="", fill="", title = "Distribution of log likelihoods")
+```
+
+```{r}
+best_model_for_subj = par_ests %>%
+  mutate(model = "original") %>%
+  rbind(par_ests_rpeChosenBundleFractal %>% mutate(model = "rpeChosenBundleFractal")) %>%
+  rbind(par_ests_rpeWhenFractalRewarded %>% mutate(model = "rpeWhenFractalRewarded")) %>%
+  group_by(model, subnum) %>%
+  summarise(aveLL = mean(logLik),.groups='keep') %>%
+  ungroup() %>%
+  group_by(subnum) %>%
+  mutate(minaveLL = min(aveLL)) %>%
+  spread(model, aveLL) %>%
+  mutate(winningModel = ifelse(minaveLL == original, "original", ifelse(minaveLL == rpeChosenBundleFractal, "rpeChosenBundleFractal", "rpeWhenFractalRewarded"))) %>%
+  select(-minaveLL) 
+
+best_model_for_subj %>%
+  ungroup()%>%
+  count(winningModel)
+```
+
+## How are the parameter estimates related between the three models 
+
+```{r}
+par_ests %>%
+  mutate(model = "original") %>%
+  rbind(par_ests_rpeChosenBundleFractal %>% mutate(model = "rpeChosenBundleFractal")) %>%
+  rbind(par_ests_rpeWhenFractalRewarded %>% mutate(model = "rpeWhenFractalRewarded")) %>%
+  filter(par == "alpha") %>%
+  ggplot(aes(value, fill=model)) +
+  geom_histogram(bins=30, position="identity", alpha=0.5)+
+  facet_wrap(~subnum, scales='free')+
+  scale_fill_manual(values=cbbPalette[1:3])+
+  theme(legend.position = "bottom")+
+  labs(x="",y="", fill="", title = "Distribution of learning rates")
+```
+Models where the RPE is not updated on each trial tend to estimate higher learning rates.
+
+```{r}
+clean_beh_data_original %>%
+  mutate(model = "original") %>%
+  select(subnum, model, alpha) %>%
+  rbind(clean_beh_data_rpeChosenBundleFractal %>%
+          mutate(model = "rpeChosenBundleFractal") %>%
+          select(subnum, model, alpha)) %>%
+  rbind(clean_beh_data_rpeWhenFractalRewarded %>%
+          mutate(model = "rpeWhenFractalRewarded") %>%
+          select(subnum, model, alpha)) %>%
+  distinct() %>%
+  gather(par, est, -subnum, -model) %>%
+  spread(model, est) %>%
+  gather(model, value, -subnum, -par, -original) %>%
+  ggplot(aes(original, value)) +
+  geom_point()+
+  geom_abline(aes(slope=1, intercept=0), linetype="dashed")+
+  facet_grid(model ~ par, scales='free')+
+  theme_bw()
+  
+```
+
+```{r}
+clean_beh_data_original %>%
+  mutate(model = "original") %>%
+  select(subnum, model, beta, delta, gamma) %>%
+  rbind(clean_beh_data_rpeChosenBundleFractal %>%
+          mutate(model = "rpeChosenBundleFractal") %>%
+          select(subnum, model, beta, delta, gamma)) %>%
+  rbind(clean_beh_data_rpeWhenFractalRewarded %>%
+          mutate(model = "rpeWhenFractalRewarded") %>%
+          select(subnum, model, beta, delta, gamma)) %>%
+  distinct() %>%
+  gather(par, est, -subnum, -model) %>%
+  spread(model, est) %>%
+  gather(model, value, -subnum, -par, -original) %>%
+  ggplot(aes(original, value)) +
+  geom_point()+
+  geom_abline(aes(slope=1, intercept=0), linetype="dashed")+
+  facet_grid(model ~ par, scales='free')+
+  theme_bw()
+  
+```
+
+## What does `rpeLeftRightSum` look like `rpeWhenFractalRewarded` and `rpeChosenBundleFractal` compared to the original model
+
+```{r}
+clean_beh_data_original %>%
+  mutate(model = "original") %>%
+  group_by(subnum) %>%
+  mutate(trialNumCont = 1:n()) %>%
+  select(subnum, model, trialNumCont, rpeLeftRightSum) %>%
+  rbind(clean_beh_data_rpeChosenBundleFractal %>%
+          mutate(model = "rpeChosenBundleFractal") %>%
+          group_by(subnum) %>%
+          mutate(trialNumCont = 1:n()) %>%
+          select(subnum, model, trialNumCont, rpeLeftRightSum)) %>%
+  rbind(clean_beh_data_rpeWhenFractalRewarded %>%
+          mutate(model = "rpeWhenFractalRewarded")%>%
+          group_by(subnum) %>%
+          mutate(trialNumCont = 1:n()) %>%
+          select(subnum, model, trialNumCont, rpeLeftRightSum)) %>%
+  spread(model, rpeLeftRightSum) %>%
+  gather(model, value, -subnum, -trialNumCont, -original) %>%
+  filter(subnum %in% c("02", "04", "08")) %>%
+  ggplot(aes(original, value)) +
+  geom_point()+
+  geom_abline(aes(slope=1, intercept=0), linetype="dashed")+
+  facet_grid(model~subnum, scales='free')+
+  theme_bw()
+  
+```

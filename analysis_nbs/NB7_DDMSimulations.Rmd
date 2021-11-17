@@ -114,6 +114,10 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
   QVRight=kwargs$QVRight
   probFractalDraw=kwargs$probFractalDraw
   
+  valueLeft = probFractalDraw*QVLeft + (1-probFractalDraw)*(EVLeft)
+  valueRight = probFractalDraw*QVRight + (1-probFractalDraw)*(EVRight)
+  valDiff_mu_mean = d*(valueLeft - valueRight)
+  
   while (time<maxIter){
     
     # If the RDV hit one of the barriers, the trial is over.
@@ -135,9 +139,7 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
       elapsedNDT = elapsedNDT + 1
     } else{
       # If the nonDecisionTime has passed set the mean of the distribution the decision variable will be sampled from to a value proportional to the value difference and the drift rate 
-      valueLeft = probFractalDraw*QVLeft + (1-probFractalDraw)*(EVLeft)
-      valueRight = probFractalDraw*QVRight + (1-probFractalDraw)*(EVRight)
-      mu_mean = d*(valueLeft - valueRight)
+      mu_mean = valDiff_mu_mean
     }
     
     # Sample the change in RDV from the distribution with mean proportional to the value difference
@@ -154,37 +156,13 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
 }
 ```
 
-**NOTE on drift rate: with a value like d=0.002 there are too many timeout trials because the scale of the value difference is much smaller than e.g. the value difference in the aDDM papers**
-
 ```{r}
-sim_data_m1_1 = sim_task(stimuli = sub_data, d = .01, sigma = .1)
+sim_data_m1_1 = sim_task(stimuli = sub_data, d = .06, sigma = .06)
 ```
 
 ```{r}
 sim_sanity_checks(sim_data_m1_1)
 ```
-
-Too fast with d=0.01. Can we slow it down with d=.005? Yes but then it's too noisy and choice doesn't depend on the relevant attributes as much as it should.
-
-```{r}
-sim_data_m1_2 = sim_task(stimuli = sub_data, d = .005, sigma = .1)
-```
-
-```{r}
-sim_sanity_checks(sim_data_m1_2)
-```
-
-Error bars for RTs are very wide. Can we make them smaller with smaller sigma? (from .1 to .05)
-
-```{r}
-sim_data_m1_3 = sim_task(stimuli = sub_data, d = .005, sigma = .05)
-```
-
-```{r}
-sim_sanity_checks(sim_data_m1_3)
-```
-
-
 
 # Model 2: 
 
@@ -615,7 +593,7 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotte
       
       # Arbitrator 
       # If abs(lotteryRDV) > abs(fractalRDV) stronger relative preference for a side based on lotteries
-      arbitrator_mu_mean = abs(lotteryRDV) - abs(fractalRDV)
+      arbitrator_mu_mean = d * abs(lotteryRDV) - abs(fractalRDV)
       arbitrator_mu = rnorm(1, arbitrator_mu_mean, epsilon)
       arbitratorRDV = arbitratorRDV + rnorm(1, arbitrator_mu, sigma)
     }
@@ -647,7 +625,7 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotte
   out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, arbitrator = arbitrator)
   
   if(debug){
-    out = list(out=out, debug_df=debug_df)
+    out = list(out=out, debug_df=debug_df[-1,])
   }
   
   return(out)
@@ -655,11 +633,24 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotte
 ```
 
 ```{r}
-sim_trial(d = .001, sigma = .01, barrierDecay = 0, EVLeft = 0.9, EVRight = .5, QVLeft = 0, QVRight = 0, probFractalDraw = 0, debug=TRUE, nonDecisionTime = 200)
+tmp = sim_trial(d = .001, sigma = .01, barrierDecay = 0, EVLeft = 0.9, EVRight = 0.1, QVLeft = 0, QVRight = 0, probFractalDraw = 0, debug=TRUE, nonDecisionTime = 200)
+
+tmp$debug_df %>%
+  select(-barrier) %>%
+  gather(key, value, -time) %>%
+  ggplot(aes(time, value))+
+  geom_line()+
+  geom_hline(aes(yintercept = 1), color="red")+
+    geom_hline(aes(yintercept = -1), color="green")+
+  facet_grid(key ~.)
 ```
 
 ```{r}
-sim_data_m4_1 = sim_task(stimuli=sub_data, d = .002, sigma = .02, barrierDecay = 0.005)
+tmp$debug_df
+```
+
+```{r}
+sim_data_m4_1 = sim_task(stimuli=sub_data, d = .002, sigma = .02, barrierDecay = 0)
 ```
 
 ```{r}

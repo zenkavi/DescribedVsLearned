@@ -555,9 +555,10 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotte
   
   timeOut = 0
   
-  leftFractalAdv = NA
-  leftLotteryAdv = NA
-  relPrefFractal = NA
+  arbitrator_mu_mean = NA
+  if(debug){
+    debug_df = data.frame()
+  }
   
   kwargs = list(...)
   EVLeft=kwargs$EVLeft
@@ -619,9 +620,10 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotte
       arbitratorRDV = arbitratorRDV + rnorm(1, arbitrator_mu, sigma)
     }
     
-    # if (debug){
-    #   print(paste0("time = ", time, " mu_mean = ", mu_mean, " mu = ", round(mu, 3), " RDV = ", round(RDV, 3), " barrier = ", round(barrier[time], 3)))
-    # }
+    if (debug){
+      debug_row = data.frame(time = time, arbitrator_mu_mean = round(arbitrator_mu_mean, 3), arbitratorRDV = round(arbitratorRDV, 3), barrier = round(barrier[time], 3), lotteryRDV = round(lotteryRDV, 3), fractalRDV = round(fractalRDV, 3))
+      debug_df = rbind(debug_df, debug_row)
+    }
     
     # Increment sampling iteration
     time = time + 1
@@ -636,25 +638,32 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotte
     } else if (arbitrator == "QV"){
       choice = ifelse(fractalRDV > 0, "left", "right")
     }
-    if(debug){
-      print("Max iterations reached.")
-    }
+   
     timeOut = 1
     RT=rlnorm(1, mean = 1.25, sd = 0.1)
   }
   
   #Organize output 
   out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, arbitrator = arbitrator)
+  
+  if(debug){
+    out = list(out=out, debug_df=debug_df)
+  }
+  
   return(out)
 }
 ```
 
 ```{r}
-sim_trial(d = .001, sigma = .01, barrierDecay = 0, EVLeft = 0.5, EVRight = .5, QVLeft = 0, QVRight = 0, probFractalDraw = .5, debug=TRUE, nonDecisionTime = 200)
+sim_trial(d = .001, sigma = .01, barrierDecay = 0, EVLeft = 0.9, EVRight = .5, QVLeft = 0, QVRight = 0, probFractalDraw = 0, debug=TRUE, nonDecisionTime = 200)
 ```
 
 ```{r}
+sim_data_m4_1 = sim_task(stimuli=sub_data, d = .002, sigma = .02, barrierDecay = 0.005)
+```
 
+```{r}
+sim_sanity_checks(sim_data_m4_1)
 ```
 
 # Sandbox

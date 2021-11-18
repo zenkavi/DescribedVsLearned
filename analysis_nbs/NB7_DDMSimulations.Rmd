@@ -657,7 +657,7 @@ tmp
 
 
 ```{r}
-sim_data_m4_1 = sim_task(stimuli=sub_data, d = .03, sigma = .03, barrierDecay = 0.007)
+sim_data_m4_1 = sim_task(stimuli=sub_data, d = .033, sigma = .03, barrierDecay = 0.007)
 ```
 
 ```{r}

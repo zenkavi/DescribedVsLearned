@@ -497,7 +497,7 @@ sim_trial(d = .008, sigma = .01, barrierDecay = 0, EVLeft = 0.7, EVRight = .1, Q
 ```
 
 ```{r}
-sim_data_m3_1 = sim_task(stimuli=sub_data, d = .03, sigma = .03, barrierDecay = 0.005)
+sim_data_m3_1 = sim_task(stimuli=sub_data, d = .01, sigma = .01, barrierDecay = 0.005)
 ```
 
 ```{r}
@@ -657,7 +657,7 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotte
 Example visualization of integration
 
 ```{r echo=FALSE, eval=FALSE}
-tmp = sim_trial(d = .01, sigma = .01, barrierDecay = 0.005, EVLeft = 1, EVRight = 0, QVLeft = 0.3, QVRight = 0.7, probFractalDraw = 1, debug=TRUE, nonDecisionTime = 0)
+tmp = sim_trial(d = .033, sigma = .03, barrierDecay = 0.005, EVLeft = .7, EVRight = 0.5, QVLeft = 0.3, QVRight = 0.7, probFractalDraw = .8, debug=TRUE, nonDecisionTime = 0)
 
 tmp$debug_df %>%
   select(-arbitrator_mu_mean) %>%
@@ -688,6 +688,180 @@ sim_sanity_checks(sim_data_m4_1)
 - Choice
   - Logits too high for edge pfrac
   - Slight/no lottery bias
+  
+# Model 5: 3 integrators
+
+- Same as model 4 but with attribute relevance affecting arbitrator and not the attribute integrators
+
+```{r}
+sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotteryBias=0.1, fractalBias = 0, timeStep=10, maxIter=400, epsilon = 0.002, debug=FALSE,...){
+  
+  # d : drift rate
+  # sigma: sd of the normal distribution 
+  # timeStep: in ms
+  # nonDecisionTime: in ms
+  # maxIter: num max samples. if a barrier isn't hit by this sampling of evidence no decision is made. If time step is 10ms and maxIter is 1000 this would be a 10sec timeout maximum
+  
+  
+  arbitratorRDV = 0
+  time = 1
+  elapsedNDT = 0
+  choice = 0
+  RT = NA
+  
+  timeOut = 0
+  
+  arbitrator_mu_mean = NA
+  if(debug){
+    debug_df = data.frame()
+  }
+  
+  kwargs = list(...)
+  EVLeft=kwargs$EVLeft
+  EVRight=kwargs$EVRight
+  if(EVLeft > EVRight){
+    lotteryRDV = lotteryBias
+  } else {
+    lotteryRDV = -lotteryBias
+  }
+  
+  QVLeft=kwargs$QVLeft
+  QVRight=kwargs$QVRight
+  if(EVLeft > EVRight){
+    fractalRDV = fractalBias
+  } else {
+    fractalRDV = -fractalBias
+  }
+  
+  probFractalDraw=kwargs$probFractalDraw
+  if(probFractalDraw == 1){
+    fractalRDV = QVLeft - QVRight
+  }
+  
+  nonDecIters = nonDecisionTime / timeStep
+  
+  initialBarrier = barrier
+  barrier = rep(initialBarrier, maxIter)
+  
+  # The values of the barriers can change over time
+  for(t in seq(1, maxIter, 1)){
+    barrier[t] = initialBarrier / (1 + barrierDecay * t)
+  }
+  
+  lottery_mu_mean = d * (EVLeft - EVRight)
+  fractal_mu_mean = d * (QVLeft - QVRight)
+  
+  while (time<maxIter){
+    
+    # If the arbitrator RDV hits one of the barriers make decision
+    if (arbitratorRDV >= barrier[time] | arbitratorRDV <= -barrier[time]){
+      
+      # Convert ms back to secs
+      RT = (time * timeStep)/1000 
+      
+      if (arbitratorRDV >= barrier[time]){
+        arbitrator = "EV"
+        choice = ifelse(lotteryRDV > 0, "left", "right")
+      } else if (arbitratorRDV <= -barrier[time]){
+        arbitrator = "QV"
+        choice = ifelse(fractalRDV > 0, "left", "right")
+      }
+      break
+    } 
+    
+    # Otherwise continue sampling evidence
+    if (elapsedNDT < nonDecIters){
+      mu_mean = 0
+      elapsedNDT = elapsedNDT + 1
+    } else{
+      
+      # Three integrators
+      
+      # Lottery integrator
+      lottery_mu = rnorm(1, lottery_mu_mean, epsilon)
+      lotteryRDV = lotteryRDV + rnorm(1, lottery_mu, sigma)
+      
+      # Fractal integrator
+      fractal_mu = rnorm(1, fractal_mu_mean, epsilon)
+      fractalRDV = fractalRDV + rnorm(1, fractal_mu, sigma)
+      
+      # Arbitrator 
+      # If abs(lotteryRDV) > abs(fractalRDV) stronger relative preference for a side based on lotteries
+      arbitrator_mu_mean = d * ((1-probFractalDraw) * abs(lotteryRDV) - (probFractalDraw) * abs(fractalRDV))
+      arbitrator_mu = rnorm(1, arbitrator_mu_mean, epsilon)
+      arbitratorRDV = arbitratorRDV + rnorm(1, arbitrator_mu, sigma)
+    }
+    
+    if (debug){
+      debug_row = data.frame(time = time, arbitrator_mu_mean = round(arbitrator_mu_mean, 3), arbitratorRDV = round(arbitratorRDV, 3), barrier = round(barrier[time], 3), lotteryRDV = round(lotteryRDV, 3), fractalRDV = round(fractalRDV, 3))
+      debug_df = rbind(debug_df, debug_row)
+    }
+    
+    # Increment sampling iteration
+    time = time + 1
+  }
+  
+  #If a choice hasn't been made by the time limit
+  if(is.na(RT)){
+    # Choose whatever you have most evidence for
+    arbitrator = ifelse(arbitratorRDV >= 0 , "EV", "QV")
+    if(arbitrator == "EV"){
+      choice = ifelse(lotteryRDV > 0, "left", "right")
+    } else if (arbitrator == "QV"){
+      choice = ifelse(fractalRDV > 0, "left", "right")
+    }
+   
+    timeOut = 1
+    RT=rlnorm(1, mean = 1.25, sd = 0.1)
+  }
+  
+  #Organize output 
+  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, arbitrator = arbitrator)
+  
+  if(debug){
+    out = list(out=out, debug_df=debug_df[-1,])
+  }
+  
+  return(out)
+}
+```
+
+Example visualization of integration
+
+```{r echo=FALSE, eval=FALSE}
+tmp = sim_trial(d = .033, sigma = .03, barrierDecay = 0.005, EVLeft = .7, EVRight = 0.5, QVLeft = 0.3, QVRight = 0.7, probFractalDraw = .8, debug=TRUE, nonDecisionTime = 0)
+
+tmp$debug_df %>%
+  select(-arbitrator_mu_mean) %>%
+  gather(key, value, -time, -barrier) %>%
+  ggplot()+
+  geom_line(aes(time, value))+
+  geom_line(aes(time, barrier), color="red")+
+  geom_line(aes(time, -barrier), color="green")+
+  geom_hline(aes(yintercept = 0), linetype="dashed")+
+  facet_grid(key ~.)
+```
+
+
+```{r}
+sim_data_m5_1 = sim_task(stimuli=sub_data, d = .033, sigma = .03, barrierDecay = 0.007)
+```
+
+```{r}
+sim_sanity_checks(sim_data_m5_1)
+```
+
+## Checks
+
+- RT
+  - RT distributions largely overlapping with true distributions
+  - Inverse U but the apex pushed to where the attribute difference is maximal (by model design)
+  - Yes fast pFrac == 1 trials
+- Choice
+  - Logits too high when value difference is not 
+  - Lottery bias?
+  
+
 
 # Next steps
 

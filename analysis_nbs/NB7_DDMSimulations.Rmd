@@ -40,11 +40,15 @@ source(paste0(helpers_path,'sim_sanity_checks.R'))
 
 ### Motivation for competition
 
+Graph below shows the difference in strength of preference for the left bundle based on EV versus QV. The smaller this difference the harder it should be to make the decision based on one attribute only. 
+
+So if choice is faster when this value is larger that would suggest it is driven primarily by (the relative preference for) one attribute. Alternatively if choice is slower when this value is smaller it suggests integrating
+
 ```{r}
 clean_beh_data %>%
-  mutate(wAbsLeftEVAdv = (1-probFractalDraw)*abs(leftEVAdv),
-         wAbsLeftQVAdv = (probFractalDraw)*abs(leftQVAdv),
-         EVAdvMinQVAdv = abs(wAbsLeftEVAdv - wAbsLeftQVAdv),
+  mutate(wAbsLeftEVAdv = (1-probFractalDraw)*abs(leftEVAdv), # strength of left preference based on EV
+         wAbsLeftQVAdv = (probFractalDraw)*abs(leftQVAdv), # strength of left preference based on QV
+         EVAdvMinQVAdv = abs(wAbsLeftEVAdv - wAbsLeftQVAdv), # difference in strength of preference
          probFractalDraw = as.factor(probFractalDraw)) %>%
   group_by(probFractalDraw) %>%
   summarise(meanEVAdvMinQVAdv = mean(EVAdvMinQVAdv),
@@ -52,20 +56,6 @@ clean_beh_data %>%
   ggplot(aes(probFractalDraw, meanEVAdvMinQVAdv))+
   geom_point()+
   geom_errorbar(aes(ymin = meanEVAdvMinQVAdv - semEVAdvMinQVAdv, ymax = meanEVAdvMinQVAdv + semEVAdvMinQVAdv), width=.2)
-```
-
-```{r}
-clean_beh_data %>%
-  mutate(wAbsLeftEVAdv = (1-probFractalDraw)*abs(leftEVAdv),
-         wAbsLeftQVAdv = (probFractalDraw)*abs(leftQVAdv),
-         QVRelPref = wAbsLeftQVAdv/(wAbsLeftEVAdv +wAbsLeftQVAdv+1e-6),
-         probFractalDraw = as.factor(probFractalDraw)) %>%
-  group_by(probFractalDraw) %>%
-  summarise(meanQVRelPref = mean(QVRelPref),
-            semQVRelPref = sem(QVRelPref)) %>%
-  ggplot(aes(probFractalDraw, meanQVRelPref))+
-  geom_point()+
-  geom_errorbar(aes(ymin = meanQVRelPref - semQVRelPref, ymax = meanQVRelPref + semQVRelPref), width=.2)
 ```
 
 Filter data for a few subjects with a range of learning rates (i.e. variance in QValue differences) to simulate RTs using DDM. Rename columns to work with task simulation function. 
@@ -86,11 +76,11 @@ sim_sanity_checks(sub_data %>%
                   compare_rts = FALSE)
 ```
 
-# Model 1: 
+# Model 1: Simplest
 
-Integrate both starting at stim presentation
-
-DDM that can take our task specific arguments as input
+- Integration begins at stim presentation for all conditions
+- Drift rate is proportional to the bundle value difference 
+- Bundle values are computed as sums of QV and EV weighted by their relevance (no distortion of probability)
 
 ```{r}
 sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=1000, epsilon = 0.0002, ...){
@@ -157,16 +147,28 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
 ```
 
 ```{r}
-sim_data_m1_1 = sim_task(stimuli = sub_data, d = .06, sigma = .06)
+sim_data_m1_1 = sim_task(stimuli = sub_data, d = .05, sigma = .025)
 ```
 
 ```{r}
 sim_sanity_checks(sim_data_m1_1)
 ```
 
-# Model 2: 
+## Checks
 
-Begin integration about Q values earlier if that is the only relevant option. Otherwise integrate
+- RT
+  - No inverse U
+  - No fast pFrac == 1 trials
+- Choice
+  - Logits are too high
+  - No lottery bias
+
+# Model 2: Early integration, relative preference weighting
+
+- Two kinds of early integration
+  - For probFractalDraw == 1 trials begin integrating before stimulus presentation proportional to QV difference weighted by drift rate
+  - For all trials, if a decision hasn't already been made before the stim presentation, first integrate only based on the weighted EV difference. This is intended to capture EV computation at stim presentation and possibly result in a lottery bias
+- Once any early integration is complete integration uses both QV and EV differences weighted by relevance. They are also weighted by how strong the difference on one attribute is compared to the other attribute.
 
 ```{r}
 sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=400, epsilon = 0.0002, stimDelay = 2000, evCompTime = 300, debug=FALSE,...){
@@ -177,6 +179,10 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
   # nonDecisionTime: in ms
   # maxIter: num max samples. if a barrier isn't hit by this sampling of evidence no decision is made. If time step is 10ms and maxIter is 1000 this would be a 10sec timeout maximum
   
+  if (debug){
+    debug_df = data.frame()
+  }
+  
   RDV = bias
   time = 1
   elapsedNDT = 0
@@ -185,11 +191,6 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
   
   decPreStim = 0
   timeOut = 0
-  
-  leftFractalAdv = NA
-  leftLotteryAdv = NA
-  relPrefLottery = NA
-  relPrefFractal = NA
   
   kwargs = list(...)
   EVLeft=kwargs$EVLeft
@@ -214,6 +215,14 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
     barrier[t] = initialBarrier / (1 + barrierDecay * (t-stimDelayIters))
   }
   
+  qv_mu_mean = d*(QVLeft - QVRight)
+  ev_mu_mean = d * (1-probFractalDraw) * (EVLeft - EVRight)
+  
+  leftFractalAdv =  probFractalDraw* (QVLeft - QVRight)
+  leftLotteryAdv = (1-probFractalDraw) * (EVLeft - EVRight)
+  relPrefFractal = abs(leftFractalAdv)/(abs(leftLotteryAdv)+1e-6)
+  weighted_mu_mean = d * (relPrefFractal * leftFractalAdv + (1/(relPrefFractal+1e-6)) * leftLotteryAdv)
+  
   while (time<maxIter){
     
     # If the RDV hit one of the barriers, the trial is over.
@@ -232,9 +241,6 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
       
       # If decision is reached before the stim screen sample rt from log normal distribution similar to choice RT 
       if (RT < 0){
-        if(debug){
-          print("RDV crossed barrier before stimDelay")
-        }
         decPreStim = 1
         RT=rlnorm(1, mean = -.25, sd = 0.5)
       }
@@ -254,7 +260,7 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
       if (time < stimDelayIters){
         # Integration after fractal prob presentation but before stim presentation happens ONLY for the probfractaldraw == 1 trials
         if (probFractalDraw == 1){
-          mu_mean = d*(QVLeft - QVRight)
+          mu_mean = qv_mu_mean
         } else {
           # No integration after NDT and before stim presentation for any other trial type
           mu_mean = 0
@@ -262,20 +268,12 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
       } else{
         # Time for EV computation. Should create lottery bias
         if (time < (stimDelayIters + evCompIters)){
-          mu_mean = d * (1-probFractalDraw) * (EVLeft - EVRight)
+          mu_mean = ev_mu_mean
         } else {
           # Competition?
           # Gathering evidence based on lotteries vs fractals
-          leftFractalAdv =  probFractalDraw* (QVLeft - QVRight)
-          leftLotteryAdv = (1-probFractalDraw) * (EVLeft - EVRight)
-          relPrefLottery = abs(leftLotteryAdv)/(abs(leftFractalAdv)+1e-6)
-          relPrefFractal = abs(leftFractalAdv)/(abs(leftLotteryAdv)+1e-6)
-          mu_mean = d * (relPrefFractal * leftFractalAdv + relPrefLottery * leftLotteryAdv)
-          
-          # How to get the inverse U?
+          mu_mean = weighted_mu_mean
         }
-        
-        
       }
     }
     
@@ -284,8 +282,9 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
     RDV = RDV + rnorm(1, mu, sigma)
     
     if (debug){
-      print(paste0("time = ", time, " mu_mean = ", mu_mean, " mu = ", round(mu, 3), " RDV = ", round(RDV, 3), " barrier = ", round(barrier[time], 3)))
-    }
+      debug_row = data.frame(time = time, mu_mean = mu_mean, mu = round(mu, 3), RDV = round(RDV, 3), barrier = round(barrier[time], 3))
+      debug_df = rbind.all.columns(debug_df, debug_row)
+      }
     
     # Increment sampling iteration
     time = time + 1
@@ -307,8 +306,13 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
   }
   
   #Organize output 
-  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, decPreStim = decPreStim, leftFractalAdv = leftFractalAdv, leftLotteryAdv = leftLotteryAdv,  relPrefFractal = relPrefFractal, relPrefLottery = relPrefLottery, d = d, sigma = sigma, barrierDecay = barrierDecay)
-  return(out)
+  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, decPreStim = decPreStim, leftFractalAdv = leftFractalAdv, leftLotteryAdv = leftLotteryAdv,  relPrefFractal = relPrefFractal, relPrefLottery = 1/(relPrefFractal+1e-6), d = d, sigma = sigma, barrierDecay = barrierDecay)
+  
+  if(debug){
+    return(list(out=out, debug_df = debug_df[-1,]))
+  } else {
+    return(out)
+  }
 }
 ```
 
@@ -323,30 +327,27 @@ sim_data_m2_1 = sim_task(stimuli=sub_data, d = .004, sigma = .04, barrierDecay =
 ```{r}
 sim_sanity_checks(sim_data_m2_1)
 ```
+
+## Checks
+
+- RT
+  - Bimodal RT distributions (should not be)
+  - Yes slight inverse U
+  - Yes fast pFrac == 1 trials (too fast)
+- Choice
+  - Logits too high for pfrac == 1
+  - Yes lottery bias
+
+What is going on with the trials that hit decision before stimuli are presented but are not pfrac = 1? There should be no integration for these before the stimuli are presented. Seems to go down quickly with reducing sigma so they're likely from noise integration but reducing sigma messes up other things as well
+
 ```{r}
 sim_data_m2_1 %>% 
   filter(decPreStim == 1)
-# filter(probFractalDraw == 0)
 ```
+# Model 3: Same as model 2 except for relative preference weighting
 
-
-```{r}
-sim_data_m2_2 = sim_task(stimuli=sub_data, d = .001, sigma = .04, barrierDecay = 0)
-```
-
-```{r}
-sim_sanity_checks(sim_data_m2_2)
-```
-
-What is going on with the trials that hit decision before stimuli are presented but are not pfrac = 1? There should be no integration for these before the stimuli are presented. Seems to go down quickly with reducing sigma, though that messes up other things as well
-
-
-```{r}
-sim_data_m2_2 %>% 
-  filter(decPreStim == 1)
-```
-
-# Model 3:
+- Same two early integration possibilities
+- For other cases the weighting factor is computed differently to mitigate effect of very large numbers at 0 difference between attributes
 
 ```{r}
 sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=400, epsilon = 0.0002, stimDelay = 2000, evCompTime = 300, debug=FALSE,...){
@@ -357,6 +358,10 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
   # nonDecisionTime: in ms
   # maxIter: num max samples. if a barrier isn't hit by this sampling of evidence no decision is made. If time step is 10ms and maxIter is 1000 this would be a 10sec timeout maximum
   
+  if(debug){
+    debug_df = data.frame()
+  }
+  
   RDV = bias
   time = 1
   elapsedNDT = 0
@@ -365,10 +370,6 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
   
   decPreStim = 0
   timeOut = 0
-  
-  leftFractalAdv = NA
-  leftLotteryAdv = NA
-  relPrefFractal = NA
   
   kwargs = list(...)
   EVLeft=kwargs$EVLeft
@@ -393,6 +394,14 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
     barrier[t] = initialBarrier / (1 + barrierDecay * (t-stimDelayIters))
   }
   
+  qv_mu_mean = d*(QVLeft - QVRight)
+  ev_mu_mean = d * (1-probFractalDraw) * (EVLeft - EVRight)
+  leftFractalAdv =  probFractalDraw* (QVLeft - QVRight)
+  leftLotteryAdv = (1-probFractalDraw) * (EVLeft - EVRight)
+  relPrefFractal = abs(leftFractalAdv)/(abs(leftLotteryAdv)+abs(leftFractalAdv)+1e-6)
+  weighted_mu_mean = d * (relPrefFractal * leftFractalAdv + (1-relPrefFractal) * leftLotteryAdv)
+
+  
   while (time<maxIter){
     
     # If the RDV hit one of the barriers, the trial is over.
@@ -401,19 +410,11 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
       # Convert ms back to secs
       RT = (time * timeStep)/1000 
       
-      # Debugging
-      if(debug){
-        print(paste0("pre subtraction RT = ", RT))
-      }
-      
       #subtract stimDelay
       RT = RT - (stimDelay/1000) 
       
       # If decision is reached before the stim screen sample rt from log normal distribution similar to choice RT 
       if (RT < 0){
-        if(debug){
-          print("RDV crossed barrier before stimDelay")
-        }
         decPreStim = 1
         RT=rlnorm(1, mean = -.25, sd = 0.5)
       }
@@ -433,7 +434,7 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
       if (time < stimDelayIters){
         # Integration after fractal prob presentation but before stim presentation happens ONLY for the probfractaldraw == 1 trials
         if (probFractalDraw == 1){
-          mu_mean = d*(QVLeft - QVRight)
+          mu_mean = qv_mu_mean
         } else {
           # No integration after NDT and before stim presentation for any other trial type
           mu_mean = 0
@@ -442,14 +443,11 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
         
         # Time for EV computation. Should create lottery bias
         if (time < (stimDelayIters + evCompIters)){
-          mu_mean = d * (1-probFractalDraw) * (EVLeft - EVRight)
+          mu_mean = ev_mu_mean
         } else {
           # Competition?
           # Gathering evidence based on lotteries vs fractals' relative strength of preference
-          leftFractalAdv =  probFractalDraw* (QVLeft - QVRight)
-          leftLotteryAdv = (1-probFractalDraw) * (EVLeft - EVRight)
-          relPrefFractal = abs(leftFractalAdv)/(abs(leftLotteryAdv)+abs(leftFractalAdv)+1e-6)
-          mu_mean = d * (relPrefFractal * leftFractalAdv + (1-relPrefFractal) * leftLotteryAdv)
+          mu_mean = weighted_mu_mean
         }
       }
     }
@@ -459,7 +457,8 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
     RDV = RDV + rnorm(1, mu, sigma)
     
     if (debug){
-      print(paste0("time = ", time, " mu_mean = ", mu_mean, " mu = ", round(mu, 3), " RDV = ", round(RDV, 3), " barrier = ", round(barrier[time], 3)))
+      debug_row = data.frame(time = time, mu_mean = mu_mean, mu = round(mu, 3), RDV = round(RDV, 3), barrier = round(barrier[time], 3))
+      debug_df = rbind.all.columns(debug_df, debug_row)
     }
     
     # Increment sampling iteration
@@ -483,7 +482,13 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
   
   #Organize output 
   out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, decPreStim = decPreStim, leftFractalAdv = leftFractalAdv, leftLotteryAdv = leftLotteryAdv,  relPrefFractal = relPrefFractal, d = d, sigma = sigma, barrierDecay = barrierDecay, barrier = barrier[time], RDV = RDV)
-  return(out)
+  
+  if(debug){
+    return(list(out=out, debug_df=debug_df))
+  }else{
+    return(out)
+  }
+  
 }
 ```
 
@@ -492,27 +497,29 @@ sim_trial(d = .008, sigma = .01, barrierDecay = 0, EVLeft = 0.7, EVRight = .1, Q
 ```
 
 ```{r}
-sim_data_m3_1 = sim_task(stimuli=sub_data, d = .006, sigma = .02, barrierDecay = 0.005)
+sim_data_m3_1 = sim_task(stimuli=sub_data, d = .03, sigma = .03, barrierDecay = 0.005)
 ```
 
 ```{r}
 sim_sanity_checks(sim_data_m3_1)
 ```
 
-```{r}
-sim_data_m3_1 %>% 
-  filter(decPreStim == 1)
-```
+## Checks
 
-```{r}
-sim_data_m3_2 = sim_task(stimuli=sub_data, d = .020, sigma = .03, barrierDecay = 0.005)
-```
+- RT
+  - Bimodal RT distributions (should not be)
+  - Not really inverse U, more like an increase wihth increased pFrac
+  - Yes fast pFrac == 1 trials
+- Choice
+  - Logits too high for pfrac == 1
+  - No lottery bias
 
-```{r}
-sim_sanity_checks(sim_data_m3_2)
-```
+# Model 4: 3 integrators
 
-# Model 4:
+- all biases are by moving the starting points
+  - for all trials there is a general lottery bias
+  - for pfrac == 1 trials there is a fractal bias the size of the QV difference
+- Integration happens for EV and QV separately along with an arbitrator that determines the decision
 
 ```{r}
 sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotteryBias=0.1, fractalBias = 0, timeStep=10, maxIter=400, epsilon = 0.002, debug=FALSE,...){
@@ -523,8 +530,7 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotte
   # nonDecisionTime: in ms
   # maxIter: num max samples. if a barrier isn't hit by this sampling of evidence no decision is made. If time step is 10ms and maxIter is 1000 this would be a 10sec timeout maximum
   
-  lotteryRDV = lotteryBias
-  fractalRDV = fractalBias
+  
   arbitratorRDV = 0
   time = 1
   elapsedNDT = 0
@@ -541,8 +547,20 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotte
   kwargs = list(...)
   EVLeft=kwargs$EVLeft
   EVRight=kwargs$EVRight
+  if(EVLeft > EVRight){
+    lotteryRDV = lotteryBias
+  } else {
+    lotteryRDV = -lotteryBias
+  }
+  
   QVLeft=kwargs$QVLeft
   QVRight=kwargs$QVRight
+  if(EVLeft > EVRight){
+    fractalRDV = fractalBias
+  } else {
+    fractalRDV = -fractalBias
+  }
+  
   probFractalDraw=kwargs$probFractalDraw
   if(probFractalDraw == 1){
     fractalRDV = QVLeft - QVRight
@@ -636,7 +654,9 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotte
 }
 ```
 
-```{r}
+Example visualization of integration
+
+```{r echo=FALSE, eval=FALSE}
 tmp = sim_trial(d = .01, sigma = .01, barrierDecay = 0.005, EVLeft = 1, EVRight = 0, QVLeft = 0.3, QVRight = 0.7, probFractalDraw = 1, debug=TRUE, nonDecisionTime = 0)
 
 tmp$debug_df %>%
@@ -650,11 +670,6 @@ tmp$debug_df %>%
   facet_grid(key ~.)
 ```
 
-```{r}
-tmp
-```
-
-
 
 ```{r}
 sim_data_m4_1 = sim_task(stimuli=sub_data, d = .033, sigma = .03, barrierDecay = 0.007)
@@ -663,3 +678,14 @@ sim_data_m4_1 = sim_task(stimuli=sub_data, d = .033, sigma = .03, barrierDecay =
 ```{r}
 sim_sanity_checks(sim_data_m4_1)
 ```
+
+## Checks
+
+- RT
+  - RT distributions largely overlapping with true distributions
+  - Inverse U or continued increase?
+  - Yes fast pFrac == 1 trials
+- Choice
+  - Logits too high for edge pfrac
+  - No lottery bias
+

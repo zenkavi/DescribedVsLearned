@@ -687,5 +687,11 @@ sim_sanity_checks(sim_data_m4_1)
   - Yes fast pFrac == 1 trials
 - Choice
   - Logits too high for edge pfrac
-  - No lottery bias
+  - Slight/no lottery bias
 
+# Next steps
+
+- Quantitative check for inverse U?
+- Simulations with best fitting parameter combinations?
+  - What distributions would these parameters come from?
+- Incorporating EV and QV computation instead of using them as input

@@ -860,7 +860,46 @@ sim_sanity_checks(sim_data_m5_1)
 - Choice
   - Logits too high when value difference is not 
   - Lottery bias?
+
+
+```{r}
+get_rt_sumsq = function(sub_data, sim_data){
   
+  
+  return(rt_sumsq)
+}
+
+get_choice_sumsq = function(sub_data, sim_data){
+  
+  
+  
+  return(choice_sumsq)
+}
+
+
+find_best_par_combo = function(sub_data, d_par_space = ..., sigma_par_space = ..., heatmaps = FALSE){
+  
+  out = data.frame()
+  
+  for(cur_d in d_par_space){
+    for(cur_sigma in sigma_par_space){
+      
+    }
+  }
+  
+  if(heatmaps){
+    
+  }
+  
+  opt_rt_pars = out[rt_sumsq == min(out$rt_sumsq),]
+  opt_choice_pars = out[choice_sumsq == min(out$choice_sumsq),]
+  opt_avg_pars = out[avg_sumsq == min(out$avg_sumsq),]
+  
+  return(list(opt_rt_d = opt_rt_pars$d, opt_rt_sigma = opt_rt_pars$sigma, 
+              opt_choice_d = opt_choice_pars$d, opt_choice_sigma = opt_choice_pars$sigma, 
+              opt_avg_d = opt_avg_pars$d, opt_avg_d = opt_avg_pars$sigma))
+}
+```
 
 
 # Next steps

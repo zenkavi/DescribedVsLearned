@@ -515,7 +515,7 @@ sim_sanity_checks(sim_data_m3_2)
 # Model 4:
 
 ```{r}
-sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotteryBias=0, fractalBias = 0, timeStep=10, maxIter=400, epsilon = 0.002, debug=FALSE,...){
+sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotteryBias=0.1, fractalBias = 0, timeStep=10, maxIter=400, epsilon = 0.002, debug=FALSE,...){
   
   # d : drift rate
   # sigma: sd of the normal distribution 
@@ -544,6 +544,9 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotte
   QVLeft=kwargs$QVLeft
   QVRight=kwargs$QVRight
   probFractalDraw=kwargs$probFractalDraw
+  if(probFractalDraw == 1){
+    fractalRDV = QVLeft - QVRight
+  }
   
   nonDecIters = nonDecisionTime / timeStep
   
@@ -554,6 +557,9 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotte
   for(t in seq(1, maxIter, 1)){
     barrier[t] = initialBarrier / (1 + barrierDecay * t)
   }
+  
+  lottery_mu_mean = d * (1-probFractalDraw) * (EVLeft - EVRight)
+  fractal_mu_mean = d * probFractalDraw * (QVLeft - QVRight)
   
   while (time<maxIter){
     
@@ -582,18 +588,16 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotte
       # Three integrators
       
       # Lottery integrator
-      lottery_mu_mean = d * (1-probFractalDraw) * (EVLeft - EVRight)
       lottery_mu = rnorm(1, lottery_mu_mean, epsilon)
       lotteryRDV = lotteryRDV + rnorm(1, lottery_mu, sigma)
       
       # Fractal integrator
-      fractal_mu_mean = d * probFractalDraw * (QVLeft - QVRight)
       fractal_mu = rnorm(1, fractal_mu_mean, epsilon)
       fractalRDV = fractalRDV + rnorm(1, fractal_mu, sigma)
       
       # Arbitrator 
       # If abs(lotteryRDV) > abs(fractalRDV) stronger relative preference for a side based on lotteries
-      arbitrator_mu_mean = d * abs(lotteryRDV) - abs(fractalRDV)
+      arbitrator_mu_mean = d * (abs(lotteryRDV) - abs(fractalRDV))
       arbitrator_mu = rnorm(1, arbitrator_mu_mean, epsilon)
       arbitratorRDV = arbitratorRDV + rnorm(1, arbitrator_mu, sigma)
     }
@@ -633,42 +637,29 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotte
 ```
 
 ```{r}
-tmp = sim_trial(d = .001, sigma = .01, barrierDecay = 0, EVLeft = 0.9, EVRight = 0.1, QVLeft = 0, QVRight = 0, probFractalDraw = 0, debug=TRUE, nonDecisionTime = 200)
+tmp = sim_trial(d = .01, sigma = .01, barrierDecay = 0.005, EVLeft = 1, EVRight = 0, QVLeft = 0.3, QVRight = 0.7, probFractalDraw = 1, debug=TRUE, nonDecisionTime = 0)
 
 tmp$debug_df %>%
-  select(-barrier) %>%
-  gather(key, value, -time) %>%
-  ggplot(aes(time, value))+
-  geom_line()+
-  geom_hline(aes(yintercept = 1), color="red")+
-    geom_hline(aes(yintercept = -1), color="green")+
+  select(-arbitrator_mu_mean) %>%
+  gather(key, value, -time, -barrier) %>%
+  ggplot()+
+  geom_line(aes(time, value))+
+  geom_line(aes(time, barrier), color="red")+
+  geom_line(aes(time, -barrier), color="green")+
+  geom_hline(aes(yintercept = 0), linetype="dashed")+
   facet_grid(key ~.)
 ```
 
 ```{r}
-tmp$debug_df
+tmp
 ```
 
+
+
 ```{r}
-sim_data_m4_1 = sim_task(stimuli=sub_data, d = .002, sigma = .02, barrierDecay = 0)
+sim_data_m4_1 = sim_task(stimuli=sub_data, d = .03, sigma = .03, barrierDecay = 0.007)
 ```
 
 ```{r}
 sim_sanity_checks(sim_data_m4_1)
-```
-
-# Sandbox
-
-Proportion of pfrac == 1 trials in the sample that is being used for the simulations. Number of trials with pre stimulus decisions shouldn't exceed this.
-
-```{r}
-nrow(sub_data %>% filter(probFractalDraw==1))/nrow(sub_data)
-```
-
-Response time distribution for too fast decisions
-
-```{r}
-data.frame(val = rlnorm(1000, mean = -.25, sd = 0.5)) %>%
-  ggplot(aes(val))+
-  geom_histogram(bins = 30)
 ```

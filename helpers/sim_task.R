@@ -12,7 +12,7 @@ rbind.all.columns <- function(x, y) {
   return(out)
 }
 
-sim_task = function(stimuli, ...){
+sim_task = function(stimuli, model_name, ...){
   kwargs = list(...)
   if (!("nonDecisionTime" %in% kwargs)){
     kwargs$nonDecisionTime = 0
@@ -20,6 +20,9 @@ sim_task = function(stimuli, ...){
   if (!("barrierDecay" %in% kwargs)){
     kwargs$barrierDecay = 0
   }
+  
+  # Extract the correct trial simulator for the model_name
+  sim_trial = sim_trial_list[[model_name]]
   
   # Create placeholder output df
   out = data.frame(EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, probFractalDraw = NA, choice = NA, reactionTime = NA)
@@ -40,6 +43,11 @@ sim_task = function(stimuli, ...){
   
   # Drops only first row instead of all NAs to keep trials where iterations timed out and a decision was not made
   out = out[-1,]
+  out$model = model_name
+  out$d = kwargs$d
+  out$sigma = kwargs$sigma
+  out$nonDecisionTime = kwargs$nonDecisionTime
+  out$barrierDecay = kwargs$barrierDecay
   
   return(out)
 }

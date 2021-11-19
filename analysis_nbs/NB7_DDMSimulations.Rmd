@@ -75,6 +75,10 @@ sim_sanity_checks(sub_data %>%
                     mutate(choice = ifelse(choiceLeft == 1, "left", "right")), 
                   compare_rts = FALSE)
 ```
+```{r}
+sim_trial_list = list()
+```
+
 
 # Model 1: Simplest
 
@@ -144,6 +148,7 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
   out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT)
   return(out)
 }
+sim_trial_list[['model1']] = sim_trial
 ```
 
 ```{r}
@@ -314,6 +319,7 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
     return(out)
   }
 }
+sim_trial_list[['model2']] = sim_trial
 ```
 
 ```{r}
@@ -490,6 +496,7 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
   }
   
 }
+sim_trial_list[['model3']] = sim_trial
 ```
 
 ```{r}
@@ -652,6 +659,7 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotte
   
   return(out)
 }
+sim_trial_list[['model4']] = sim_trial
 ```
 
 Example visualization of integration
@@ -819,11 +827,12 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotte
   out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, arbitrator = arbitrator)
   
   if(debug){
-    out = list(out=out, debug_df=debug_df[-1,])
+    out = list(out=out, debug_df=debug_df)
   }
   
   return(out)
 }
+sim_trial_list[['model5']] = sim_trial
 ```
 
 Example visualization of integration
@@ -844,7 +853,11 @@ tmp$debug_df %>%
 
 
 ```{r}
-sim_data_m5_1 = sim_task(stimuli=sub_data, d = .033, sigma = .03, barrierDecay = 0.007)
+sim_data_m5_1 = sim_task(stimuli=sub_data, model_name = "model5", d = .033, sigma = .03, barrierDecay = 0.007)
+```
+
+```{r}
+sim_data_m5_1
 ```
 
 ```{r}
@@ -923,9 +936,9 @@ get_choice_sumsq = function(sub_data, sim_data){
   out = out1 %>%
     rbind(out2) %>%
     spread(term, estimate) %>%
-    mutate(evsqdv = (EVDiff_sim - EVDiff_true)^2,
-           qvsqdv = (QVDiff_sim - QVDiff_true)^2,
-           sqdv = evsqdv + qvsqdv)
+    mutate(evsqdev = (EVDiff_sim - EVDiff_true)^2,
+           qvsqdev = (QVDiff_sim - QVDiff_true)^2,
+           sqdev = evsqdev + qvsqdev)
   
   choice_sumsq = sum(out$sqdev)
   
@@ -933,30 +946,55 @@ get_choice_sumsq = function(sub_data, sim_data){
 }
 
 
-find_best_par_combo = function(sub_data, d_par_space = ..., sigma_par_space = seq(.01, .1, .01), heatmaps = FALSE){
+find_best_par_combo = function(sub_data, model_name, d_par_space = ..., sigma_par_space = seq(.01, .1, .01), barrier_par_space = c(1), heatmaps = FALSE, save_output=TRUE, out_path = here()){
   
   out = data.frame()
   
   for(cur_d in d_par_space){
     for(cur_sigma in sigma_par_space){
-      sim_data = sim_task()
+      for(cur_barrier in barrier_par_space){
+        out_row = data.frame(d = cur_d, sigma = cur_sigma, barrier_decay = cur_barrier)
+        sim_data = sim_task(stimuli=sub_data, d = cur_d, sigma = cur_sigma, barrierDecay = cur_sigma)
+        out_row$rt_sumsq = get_rt_sumsq(sub_data, sim_data)
+        out_row$choice_sumsq = get_choice_sumsq(sub_data, sim_data)
+        out_row$avg_sumsq = with(out_row, (rt_sumsq + choice_sumsq)/2)
+        
+        out = rbind.all.columns(out, out_row)
+      }
     }
   }
   
-  if(heatmaps){
-    
+  if(save_output){
+    write.csv(out, paste0(out_path, '/outputs/find_best_par_combo_', model_name, '.csv'), row.names = FALSE)
   }
   
-  opt_rt_pars = out[rt_sumsq == min(out$rt_sumsq),]
-  opt_choice_pars = out[choice_sumsq == min(out$choice_sumsq),]
-  opt_avg_pars = out[avg_sumsq == min(out$avg_sumsq),]
+  if(heatmaps){
+    p1 = out %>%
+      mutate(d = as.factor(d),
+             sigma = as.factor(sigma)) %>%
+      ggplot(aes(d, sigma, fill=rt_sumsq)) +
+      geom_tile()+
+      theme(legend.position = "bottom")
+    
+    p2 = out %>%
+      mutate(d = as.factor(d),
+             sigma = as.factor(sigma)) %>%
+      ggplot(aes(d, sigma, fill=choice_sumsq)) +
+      geom_tile()+
+      theme(legend.position = "bottom")
+    
+    p3 = grid.arrange(p1, p2, ncol=2)
+  }
   
-  return(list(opt_rt_d = opt_rt_pars$d, opt_rt_sigma = opt_rt_pars$sigma, 
-              opt_choice_d = opt_choice_pars$d, opt_choice_sigma = opt_choice_pars$sigma, 
-              opt_avg_d = opt_avg_pars$d, opt_avg_d = opt_avg_pars$sigma))
+  return(list(opt_rt_pars = out[out$rt_sumsq == min(out$rt_sumsq),],
+              opt_choice_pars = out[out$choice_sumsq == min(out$choice_sumsq),],
+              opt_avg_pars = out[out$avg_sumsq == min(out$avg_sumsq),]))
 }
 ```
 
+```{r}
+find_best_par_combo(sub_data, model_name = "model5",d_par_space = c(.03, .003), sigma_par_space = c(.01, .04), heatmaps = TRUE)
+```
 
 # Next steps
 

@@ -861,29 +861,85 @@ sim_sanity_checks(sim_data_m5_1)
   - Logits too high when value difference is not 
   - Lottery bias?
 
-
 ```{r}
 get_rt_sumsq = function(sub_data, sim_data){
   
+  out = sim_data %>%
+    select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
+    mutate(data_type = "sim") %>%
+    rbind(sub_data %>%
+            mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
+                   data_type = "true") %>%
+            select(-subnum, -choiceLeft)) %>%
+    drop_na()%>%
+    mutate(probFractalDraw = as.factor(probFractalDraw), 
+           log_rt = log(reactionTime)) %>%
+    filter(is.finite(log_rt)) %>%
+    group_by(probFractalDraw, data_type) %>%
+    summarise(mean_log_rt = mean(log_rt),.groups="keep") %>%
+    spread(data_type, mean_log_rt) %>%
+    mutate(sqdev = (sim-true)^2)
+  
+  rt_sumsq = sum(out$sqdev)
   
   return(rt_sumsq)
 }
 
 get_choice_sumsq = function(sub_data, sim_data){
+  out1 = sim_data %>%
+    select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
+    mutate(probFractalDraw = as.factor(probFractalDraw),
+           choiceLeft = ifelse(choice == "left", 1, ifelse(choice=="right", 0, NA)),
+           EVDiff = EVLeft - EVRight, 
+           QVDiff = QVLeft - QVRight) %>%
+    nest(data = -probFractalDraw) %>% 
+    mutate(
+      fit = map(data, ~ glm(choiceLeft ~ EVDiff + QVDiff, data = .x, family=binomial(link="logit"))),
+      tidied = map(fit, tidy)
+    ) %>% 
+    unnest(tidied) %>%
+    filter(term != "(Intercept)") %>%
+    select(probFractalDraw, term, estimate) %>%
+    mutate(term = paste0(term, "_sim"))
   
+  out2 = sub_data %>%
+    select(-subnum) %>%
+    mutate(choice = ifelse(choiceLeft == 1, "left", "right")) %>%
+    select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
+    mutate(probFractalDraw = as.factor(probFractalDraw),
+           choiceLeft = ifelse(choice == "left", 1, ifelse(choice=="right", 0, NA)),
+           EVDiff = EVLeft - EVRight, 
+           QVDiff = QVLeft - QVRight) %>%
+    nest(data = -probFractalDraw) %>% 
+    mutate(
+      fit = map(data, ~ glm(choiceLeft ~ EVDiff + QVDiff, data = .x, family=binomial(link="logit"))),
+      tidied = map(fit, tidy)
+    ) %>% 
+    unnest(tidied) %>%
+    filter(term != "(Intercept)") %>%
+    select(probFractalDraw, term, estimate) %>%
+    mutate(term = paste0(term, "_true"))
   
+  out = out1 %>%
+    rbind(out2) %>%
+    spread(term, estimate) %>%
+    mutate(evsqdv = (EVDiff_sim - EVDiff_true)^2,
+           qvsqdv = (QVDiff_sim - QVDiff_true)^2,
+           sqdv = evsqdv + qvsqdv)
+  
+  choice_sumsq = sum(out$sqdev)
   
   return(choice_sumsq)
 }
 
 
-find_best_par_combo = function(sub_data, d_par_space = ..., sigma_par_space = ..., heatmaps = FALSE){
+find_best_par_combo = function(sub_data, d_par_space = ..., sigma_par_space = seq(.01, .1, .01), heatmaps = FALSE){
   
   out = data.frame()
   
   for(cur_d in d_par_space){
     for(cur_sigma in sigma_par_space){
-      
+      sim_data = sim_task()
     }
   }
   

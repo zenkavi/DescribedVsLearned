@@ -76,6 +76,7 @@ find_best_par_combo = function(sub_data, model_name, d_par_space = ..., sigma_pa
   for(cur_d in d_par_space){
     for(cur_sigma in sigma_par_space){
       for(cur_barrier in barrier_par_space){
+        print(paste0("cur_d = ", cur_d, " cur_sigma = ", cur_sigma))
         out_row = data.frame(d = cur_d, sigma = cur_sigma, barrier_decay = cur_barrier)
         sim_data = sim_task(stimuli=sub_data, model_name = model_name, d = cur_d, sigma = cur_sigma, barrierDecay = cur_sigma)
         out_row$rt_sumsq = get_rt_sumsq(sub_data, sim_data)
@@ -88,7 +89,7 @@ find_best_par_combo = function(sub_data, model_name, d_par_space = ..., sigma_pa
   }
   
   if(save_output){
-    rand_str = runif(1, 100, 1000)
+    rand_str = round(runif(1, 100, 1000))
     write.csv(out, paste0(out_path, '/outputs/find_best_par_combo_', model_name,'_' , rand_str,'.csv'), row.names = FALSE)
   }
   
@@ -96,21 +97,21 @@ find_best_par_combo = function(sub_data, model_name, d_par_space = ..., sigma_pa
     p1 = out %>%
       mutate(d = as.factor(d),
              sigma = as.factor(sigma)) %>%
-      ggplot(aes(d, sigma, fill=rt_sumsq)) +
+      ggplot(aes(d, sigma, fill=log(rt_sumsq))) +
       geom_tile()+
       theme(legend.position = "bottom")
     
     p2 = out %>%
       mutate(d = as.factor(d),
              sigma = as.factor(sigma)) %>%
-      ggplot(aes(d, sigma, fill=choice_sumsq)) +
+      ggplot(aes(d, sigma, fill=log(choice_sumsq))) +
       geom_tile()+
       theme(legend.position = "bottom")
     
     p3 = grid.arrange(p1, p2, ncol=2)
   }
   
-  return(list(opt_rt_pars = out[out$rt_sumsq == min(out$rt_sumsq),],
-              opt_choice_pars = out[out$choice_sumsq == min(out$choice_sumsq),],
-              opt_avg_pars = out[out$avg_sumsq == min(out$avg_sumsq),]))
+  return(list(opt_rt_pars = out[out$rt_sumsq == min(out$rt_sumsq, na.rm=T),],
+              opt_choice_pars = out[out$choice_sumsq == min(out$choice_sumsq, na.rm = T),],
+              opt_avg_pars = out[out$avg_sumsq == min(out$avg_sumsq, na.rm=T),]))
 }

@@ -23,7 +23,7 @@ theme_set(theme_classic())
 sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 helpers_path = here('helpers/')
 
-set.seed(385723)
+set.seed(38573)
 ```
 
 Adding in parameters from the two systems model for all subjects (i.e. not choosing the best fitting one per subject)
@@ -154,18 +154,32 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
 sim_trial_list[['model1']] = sim_trial
 ```
 
+## Opt pars
+
 ```{r}
-sim_data_m1_1 = sim_task(stimuli = sub_data, model_name = "model1",d = .05, sigma = .025)
+m1_opt_out = find_best_par_combo(sub_data, model_name = "model1", 
+                                 d_par_space = c(.002, .004, .008 ,.01, .1), 
+                                 sigma_par_space = c(.01, .03, .05, .07, .1), 
+                                 heatmaps=TRUE)
 ```
 
 ```{r}
-sim_sanity_checks(sim_data_m1_1)
+sim_data_m1_opt_rt = sim_task(stimuli = sub_data, model_name = "model1",d = m1_opt_out$opt_rt_pars$d, sigma = m1_opt_out$opt_rt_pars$sigma)
+sim_data_m1_opt_choice = sim_task(stimuli = sub_data, model_name = "model1",d = m1_opt_out$opt_choice_pars$d, sigma = m1_opt_out$opt_choice_pars$sigma)
+sim_data_m1_opt_avg = sim_task(stimuli = sub_data, model_name = "model1",d = m1_opt_out$opt_avg_pars$d, sigma = m1_opt_out$opt_avg_pars$d)
 ```
 
 ```{r}
-find_best_par_combo(sub_data, model_name = "model1", d_par_space = c(.003, .01, .05, .1), sigma_par_space = c(.001, .01, .03), heatmaps=TRUE)
+sim_sanity_checks(sim_data_m1_opt_rt)
 ```
 
+```{r}
+sim_sanity_checks(sim_data_m1_opt_choice)
+```
+
+```{r}
+sim_sanity_checks(sim_data_m1_opt_avg)
+```
 ## Checks
 
 - RT
@@ -329,18 +343,32 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
 sim_trial_list[['model2']] = sim_trial
 ```
 
+## Opt pars
+
 ```{r}
-sim_trial(d = .002, sigma = .05, barrierDecay = 0.005, EVLeft = 0.7, EVRight = .5, QVLeft = 0.3, QVRight = 0.3, probFractalDraw = 0, debug=TRUE)
+m2_opt_out = find_best_par_combo(sub_data, model_name = "model2", 
+                                 d_par_space = c(.002, .004, .008 ,.01, .1), 
+                                 sigma_par_space = c(.01, .03, .05, .07, .1), 
+                                 heatmaps=TRUE)
 ```
 
 ```{r}
-sim_data_m2_1 = sim_task(stimuli=sub_data, d = .004, sigma = .04, barrierDecay = 0.005)
+sim_data_m2_opt_rt = sim_task(stimuli = sub_data, model_name = "model2",d = m2_opt_out$opt_rt_pars$d, sigma = m2_opt_out$opt_rt_pars$sigma)
+sim_data_m2_opt_choice = sim_task(stimuli = sub_data, model_name = "model2",d = m2_opt_out$opt_choice_pars$d, sigma = m2_opt_out$opt_choice_pars$sigma)
+sim_data_m2_opt_avg = sim_task(stimuli = sub_data, model_name = "model2",d = m2_opt_out$opt_avg_pars$d, sigma = m2_opt_out$opt_avg_pars$d)
 ```
 
 ```{r}
-sim_sanity_checks(sim_data_m2_1)
+sim_sanity_checks(sim_data_m2_opt_rt)
 ```
 
+```{r}
+sim_sanity_checks(sim_data_m2_opt_choice)
+```
+
+```{r}
+sim_sanity_checks(sim_data_m2_opt_avg)
+```
 ## Checks
 
 - RT
@@ -354,9 +382,10 @@ sim_sanity_checks(sim_data_m2_1)
 What is going on with the trials that hit decision before stimuli are presented but are not pfrac = 1? There should be no integration for these before the stimuli are presented. Seems to go down quickly with reducing sigma so they're likely from noise integration but reducing sigma messes up other things as well
 
 ```{r}
-sim_data_m2_1 %>% 
+sim_data_m2_opt_rt %>% 
   filter(decPreStim == 1)
 ```
+
 # Model 3: Same as model 2 except for relative preference weighting
 
 - Same two early integration possibilities
@@ -506,16 +535,31 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
 sim_trial_list[['model3']] = sim_trial
 ```
 
+## Opt pars
+
 ```{r}
-sim_trial(d = .008, sigma = .01, barrierDecay = 0, EVLeft = 0.7, EVRight = .1, QVLeft = 0.7, QVRight = 0.1, probFractalDraw = .6, debug=TRUE)
+m3_opt_out = find_best_par_combo(sub_data, model_name = "model3", 
+                                 d_par_space = c(.002, .004, .008 ,.01, .1), 
+                                 sigma_par_space = c(.01, .03, .05, .07, .1), 
+                                 heatmaps=TRUE)
 ```
 
 ```{r}
-sim_data_m3_1 = sim_task(stimuli=sub_data, d = .01, sigma = .01, barrierDecay = 0.005)
+sim_data_m3_opt_rt = sim_task(stimuli = sub_data, model_name = "model3",d = m3_opt_out$opt_rt_pars$d, sigma = m3_opt_out$opt_rt_pars$sigma)
+sim_data_m3_opt_choice = sim_task(stimuli = sub_data, model_name = "model3",d = m3_opt_out$opt_choice_pars$d, sigma = m3_opt_out$opt_choice_pars$sigma)
+sim_data_m3_opt_avg = sim_task(stimuli = sub_data, model_name = "model3",d = m3_opt_out$opt_avg_pars$d, sigma = m3_opt_out$opt_avg_pars$d)
 ```
 
 ```{r}
-sim_sanity_checks(sim_data_m3_1)
+sim_sanity_checks(sim_data_m3_opt_rt)
+```
+
+```{r}
+sim_sanity_checks(sim_data_m3_opt_choice)
+```
+
+```{r}
+sim_sanity_checks(sim_data_m3_opt_avg)
 ```
 
 ## Checks
@@ -685,15 +729,32 @@ tmp$debug_df %>%
   facet_grid(key ~.)
 ```
 
+## Opt pars
 
 ```{r}
-sim_data_m4_1 = sim_task(stimuli=sub_data, d = .033, sigma = .03, barrierDecay = 0.007)
+m4_opt_out = find_best_par_combo(sub_data, model_name = "model4", 
+                                 d_par_space = c(.002, .004, .008 ,.01, .1), 
+                                 sigma_par_space = c(.01, .03, .05, .07, .1), 
+                                 heatmaps=TRUE)
 ```
 
 ```{r}
-sim_sanity_checks(sim_data_m4_1)
+sim_data_m4_opt_rt = sim_task(stimuli = sub_data, model_name = "model4",d = m4_opt_out$opt_rt_pars$d, sigma = m4_opt_out$opt_rt_pars$sigma)
+sim_data_m4_opt_choice = sim_task(stimuli = sub_data, model_name = "model4",d = m4_opt_out$opt_choice_pars$d, sigma = m4_opt_out$opt_choice_pars$sigma)
+sim_data_m4_opt_avg = sim_task(stimuli = sub_data, model_name = "model4",d = m4_opt_out$opt_avg_pars$d, sigma = m4_opt_out$opt_avg_pars$d)
 ```
 
+```{r}
+sim_sanity_checks(sim_data_m4_opt_rt)
+```
+
+```{r}
+sim_sanity_checks(sim_data_m4_opt_choice)
+```
+
+```{r}
+sim_sanity_checks(sim_data_m4_opt_avg)
+```
 ## Checks
 
 - RT
@@ -858,19 +919,32 @@ tmp$debug_df %>%
   facet_grid(key ~.)
 ```
 
+## Opt pars
 
 ```{r}
-sim_data_m5_1 = sim_task(stimuli=sub_data, model_name = "model5", d = .033, sigma = .03, barrierDecay = 0.007)
+m5_opt_out = find_best_par_combo(sub_data, model_name = "model5", 
+                                 d_par_space = c(.002, .004, .008 ,.01, .1), 
+                                 sigma_par_space = c(.01, .03, .05, .07, .1), 
+                                 heatmaps=TRUE)
 ```
 
 ```{r}
-sim_data_m5_1
+sim_data_m5_opt_rt = sim_task(stimuli = sub_data, model_name = "model5",d = m5_opt_out$opt_rt_pars$d, sigma = m5_opt_out$opt_rt_pars$sigma)
+sim_data_m5_opt_choice = sim_task(stimuli = sub_data, model_name = "model5",d = m5_opt_out$opt_choice_pars$d, sigma = m5_opt_out$opt_choice_pars$sigma)
+sim_data_m5_opt_avg = sim_task(stimuli = sub_data, model_name = "model5",d = m5_opt_out$opt_avg_pars$d, sigma = m5_opt_out$opt_avg_pars$d)
 ```
 
 ```{r}
-sim_sanity_checks(sim_data_m5_1)
+sim_sanity_checks(sim_data_m5_opt_rt)
 ```
 
+```{r}
+sim_sanity_checks(sim_data_m5_opt_choice)
+```
+
+```{r}
+sim_sanity_checks(sim_data_m5_opt_avg)
+```
 ## Checks
 
 - RT
@@ -881,13 +955,6 @@ sim_sanity_checks(sim_data_m5_1)
   - Logits too high when value difference is not 
   - Lottery bias?
 
-```{r}
-find_best_par_combo(sub_data, model_name = "model5",d_par_space = c(.03, .003), sigma_par_space = c(.01, .04), heatmaps = TRUE)
-```
-
 # Next steps
 
-- Quantitative check for inverse U?
-- Simulations with best fitting parameter combinations?
-  - What distributions would these parameters come from?
 - Incorporating EV and QV computation instead of using them as input

@@ -111,7 +111,7 @@ find_best_par_combo = function(sub_data, model_name, d_par_space = ..., sigma_pa
     p3 = grid.arrange(p1, p2, ncol=2)
   }
   
-  return(list(opt_rt_pars = out[out$rt_sumsq == min(out$rt_sumsq, na.rm=T),],
-              opt_choice_pars = out[out$choice_sumsq == min(out$choice_sumsq, na.rm = T),],
-              opt_avg_pars = out[out$avg_sumsq == min(out$avg_sumsq, na.rm=T),]))
+  return(list(opt_rt_pars = out[out$rt_sumsq == min(out$rt_sumsq, na.rm=T),] %>% drop_na(),
+              opt_choice_pars = out[out$choice_sumsq == min(out$choice_sumsq, na.rm = T),] %>% drop_na(),
+              opt_avg_pars = out[out$avg_sumsq == min(out$avg_sumsq, na.rm=T),] %>% drop_na()))
 }

@@ -76,12 +76,21 @@ sim_sanity_checks(sub_data %>%
                     mutate(choice = ifelse(choiceLeft == 1, "left", "right")), 
                   compare_rts = FALSE)
 ```
+
+# Optimization prep
+
 Create empty list that will store the trial simulators for the forthcoming models.
 
 ```{r}
 sim_trial_list = list()
 ```
 
+Define parameter space in which you'll search for best fits for the following models.
+
+```{r}
+d_par_space = c(.002, .004, .006, .008 ,.01, .02, .04, .06, .08, .1)
+sigma_par_space = c(.004, .008 ,.01, .02, .04, .06, .08, .1)
+```
 
 # Model 1: Simplest
 
@@ -158,8 +167,8 @@ sim_trial_list[['model1']] = sim_trial
 
 ```{r}
 m1_opt_out = find_best_par_combo(sub_data, model_name = "model1", 
-                                 d_par_space = c(.002, .004, .008 ,.01, .1), 
-                                 sigma_par_space = c(.01, .03, .05, .07, .1), 
+                                 d_par_space = d_par_space, 
+                                 sigma_par_space = sigma_par_space, 
                                  heatmaps=TRUE)
 ```
 
@@ -167,6 +176,11 @@ m1_opt_out = find_best_par_combo(sub_data, model_name = "model1",
 sim_data_m1_opt_rt = sim_task(stimuli = sub_data, model_name = "model1",d = m1_opt_out$opt_rt_pars$d, sigma = m1_opt_out$opt_rt_pars$sigma)
 sim_data_m1_opt_choice = sim_task(stimuli = sub_data, model_name = "model1",d = m1_opt_out$opt_choice_pars$d, sigma = m1_opt_out$opt_choice_pars$sigma)
 sim_data_m1_opt_avg = sim_task(stimuli = sub_data, model_name = "model1",d = m1_opt_out$opt_avg_pars$d, sigma = m1_opt_out$opt_avg_pars$d)
+```
+
+```{r}
+m1_opt_out$opt_choice_pars %>%
+  drop_na()
 ```
 
 ```{r}
@@ -180,6 +194,7 @@ sim_sanity_checks(sim_data_m1_opt_choice)
 ```{r}
 sim_sanity_checks(sim_data_m1_opt_avg)
 ```
+
 ## Checks
 
 - RT
@@ -347,8 +362,8 @@ sim_trial_list[['model2']] = sim_trial
 
 ```{r}
 m2_opt_out = find_best_par_combo(sub_data, model_name = "model2", 
-                                 d_par_space = c(.002, .004, .008 ,.01, .1), 
-                                 sigma_par_space = c(.01, .03, .05, .07, .1), 
+                                 d_par_space = d_par_space, 
+                                 sigma_par_space = sigma_par_space, 
                                  heatmaps=TRUE)
 ```
 
@@ -539,8 +554,8 @@ sim_trial_list[['model3']] = sim_trial
 
 ```{r}
 m3_opt_out = find_best_par_combo(sub_data, model_name = "model3", 
-                                 d_par_space = c(.002, .004, .008 ,.01, .1), 
-                                 sigma_par_space = c(.01, .03, .05, .07, .1), 
+                                 d_par_space = d_par_space, 
+                                 sigma_par_space = sigma_par_space, 
                                  heatmaps=TRUE)
 ```
 
@@ -733,8 +748,8 @@ tmp$debug_df %>%
 
 ```{r}
 m4_opt_out = find_best_par_combo(sub_data, model_name = "model4", 
-                                 d_par_space = c(.002, .004, .008 ,.01, .1), 
-                                 sigma_par_space = c(.01, .03, .05, .07, .1), 
+                                 d_par_space = d_par_space, 
+                                 sigma_par_space = sigma_par_space, 
                                  heatmaps=TRUE)
 ```
 
@@ -923,8 +938,8 @@ tmp$debug_df %>%
 
 ```{r}
 m5_opt_out = find_best_par_combo(sub_data, model_name = "model5", 
-                                 d_par_space = c(.002, .004, .008 ,.01, .1), 
-                                 sigma_par_space = c(.01, .03, .05, .07, .1), 
+                                 d_par_space = d_par_space, 
+                                 sigma_par_space = sigma_par_space, 
                                  heatmaps=TRUE)
 ```
 

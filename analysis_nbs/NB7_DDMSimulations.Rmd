@@ -969,4 +969,33 @@ model_summary
 # Next steps
 
 - Is the relationship between pars that optim rt vs choice the same across models?
+
+No. There can be a trade-off between the parameters depending on what you optimize for but it's not in the same direction for all models.
+
+```{r}
+all_opt_outs = list(m1_opt_out, m2_opt_out, m3_opt_out, m4_opt_out, m5_opt_out)
+opt_outs_df = data.frame()
+for (i in 1:length(all_opt_outs)){
+  opt_outs_df = rbind.all.columns(opt_outs_df,
+                                  all_opt_outs[[i]]$opt_rt_pars %>%
+                                    mutate(model_name = paste0("model", i),
+                                           opt_for = "opt_rt") %>%
+                                    rbind(all_opt_outs[[i]]$opt_choice_pars %>%
+                                            mutate(model_name = paste0("model", i),
+                                                   opt_for = "opt_choice")) %>%
+                                    rbind(all_opt_outs[[i]]$opt_avg_pars %>%
+                                            mutate(model_name = paste0("model", i),
+                                                   opt_for = "opt_avg")))
+}
+
+opt_outs_df %>%
+  select(-barrier_decay, -rt_sumsq, -choice_sumsq, -avg_sumsq) %>%
+  gather(par, value, -model_name, -opt_for) %>%
+  ggplot(aes(model_name, value, color=opt_for))+
+  geom_point(size=4, alpha=.5)+
+  facet_wrap(~par)+
+  labs(x="", y="", color="")+
+  theme(legend.position = "bottom")
+```
+
 - Incorporating EV and QV computation instead of using them as input

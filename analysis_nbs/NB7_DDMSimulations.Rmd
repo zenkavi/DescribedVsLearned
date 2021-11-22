@@ -170,34 +170,31 @@ m1_opt_out = find_best_par_combo(sub_data, model_name = "model1",
                                  d_par_space = d_par_space, 
                                  sigma_par_space = sigma_par_space)
 ```
-
 ```{r}
-sim_data_m1_opt_rt = sim_task(stimuli = sub_data, model_name = "model1",d = m1_opt_out$opt_rt_pars$d, sigma = m1_opt_out$opt_rt_pars$sigma)
-sim_data_m1_opt_choice = sim_task(stimuli = sub_data, model_name = "model1",d = m1_opt_out$opt_choice_pars$d, sigma = m1_opt_out$opt_choice_pars$sigma)
-sim_data_m1_opt_avg = sim_task(stimuli = sub_data, model_name = "model1",d = m1_opt_out$opt_avg_pars$d, sigma = m1_opt_out$opt_avg_pars$d)
+sim_data_m1 = sim_w_best_combo(m1_opt_out, "model1")
 ```
 
 ```{r}
-sim_sanity_checks(sim_data_m1_opt_rt)
+sim_sanity_checks(sim_data_m1$sim_data_opt_rt)
 ```
 
 ```{r}
-sim_sanity_checks(sim_data_m1_opt_choice)
-```
-
-```{r}
-sim_sanity_checks(sim_data_m1_opt_avg)
+if(is.na(sim_data_m1$sim_data_opt_choice)){
+  print("Same data as above.")
+} else {
+  sim_sanity_checks(sim_data_m1$sim_data_opt_choice)
+}
 ```
 
 ## Checks
 
 ```{r}
-model_summary = data.frame(model_name = c("Model1"),
-                           description = c("Simplest model"),
-                           RT_inverseU = c("No"),
-                           RT_fasterpFrac1 = c("No"),
-                           choice_logits = c("Reasonable"),
-                           choice_lotteryBias = c("No"))
+model_summary = data.frame(model_name = "Model1",
+                           description = "Simplest",
+                           RT_inverseU = "No, similar for all levels",
+                           RT_fasterpFrac1 = "No",
+                           choice_logits = "Reasonable",
+                           choice_lotteryBias = "No")
 model_summary
 ```
 
@@ -360,36 +357,36 @@ sim_trial_list[['model2']] = sim_trial
 ```{r}
 m2_opt_out = find_best_par_combo(sub_data, model_name = "model2", 
                                  d_par_space = d_par_space, 
-                                 sigma_par_space = sigma_par_space, 
-                                 heatmaps=TRUE)
+                                 sigma_par_space = sigma_par_space)
 ```
 
 ```{r}
-sim_data_m2_opt_rt = sim_task(stimuli = sub_data, model_name = "model2",d = m2_opt_out$opt_rt_pars$d, sigma = m2_opt_out$opt_rt_pars$sigma)
-sim_data_m2_opt_choice = sim_task(stimuli = sub_data, model_name = "model2",d = m2_opt_out$opt_choice_pars$d, sigma = m2_opt_out$opt_choice_pars$sigma)
-sim_data_m2_opt_avg = sim_task(stimuli = sub_data, model_name = "model2",d = m2_opt_out$opt_avg_pars$d, sigma = m2_opt_out$opt_avg_pars$d)
+sim_data_m2 = sim_w_best_combo(m2_opt_out, "model2")
 ```
 
 ```{r}
-sim_sanity_checks(sim_data_m2_opt_rt)
+sim_sanity_checks(sim_data_m2$sim_data_opt_rt)
 ```
 
 ```{r}
-sim_sanity_checks(sim_data_m2_opt_choice)
+if(is.na(sim_data_m2$sim_data_opt_choice)){
+  print("Same data as above.")
+} else {
+  sim_sanity_checks(sim_data_m2$sim_data_opt_choice)
+}
 ```
 
-```{r}
-sim_sanity_checks(sim_data_m2_opt_avg)
-```
 ## Checks
 
-- RT
-  - Bimodal RT distributions (should not be)
-  - Yes slight inverse U
-  - Yes fast pFrac == 1 trials (too fast)
-- Choice
-  - Logits too high for pfrac == 1
-  - Yes lottery bias
+```{r}
+model_summary = rbind(model_summary, data.frame(model_name = "Model2",
+                                                description = "Early integration+rel pref weighting",
+                                                RT_inverseU = "Yes but ends too fast and bimodal distributions",
+                                                RT_fasterpFrac1 = "Yes but too fast",
+                                                choice_logits = "Too high for edge case",
+                                                choice_lotteryBias = "Slight to none."))
+model_summary
+```
 
 What is going on with the trials that hit decision before stimuli are presented but are not pfrac = 1? There should be no integration for these before the stimuli are presented. Seems to go down quickly with reducing sigma so they're likely from noise integration but reducing sigma messes up other things as well
 
@@ -552,37 +549,37 @@ sim_trial_list[['model3']] = sim_trial
 ```{r}
 m3_opt_out = find_best_par_combo(sub_data, model_name = "model3", 
                                  d_par_space = d_par_space, 
-                                 sigma_par_space = sigma_par_space, 
-                                 heatmaps=TRUE)
+                                 sigma_par_space = sigma_par_space)
 ```
 
 ```{r}
-sim_data_m3_opt_rt = sim_task(stimuli = sub_data, model_name = "model3",d = m3_opt_out$opt_rt_pars$d, sigma = m3_opt_out$opt_rt_pars$sigma)
-sim_data_m3_opt_choice = sim_task(stimuli = sub_data, model_name = "model3",d = m3_opt_out$opt_choice_pars$d, sigma = m3_opt_out$opt_choice_pars$sigma)
-sim_data_m3_opt_avg = sim_task(stimuli = sub_data, model_name = "model3",d = m3_opt_out$opt_avg_pars$d, sigma = m3_opt_out$opt_avg_pars$d)
+sim_data_m3 = sim_w_best_combo(m3_opt_out, "model3")
 ```
 
 ```{r}
-sim_sanity_checks(sim_data_m3_opt_rt)
+sim_sanity_checks(sim_data_m3$sim_data_opt_rt)
 ```
 
 ```{r}
-sim_sanity_checks(sim_data_m3_opt_choice)
-```
+if(is.na(sim_data_m3$sim_data_opt_choice)){
+  print("Same data as above.")
+} else {
+  sim_sanity_checks(sim_data_m3$sim_data_opt_choice)
+}
 
-```{r}
-sim_sanity_checks(sim_data_m3_opt_avg)
 ```
 
 ## Checks
 
-- RT
-  - Bimodal RT distributions (should not be)
-  - Not really inverse U, more like an increase wihth increased pFrac
-  - Yes fast pFrac == 1 trials
-- Choice
-  - Logits too high for pfrac == 1
-  - No lottery bias
+```{r}
+model_summary = rbind(model_summary, data.frame(model_name = "Model3",
+                                                description = "Early integration+rel pref weighting",
+                                                RT_inverseU = "No, either ends too fast or all too slow",
+                                                RT_fasterpFrac1 = "Yes but not fast enough",
+                                                choice_logits = "Too high for edge case",
+                                                choice_lotteryBias = "Slight to none."))
+model_summary
+```
 
 # Model 4: 3 integrators
 
@@ -746,37 +743,38 @@ tmp$debug_df %>%
 ```{r}
 m4_opt_out = find_best_par_combo(sub_data, model_name = "model4", 
                                  d_par_space = d_par_space, 
-                                 sigma_par_space = sigma_par_space, 
-                                 heatmaps=TRUE)
+                                 sigma_par_space = sigma_par_space)
 ```
 
 ```{r}
-sim_data_m4_opt_rt = sim_task(stimuli = sub_data, model_name = "model4",d = m4_opt_out$opt_rt_pars$d, sigma = m4_opt_out$opt_rt_pars$sigma)
-sim_data_m4_opt_choice = sim_task(stimuli = sub_data, model_name = "model4",d = m4_opt_out$opt_choice_pars$d, sigma = m4_opt_out$opt_choice_pars$sigma)
-sim_data_m4_opt_avg = sim_task(stimuli = sub_data, model_name = "model4",d = m4_opt_out$opt_avg_pars$d, sigma = m4_opt_out$opt_avg_pars$d)
+sim_data_m4 = sim_w_best_combo(m4_opt_out, "model4")
 ```
 
 ```{r}
-sim_sanity_checks(sim_data_m4_opt_rt)
+sim_sanity_checks(sim_data_m4$sim_data_opt_rt)
 ```
 
 ```{r}
-sim_sanity_checks(sim_data_m4_opt_choice)
+if(is.na(sim_data_m4$sim_data_opt_choice)){
+  print("Same data as above.")
+} else {
+  sim_sanity_checks(sim_data_m4$sim_data_opt_choice)
+}
+
 ```
 
-```{r}
-sim_sanity_checks(sim_data_m4_opt_avg)
-```
 ## Checks
 
-- RT
-  - RT distributions largely overlapping with true distributions
-  - Inverse U or continued increase?
-  - Yes fast pFrac == 1 trials
-- Choice
-  - Logits too high for edge pfrac
-  - Slight/no lottery bias
-  
+```{r}
+model_summary = rbind(model_summary, data.frame(model_name = "Model4",
+                                                description = "3 integrators with relevance on attribute integrators",
+                                                RT_inverseU = "No",
+                                                RT_fasterpFrac1 = "No, too fast",
+                                                choice_logits = "Can be reasonable or too noisy",
+                                                choice_lotteryBias = "Slight to none."))
+model_summary
+```
+
 # Model 5: 3 integrators
 
 - Same as model 4 but with attribute relevance affecting arbitrator and not the attribute integrators
@@ -936,32 +934,36 @@ tmp$debug_df %>%
 ```{r}
 m5_opt_out = find_best_par_combo(sub_data, model_name = "model5", 
                                  d_par_space = d_par_space, 
-                                 sigma_par_space = sigma_par_space, 
-                                 heatmaps=TRUE)
+                                 sigma_par_space = sigma_par_space)
 ```
 
 ```{r}
-sim_data_m5_opt_rt = sim_task(stimuli = sub_data, model_name = "model5",d = m5_opt_out$opt_rt_pars$d, sigma = m5_opt_out$opt_rt_pars$sigma)
-sim_data_m5_opt_choice = sim_task(stimuli = sub_data, model_name = "model5",d = m5_opt_out$opt_choice_pars$d, sigma = m5_opt_out$opt_choice_pars$sigma)
-sim_data_m5_opt_avg = sim_task(stimuli = sub_data, model_name = "model5",d = m5_opt_out$opt_avg_pars$d, sigma = m5_opt_out$opt_avg_pars$d)
+sim_data_m5 = sim_w_best_combo(m5_opt_out, "model5")
 ```
 
 ```{r}
-sim_sanity_checks(sim_data_m5_opt_rt)
+sim_sanity_checks(sim_data_m5$sim_data_opt_rt)
 ```
 
 ```{r}
-sim_sanity_checks(sim_data_m5_opt_choice)
-```
+if(is.na(sim_data_m5$sim_data_opt_choice)){
+  print("Same data as above.")
+} else {
+  sim_sanity_checks(sim_data_m5$sim_data_opt_choice)
+}
 
-```{r}
-sim_sanity_checks(sim_data_m5_opt_avg)
 ```
 
 ## Checks
 
 ```{r}
-model_summary = rbind(model_summary, data.frame())
+model_summary = rbind(model_summary, data.frame(model_name = "Model5",
+                                                description = "3 integrators with relevance on arbitrator",
+                                                RT_inverseU = "No",
+                                                RT_fasterpFrac1 = "No",
+                                                choice_logits = "Too noisy or too slow",
+                                                choice_lotteryBias = "No."))
+model_summary
 ```
 
 # Next steps

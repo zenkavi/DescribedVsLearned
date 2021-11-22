@@ -121,8 +121,9 @@ sim_par_combs = function(sub_data, model_name, d_par_space, sigma_par_space, bar
 
 find_best_par_combo = function(sub_data, model_name, d_par_space, sigma_par_space){
   
-  obj_name = paste0("m", readr::parse_number("model1"), "_opt_out")
+  obj_name = paste0("m", readr::parse_number(model_name), "_opt_out")
   if(exists(obj_name)){#object name in r env
+    print("Object already exists.")
     out = get(obj_name)
   } else{
     tryCatch(
@@ -163,4 +164,17 @@ find_best_par_combo = function(sub_data, model_name, d_par_space, sigma_par_spac
     )
     return(out)
   }
+}
+
+sim_w_best_combo = function(opt_out, model_name){
+  if(opt_out$opt_rt_pars$d == opt_out$opt_choice_pars$d & opt_out$opt_rt_pars$sigma == opt_out$opt_choice_pars$sigma){
+    print("Same parameter combination works best for both RT and choice")
+    sim_data_opt_rt = sim_task(stimuli = sub_data, model_name = "model_name",d = opt_out$opt_rt_pars$d, sigma = opt_out$opt_rt_pars$sigma)
+    sim_data_opt_choice = NA
+  } else {
+    sim_data_opt_rt = sim_task(stimuli = sub_data, model_name = "model_name",d = opt_out$opt_rt_pars$d, sigma = opt_out$opt_rt_pars$sigma)
+    sim_data_opt_choice = sim_task(stimuli = sub_data, model_name = "model_name",d = opt_out$opt_choice_pars$d, sigma = opt_out$opt_choice_pars$sigma)
+  }
+  return(list(sim_data_opt_rt = sim_data_opt_rt,
+              sim_data_opt_choice = sim_data_opt_choice))
 }

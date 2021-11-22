@@ -68,8 +68,27 @@ get_choice_sumsq = function(sub_data, sim_data){
   return(choice_sumsq)
 }
 
+get_opt_heatmaps = function(out){
+  p1 = out %>%
+    mutate(d = as.factor(d),
+           sigma = as.factor(sigma)) %>%
+    ggplot(aes(d, sigma, fill=log(rt_sumsq))) +
+    geom_tile()+
+    theme(legend.position = "bottom")
+  
+  p2 = out %>%
+    mutate(d = as.factor(d),
+           sigma = as.factor(sigma)) %>%
+    ggplot(aes(d, sigma, fill=log(choice_sumsq))) +
+    geom_tile()+
+    theme(legend.position = "bottom")
+  
+  p3 = grid.arrange(p1, p2, ncol=2)
+  print(p3)
+}
 
-find_best_par_combo = function(sub_data, model_name, d_par_space = ..., sigma_par_space = seq(.01, .1, .01), barrier_par_space = c(1), heatmaps = TRUE, save_output=TRUE, out_path = here()){
+
+sim_par_combs = function(sub_data, model_name, d_par_space, sigma_par_space, barrier_par_space = c(1), heatmaps = TRUE, save_output=TRUE, out_path = here()){
   
   out = data.frame()
   
@@ -94,24 +113,54 @@ find_best_par_combo = function(sub_data, model_name, d_par_space = ..., sigma_pa
   }
   
   if(heatmaps){
-    p1 = out %>%
-      mutate(d = as.factor(d),
-             sigma = as.factor(sigma)) %>%
-      ggplot(aes(d, sigma, fill=log(rt_sumsq))) +
-      geom_tile()+
-      theme(legend.position = "bottom")
-    
-    p2 = out %>%
-      mutate(d = as.factor(d),
-             sigma = as.factor(sigma)) %>%
-      ggplot(aes(d, sigma, fill=log(choice_sumsq))) +
-      geom_tile()+
-      theme(legend.position = "bottom")
-    
-    p3 = grid.arrange(p1, p2, ncol=2)
+    get_opt_heatmaps(out)
   }
   
-  return(list(opt_rt_pars = out[out$rt_sumsq == min(out$rt_sumsq, na.rm=T),] %>% drop_na(),
-              opt_choice_pars = out[out$choice_sumsq == min(out$choice_sumsq, na.rm = T),] %>% drop_na(),
-              opt_avg_pars = out[out$avg_sumsq == min(out$avg_sumsq, na.rm=T),] %>% drop_na()))
+  return(out)
+}
+
+find_best_par_combo = function(sub_data, model_name, d_par_space, sigma_par_space){
+  
+  obj_name = paste0("m", readr::parse_number("model1"), "_opt_out")
+  if(exists(obj_name)){#object name in r env
+    out = get(obj_name)
+  } else{
+    tryCatch(
+      expr = {
+        # Your code...
+        # goes here...
+        print("No opt out object in the env for this model. Trying to read in previous simulation output.")
+        latest_opt_out = file.info(list.files(paste0(here(), '/outputs'), full.names=T)) %>%
+          mutate(fname=  row.names(.)) %>%
+          filter(grepl(model_name, fname)) %>%
+          filter(mtime == max(mtime))
+        out = read.csv(latest_opt_out$fname)
+        
+        
+      },
+      error = function(e){ 
+        # (Optional)
+        # Do this if an error is caught...
+        print("Could not find saved opt out file for this model. Running new simulation.")
+        out = sim_par_combs(sub_data, model_name = model_name, 
+                                  d_par_space = d_par_space, 
+                                  sigma_par_space = sigma_par_space, 
+                                  heatmaps=FALSE)
+      },
+      warning = function(w){
+        # (Optional)
+        # Do this if an warning is caught...
+      },
+      finally = {
+        # (Optional)
+        # Do this at the end before quitting the tryCatch structure...
+        get_opt_heatmaps(out)
+        out = list(opt_rt_pars = out[out$rt_sumsq == min(out$rt_sumsq, na.rm=T),] %>% drop_na(),
+                   opt_choice_pars = out[out$choice_sumsq == min(out$choice_sumsq, na.rm = T),] %>% drop_na(),
+                   opt_avg_pars = out[out$avg_sumsq == min(out$avg_sumsq, na.rm=T),] %>% drop_na())
+        
+      }
+    )
+    return(out)
+  }
 }

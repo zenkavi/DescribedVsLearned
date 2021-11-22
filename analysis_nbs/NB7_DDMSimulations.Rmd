@@ -168,19 +168,13 @@ sim_trial_list[['model1']] = sim_trial
 ```{r}
 m1_opt_out = find_best_par_combo(sub_data, model_name = "model1", 
                                  d_par_space = d_par_space, 
-                                 sigma_par_space = sigma_par_space, 
-                                 heatmaps=TRUE)
+                                 sigma_par_space = sigma_par_space)
 ```
 
 ```{r}
 sim_data_m1_opt_rt = sim_task(stimuli = sub_data, model_name = "model1",d = m1_opt_out$opt_rt_pars$d, sigma = m1_opt_out$opt_rt_pars$sigma)
 sim_data_m1_opt_choice = sim_task(stimuli = sub_data, model_name = "model1",d = m1_opt_out$opt_choice_pars$d, sigma = m1_opt_out$opt_choice_pars$sigma)
 sim_data_m1_opt_avg = sim_task(stimuli = sub_data, model_name = "model1",d = m1_opt_out$opt_avg_pars$d, sigma = m1_opt_out$opt_avg_pars$d)
-```
-
-```{r}
-m1_opt_out$opt_choice_pars %>%
-  drop_na()
 ```
 
 ```{r}
@@ -197,12 +191,15 @@ sim_sanity_checks(sim_data_m1_opt_avg)
 
 ## Checks
 
-- RT
-  - No inverse U
-  - No fast pFrac == 1 trials
-- Choice
-  - Logits are too high
-  - No lottery bias
+```{r}
+model_summary = data.frame(model_name = c("Model1"),
+                           description = c("Simplest model"),
+                           RT_inverseU = c("No"),
+                           RT_fasterpFrac1 = c("No"),
+                           choice_logits = c("Reasonable"),
+                           choice_lotteryBias = c("No"))
+model_summary
+```
 
 # Model 2: Early integration, relative preference weighting
 
@@ -396,7 +393,7 @@ sim_sanity_checks(sim_data_m2_opt_avg)
 
 What is going on with the trials that hit decision before stimuli are presented but are not pfrac = 1? There should be no integration for these before the stimuli are presented. Seems to go down quickly with reducing sigma so they're likely from noise integration but reducing sigma messes up other things as well
 
-```{r}
+```{r eval=FALSE, echo=FALSE}
 sim_data_m2_opt_rt %>% 
   filter(decPreStim == 1)
 ```
@@ -960,16 +957,14 @@ sim_sanity_checks(sim_data_m5_opt_choice)
 ```{r}
 sim_sanity_checks(sim_data_m5_opt_avg)
 ```
+
 ## Checks
 
-- RT
-  - RT distributions largely overlapping with true distributions
-  - Inverse U but the apex pushed to where the attribute difference is maximal (by model design)
-  - Yes fast pFrac == 1 trials
-- Choice
-  - Logits too high when value difference is not 
-  - Lottery bias?
+```{r}
+model_summary = rbind(model_summary, data.frame())
+```
 
 # Next steps
 
+- Is the relationship between pars that optim rt vs choice the same across models?
 - Incorporating EV and QV computation instead of using them as input

@@ -97,7 +97,7 @@ sim_par_combs = function(sub_data, model_name, d_par_space, sigma_par_space, bar
       for(cur_barrier in barrier_par_space){
         print(paste0("cur_d = ", cur_d, " cur_sigma = ", cur_sigma))
         out_row = data.frame(d = cur_d, sigma = cur_sigma, barrier_decay = cur_barrier)
-        sim_data = sim_task(stimuli=sub_data, model_name = model_name, d = cur_d, sigma = cur_sigma, barrierDecay = cur_sigma)
+        sim_data = sim_task(stimuli=sub_data, model_name = model_name, d = cur_d, sigma = cur_sigma, barrierDecay = cur_barrier)
         out_row$rt_sumsq = get_rt_sumsq(sub_data, sim_data)
         out_row$choice_sumsq = get_choice_sumsq(sub_data, sim_data)
         out_row$avg_sumsq = with(out_row, (rt_sumsq + choice_sumsq)/2)

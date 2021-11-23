@@ -604,7 +604,7 @@ model_summary
 - Integration happens for EV and QV separately along with an arbitrator that determines the decision
 
 ```{r}
-sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotteryBias=0.1, fractalBias = 0, timeStep=10, maxIter=400, epsilon = 0.002, debug=FALSE,...){
+sim_trial = function(dArb, dAttr, sigmaArb, sigmaAttr, barrierDecay, barrier=1, nonDecisionTime=0, lotteryBias=0.1, fractalBias = 0, timeStep=10, maxIter=400, epsilon = 0.002, debug=FALSE,...){
   
   # d : drift rate
   # sigma: sd of the normal distribution 
@@ -658,8 +658,8 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotte
     barrier[t] = initialBarrier / (1 + barrierDecay * t)
   }
   
-  lottery_mu_mean = d * (1-probFractalDraw) * (EVLeft - EVRight)
-  fractal_mu_mean = d * probFractalDraw * (QVLeft - QVRight)
+  lottery_mu_mean = dAttr * (1-probFractalDraw) * (EVLeft - EVRight)
+  fractal_mu_mean = dAttr * probFractalDraw * (QVLeft - QVRight)
   
   while (time<maxIter){
     
@@ -689,17 +689,17 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, lotte
       
       # Lottery integrator
       lottery_mu = rnorm(1, lottery_mu_mean, epsilon)
-      lotteryRDV = lotteryRDV + rnorm(1, lottery_mu, sigma)
+      lotteryRDV = lotteryRDV + rnorm(1, lottery_mu, sigmaAttr)
       
       # Fractal integrator
       fractal_mu = rnorm(1, fractal_mu_mean, epsilon)
-      fractalRDV = fractalRDV + rnorm(1, fractal_mu, sigma)
+      fractalRDV = fractalRDV + rnorm(1, fractal_mu, sigmaAttr)
       
       # Arbitrator 
       # If abs(lotteryRDV) > abs(fractalRDV) stronger relative preference for a side based on lotteries
-      arbitrator_mu_mean = d * (abs(lotteryRDV) - abs(fractalRDV))
+      arbitrator_mu_mean = dArb * (abs(lotteryRDV) - abs(fractalRDV))
       arbitrator_mu = rnorm(1, arbitrator_mu_mean, epsilon)
-      arbitratorRDV = arbitratorRDV + rnorm(1, arbitrator_mu, sigma)
+      arbitratorRDV = arbitratorRDV + rnorm(1, arbitrator_mu, sigmaArb)
     }
     
     if (debug){
@@ -968,9 +968,8 @@ if(is.na(sim_data_m5$sim_data_opt_choice)){
 }
 
 ```
-
 ```{r}
-m5_opt_out
+summarise_opt_out(m5_opt_out)
 ```
 
 ## Checks

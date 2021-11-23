@@ -56,14 +56,14 @@ sim_task = function(stimuli, model_name, ...){
     if(model_name %in% c("model4", "model5")){
       cur_out = sim_trial(dArb=kwargs$dArb, dAttr=kwargs$dAttr, sigmaArb = kwargs$sigmaArb, sigmaAttr = kwargs$sigmaAttr, 
                           barrier = kwargs$barrier,nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
-                          bias = kwargs$bias, timestep = kwargs$timestep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon, 
+                          bias = kwargs$bias, timestep = kwargs$timestep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,
                           EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], 
                           QVLeft = stimuli$QVLeft[i], QVRight= stimuli$QVRight[i] , 
                           probFractalDraw = stimuli$probFractalDraw[i])
     } else{
       cur_out = sim_trial(d=kwargs$d, sigma = kwargs$sigma, 
                           barrier = kwargs$barrier, nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
-                          bias = kwargs$bias, timestep = kwargs$timestep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon, 
+                          bias = kwargs$bias, timestep = kwargs$timestep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,
                           stimDelay = kwargs$stimDelay, evCompTime = kwargs$evCompTime,
                           EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], 
                           QVLeft = stimuli$QVLeft[i], QVRight= stimuli$QVRight[i] , 

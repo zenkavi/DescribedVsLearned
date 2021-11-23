@@ -104,8 +104,8 @@ sim_par_combs = function(sub_data, model_name, d_par_space, sigma_par_space, hea
       for(cur_dAttr in d_par_space){
         for(cur_sigmaArb in sigma_par_space){
           for(cur_sigmaAttr in sigma_par_space){
-            print(paste0("cur_d = ", cur_d, " cur_sigma = ", cur_sigma))
-            out_row = data.frame(d = cur_d, sigma = cur_sigma, barrier_decay = cur_barrier)
+            print(paste0("cur_dArb = ", cur_dArb,"cur_dAttr = ", cur_dAttr, " cur_sigmaArb = ", cur_sigmaArb,  " cur_sigmaAttr = ", cur_sigmaAttr))
+            out_row = data.frame(dArb = cur_dArb, dAttr = cur_dAttr, sigmaArb = cur_sigmaArb, sigmaAttr = cur_sigmaAttr)
             sim_data = sim_task(stimuli=sub_data, model_name = model_name, dArb = cur_dArb, dAttr = cur_dAttr, sigmaArb = cur_sigmaArb, sigmaAttr = cur_sigmaAttr)
             out_row$rt_sumsq = get_rt_sumsq(sub_data, sim_data)
             out_row$choice_sumsq = get_choice_sumsq(sub_data, sim_data)
@@ -120,8 +120,8 @@ sim_par_combs = function(sub_data, model_name, d_par_space, sigma_par_space, hea
     for(cur_d in d_par_space){
       for(cur_sigma in sigma_par_space){
         print(paste0("cur_d = ", cur_d, " cur_sigma = ", cur_sigma))
-        out_row = data.frame(d = cur_d, sigma = cur_sigma, barrier_decay = cur_barrier)
-        sim_data = sim_task(stimuli=sub_data, model_name = model_name, d = cur_d, sigma = cur_sigma, barrierDecay = cur_barrier)
+        out_row = data.frame(d = cur_d, sigma = cur_sigma)
+        sim_data = sim_task(stimuli=sub_data, model_name = model_name, d = cur_d, sigma = cur_sigma)
         out_row$rt_sumsq = get_rt_sumsq(sub_data, sim_data)
         out_row$choice_sumsq = get_choice_sumsq(sub_data, sim_data)
         out_row$avg_sumsq = with(out_row, (rt_sumsq + choice_sumsq)/2)
@@ -148,48 +148,36 @@ sim_par_combs = function(sub_data, model_name, d_par_space, sigma_par_space, hea
 find_best_par_combo = function(sub_data, model_name, d_par_space, sigma_par_space){
   
   obj_name = paste0("m", readr::parse_number(model_name), "_opt_out")
+  
+  latest_opt_out = file.info(list.files(paste0(here(), '/outputs'), full.names=T)) %>%
+    mutate(fname=  row.names(.)) %>%
+    filter(grepl(model_name, fname)) %>%
+    filter(mtime == max(mtime))
+  
   if(exists(obj_name)){#object name in r env
     print("Object already exists.")
     out = get(obj_name)
     get_opt_heatmaps(out)
-  } else{
-    tryCatch(
-      expr = {
-        # Your code...
-        # goes here...
-        print("No opt out object in the env for this model. Trying to read in previous simulation output.")
-        latest_opt_out = file.info(list.files(paste0(here(), '/outputs'), full.names=T)) %>%
-          mutate(fname=  row.names(.)) %>%
-          filter(grepl(model_name, fname)) %>%
-          filter(mtime == max(mtime))
-        out = read.csv(latest_opt_out$fname)
-      },
-      error = function(e){ 
-        # (Optional)
-        # Do this if an error is caught...
-        print("Could not find saved opt out file for this model. Running new simulation.")
-        out = sim_par_combs(sub_data, model_name = model_name, 
-                                  d_par_space = d_par_space, 
-                                  sigma_par_space = sigma_par_space, 
-                                  heatmaps=FALSE)
-      },
-      warning = function(w){
-        # (Optional)
-        # Do this if an warning is caught...
-      },
-      finally = {
-        # (Optional)
-        # Do this at the end before quitting the tryCatch structure...
-        get_opt_heatmaps(out)
-        out = list(opt_rt_pars = out[out$rt_sumsq == min(out$rt_sumsq, na.rm=T),] %>% drop_na(),
-                   opt_choice_pars = out[out$choice_sumsq == min(out$choice_sumsq, na.rm = T),] %>% drop_na(),
-                   opt_avg_pars = out[out$avg_sumsq == min(out$avg_sumsq, na.rm=T),] %>% drop_na())
-        
-      }
-    )
-    return(out)
+    
+  } else if (nrow(latest_opt_out)>0){#if it doesn't exist but a previous output has been saved
+    
+    out = read.csv(latest_opt_out$fname)
+    get_opt_heatmaps(out)
+    out = list(opt_rt_pars = out[out$rt_sumsq == min(out$rt_sumsq, na.rm=T),] %>% drop_na(),
+               opt_choice_pars = out[out$choice_sumsq == min(out$choice_sumsq, na.rm = T),] %>% drop_na(),
+               opt_avg_pars = out[out$avg_sumsq == min(out$avg_sumsq, na.rm=T),] %>% drop_na())
+    
+  } else{ #no objcet of output found
+    print("Could not find saved opt out file for this model. Running new simulation.")
+    out = sim_par_combs(sub_data, model_name = model_name, 
+                        d_par_space = d_par_space, 
+                        sigma_par_space = sigma_par_space, 
+                        heatmaps=TRUE)
   }
+  
+  return(out)
 }
+
 
 sim_w_best_combo = function(opt_out, model_name){
   

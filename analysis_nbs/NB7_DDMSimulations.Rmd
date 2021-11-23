@@ -116,16 +116,6 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
   # Initialize inputs
   kwargs = list(...)
   
-  d = kwargs$d
-  sigma = kwargs$sigma
-  barrier = kwargs$barrier
-  nonDecisionTime = kwargs$nonDecisionTime
-  bias = kwargs$bias
-  
-  timestep = kwargs$timestep
-  maxIter = kwargs$maxIter
-  epsilon = kwargs$epsilon
-  
   EVLeft=kwargs$EVLeft
   EVRight=kwargs$EVRight
   QVLeft=kwargs$QVLeft
@@ -173,11 +163,6 @@ sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=1
   return(out)
 }
 sim_trial_list[['model1']] = sim_trial
-# rm(sim_trial)
-```
-
-```{r}
-sim_trial(d=.004, sigma=0.4)
 ```
 
 ## Opt pars

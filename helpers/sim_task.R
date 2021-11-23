@@ -13,7 +13,9 @@ rbind.all.columns <- function(x, y) {
 }
 
 sim_task = function(stimuli, model_name, ...){
+  
   kwargs = list(...)
+  # 
   # Initialize any missing arguments
   if (!("nonDecisionTime" %in% kwargs)){
     kwargs$nonDecisionTime = 0
@@ -26,6 +28,12 @@ sim_task = function(stimuli, model_name, ...){
   }
   if (!("bias" %in% kwargs)){
     kwargs$bias = 0
+  }
+  if (!("lotteryBias" %in% kwargs)){
+    kwargs$lotteryBias = 0.1
+  }
+  if (!("fractalBias" %in% kwargs)){
+    kwargs$fractalBias = 0
   }
   if (!("timeStep" %in% kwargs)){
     kwargs$timeStep = 10
@@ -40,30 +48,31 @@ sim_task = function(stimuli, model_name, ...){
     kwargs$stimDelay = 2000
   }
   if (!("evCompTime" %in% kwargs)){
-    kwargs$epsilon = 300
+    kwargs$evCompTime = 300
   }
 
   # Extract the correct trial simulator for the model_name
   sim_trial = sim_trial_list[[model_name]]
   
   # Create placeholder output df
-  out = data.frame(EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, probFractalDraw = NA, choice = NA, reactionTime = NA)
-  
-  # Loop through all trials of a subjects data (or just all the rows of the input)
-  for(i in 1:nrow(sub_data)) {
-    
+  out = data.frame()
+
+  # Loop through  all the rows of the input
+  for(i in 1:nrow(stimuli)) {
     # Simulate RT and choice for a single trial with given DDM parameters and trial stimulus values
     if(model_name %in% c("model4", "model5")){
       cur_out = sim_trial(dArb=kwargs$dArb, dAttr=kwargs$dAttr, sigmaArb = kwargs$sigmaArb, sigmaAttr = kwargs$sigmaAttr, 
                           barrier = kwargs$barrier,nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
-                          bias = kwargs$bias, timestep = kwargs$timestep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,
+                          lotteryBias = kwargs$lotteryBias, fractalBias = kwargs$fractalBias, timeStep = kwargs$timeStep,
+                          maxIter = kwargs$maxIter,
+                          epsilon = kwargs$epsilon,
                           EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], 
-                          QVLeft = stimuli$QVLeft[i], QVRight= stimuli$QVRight[i] , 
+                          QVLeft = stimuli$QVLeft[i], QVRight= stimuli$QVRight[i], 
                           probFractalDraw = stimuli$probFractalDraw[i])
     } else{
       cur_out = sim_trial(d=kwargs$d, sigma = kwargs$sigma, 
                           barrier = kwargs$barrier, nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
-                          bias = kwargs$bias, timestep = kwargs$timestep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,
+                          bias = kwargs$bias, timeStep = kwargs$timeStep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,
                           stimDelay = kwargs$stimDelay, evCompTime = kwargs$evCompTime,
                           EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], 
                           QVLeft = stimuli$QVLeft[i], QVRight= stimuli$QVRight[i] , 
@@ -75,9 +84,6 @@ sim_task = function(stimuli, model_name, ...){
     out = rbind.all.columns(out, cur_out)
     
   }
-  
-  # Drops only first row instead of all NAs to keep trials where iterations timed out and a decision was not made
-  out = out[-1,]
   
   # Add details of the parameters used for the simulation
   out$model = model_name

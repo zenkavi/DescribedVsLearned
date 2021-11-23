@@ -189,18 +189,6 @@ if(is.na(sim_data_m1$sim_data_opt_choice)){
 }
 ```
 
-## Checks
-
-```{r}
-model_summary = data.frame(model_name = "Model1",
-                           description = "Simplest",
-                           RT_inverseU = "No, similar for all levels",
-                           RT_fasterpFrac1 = "No",
-                           choice_logits = "Reasonable",
-                           choice_lotteryBias = "No")
-model_summary
-```
-
 # Model 2: Early integration, relative preference weighting
 
 - Two kinds of early integration
@@ -391,18 +379,6 @@ if(is.na(sim_data_m2$sim_data_opt_choice)){
 }
 ```
 
-## Checks
-
-```{r}
-model_summary = rbind(model_summary, data.frame(model_name = "Model2",
-                                                description = "Early integration+rel pref weighting",
-                                                RT_inverseU = "Yes but ends too fast and bimodal distributions",
-                                                RT_fasterpFrac1 = "Yes but too fast",
-                                                choice_logits = "Too high for edge case",
-                                                choice_lotteryBias = "Slight to none."))
-model_summary
-```
-
 What is going on with the trials that hit decision before stimuli are presented but are not pfrac = 1? There should be no integration for these before the stimuli are presented. Seems to go down quickly with reducing sigma so they're likely from noise integration but reducing sigma messes up other things as well
 
 ```{r eval=FALSE, echo=FALSE}
@@ -584,18 +560,6 @@ if(is.na(sim_data_m3$sim_data_opt_choice)){
 
 ```
 
-## Checks
-
-```{r}
-model_summary = rbind(model_summary, data.frame(model_name = "Model3",
-                                                description = "Early integration+rel pref weighting",
-                                                RT_inverseU = "No, either ends too fast or all too slow",
-                                                RT_fasterpFrac1 = "Yes but not fast enough",
-                                                choice_logits = "Too high for edge case",
-                                                choice_lotteryBias = "Slight to none."))
-model_summary
-```
-
 # Model 4: 3 integrators
 
 - all biases are by moving the starting points
@@ -637,7 +601,7 @@ sim_trial = function(dArb, dAttr, sigmaArb, sigmaAttr, barrierDecay, barrier=1, 
   
   QVLeft=kwargs$QVLeft
   QVRight=kwargs$QVRight
-  if(EVLeft > EVRight){
+  if(QVLeft > QVRight){
     fractalRDV = fractalBias
   } else {
     fractalRDV = -fractalBias
@@ -762,6 +726,20 @@ m4_opt_out = find_best_par_combo(sub_data, model_name = "model4",
 ```
 
 ```{r}
+summarise_opt_out(m4_opt_out)
+```
+
+```{r}
+m4_opt_out %>%
+  select(rt_sumsq, choice_sumsq) %>%
+  gather(key, value) %>%
+  ggplot(aes(value, fill=key)) +
+  geom_histogram(position="identity", alpha=.5, bins=30) +
+  theme(legend.position = "bottom")+
+  labs(fill="")
+```
+
+```{r}
 sim_data_m4 = sim_w_best_combo(m4_opt_out, "model4")
 ```
 
@@ -776,18 +754,6 @@ if(is.na(sim_data_m4$sim_data_opt_choice)){
   sim_sanity_checks(sim_data_m4$sim_data_opt_choice)
 }
 
-```
-
-## Checks
-
-```{r}
-model_summary = rbind(model_summary, data.frame(model_name = "Model4",
-                                                description = "3 integrators with relevance on attribute integrators",
-                                                RT_inverseU = "No",
-                                                RT_fasterpFrac1 = "No, too fast",
-                                                choice_logits = "Can be reasonable or too noisy",
-                                                choice_lotteryBias = "Slight to none."))
-model_summary
 ```
 
 # Model 5: 3 integrators
@@ -828,7 +794,7 @@ sim_trial = function(dArb, dAttr, sigmaArb, sigmaAttr, barrierDecay, barrier=1, 
   
   QVLeft=kwargs$QVLeft
   QVRight=kwargs$QVRight
-  if(EVLeft > EVRight){
+  if(QVLeft > QVRight){
     fractalRDV = fractalBias
   } else {
     fractalRDV = -fractalBias
@@ -931,7 +897,7 @@ sim_trial_list[['model5']] = sim_trial
 Example visualization of integration
 
 ```{r echo=FALSE, eval=FALSE}
-tmp = sim_trial(d = .033, sigma = .03, barrierDecay = 0.005, EVLeft = .7, EVRight = 0.5, QVLeft = 0.3, QVRight = 0.7, probFractalDraw = .8, debug=TRUE, nonDecisionTime = 0)
+tmp = sim_trial(dArb = .04, dAttr=0.1, sigmaArb = .02, sigmaAttr = .01, barrierDecay = 0, EVLeft = .7, EVRight = 0.5, QVLeft = 0, QVRight = 0, probFractalDraw = .8, debug=TRUE, nonDecisionTime = 0)
 
 tmp$debug_df %>%
   select(-arbitrator_mu_mean) %>%
@@ -941,7 +907,16 @@ tmp$debug_df %>%
   geom_line(aes(time, barrier), color="red")+
   geom_line(aes(time, -barrier), color="green")+
   geom_hline(aes(yintercept = 0), linetype="dashed")+
-  facet_grid(key ~.)
+  facet_grid(key ~.)+
+  theme_bw()
+```
+
+```{r}
+tmp
+```
+
+```{r}
+replicate(4, sim_trial_list[['model5']](dArb = .04, dAttr=0.1, sigmaArb = .02, sigmaAttr = .01, barrierDecay = 0, EVLeft = .6, EVRight = 0.5, QVLeft = 0, QVRight = 0, probFractalDraw = 0, nonDecisionTime = 0))
 ```
 
 ## Opt pars
@@ -950,6 +925,10 @@ tmp$debug_df %>%
 m5_opt_out = find_best_par_combo(sub_data, model_name = "model5", 
                                  d_par_space = d_par_space, 
                                  sigma_par_space = sigma_par_space)
+```
+
+```{r}
+summarise_opt_out(m5_opt_out)
 ```
 
 ```{r}
@@ -967,21 +946,6 @@ if(is.na(sim_data_m5$sim_data_opt_choice)){
   sim_sanity_checks(sim_data_m5$sim_data_opt_choice)
 }
 
-```
-```{r}
-summarise_opt_out(m5_opt_out)
-```
-
-## Checks
-
-```{r}
-model_summary = rbind(model_summary, data.frame(model_name = "Model5",
-                                                description = "3 integrators with relevance on arbitrator",
-                                                RT_inverseU = "No",
-                                                RT_fasterpFrac1 = "No",
-                                                choice_logits = "Too noisy or too slow",
-                                                choice_lotteryBias = "No."))
-model_summary
 ```
 
 # Trade-offs across models

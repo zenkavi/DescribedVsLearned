@@ -47,9 +47,6 @@ sim_task = function(stimuli, model_name, ...){
   if (!("stimDelay" %in% kwargs)){
     kwargs$stimDelay = 2000
   }
-  if (!("evCompTime" %in% kwargs)){
-    kwargs$evCompTime = 300
-  }
 
   # Extract the correct trial simulator for the model_name
   sim_trial = sim_trial_list[[model_name]]
@@ -73,7 +70,7 @@ sim_task = function(stimuli, model_name, ...){
       cur_out = sim_trial(d=kwargs$d, sigma = kwargs$sigma, 
                           barrier = kwargs$barrier, nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
                           bias = kwargs$bias, timeStep = kwargs$timeStep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,
-                          stimDelay = kwargs$stimDelay, evCompTime = kwargs$evCompTime,
+                          stimDelay = kwargs$stimDelay, 
                           EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], 
                           QVLeft = stimuli$QVLeft[i], QVRight= stimuli$QVRight[i] , 
                           probFractalDraw = stimuli$probFractalDraw[i])

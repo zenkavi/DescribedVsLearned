@@ -57,10 +57,10 @@ sim_task = function(stimuli, model_name, ...){
   # Loop through  all the rows of the input
   for(i in 1:nrow(stimuli)) {
     # Simulate RT and choice for a single trial with given DDM parameters and trial stimulus values
-    if(model_name %in% c("model4", "model5")){
+    if(model_name %in% c("model4", "model5","model6")){
       cur_out = sim_trial(dArb=kwargs$dArb, dAttr=kwargs$dAttr, sigmaArb = kwargs$sigmaArb, sigmaAttr = kwargs$sigmaAttr, 
                           barrier = kwargs$barrier,nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
-                          lotteryBias = kwargs$lotteryBias, fractalBias = kwargs$fractalBias, timeStep = kwargs$timeStep,
+                          lotteryBias = kwargs$lotteryBias, timeStep = kwargs$timeStep,
                           maxIter = kwargs$maxIter,
                           epsilon = kwargs$epsilon,
                           EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], 
@@ -84,7 +84,7 @@ sim_task = function(stimuli, model_name, ...){
   
   # Add details of the parameters used for the simulation
   out$model = model_name
-  if(model_name %in% c("model4", "model5")){
+  if(model_name %in% c("model4", "model5", "model6")){
     out$dArb = kwargs$dArb
     out$dAttr = kwargs$dAttr
     out$sigmaArb = kwargs$sigmaArb

@@ -171,6 +171,31 @@ sim_trial_list[['model1']] = sim_trial
 tmp = sim_task(sub_data, model_name="model1", d=0.04, sigma = 0.02)
 sim_sanity_checks(tmp)
 ```
+### What controls spread vs mean?
+
+```{r}
+tmp1 = sim_task(sub_data, model_name = "model1", d=0.06, sigma = 0.03)
+sim_sanity_checks(tmp1, checks=c(3))
+```
+
+```{r}
+tmp2 = sim_task(sub_data, model_name = "model1", d=0.06, sigma = 0.003)
+sim_sanity_checks(tmp2, checks=c(3))
+```
+
+```{r}
+tmp3 = sim_task(sub_data, model_name = "model1", d=0.006, sigma = 0.03)
+sim_sanity_checks(tmp3, checks=c(3))
+```
+
+```{r}
+tmp4 = sim_task(sub_data, model_name = "model1", d=0.006, sigma = 0.003)
+sim_sanity_checks(tmp4, checks=c(3))
+```
+
+```{r}
+rm(tmp1, tmp2, tmp3, tmp4)
+```
 
 ## Opt pars
 
@@ -247,8 +272,7 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
   }
   
   qv_mu_mean = d*(QVLeft - QVRight)
-  ev_mu_mean = d * (1-probFractalDraw) * (EVLeft - EVRight)
-  
+
   leftFractalAdv =  probFractalDraw* (QVLeft - QVRight)
   leftLotteryAdv = (1-probFractalDraw) * (EVLeft - EVRight)
   weighted_mu_mean = d * (leftFractalAdv + leftLotteryAdv)
@@ -283,22 +307,23 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
       break
     } 
     
-    if (elapsedNDT < nonDecIters){
-      mu_mean = 0
-      elapsedNDT = elapsedNDT + 1
+    if (time < stimDelayIters){
+      if (probFractalDraw == 1){
+        mu_mean = qv_mu_mean
+      } else {
+        # No integration before stim presentation for any other trial type
+        mu_mean = 0
+      }
     } else{
-      if (time < stimDelayIters){
-        # Integration after fractal prob presentation but before stim presentation happens ONLY for the probfractaldraw == 1 trials
-        if (probFractalDraw == 1){
-          mu_mean = qv_mu_mean
-        } else {
-          # No integration after NDT and before stim presentation for any other trial type
-          mu_mean = 0
-        }
+      if (elapsedNDT < nonDecIters){
+        mu_mean = 0
+        elapsedNDT = elapsedNDT + 1
       } else{
         mu_mean = weighted_mu_mean
       }
     }
+    
+    
     
     # Sample the change in RDV from the distribution.
     mu = rnorm(1, mu_mean, epsilon)
@@ -343,9 +368,11 @@ sim_trial_list[['model2']] = sim_trial
 ## Check sim task
 
 ```{r eval=FALSE, echo=FALSE}
-tmp = sim_task(sub_data, model_name = "model2", d=0.06, sigma = 0.03)
+tmp = sim_task(sub_data, model_name = "model2", d=0.04, sigma = 0.03)
 sim_sanity_checks(tmp)
 ```
+
+When does integration reach a bound before the stim presentation?
 
 ```{r}
 with(tmp, table(decPreStim, probFractalDraw))
@@ -358,35 +385,13 @@ tmp %>%
   rbind(sub_data %>%
           mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
                  data_type = "true",
-                 decPreStim = "true") %>%
+                 decPreStim = "trueData") %>%
           select(-subnum, -choiceLeft)) %>%
   mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
   ggplot(aes(reactionTime, fill=decPreStim)) +
   geom_histogram(position="identity", bins=30, alpha=.5) +
-  labs(title="RT long tail?", fill="")+
   facet_wrap(~probFractalDraw)+
   theme(legend.position = "bottom")
-```
-### What controls spread vs mean?
-
-```{r}
-tmp1 = sim_task(sub_data, model_name = "model2", d=0.06, sigma = 0.03)
-sim_sanity_checks(tmp1, checks=c(3))
-```
-
-```{r}
-tmp2 = sim_task(sub_data, model_name = "model2", d=0.06, sigma = 0.003)
-sim_sanity_checks(tmp2, checks=c(3))
-```
-
-```{r}
-tmp3 = sim_task(sub_data, model_name = "model2", d=0.006, sigma = 0.03)
-sim_sanity_checks(tmp3, checks=c(3))
-```
-
-```{r}
-tmp4 = sim_task(sub_data, model_name = "model2", d=0.006, sigma = 0.003)
-sim_sanity_checks(tmp4, checks=c(3))
 ```
 
 ## Opt pars
@@ -467,7 +472,6 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
   }
   
   qv_mu_mean = d*(QVLeft - QVRight)
-  ev_mu_mean = d * (1-probFractalDraw) * (EVLeft - EVRight)
   leftFractalAdv =  probFractalDraw* (QVLeft - QVRight)
   leftLotteryAdv = (1-probFractalDraw) * (EVLeft - EVRight)
   relPrefFractal = abs(leftFractalAdv)/(abs(leftLotteryAdv)+abs(leftFractalAdv)+1e-6)
@@ -499,18 +503,18 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
       break
     } 
     
-    if (elapsedNDT < nonDecIters){
-      mu_mean = 0
-      elapsedNDT = elapsedNDT + 1
+    if (time < stimDelayIters){
+      # Integration after fractal prob presentation but before stim presentation happens ONLY for the probfractaldraw == 1 trials
+      if (probFractalDraw == 1){
+        mu_mean = qv_mu_mean
+      } else {
+        # No integration before stim presentation for any other trial type
+        mu_mean = 0
+      }
     } else{
-      if (time < stimDelayIters){
-        # Integration after fractal prob presentation but before stim presentation happens ONLY for the probfractaldraw == 1 trials
-        if (probFractalDraw == 1){
-          mu_mean = qv_mu_mean
-        } else {
-          # No integration after NDT and before stim presentation for any other trial type
-          mu_mean = 0
-        }
+      if (elapsedNDT < nonDecIters){
+        mu_mean = 0
+        elapsedNDT = elapsedNDT + 1
       } else{
         mu_mean = weighted_mu_mean
       }
@@ -557,8 +561,10 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
 sim_trial_list[['model3']] = sim_trial
 ```
 
+## Check sim task
+
 ```{r eval=FALSE, echo=FALSE}
-tmp = sim_task(sub_data, model_name = "model3", d=0.05, sigma = 0.02)
+tmp = sim_task(sub_data, model_name = "model3", d=0.05, sigma = 0.01)
 sim_sanity_checks(tmp)
 ```
 
@@ -742,6 +748,13 @@ tmp$debug_df %>%
   geom_line(aes(time, -barrier), color="green")+
   geom_hline(aes(yintercept = 0), linetype="dashed")+
   facet_grid(key ~.)
+```
+
+## Check sim task
+
+```{r eval=FALSE, echo=FALSE}
+tmp = sim_task(sub_data, model_name = "model4", dAttr=0.04, dArb=0.04, sigmaAttr = 0.03, sigmaArb = 0.03)
+sim_sanity_checks(tmp)
 ```
 
 ## Opt pars
@@ -937,6 +950,14 @@ tmp$debug_df %>%
   facet_grid(key ~.)+
   theme_bw()
 ```
+
+## Check sim task
+
+```{r eval=FALSE, echo=FALSE}
+tmp = sim_task(sub_data, model_name = "model5", dAttr=0.04, dArb=0.04, sigmaAttr = 0.03, sigmaArb = 0.03)
+sim_sanity_checks(tmp)
+```
+
 
 ## Opt pars
 

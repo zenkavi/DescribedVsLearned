@@ -17,35 +17,35 @@ sim_task = function(stimuli, model_name, ...){
   kwargs = list(...)
   # 
   # Initialize any missing arguments
-  if (!("nonDecisionTime" %in% kwargs)){
+  if (!("nonDecisionTime" %in% names(kwargs))){
     kwargs$nonDecisionTime = 0
   }
-  if (!("barrier" %in% kwargs)){
+  if (!("barrier" %in% names(kwargs))){
     kwargs$barrier = 1
   }
-  if (!("barrierDecay" %in% kwargs)){
+  if (!("barrierDecay" %in% names(kwargs))){
     kwargs$barrierDecay = 0
   }
-  if (!("bias" %in% kwargs)){
+  if (!("bias" %in% names(kwargs))){
     kwargs$bias = 0
   }
-  if (!("lotteryBias" %in% kwargs)){
+  if (!("lotteryBias" %in% names(kwargs))){
     kwargs$lotteryBias = 0.1
   }
-  if (!("fractalBias" %in% kwargs)){
-    kwargs$fractalBias = 0
-  }
-  if (!("timeStep" %in% kwargs)){
+  if (!("timeStep" %in% names(kwargs))){
     kwargs$timeStep = 10
   }
-  if (!("maxIter" %in% kwargs)){
+  if (!("maxIter" %in% names(kwargs))){
     kwargs$maxIter = 400
   }
-  if (!("epsilon" %in% kwargs)){
+  if (!("epsilon" %in% names(kwargs))){
     kwargs$epsilon = 0.0002
   }
-  if (!("stimDelay" %in% kwargs)){
+  if (!("stimDelay" %in% names(kwargs))){
     kwargs$stimDelay = 2000
+  }
+  if (!("debug" %in% names(kwargs))){
+    kwargs$debug = FALSE
   }
 
   # Extract the correct trial simulator for the model_name
@@ -53,11 +53,26 @@ sim_task = function(stimuli, model_name, ...){
   
   # Create placeholder output df
   out = data.frame()
+  
+  if(kwargs$debug){
+    print(paste0("Simulating task with parameters: model_name = ", model_name,
+          ", non-decision time = ", kwargs$nonDecisionTime,
+          ", barrier = ", kwargs$barrier,
+          ", barrierDecay = ", kwargs$barrierDecay,
+          ", bias = ", kwargs$bias,
+          ", lotteryBias = ", kwargs$lotteryBias,
+          ", timeStep = ", kwargs$timeStep,
+          ", maxIter = ", kwargs$maxIter,
+          ", epsilon = ", kwargs$epsilon,
+          ", stimDelay = ", kwargs$stimDelay
+          ))
+  }
 
   # Loop through  all the rows of the input
   for(i in 1:nrow(stimuli)) {
     # Simulate RT and choice for a single trial with given DDM parameters and trial stimulus values
     if(model_name %in% c("model4", "model5","model6")){
+      
       cur_out = sim_trial(dArb=kwargs$dArb, dAttr=kwargs$dAttr, sigmaArb = kwargs$sigmaArb, sigmaAttr = kwargs$sigmaAttr, 
                           barrier = kwargs$barrier,nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
                           lotteryBias = kwargs$lotteryBias, timeStep = kwargs$timeStep,

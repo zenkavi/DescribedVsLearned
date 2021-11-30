@@ -49,8 +49,8 @@ sim_trial = function(dArb, dAttr, sigmaArb, sigmaAttr, barrierDecay, barrier=1, 
     barrier[t] = initialBarrier / (1 + barrierDecay * t)
   }
   
-  lottery_mu_mean = dAttr * (1+lotteryBias) * (EVLeft - EVRight) * (1-probFractalDraw)
-  fractal_mu_mean = dAttr * (QVLeft - QVRight) * (probFractalDraw)
+  lottery_mu_mean = dAttr * (1+lotteryBias) * (EVLeft - EVRight)
+  fractal_mu_mean = dAttr * (QVLeft - QVRight)
   
   while (time<maxIter){
     

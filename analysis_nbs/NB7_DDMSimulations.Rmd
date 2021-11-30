@@ -419,7 +419,7 @@ if(is.na(sim_data_m5$sim_data_opt_choice)){
 
 ```
 
-How to visualize goodness of fit across
+### How to visualize goodness of fit across >2 parameters?
 
 ```{r}
 m5_opt_out %>% 
@@ -479,6 +479,12 @@ Need to debug lotteryBias feeding in properly to sim_task depending on the
 ```{r eval=FALSE, echo=FALSE}
 tmp = sim_task(sub_data, model_name = "model6", dAttr=0.02, dArb=0.04, sigmaAttr = 0.03, sigmaArb = 0.03, debug = TRUE, lotteryBias = .25)
 sim_sanity_checks(tmp)
+```
+
+What are the pFrac <.4 trials so fast? Is it due to pre stim decisions (shouldn't be unless there is a bug)? No it isn't.
+
+```{r}
+with(tmp, table(decPreStim, probFractalDraw))
 ```
 
 # Trade-offs across models

@@ -32,10 +32,10 @@ sim_trial = function(dArb, dAttr, sigmaArb, sigmaAttr, barrierDecay, barrier=1, 
   QVRight=kwargs$QVRight
   
   # remove bias from arbitrator RDV if pFrac == 1
-  probFractalDraw=kwargs$probFractalDraw
-  if(probFractalDraw == 1){
-    arbitratorRDV = 0
-  }
+  # probFractalDraw=kwargs$probFractalDraw
+  # if(probFractalDraw == 1){
+  #   arbitratorRDV = 0
+  # }
   
   nonDecIters = nonDecisionTime / timeStep
   stimDelayIters = stimDelay / timeStep

@@ -94,8 +94,6 @@ sim_trial = function(d, sigma, barrierDecay, barrier=1, nonDecisionTime=0, bias=
       }
     }
     
-    
-    
     # Sample the change in RDV from the distribution.
     mu = rnorm(1, mu_mean, epsilon)
     RDV = RDV + rnorm(1, mu, sigma)

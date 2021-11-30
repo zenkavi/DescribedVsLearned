@@ -162,8 +162,7 @@ if(is.na(sim_data_m1$sim_data_opt_choice)){
 
 # Model 2: Early integration
 
-- For probFractalDraw == 1 trials begin integrating before stimulus presentation proportional to QV difference weighted by drift rate
-- Once early integration is complete integration uses both QV and EV differences weighted by relevance
+- Early integrator for pFractalDraw == 1 only.
 
 ```{r}
 source(paste0(helpers_path, 'ddmSims/ddm_model2.R'))
@@ -225,6 +224,9 @@ if(is.na(sim_data_m2$sim_data_opt_choice)){
 
 # Model 3: Model 2 + relative preference weighting
 
+- Early integration for pFractalDraw == 1 only
+- Relative preference weighted value difference for all other conditions
+
 ```{r}
 source(paste0(helpers_path, 'ddmSims/ddm_model3.R'))
 sim_trial_list[['model3']] = sim_trial
@@ -233,7 +235,7 @@ sim_trial_list[['model3']] = sim_trial
 ## Check sim task
 
 ```{r eval=FALSE, echo=FALSE}
-tmp = sim_task(sub_data, model_name = "model3", d=0.05, sigma = 0.01)
+tmp = sim_task(sub_data, model_name = "model3", d=0.08, sigma = 0.01)
 sim_sanity_checks(tmp)
 ```
 
@@ -264,10 +266,11 @@ if(is.na(sim_data_m3$sim_data_opt_choice)){
 
 # Model 4: 3 integrators
 
-- all biases are by moving the starting points
-  - for all trials there is a general lottery bias
-  - for pfrac == 1 trials there is a fractal bias the size of the QV difference
-- Integration happens for EV and QV separately along with an arbitrator that determines the decision
+- 3 integrators
+- Arbitrator integrator starts biased towards lotteries
+- If pFractalDraw == 1 fractal integrator starts biased towards the better fractal
+- Attribute relevant (pFractalDraw) affects attribute integrators directly, not the arbitrator
+- Arbitrator integrator depends on the difference in absolute attribute integrator RDVs
 
 ```{r}
 source(paste0(helpers_path, 'ddmSims/ddm_model4.R'))
@@ -338,7 +341,11 @@ if(is.na(sim_data_m4$sim_data_opt_choice)){
 
 # Model 5: 3 integrators
 
-- Same as model 4 but with attribute relevance affecting arbitrator and not the attribute integrators
+- 3 integrators
+- Arbitrator integrator starts biased towards lotteries
+- If pFractalDraw == 1 fractal integrator starts biased towards the better fractal
+- Attribute relevant (pFractalDraw) does not affects attribute integrators directly
+- Arbitrator integrator depends on the difference in absolute attribute integrator RDVs weighted by the attribute relevance
 
 ```{r}
 source(paste0(helpers_path, 'ddmSims/ddm_model5.R'))
@@ -465,6 +472,12 @@ m5_opt_out %>%
 
 # Model 6: 3 integrators + early integration
 
+- 3 integrators
+- Arbitrator integrator starts from 0. Lottery bias is a multiplication of the lottery integrator drift rate
+- If pFractalDraw == 1 fractal and arbitrato integrator starts early. Arbitrator moves only towards fractal.
+- Attribute relevance (pFractalDraw) does affect attribute integrators directly
+- Arbitrator integrator depends on the difference in absolute attribute integrator RDVs weighted by attribute relevance
+
 - Where should nondecision time come into play?
 
 ```{r}
@@ -524,4 +537,5 @@ opt_outs_df
 
 # Next steps
 
+- Why can I find a combination of parameters to match cases pFractalDraw > .5 but the same combination is too fast for other conditions?
 - Incorporating EV and QV computation instead of using them as input

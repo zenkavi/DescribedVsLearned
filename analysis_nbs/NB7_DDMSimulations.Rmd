@@ -29,12 +29,12 @@ set.seed(38573)
 Adding in parameters from the two systems model for all subjects (i.e. not choosing the best fitting one per subject)
 
 ```{r}
-source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical.R'))
+source(paste0(helpers_path,'twoSystemsFitting/fit_twoValSystemsWithRL_hierarchical.R'))
 source(paste0(helpers_path,'add_inferred_pars.R'))
 clean_beh_data = add_inferred_pars(clean_beh_data, par_ests, model_name="original")
-source(paste0(helpers_path,'sim_task.R'))
-source(paste0(helpers_path,'sim_sanity_checks.R'))
-source(paste0(helpers_path,'find_best_par_combo.R'))
+source(paste0(helpers_path,'ddmSims/sim_task.R'))
+source(paste0(helpers_path,'ddmSims/sim_sanity_checks.R'))
+source(paste0(helpers_path,'ddmSims/find_best_par_combo.R'))
 ```
 
 # True data
@@ -99,69 +99,7 @@ sigma_par_space = c(.004, .008 ,.01, .02, .04, .06, .08, .1)
 - Bundle values are computed as sums of QV and EV weighted by their relevance (no distortion of probability)
 
 ```{r}
-sim_trial = function(d, sigma,  barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=400, epsilon = 0.0002, ...){
-  
-  # d : drift rate
-  # sigma: sd of the normal distribution 
-  # timeStep: in ms
-  # nonDecisionTime: in ms
-  # maxIter: num max samples. if a barrier isn't hit by this sampling of evidence no decision is made. If time step is 10ms and maxIter is 1000 this would be a (1000 iterations * 10 ms (per iteration) / 1000 convert back to sec =) 10sec timeout maximum
-  
-  RDV = bias
-  time = 1
-  elapsedNDT = 0
-  choice = 0
-  RT = NA
-  
-  # Initialize inputs
-  kwargs = list(...)
-  
-  EVLeft=kwargs$EVLeft
-  EVRight=kwargs$EVRight
-  QVLeft=kwargs$QVLeft
-  QVRight=kwargs$QVRight
-  probFractalDraw=kwargs$probFractalDraw
-  
-  valueLeft = probFractalDraw*QVLeft + (1-probFractalDraw)*(EVLeft)
-  valueRight = probFractalDraw*QVRight + (1-probFractalDraw)*(EVRight)
-  valDiff_mu_mean = d*(valueLeft - valueRight)
-  
-  while (time<maxIter){
-    
-    # If the RDV hit one of the barriers, the trial is over.
-    if (RDV >= barrier | RDV <= -barrier){
-      RT = (time * timeStep)/1000 #convert back to secs
-      if (RDV >= barrier){
-        choice = "left"
-      } else if (RDV <= -barrier){
-        choice = "right"
-      }
-      break
-    } 
-    
-    # nonDecisionTime/timeStep gives how many sampling iterations the nonDecisionTime corresponds to
-    nonDecIters = nonDecisionTime / timeStep
-    # If elapsed time is less than the number of sampling iterations required for the nonDecisionTime set evidence sampling distribution mean to 0 so any move from starting point would only be noise
-    if (elapsedNDT < nonDecIters){
-      mu_mean = 0
-      elapsedNDT = elapsedNDT + 1
-    } else{
-      # If the nonDecisionTime has passed set the mean of the distribution the decision variable will be sampled from to a value proportional to the value difference and the drift rate 
-      mu_mean = valDiff_mu_mean
-    }
-    
-    # Sample the change in RDV from the distribution with mean proportional to the value difference
-    mu = rnorm(1, mu_mean, epsilon)
-    RDV = RDV + rnorm(1, mu, sigma)
-    
-    # Increment sampling iteration
-    time = time + 1
-  }
-  
-  #Organize output 
-  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT)
-  return(out)
-}
+source(paste0(helpers_path, 'ddmSims/ddm_model1.R'))
 sim_trial_list[['model1']] = sim_trial
 ```
 
@@ -943,6 +881,22 @@ tmp = sim_task(sub_data, model_name = "model5", dAttr=0.04, dArb=0.04, sigmaAttr
 sim_sanity_checks(tmp)
 ```
 
+```{r}
+tmp %>%
+  select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, arbitrator) %>%
+  mutate(data_type = "sim") %>%
+  rbind(sub_data %>%
+          mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
+                 data_type = "true",
+                 arbitrator= "true") %>%
+          select(-subnum, -choiceLeft)) %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
+  ggplot(aes(reactionTime, fill=as.factor(arbitrator))) +
+  geom_histogram(position="identity", bins=30, alpha=.5) +
+  labs(title="RT long tail?", fill="")+
+  facet_wrap(~probFractalDraw)+
+  theme(legend.position = "bottom")
+```
 
 ## Opt pars
 
@@ -962,23 +916,6 @@ sim_data_m5 = sim_w_best_combo(m5_opt_out, "model5")
 
 ```{r}
 sim_sanity_checks(sim_data_m5$sim_data_opt_rt)
-```
-
-```{r}
-sim_data_m5$sim_data_opt_rt %>%
-        select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, arbitrator) %>%
-        mutate(data_type = "sim") %>%
-        rbind(sub_data %>%
-                mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
-                       data_type = "true",
-                       arbitrator= "true") %>%
-                select(-subnum, -choiceLeft)) %>%
-        mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
-        ggplot(aes(reactionTime, fill=as.factor(arbitrator))) +
-        geom_histogram(position="identity", bins=30, alpha=.5) +
-        labs(title="RT long tail?", fill="")+
-        facet_wrap(~probFractalDraw)+
-        theme(legend.position = "bottom")
 ```
 
 ```{r}
@@ -1201,14 +1138,10 @@ sim_trial_list[['model6']] = sim_trial
 Need to debug lotteryBias feeding in properly to sim_task depending on the 
 
 ```{r eval=FALSE, echo=FALSE}
-tmp = sim_task(sub_data, model_name = "model6", dAttr=0.02, dArb=0.06, sigmaAttr = 0.03, sigmaArb = 0.03, debug = TRUE, lotteryBias = .25)
+tmp = sim_task(sub_data, model_name = "model6", dAttr=0.02, dArb=0.04, sigmaAttr = 0.03, sigmaArb = 0.03, debug = TRUE, lotteryBias = .25)
 sim_sanity_checks(tmp)
 ```
 
-```{r eval=FALSE, echo=FALSE}
-tmp = sim_task(sub_data, model_name = "model6", dAttr=0.02, dArb=0.06, sigmaAttr = 0.03, sigmaArb = 0.03, lotteryBias = .01)
-sim_sanity_checks(tmp)
-```
 # Trade-offs across models
 
 - Is the relationship between pars that optim rt vs choice the same across models?

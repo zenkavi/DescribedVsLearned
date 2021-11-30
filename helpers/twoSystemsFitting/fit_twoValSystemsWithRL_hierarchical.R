@@ -10,11 +10,11 @@ if (!exists('clean_beh_data')){
 }
 
 if(!exists('extract_var_for_stan')){
-  source(paste0(helpers_path, 'extract_var_for_stan.R'))
+  source(paste0(helpers_path, 'twoSystemsFitting/extract_var_for_stan.R'))
 }
 
 if(!exists('organize_stan_output')){
-  source(paste0(helpers_path, 'organize_stan_output.R'))
+  source(paste0(helpers_path, 'twoSystemsFitting/organize_stan_output.R'))
 }
 
 ## If there is a fit object read it in

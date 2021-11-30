@@ -176,6 +176,11 @@ tmp = sim_task(sub_data, model_name = "model2", d=0.04, sigma = 0.03)
 sim_sanity_checks(tmp)
 ```
 
+```{r eval=FALSE, echo=FALSE}
+tmp = sim_task(sub_data, model_name = "model2", d=0.045, sigma = 0.015)
+sim_sanity_checks(tmp)
+```
+
 When does integration reach a bound before the stim presentation?
 
 ```{r}
@@ -196,6 +201,25 @@ tmp %>%
   geom_histogram(position="identity", bins=30, alpha=.5) +
   facet_wrap(~probFractalDraw)+
   theme(legend.position = "bottom")
+```
+
+```{r}
+with(tmp, table(timeOut, probFractalDraw))
+```
+
+Time outs by value difference
+
+```{r}
+tmp %>%
+  mutate(QVDiff = abs(QVLeft - QVRight),
+         EVDiff = abs(EVLeft - EVRight)) %>%
+  select(EVDiff, QVDiff, timeOut, probFractalDraw) %>%
+  gather(key, value, -timeOut, -probFractalDraw) %>%
+  ggplot(aes(value, timeOut, color= key)) +
+  geom_jitter(height=.1, width = .1, alpha = .1)+
+  facet_wrap(~probFractalDraw)+
+  theme(legend.position = "bottom")+
+  labs(color="")
 ```
 
 ## Opt pars
@@ -236,6 +260,11 @@ sim_trial_list[['model3']] = sim_trial
 
 ```{r eval=FALSE, echo=FALSE}
 tmp = sim_task(sub_data, model_name = "model3", d=0.08, sigma = 0.01)
+sim_sanity_checks(tmp)
+```
+
+```{r eval=FALSE, echo=FALSE}
+tmp = sim_task(sub_data, model_name = "model3", d=0.06, sigma = 0.008)
 sim_sanity_checks(tmp)
 ```
 
@@ -297,6 +326,11 @@ tmp$debug_df %>%
 
 ```{r eval=FALSE, echo=FALSE}
 tmp = sim_task(sub_data, model_name = "model4", dAttr=0.04, dArb=0.04, sigmaAttr = 0.03, sigmaArb = 0.03)
+sim_sanity_checks(tmp)
+```
+
+```{r eval=FALSE, echo=FALSE}
+tmp = sim_task(sub_data, model_name = "model4", dAttr=0.025, dArb=0.05, sigmaAttr = 0.03, sigmaArb = 0.01)
 sim_sanity_checks(tmp)
 ```
 
@@ -392,6 +426,15 @@ tmp %>%
   facet_wrap(~probFractalDraw)+
   theme(legend.position = "bottom")
 ```
+```{r eval=FALSE, echo=FALSE}
+tmp = sim_task(sub_data, model_name = "model5", dAttr=0.025, dArb=0.05, sigmaAttr = 0.03, sigmaArb = 0.01)
+sim_sanity_checks(tmp)
+```
+
+```{r eval=FALSE, echo=FALSE}
+tmp = sim_task(sub_data, model_name = "model5", dAttr=0.05, dArb=0.025, sigmaAttr = 0.03, sigmaArb = 0.01)
+sim_sanity_checks(tmp)
+```
 
 ## Opt pars
 
@@ -485,19 +528,105 @@ source(paste0(helpers_path, 'ddmSims/ddm_model6.R'))
 sim_trial_list[['model6']] = sim_trial
 ```
 
+Why is it so fast for pFractalDraw == 0?
+
+```{r}
+tmp = sim_trial_list[['model6']](dArb = .04, dAttr = .02, sigmaArb = .01, sigmaAttr = .03, EVLeft = .7, EVRight = .5, QVLeft = .5, QVRight = .7, probFractalDraw = 0, lotteryBias = .25, barrierDecay = 0, debug = TRUE)
+tmp$out
+```
+
+```{r}
+tmp$debug_df %>%
+  select(-arbitrator_mu_mean) %>%
+  gather(key, value, -time, -barrier) %>%
+  ggplot()+
+  geom_line(aes(time, value))+
+  geom_line(aes(time, barrier), color="red")+
+  geom_line(aes(time, -barrier), color="green")+
+  geom_hline(aes(yintercept = 0), linetype="dashed")+
+  facet_grid(key ~.)+
+  theme_bw()
+```
+
+Why isn't it slowest for pFractalDraw == 0.5?
+
+```{r}
+tmp = sim_trial_list[['model6']](dArb = .04, dAttr = .02, sigmaArb = .01, sigmaAttr = .03, EVLeft = .7, EVRight = .5, QVLeft = .5, QVRight = .7, barrierDecay = 0, probFractalDraw = 0.5, lotteryBias = .25, debug = TRUE)
+tmp$out
+```
+```{r}
+tmp$debug_df %>%
+  select(-arbitrator_mu_mean) %>%
+  gather(key, value, -time, -barrier) %>%
+  ggplot()+
+  geom_line(aes(time, value))+
+  geom_line(aes(time, barrier), color="red")+
+  geom_line(aes(time, -barrier), color="green")+
+  geom_hline(aes(yintercept = 0), linetype="dashed")+
+  facet_grid(key ~.)+
+  theme_bw()
+```
+
 ## Check sim task
 
-Need to debug lotteryBias feeding in properly to sim_task depending on the 
-
 ```{r eval=FALSE, echo=FALSE}
-tmp = sim_task(sub_data, model_name = "model6", dAttr=0.02, dArb=0.04, sigmaAttr = 0.03, sigmaArb = 0.03, debug = TRUE, lotteryBias = .25)
+tmp = sim_task(sub_data, model_name = "model6", dAttr=0.02, dArb=0.04, sigmaAttr = 0.03, sigmaArb = 0.01, lotteryBias = .25)
 sim_sanity_checks(tmp)
 ```
 
-What are the pFrac <.4 trials so fast? Is it due to pre stim decisions (shouldn't be unless there is a bug)? No it isn't.
+```{r eval=FALSE, echo=FALSE}
+tmp = sim_task(sub_data, model_name = "model6", dAttr=0.02, dArb=0.04, sigmaAttr = 0.03, sigmaArb = 0.01, lotteryBias = 0)
+sim_sanity_checks(tmp)
+```
+
+What difference does the attribute integrator drift rate make?
+
+```{r eval=FALSE, echo=FALSE}
+tmp = sim_task(sub_data, model_name = "model6", dAttr=0.04, dArb=0.02, sigmaAttr = 0.03, sigmaArb = 0.01, lotteryBias = 0)
+sim_sanity_checks(tmp)
+```
+
+Why are the pFrac <.4 trials so fast (even when there is no lottery bias)? Is it due to pre stim decisions (shouldn't be unless there is a bug)? No it isn't.
 
 ```{r}
 with(tmp, table(decPreStim, probFractalDraw))
+```
+
+# Model 7: Switching between integrators
+
+```{r}
+source(paste0(helpers_path, 'ddmSims/ddm_model7.R'))
+sim_trial_list[['model7']] = sim_trial
+```
+
+```{r}
+tmp = sim_trial_list[['model7']](dArb = .04, dAttr = .02, sigmaArb = .01, sigmaAttr = .03, EVLeft = .7, EVRight = .5, QVLeft = .5, QVRight = .7, probFractalDraw = .5, lotteryBias = .25, barrierDecay = 0, debug = TRUE)
+tmp$out
+```
+
+```{r}
+tmp$debug_df %>%
+  select(-arbitrator_mu_mean) %>%
+  gather(key, value, -time, -barrier) %>%
+  ggplot()+
+  geom_line(aes(time, value))+
+  geom_line(aes(time, barrier), color="red")+
+  geom_line(aes(time, -barrier), color="green")+
+  geom_hline(aes(yintercept = 0), linetype="dashed")+
+  facet_grid(key ~.)+
+  theme_bw()
+```
+
+## Check sim task
+
+```{r eval=FALSE, echo=FALSE}
+tmp = sim_task(sub_data, model_name = "model7", dAttr=0.02, dArb=0.03, sigmaAttr = 0.03, sigmaArb = 0.01, lotteryBias = .15)
+sim_sanity_checks(tmp)
+```
+
+```{r eval=FALSE, echo=FALSE}
+tmp = sim_task(sub_data, model_name = "model7", dAttr=0.03, dArb=0.02, sigmaAttr = 0.03, sigmaArb = 0.01, lotteryBias = .15)
+sim_sanity_checks(tmp)
 ```
 
 # Trade-offs across models
@@ -538,4 +667,6 @@ opt_outs_df
 # Next steps
 
 - Why can I find a combination of parameters to match cases pFractalDraw > .5 but the same combination is too fast for other conditions?
+- Why is the slowest condition pFractalDraw == .6 for simulations but pFractalDraw == .5 in true data?
+- Change grid search optimization for RT to KL divergence?
 - Incorporating EV and QV computation instead of using them as input

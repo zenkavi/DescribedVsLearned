@@ -1,4 +1,4 @@
-sim_trial = function(dArb, dAttr, sigmaArb, sigmaAttr, barrierDecay, barrier=1, nonDecisionTime=0, lotteryBias=0.01, timeStep=10, maxIter=400, epsilon = 0.002, stimDelay = 2000, debug=FALSE,...){
+sim_trial = function(dArb, dAttr, sigmaArb, sigmaAttr, barrierDecay, barrier=1, nonDecisionTime=0, lotteryBias=0.01, timeStep=10, maxIter=400, epsilon = 0.002, stimDelay = 2000, evCompTime = 450, debug=FALSE,...){
   
   # d : drift rate
   # sigma: sd of the normal distribution 
@@ -7,8 +7,8 @@ sim_trial = function(dArb, dAttr, sigmaArb, sigmaAttr, barrierDecay, barrier=1, 
   # maxIter: num max samples. if a barrier isn't hit by this sampling of evidence no decision is made. If time step is 10ms and maxIter is 1000 this would be a 10sec timeout maximum
   
   
-  arbitratorRDV = lotteryBias
-  # arbitratorRDV = 0
+  # arbitratorRDV = lotteryBias
+  arbitratorRDV = 0
   fractalRDV = 0
   lotteryRDV = 0
   time = 1
@@ -33,12 +33,13 @@ sim_trial = function(dArb, dAttr, sigmaArb, sigmaAttr, barrierDecay, barrier=1, 
   
   # remove bias from arbitrator RDV if pFrac == 1
   probFractalDraw=kwargs$probFractalDraw
-  if(probFractalDraw == 1){
-    arbitratorRDV = 0
-  }
+  # if(probFractalDraw == 1){
+  #   arbitratorRDV = 0
+  # }
   
   nonDecIters = nonDecisionTime / timeStep
   stimDelayIters = stimDelay / timeStep
+  evCompIters = evCompTime / timeStep
   maxIter = maxIter + stimDelayIters
   
   initialBarrier = barrier
@@ -49,8 +50,8 @@ sim_trial = function(dArb, dAttr, sigmaArb, sigmaAttr, barrierDecay, barrier=1, 
     barrier[t] = initialBarrier / (1 + barrierDecay * t)
   }
   
-  # lottery_mu_mean = dAttr * (1+lotteryBias) * (EVLeft - EVRight)
-  lottery_mu_mean = dAttr * (EVLeft - EVRight)
+  lottery_mu_mean = dAttr * (1+lotteryBias) * (EVLeft - EVRight)
+  # lottery_mu_mean = dAttr * (EVLeft - EVRight)
   fractal_mu_mean = dAttr * (QVLeft - QVRight)
   
   while (time<maxIter){
@@ -90,7 +91,7 @@ sim_trial = function(dArb, dAttr, sigmaArb, sigmaAttr, barrierDecay, barrier=1, 
         
         arbitrator_mu_mean = dArb * (-1) * ((probFractalDraw) * abs(fractalRDV))
       } else {
-      arbitrator_mu_mean = 0
+        arbitrator_mu_mean = 0
       }
       arbitrator_mu = rnorm(1, arbitrator_mu_mean, epsilon)
       arbitratorRDV = arbitratorRDV + rnorm(1, arbitrator_mu, sigmaArb)
@@ -108,17 +109,26 @@ sim_trial = function(dArb, dAttr, sigmaArb, sigmaAttr, barrierDecay, barrier=1, 
         lottery_mu = rnorm(1, lottery_mu_mean, epsilon)
         lotteryRDV = lotteryRDV + rnorm(1, lottery_mu, sigmaAttr)
         
-        # Fractal integrator
-        fractal_mu = rnorm(1, fractal_mu_mean, epsilon)
-        fractalRDV = fractalRDV + rnorm(1, fractal_mu, sigmaAttr)
-        
-        # Arbitrator 
-        # If abs(lotteryRDV) > abs(fractalRDV) stronger relative preference for a side based on lotteries
-        arbitrator_mu_mean = dArb * ((1-probFractalDraw) * abs(lotteryRDV) - (probFractalDraw) * abs(fractalRDV))
-        arbitrator_mu = rnorm(1, arbitrator_mu_mean, epsilon)
-        arbitratorRDV = arbitratorRDV + rnorm(1, arbitrator_mu, sigmaArb)
+        # No arbitration if fractal is not relevant
+        if(time < evCompIters + stimDelayIters){
+          
+          arbitrator_mu_mean = dArb * ((1-probFractalDraw) * abs(lotteryRDV))
+          arbitrator_mu = rnorm(1, arbitrator_mu_mean, epsilon)
+          arbitratorRDV = arbitratorRDV + rnorm(1, arbitrator_mu, sigmaArb)
+        } else { # Resume integrating about both
+          
+          # Fractal integrator
+          fractal_mu = rnorm(1, fractal_mu_mean, epsilon)
+          fractalRDV = fractalRDV + rnorm(1, fractal_mu, sigmaAttr)
+          
+          # Arbitrator 
+          # If abs(lotteryRDV) > abs(fractalRDV) stronger relative preference for a side based on lotteries
+          arbitrator_mu_mean = dArb * ((1-probFractalDraw) * abs(lotteryRDV) - (probFractalDraw) * abs(fractalRDV))
+          arbitrator_mu = rnorm(1, arbitrator_mu_mean, epsilon)
+          arbitratorRDV = arbitratorRDV + rnorm(1, arbitrator_mu, sigmaArb)
         }
       }
+    }
     
     if (debug){
       debug_row = data.frame(time = time, arbitrator_mu_mean = round(arbitrator_mu_mean, 3), arbitratorRDV = round(arbitratorRDV, 3), barrier = round(barrier[time], 3), lotteryRDV = round(lotteryRDV, 3), fractalRDV = round(fractalRDV, 3))

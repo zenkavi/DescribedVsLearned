@@ -298,7 +298,7 @@ if(is.na(sim_data_m3$sim_data_opt_choice)){
 - 3 integrators
 - Arbitrator integrator starts biased towards lotteries
 - If pFractalDraw == 1 fractal integrator starts biased towards the better fractal
-- Attribute relevant (pFractalDraw) affects attribute integrators directly, not the arbitrator
+- Attribute relevance (pFractalDraw) affects attribute integrators directly, not the arbitrator
 - Arbitrator integrator depends on the difference in absolute attribute integrator RDVs
 
 ```{r}
@@ -326,6 +326,16 @@ tmp$debug_df %>%
 
 ```{r eval=FALSE, echo=FALSE}
 tmp = sim_task(sub_data, model_name = "model4", dAttr=0.04, dArb=0.04, sigmaAttr = 0.03, sigmaArb = 0.03)
+sim_sanity_checks(tmp)
+```
+
+```{r}
+source(paste0(helpers_path, 'ddmSims/ddm_model4a.R'))
+sim_trial_list[['model4a']] = sim_trial
+```
+
+```{r eval=FALSE, echo=FALSE}
+tmp = sim_task(sub_data, model_name = "model4a", dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.03)
 sim_sanity_checks(tmp)
 ```
 
@@ -389,8 +399,11 @@ sim_trial_list[['model5']] = sim_trial
 Example visualization of integration
 
 ```{r echo=FALSE, eval=FALSE}
-tmp = sim_trial(dArb = .04, dAttr=0.1, sigmaArb = .02, sigmaAttr = .01, barrierDecay = 0, EVLeft = .7, EVRight = 0.5, QVLeft = 0, QVRight = 0, probFractalDraw = .8, debug=TRUE, nonDecisionTime = 0)
+tmp = sim_trial_list[['model5']](dArb = .04, dAttr=0.01, sigmaArb = .01, sigmaAttr = .03, barrierDecay = 0, EVLeft = .7, EVRight = 0.5, QVLeft = 0, QVRight = 0, probFractalDraw = 0, debug=TRUE, nonDecisionTime = 0)
+tmp$out
+```
 
+```{r}
 tmp$debug_df %>%
   select(-arbitrator_mu_mean) %>%
   gather(key, value, -time, -barrier) %>%
@@ -426,6 +439,7 @@ tmp %>%
   facet_wrap(~probFractalDraw)+
   theme(legend.position = "bottom")
 ```
+
 ```{r eval=FALSE, echo=FALSE}
 tmp = sim_task(sub_data, model_name = "model5", dAttr=0.025, dArb=0.05, sigmaAttr = 0.03, sigmaArb = 0.01)
 sim_sanity_checks(tmp)
@@ -518,7 +532,7 @@ m5_opt_out %>%
 - 3 integrators
 - Arbitrator integrator starts from 0. Lottery bias is a multiplication of the lottery integrator drift rate
 - If pFractalDraw == 1 fractal and arbitrato integrator starts early. Arbitrator moves only towards fractal.
-- Attribute relevance (pFractalDraw) does affect attribute integrators directly
+- Attribute relevance (pFractalDraw) does not affect attribute integrators directly
 - Arbitrator integrator depends on the difference in absolute attribute integrator RDVs weighted by attribute relevance
 
 - Where should nondecision time come into play?
@@ -624,9 +638,21 @@ tmp = sim_task(sub_data, model_name = "model7", dAttr=0.02, dArb=0.03, sigmaAttr
 sim_sanity_checks(tmp)
 ```
 
-```{r eval=FALSE, echo=FALSE}
-tmp = sim_task(sub_data, model_name = "model7", dAttr=0.03, dArb=0.02, sigmaAttr = 0.03, sigmaArb = 0.01, lotteryBias = .15)
-sim_sanity_checks(tmp)
+```{r}
+tmp %>%
+  select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, arbitrator) %>%
+  mutate(data_type = "sim") %>%
+  rbind(sub_data %>%
+          mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
+                 data_type = "true",
+                 arbitrator= "true") %>%
+          select(-subnum, -choiceLeft)) %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
+  ggplot(aes(reactionTime, fill=as.factor(arbitrator))) +
+  geom_histogram(position="identity", bins=30, alpha=.5) +
+  labs(title="RT long tail?", fill="")+
+  facet_wrap(~probFractalDraw)+
+  theme(legend.position = "bottom")
 ```
 
 # Trade-offs across models
@@ -664,7 +690,7 @@ opt_outs_df %>%
 opt_outs_df
 ```
 
-# Next steps
+# Questions
 
 - Why can I find a combination of parameters to match cases pFractalDraw > .5 but the same combination is too fast for other conditions?
 - Why is the slowest condition pFractalDraw == .6 for simulations but pFractalDraw == .5 in true data?

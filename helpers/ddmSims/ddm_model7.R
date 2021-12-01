@@ -85,7 +85,7 @@ sim_trial = function(dArb, dAttr, sigmaArb, sigmaAttr, barrierDecay, barrier=1, 
     if(time < stimDelayIters){
       
       if(probFractalDraw == 1){
-      # if(probFractalDraw > .5){
+        # if(probFractalDraw > .5){
         fractal_mu = rnorm(1, fractal_mu_mean, epsilon)
         fractalRDV = fractalRDV + rnorm(1, fractal_mu, sigmaAttr)
         
@@ -109,13 +109,13 @@ sim_trial = function(dArb, dAttr, sigmaArb, sigmaAttr, barrierDecay, barrier=1, 
         lottery_mu = rnorm(1, lottery_mu_mean, epsilon)
         lotteryRDV = lotteryRDV + rnorm(1, lottery_mu, sigmaAttr)
         
-        # No arbitration if fractal is not relevant
+        # When lottery is more relevant integrate based only on that for a bit
         if(time < evCompIters + stimDelayIters){
-          
           arbitrator_mu_mean = dArb * ((1-probFractalDraw) * abs(lotteryRDV))
           arbitrator_mu = rnorm(1, arbitrator_mu_mean, epsilon)
           arbitratorRDV = arbitratorRDV + rnorm(1, arbitrator_mu, sigmaArb)
-        } else { # Resume integrating about both
+        }
+        else { # Resume integrating about both
           
           # Fractal integrator
           fractal_mu = rnorm(1, fractal_mu_mean, epsilon)

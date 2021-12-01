@@ -81,6 +81,15 @@ sim_task = function(stimuli, model_name, ...){
                           EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], 
                           QVLeft = stimuli$QVLeft[i], QVRight= stimuli$QVRight[i], 
                           probFractalDraw = stimuli$probFractalDraw[i])
+    } else if (model_name %in% c("model4a")){
+      cur_out = sim_trial(dArb=kwargs$dArb, dLott=kwargs$dLott, dFrac=kwargs$dFrac, sigmaArb = kwargs$sigmaArb, sigmaLott = kwargs$sigmaLott, sigmaFrac = kwargs$sigmaFrac, 
+                          barrier = kwargs$barrier,nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
+                          lotteryBias = kwargs$lotteryBias, timeStep = kwargs$timeStep,
+                          maxIter = kwargs$maxIter,
+                          epsilon = kwargs$epsilon,
+                          EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], 
+                          QVLeft = stimuli$QVLeft[i], QVRight= stimuli$QVRight[i], 
+                          probFractalDraw = stimuli$probFractalDraw[i])
     } else{
       cur_out = sim_trial(d=kwargs$d, sigma = kwargs$sigma, 
                           barrier = kwargs$barrier, nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
@@ -104,6 +113,12 @@ sim_task = function(stimuli, model_name, ...){
     out$dAttr = kwargs$dAttr
     out$sigmaArb = kwargs$sigmaArb
     out$sigmaAttr = kwargs$sigmaAttr
+  } else if(model_name %in% c("model4a")){
+    out$dArb = kwargs$dArb
+    out$dLott = kwargs$dLott
+    out$dFrac = kwargs$dFrac
+    out$sigmaArb = kwargs$sigmaArb
+    out$sigmaFrac = kwargs$sigmaFrac
   } else {
     out$d = kwargs$d
     out$sigma = kwargs$sigma

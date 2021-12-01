@@ -77,19 +77,10 @@ sim_sanity_checks(sub_data %>%
                   compare_rts = FALSE)
 ```
 
-# Optimization prep
-
 Create empty list that will store the trial simulators for the forthcoming models.
 
 ```{r}
 sim_trial_list = list()
-```
-
-Define parameter space in which you'll search for best fits for the following models.
-
-```{r}
-d_par_space = c(.002, .004, .006, .008 ,.01, .02, .04, .06, .08, .1)
-sigma_par_space = c(.004, .008 ,.01, .02, .04, .06, .08, .1)
 ```
 
 # Model 1: Simplest
@@ -106,8 +97,8 @@ sim_trial_list[['model1']] = sim_trial
 ## Check sim task 
 
 ```{r eval = FALSE, echo = FALSE}
-tmp = sim_task(sub_data, model_name="model1", d=0.04, sigma = 0.02)
-sim_sanity_checks(tmp)
+m1 = sim_task(sub_data, model_name="model1", d=0.04, sigma = 0.02)
+sim_sanity_checks(m1)
 ```
 
 ### What controls spread vs mean?
@@ -136,30 +127,6 @@ sim_sanity_checks(tmp4, checks=c(3))
 rm(tmp1, tmp2, tmp3, tmp4)
 ```
 
-## Opt pars
-
-```{r}
-m1_opt_out = find_best_par_combo(sub_data, model_name = "model1", 
-                                 d_par_space = d_par_space, 
-                                 sigma_par_space = sigma_par_space)
-```
-
-```{r}
-sim_data_m1 = sim_w_best_combo(m1_opt_out, "model1")
-```
-
-```{r}
-sim_sanity_checks(sim_data_m1$sim_data_opt_rt)
-```
-
-```{r}
-if(is.na(sim_data_m1$sim_data_opt_choice)){
-  print("Same data as above.")
-} else {
-  sim_sanity_checks(sim_data_m1$sim_data_opt_choice)
-}
-```
-
 # Model 2: Early integration
 
 - Early integrator for pFractalDraw == 1 only.
@@ -172,23 +139,18 @@ sim_trial_list[['model2']] = sim_trial
 ## Check sim task
 
 ```{r eval=FALSE, echo=FALSE}
-tmp = sim_task(sub_data, model_name = "model2", d=0.04, sigma = 0.03)
-sim_sanity_checks(tmp)
-```
-
-```{r eval=FALSE, echo=FALSE}
-tmp = sim_task(sub_data, model_name = "model2", d=0.045, sigma = 0.015)
-sim_sanity_checks(tmp)
+m2 = sim_task(sub_data, model_name = "model2", d=0.05, sigma = 0.02)
+sim_sanity_checks(m2)
 ```
 
 When does integration reach a bound before the stim presentation?
 
 ```{r}
-with(tmp, table(decPreStim, probFractalDraw))
+with(m2, table(decPreStim, probFractalDraw))
 ```
 
 ```{r}
-tmp %>%
+m2 %>%
   select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, decPreStim) %>%
   mutate(data_type = "sim") %>%
   rbind(sub_data %>%
@@ -204,46 +166,48 @@ tmp %>%
 ```
 
 ```{r}
-with(tmp, table(timeOut, probFractalDraw))
+with(m2, table(timeOut, probFractalDraw))
 ```
 
-Time outs by value difference
+# Model 2a
 
 ```{r}
-tmp %>%
-  mutate(QVDiff = abs(QVLeft - QVRight),
-         EVDiff = abs(EVLeft - EVRight)) %>%
-  select(EVDiff, QVDiff, timeOut, probFractalDraw) %>%
-  gather(key, value, -timeOut, -probFractalDraw) %>%
-  ggplot(aes(value, timeOut, color= key)) +
-  geom_jitter(height=.1, width = .1, alpha = .1)+
-  facet_wrap(~probFractalDraw)+
-  theme(legend.position = "bottom")+
-  labs(color="")
+source(paste0(helpers_path, 'ddmSims/ddm_model2a.R'))
+sim_trial_list[['model2a']] = sim_trial
 ```
 
-## Opt pars
+## Check sim task
 
-```{r}
-m2_opt_out = find_best_par_combo(sub_data, model_name = "model2", 
-                                 d_par_space = d_par_space, 
-                                 sigma_par_space = sigma_par_space)
+```{r eval=FALSE, echo=FALSE}
+m2a = sim_task(sub_data, model_name = "model2a", d=0.05, sigma = 0.02, theta = 0.1)
+sim_sanity_checks(m2a)
 ```
 
-```{r}
-sim_data_m2 = sim_w_best_combo(m2_opt_out, "model2")
-```
+# Model 2b: Asymmetric prob distortion
 
 ```{r}
-sim_sanity_checks(sim_data_m2$sim_data_opt_rt)
+data.frame(pFrac = seq(.1, .9, .1),
+           delta = 2, gamma = 1) %>%
+  mutate(distortedPFrac = exp( (-1) * delta * ((-1)*log(pFrac))^gamma) ) %>%
+  ggplot(aes(pFrac, distortedPFrac))+
+  geom_point()+
+  geom_line()+
+  geom_abline(aes(slope=1, intercept=0), linetype="dashed")+
+  xlim(0,1)+ylim(0,1)
+
+
 ```
 
 ```{r}
-if(is.na(sim_data_m2$sim_data_opt_choice)){
-  print("Same data as above.")
-} else {
-  sim_sanity_checks(sim_data_m2$sim_data_opt_choice)
-}
+source(paste0(helpers_path, 'ddmSims/ddm_model2b.R'))
+sim_trial_list[['model2b']] = sim_trial
+```
+
+## Check sim task
+
+```{r eval=FALSE, echo=FALSE}
+m2b = sim_task(sub_data, model_name = "model2b", d=0.05, sigma = 0.02, delta = 2, gamma = 1)
+sim_sanity_checks(m2b)
 ```
 
 # Model 3: Model 2 + relative preference weighting
@@ -259,38 +223,13 @@ sim_trial_list[['model3']] = sim_trial
 ## Check sim task
 
 ```{r eval=FALSE, echo=FALSE}
-tmp = sim_task(sub_data, model_name = "model3", d=0.08, sigma = 0.01)
-sim_sanity_checks(tmp)
+m3 = sim_task(sub_data, model_name = "model3", d=0.08, sigma = 0.01)
+sim_sanity_checks(m3)
 ```
 
 ```{r eval=FALSE, echo=FALSE}
-tmp = sim_task(sub_data, model_name = "model3", d=0.06, sigma = 0.008)
-sim_sanity_checks(tmp)
-```
-
-## Opt pars
-
-```{r}
-m3_opt_out = find_best_par_combo(sub_data, model_name = "model3", 
-                                 d_par_space = d_par_space, 
-                                 sigma_par_space = sigma_par_space)
-```
-
-```{r}
-sim_data_m3 = sim_w_best_combo(m3_opt_out, "model3")
-```
-
-```{r}
-sim_sanity_checks(sim_data_m3$sim_data_opt_rt)
-```
-
-```{r}
-if(is.na(sim_data_m3$sim_data_opt_choice)){
-  print("Same data as above.")
-} else {
-  sim_sanity_checks(sim_data_m3$sim_data_opt_choice)
-}
-
+m3 = sim_task(sub_data, model_name = "model3", d=0.06, sigma = 0.008)
+sim_sanity_checks(m3)
 ```
 
 # Model 4a: 3 integrators
@@ -306,49 +245,34 @@ source(paste0(helpers_path, 'ddmSims/ddm_model4a.R'))
 sim_trial_list[['model4a']] = sim_trial
 ```
 
+## Check sim task
 
 ```{r eval=FALSE, echo=FALSE}
-tmp = sim_task(sub_data, model_name = "model4a", dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.03)
-sim_sanity_checks(tmp)
+m4a = sim_task(sub_data, model_name = "model4a", dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.03)
+sim_sanity_checks(m4a)
 ```
 
-## Opt pars
-
-```{r}
-m4a_opt_out = find_best_par_combo(sub_data, model_name = "model4a", 
-                                 d_par_space = d_par_space, 
-                                 sigma_par_space = sigma_par_space)
+```{r eval=FALSE, echo=FALSE}
+m4a = sim_task(sub_data, model_name = "model4a", dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, lotteryBias= 1)
+sim_sanity_checks(m4a)
 ```
 
 ```{r}
-summarise_opt_out(m4a_opt_out)
+m4a_trial = sim_trial_list[['model4a']](dArb = .04, dLott=0.02, dFrac=0.03, sigmaArb = .01, sigmaLott = .03, sigmaFrac = .03, barrierDecay = 0, EVLeft = .7, EVRight = 0.5, QVLeft = 0, QVRight = 0, probFractalDraw = 0.5, debug=TRUE, nonDecisionTime = 0)
+m4a_trial$out
 ```
 
 ```{r}
-m4a_opt_out %>%
-  select(rt_sumsq, choice_sumsq) %>%
-  gather(key, value) %>%
-  ggplot(aes(value, fill=key)) +
-  geom_histogram(position="identity", alpha=.5, bins=30) +
-  theme(legend.position = "bottom")+
-  labs(fill="")
-```
-
-```{r}
-sim_data_m4a = sim_w_best_combo(m4a_opt_out, "model4a")
-```
-
-```{r}
-sim_sanity_checks(sim_data_m4a$sim_data_opt_rt)
-```
-
-```{r}
-if(is.na(sim_data_m4a$sim_data_opt_choice)){
-  print("Same data as above.")
-} else {
-  sim_sanity_checks(sim_data_m4a$sim_data_opt_choice)
-}
-
+m4a_trial$debug_df %>%
+  select(-arbitrator_mu_mean) %>%
+  gather(key, value, -time, -barrier) %>%
+  ggplot()+
+  geom_line(aes(time, value))+
+  geom_line(aes(time, barrier), color="red")+
+  geom_line(aes(time, -barrier), color="green")+
+  geom_hline(aes(yintercept = 0), linetype="dashed")+
+  facet_grid(key ~.)+
+  theme_bw()
 ```
 
 # Model 5a: 3 integrators
@@ -367,12 +291,12 @@ sim_trial_list[['model5a']] = sim_trial
 Example visualization of integration
 
 ```{r echo=FALSE, eval=FALSE}
-tmp = sim_trial_list[['model5a']](dArb = .04, dLott=0.03, dFrac=0.02, sigmaArb = .01, sigmaLott = .03, sigmaFrac = .03, barrierDecay = 0, EVLeft = .7, EVRight = 0.5, QVLeft = 0, QVRight = 0, probFractalDraw = 0, debug=TRUE, nonDecisionTime = 0)
-tmp$out
+m5a_trial = sim_trial_list[['model5a']](dArb = .04, dLott=0.03, dFrac=0.02, sigmaArb = .01, sigmaLott = .03, sigmaFrac = .03, barrierDecay = 0, EVLeft = .7, EVRight = 0.5, QVLeft = 0, QVRight = 0, probFractalDraw = 0, debug=TRUE, nonDecisionTime = 0)
+m5a$out
 ```
 
 ```{r}
-tmp$debug_df %>%
+m5a_trial$debug_df %>%
   select(-arbitrator_mu_mean) %>%
   gather(key, value, -time, -barrier) %>%
   ggplot()+
@@ -387,12 +311,18 @@ tmp$debug_df %>%
 ## Check sim task
 
 ```{r eval=FALSE, echo=FALSE}
-tmp = sim_task(sub_data, model_name = "model5a", dLott=0.025, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01)
+m5a = sim_task(sub_data, model_name = "model5a", dLott=0.02, dFrac=0.045, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01)
 sim_sanity_checks(tmp)
 ```
 
+```{r eval=FALSE, echo=FALSE}
+m5a = sim_task(sub_data, model_name = "model5a", dLott=0.035, dFrac=0.02, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01)
+sim_sanity_checks(tmp)
+```
+
+
 ```{r}
-tmp %>%
+m5a %>%
   select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, arbitrator) %>%
   mutate(data_type = "sim") %>%
   rbind(sub_data %>%
@@ -406,82 +336,6 @@ tmp %>%
   labs(title="RT long tail?", fill="")+
   facet_wrap(~probFractalDraw)+
   theme(legend.position = "bottom")
-```
-## Opt pars
-
-```{r}
-m5a_opt_out = find_best_par_combo(sub_data, model_name = "model5a", 
-                                 d_par_space = d_par_space, 
-                                 sigma_par_space = sigma_par_space)
-```
-
-```{r}
-summarise_opt_out(m5a_opt_out)
-```
-
-```{r}
-sim_data_m5 = sim_w_best_combo(m5a_opt_out, "model5a")
-```
-
-```{r}
-sim_sanity_checks(sim_data_m5a$sim_data_opt_rt)
-```
-
-```{r}
-summarise_opt_out(m5a_opt_out)
-```
-
-```{r}
-if(is.na(sim_data_m5a$sim_data_opt_choice)){
-  print("Same data as above.")
-} else {
-  sim_sanity_checks(sim_data_m5a$sim_data_opt_choice)
-}
-
-```
-
-### How to visualize goodness of fit across >2 parameters?
-
-```{r}
-m5a_opt_out %>% 
-  select(rt_sumsq, choice_sumsq) %>%
-  mutate(choice_sumsq = ifelse(choice_sumsq>500, 500, choice_sumsq)) %>%
-  gather(key, value) %>%
-  ggplot(aes(value))+
-  geom_histogram(position="identity", alpha = .5, bins=30) +
-  facet_wrap(~key, scales="free")
-```
-
-```{r}
-m5a_opt_out %>%
-  mutate(choice_sumsq = ifelse(choice_sumsq>500, 500, choice_sumsq)) %>%
-  select(-rt_sumsq, -avg_sumsq, -model_name) %>%
-  gather(key, value, -choice_sumsq) %>%
-  group_by(key, value) %>%
-  summarise(.groups='keep', 
-            mean_choice_sumsq = mean(choice_sumsq),
-            sem_choice_sumsq = sem(choice_sumsq)) %>%
-  ggplot(aes(as.factor(value), mean_choice_sumsq))+
-  geom_point()+
-  geom_errorbar(aes(ymin = mean_choice_sumsq - sem_choice_sumsq, ymax = mean_choice_sumsq + sem_choice_sumsq), width=.2)+
-  facet_wrap(~key)
-```
-```{r}
-summarise_opt_out(m5_opt_out)
-```
-
-```{r}
-m5a_opt_out %>%
-  select(-choice_sumsq, -avg_sumsq, -model_name) %>%
-  gather(key, value, -rt_sumsq) %>%
-  group_by(key, value) %>%
-  summarise(.groups='keep', 
-            mean_rt_sumsq = mean(rt_sumsq),
-            sem_rt_sumsq = sem(rt_sumsq)) %>%
-  ggplot(aes(as.factor(value), mean_rt_sumsq))+
-  geom_point()+
-  geom_errorbar(aes(ymin = mean_rt_sumsq - sem_rt_sumsq, ymax = mean_rt_sumsq + sem_rt_sumsq), width=.2)+
-  facet_wrap(~key)
 ```
 
 # Model 6a: 3 integrators + early integration
@@ -502,8 +356,8 @@ sim_trial_list[['model6a']] = sim_trial
 ## Check sim task
 
 ```{r eval=FALSE, echo=FALSE}
-tmp = sim_task(sub_data, model_name = "model6a", dLott=0.02, dFrac=0.02, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, lotteryBias = .25)
-sim_sanity_checks(tmp)
+m6a = sim_task(sub_data, model_name = "model6a", dLott=0.01, dFrac=0.045, dArb=0.05, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, lotteryBias = .25)
+sim_sanity_checks(m6a)
 ```
 
 # Model 7a: Switching between integrators
@@ -523,12 +377,12 @@ sim_trial_list[['model7a']] = sim_trial
 ## Check sim task
 
 ```{r eval=FALSE, echo=FALSE}
-tmp = sim_task(sub_data, model_name = "model7a", dLott=0.015, dFrac=0.05, dArb=0.03, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, lotteryBias = .15)
-sim_sanity_checks(tmp)
+m7a = sim_task(sub_data, model_name = "model7a", dLott=0.01, dFrac=0.06, dArb=0.06, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, lotteryBias = .1)
+sim_sanity_checks(m7a)
 ```
 
 ```{r}
-tmp %>%
+m7a %>%
   select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, arbitrator) %>%
   mutate(data_type = "sim") %>%
   rbind(sub_data %>%

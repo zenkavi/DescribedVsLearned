@@ -1,4 +1,4 @@
-sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE){
+sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE, yrange_lim = 25){
   #Check 1
   if (1 %in% checks){
     print(paste0("Proportion of time out trials if no decision made: ", round(sum(is.na(sim_data$reactionTime))/nrow(sim_data), 3)))
@@ -111,7 +111,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
              QVDiff = QVLeft - QVRight) %>%
       nest(data = -probFractalDraw) %>% 
       mutate(
-        fit = map(data, ~ glm(choiceLeft ~ EVDiff + QVDiff, data = .x, family=binomial(link="logit"))),
+        fit = map(data, ~ glm(choiceLeft ~ scale(EVDiff) + scale(QVDiff), data = .x, family=binomial(link="logit"))),
         tidied = map(fit, tidy)
       ) %>% 
       unnest(tidied) %>%
@@ -127,9 +127,9 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       labs(color="", title="Relevant attribute effect on choice")
     
     yrange = layer_scales(p)$y$range$range
-    large_range = abs(yrange) > 20
+    large_range = abs(yrange) > yrange_lim
     if(large_range){
-      p = p+ylim(-5, 25)
+      p = p+ylim(-5, yrange_lim)
     }
     
     print(p)

@@ -90,7 +90,24 @@ sim_task = function(stimuli, model_name, ...){
                           EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], 
                           QVLeft = stimuli$QVLeft[i], QVRight= stimuli$QVRight[i], 
                           probFractalDraw = stimuli$probFractalDraw[i])
-    } else{
+    } else if(model_name %in% c("model2a")){
+      cur_out = sim_trial(d=kwargs$d, sigma = kwargs$sigma, theta = kwargs$theta,
+                          barrier = kwargs$barrier, nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
+                          bias = kwargs$bias, timeStep = kwargs$timeStep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,
+                          stimDelay = kwargs$stimDelay, 
+                          EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], 
+                          QVLeft = stimuli$QVLeft[i], QVRight= stimuli$QVRight[i] , 
+                          probFractalDraw = stimuli$probFractalDraw[i])
+      
+    } else if(model_name %in% c("model2b")){
+      cur_out = sim_trial(d=kwargs$d, sigma = kwargs$sigma, delta = kwargs$delta, gamma = kwargs$gamma,
+                          barrier = kwargs$barrier, nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
+                          bias = kwargs$bias, timeStep = kwargs$timeStep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,
+                          stimDelay = kwargs$stimDelay, 
+                          EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], 
+                          QVLeft = stimuli$QVLeft[i], QVRight= stimuli$QVRight[i] , 
+                          probFractalDraw = stimuli$probFractalDraw[i])
+      } else{
       cur_out = sim_trial(d=kwargs$d, sigma = kwargs$sigma, 
                           barrier = kwargs$barrier, nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
                           bias = kwargs$bias, timeStep = kwargs$timeStep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,

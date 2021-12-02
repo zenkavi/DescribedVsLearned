@@ -77,6 +77,50 @@ sim_sanity_checks(sub_data %>%
                   compare_rts = FALSE)
 ```
 
+```{r}
+sub_data %>%
+  # select(-subnum) %>%
+  mutate(choice = ifelse(choiceLeft == 1, "left", "right"))%>%
+  drop_na()%>%
+  mutate(probFractalDraw = as.factor(probFractalDraw), 
+         log_rt = log(reactionTime)) %>%
+  group_by(probFractalDraw, subnum) %>%
+  summarise(mean_log_rt = mean(log_rt),
+            sem_log_rt = sem(log_rt), .groups="keep") %>%
+  ggplot(aes(probFractalDraw, mean_log_rt))+
+  geom_point()+
+  geom_errorbar(aes(ymin = mean_log_rt - sem_log_rt, ymax = mean_log_rt + sem_log_rt), width=.2)+
+  facet_wrap(~subnum, scales = 'free')
+```
+
+```{r}
+sub_data %>%
+  mutate(choice = ifelse(choiceLeft == 1, "left", "right"))%>%
+  select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, subnum) %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw),
+         choiceLeft = ifelse(choice == "left", 1, ifelse(choice=="right", 0, NA)),
+         EVDiff = EVLeft - EVRight, 
+         QVDiff = QVLeft - QVRight) %>%
+  nest(data = -probFractalDraw, -subnum) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ scale(EVDiff) + scale(QVDiff), data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(subnum, probFractalDraw, term, estimate, std.error) %>%
+  ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
+  geom_point()+
+  geom_line()+
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  scale_color_manual(values = cbbPalette[2:1])+
+  theme(legend.position = "bottom")+
+  labs(color="", title="Relevant attribute effect on choice")+
+  facet_wrap(~subnum, scales="free")+
+  ylim(-2.5, 10)
+```
+
 Create empty list that will store the trial simulators for the forthcoming models.
 
 ```{r}
@@ -180,23 +224,24 @@ sim_trial_list[['model2a']] = sim_trial
 
 ```{r eval=FALSE, echo=FALSE}
 m2a = sim_task(sub_data, model_name = "model2a", d=0.05, sigma = 0.02, theta = 0.1)
-sim_sanity_checks(m2a)
+sim_sanity_checks(m2a, yrange_lim = 30)
 ```
 
 # Model 2b: Asymmetric prob distortion
 
 ```{r}
 data.frame(pFrac = seq(.1, .9, .1),
-           delta = 2, gamma = 1) %>%
+           delta = 2, gamma = 2) %>%
   mutate(distortedPFrac = exp( (-1) * delta * ((-1)*log(pFrac))^gamma) ) %>%
   ggplot(aes(pFrac, distortedPFrac))+
   geom_point()+
   geom_line()+
   geom_abline(aes(slope=1, intercept=0), linetype="dashed")+
-  xlim(0,1)+ylim(0,1)
-
-
+  scale_y_continuous(breaks = seq(0, 1, .1))+
+  scale_x_continuous(breaks = seq(0, 1, .1))
 ```
+Overweight for larger pfrac
+
 
 ```{r}
 source(paste0(helpers_path, 'ddmSims/ddm_model2b.R'))
@@ -206,9 +251,22 @@ sim_trial_list[['model2b']] = sim_trial
 ## Check sim task
 
 ```{r eval=FALSE, echo=FALSE}
-m2b = sim_task(sub_data, model_name = "model2b", d=0.05, sigma = 0.02, delta = 2, gamma = 1)
-sim_sanity_checks(m2b)
+m2b = sim_task(sub_data, model_name = "model2b", d=0.03, sigma = 0.01, delta = 2, gamma = 2, barrierDecay = .007)
+sim_sanity_checks(m2b, yrange_lim = 50)
 ```
+- Why are the logit values so high?
+
+```{r}
+
+```
+
+- What do the trials on the slow end of the bimodal distribution look like?
+
+```{r}
+m2b %>%
+  filter(reactionTime > 3)
+```
+
 
 # Model 3: Model 2 + relative preference weighting
 

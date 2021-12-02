@@ -256,11 +256,35 @@ sim_sanity_checks(m2b, yrange_lim = 50)
 ```
 - Why are the logit values so high?
 
-```{r}
+In the simulations choice depends only on these value differences. The model fits too well, there is very low residual deviance.
 
+```{r}
+tmp = sub_data %>%
+  filter(probFractalDraw == 1) %>%
+  mutate(QVDiff = scale(QVLeft - QVRight),
+         EVDiff = scale(EVLeft - EVRight))
+
+summary(glm(choiceLeft ~ EVDiff + QVDiff, data = tmp,family=binomial(link="logit")))
 ```
 
-- What do the trials on the slow end of the bimodal distribution look like?
+```{r}
+tmp = m2b %>%
+  filter(probFractalDraw == 1) %>%
+  mutate(QVDiff = scale(QVLeft - QVRight),
+         EVDiff = scale(EVLeft - EVRight),
+         choiceLeft = ifelse(choice == "left", 1, 0))
+
+summary(glm(choiceLeft ~ EVDiff + QVDiff, data = tmp,family=binomial(link="logit")))
+```
+
+Can we reduce the logit slopes by increasing epsilon? (SD of distribution the mean of drift is sampled from) Yes.
+
+```{r eval=FALSE, echo=FALSE}
+tmp = sim_task(sub_data, model_name = "model2b", d=0.02, sigma = 0.005, delta = 2, gamma = 2, barrierDecay = 0.002, epsilon = 0.03)
+sim_sanity_checks(tmp)
+```
+
+- What do the trials on the slow end of the bimodal distribution look like? Are they for particularly hard trials? Should we add something to an effect of "if options are too close to each other choose..." randomly? the first one?
 
 ```{r}
 m2b %>%

@@ -1,4 +1,4 @@
-sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=400, epsilon = 0.0002, stimDelay = 2000, debug=FALSE,...){
+sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=400, epsilon = 0.0002, stimDelay = 2000, debug=FALSE, recallDelay = 0 ,...){
   
   # d : drift rate
   # sigma: sd of the normal distribution 
@@ -27,7 +27,7 @@ sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   QVRight=kwargs$QVRight
   probFractalDraw=kwargs$probFractalDraw
   # Stimulus screen comes on 2 secs after the presentation of probFractalDraw
-  stimDelayIters = stimDelay / timeStep
+  stimDelayIters = round((stimDelay - recallDelay) / timeStep)
   nonDecIters = nonDecisionTime / timeStep
   
   # Integration starts before stim presentation (though meaningful move from 0 happens only for pFrac = 1 trials) but decision can only be indicated after stim. Since total iterations depend on maxIter the addition of iterations before stim presentation controls for the desired max time out for the trial. In the arguments to the function it is specified as the maximum time out duration after stim presentation

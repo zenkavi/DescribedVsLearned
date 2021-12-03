@@ -44,6 +44,9 @@ sim_task = function(stimuli, model_name, ...){
   if (!("stimDelay" %in% names(kwargs))){
     kwargs$stimDelay = 2000
   }
+  if (!("recallDelay" %in% names(kwargs))){
+    kwargs$recallDelay = 0
+  }
   if (!("debug" %in% names(kwargs))){
     kwargs$debug = FALSE
   }
@@ -103,7 +106,7 @@ sim_task = function(stimuli, model_name, ...){
       cur_out = sim_trial(d=kwargs$d, sigma = kwargs$sigma, delta = kwargs$delta, gamma = kwargs$gamma,
                           barrier = kwargs$barrier, nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
                           bias = kwargs$bias, timeStep = kwargs$timeStep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,
-                          stimDelay = kwargs$stimDelay, 
+                          stimDelay = kwargs$stimDelay, recallDelay = kwargs$recallDelay,
                           EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], 
                           QVLeft = stimuli$QVLeft[i], QVRight= stimuli$QVRight[i] , 
                           probFractalDraw = stimuli$probFractalDraw[i])

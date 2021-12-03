@@ -18,7 +18,6 @@ library(brms)
 library(here)
 library(broom)
 cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
-# theme_set(theme_bw())
 theme_set(theme_classic())
 sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 helpers_path = here('helpers/')
@@ -76,6 +75,7 @@ sim_sanity_checks(sub_data %>%
                     mutate(choice = ifelse(choiceLeft == 1, "left", "right")), 
                   compare_rts = FALSE)
 ```
+
 Individual subject plots for the above stylized RT and choice plots
 
 ```{r}
@@ -141,8 +141,11 @@ sim_trial_list[['model1']] = sim_trial
 
 ## Check sim task 
 
-```{r eval = FALSE, echo = FALSE}
+```{r}
 m1 = sim_task(sub_data, model_name="model1", d=0.04, sigma = 0.02)
+```
+
+```{r}
 sim_sanity_checks(m1)
 ```
 
@@ -235,7 +238,7 @@ sim_sanity_checks(m2a, yrange_lim = 30)
 
 ```{r}
 data.frame(pFrac = seq(0, 1, .1),
-           delta = 2, gamma = 3) %>%
+           delta = 1, gamma = 1) %>%
   mutate(distortedPFrac = exp( (-1) * delta * ((-1)*log(pFrac))^gamma) ) %>%
   ggplot(aes(pFrac, distortedPFrac))+
   geom_point()+

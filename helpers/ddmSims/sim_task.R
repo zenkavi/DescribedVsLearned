@@ -1,3 +1,6 @@
+library(foreach)
+
+# Helper function to combine outputs with different column names
 rbind.all.columns <- function(x, y) {
   
   if(ncol(x) == 0 | ncol(y) == 0){
@@ -12,11 +15,75 @@ rbind.all.columns <- function(x, y) {
   return(out)
 }
 
-sim_task = function(stimuli, model_name, ...){
+
+# Function to simulate ddm process for a given set of stimuli using a model provided as a string in the model_name argument
+sim_task = function(stimuli, model_name, sim_trial_list = stim_trial_list, ...){
+  
+  # Parallelization setup based on this post
+  # https://www.blasbenito.com/post/02_parallelizing_loops_with_r/
+  n.cores <- parallel::detectCores() - 1
+  
+  #create the cluster
+  my.cluster <- parallel::makeCluster(
+    n.cores, 
+    type = "FORK"
+  )
+  
+  #check cluster definition (optional)
+  # print(my.cluster)
+  
+  #register it to be used by %dopar%
+  doParallel::registerDoParallel(cl = my.cluster)
+  
+  #check if it is registered (optional)
+  # foreach::getDoParRegistered()
+  
+  #how many workers are available? (optional)
+  # foreach::getDoParWorkers()
+  
   
   kwargs = list(...)
   # 
-  # Initialize any missing arguments
+  # Initialize any missing arguments. Some are useless defaults to make sure different sim_trial functions from different models can run without errors even if they don't make use of that argument
+  if (!("d" %in% names(kwargs))){
+    kwargs$d = 0
+  }
+  if (!("sigma" %in% names(kwargs))){
+    kwargs$sigma = 1e-9
+  }
+  if (!("dArb" %in% names(kwargs))){
+    kwargs$dArb = 0
+  }
+  if (!("dAttr" %in% names(kwargs))){
+    kwargs$dAttr = 0
+  }
+  if (!("dLott" %in% names(kwargs))){
+    kwargs$dLott = 0
+  }
+  if (!("dFrac" %in% names(kwargs))){
+    kwargs$dFrac = 0
+  }
+  if (!("sigmaArb" %in% names(kwargs))){
+    kwargs$sigmaArb = 1e-9
+  }
+  if (!("sigmaAttr" %in% names(kwargs))){
+    kwargs$sigmaAttr = 1e-9
+  }
+  if (!("sigmaLott" %in% names(kwargs))){
+    kwargs$sigmaLott = 1e-9
+  }
+  if (!("sigmaFrac" %in% names(kwargs))){
+    kwargs$sigmaFrac = 1e-9
+  }
+  if (!("theta" %in% names(kwargs))){
+    kwargs$theta = 0
+  }
+  if (!("delta" %in% names(kwargs))){
+    kwargs$delta = 1
+  }
+  if (!("gamma" %in% names(kwargs))){
+    kwargs$gamma = 1
+  }
   if (!("nonDecisionTime" %in% names(kwargs))){
     kwargs$nonDecisionTime = 0
   }
@@ -50,81 +117,46 @@ sim_task = function(stimuli, model_name, ...){
   if (!("debug" %in% names(kwargs))){
     kwargs$debug = FALSE
   }
-
+  
   # Extract the correct trial simulator for the model_name
   sim_trial = sim_trial_list[[model_name]]
   
-  # Create placeholder output df
-  out = data.frame()
-  
+  # Print arguments that will be used for simulation if in debug mode
   if(kwargs$debug){
     print(paste0("Simulating task with parameters: model_name = ", model_name,
-          ", non-decision time = ", kwargs$nonDecisionTime,
-          ", barrier = ", kwargs$barrier,
-          ", barrierDecay = ", kwargs$barrierDecay,
-          ", bias = ", kwargs$bias,
-          ", lotteryBias = ", kwargs$lotteryBias,
-          ", timeStep = ", kwargs$timeStep,
-          ", maxIter = ", kwargs$maxIter,
-          ", epsilon = ", kwargs$epsilon,
-          ", stimDelay = ", kwargs$stimDelay
-          ))
+                 ", non-decision time = ", kwargs$nonDecisionTime,
+                 ", barrier = ", kwargs$barrier,
+                 ", barrierDecay = ", kwargs$barrierDecay,
+                 ", bias = ", kwargs$bias,
+                 ", lotteryBias = ", kwargs$lotteryBias,
+                 ", timeStep = ", kwargs$timeStep,
+                 ", maxIter = ", kwargs$maxIter,
+                 ", epsilon = ", kwargs$epsilon,
+                 ", stimDelay = ", kwargs$stimDelay
+    ))
   }
-
-  # Loop through  all the rows of the input
-  for(i in 1:nrow(stimuli)) {
+  
+  # Parallel loop
+  out <- foreach(
+    EVLeft=stimuli$EVLeft, 
+    EVRight = stimuli$EVRight, 
+    QVLeft = stimuli$QVLeft, 
+    QVRight= stimuli$QVRight , 
+    probFractalDraw = stimuli$probFractalDraw,
+    .combine = 'rbind'
+  ) %dopar% {
     # Simulate RT and choice for a single trial with given DDM parameters and trial stimulus values
-    if(model_name %in% c("model4", "model5","model6","model7")){
-      
-      cur_out = sim_trial(dArb=kwargs$dArb, dAttr=kwargs$dAttr, sigmaArb = kwargs$sigmaArb, sigmaAttr = kwargs$sigmaAttr, 
-                          barrier = kwargs$barrier,nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
-                          lotteryBias = kwargs$lotteryBias, timeStep = kwargs$timeStep,
-                          maxIter = kwargs$maxIter,
-                          epsilon = kwargs$epsilon,
-                          EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], 
-                          QVLeft = stimuli$QVLeft[i], QVRight= stimuli$QVRight[i], 
-                          probFractalDraw = stimuli$probFractalDraw[i])
-    } else if (model_name %in% c("model4a", "model5a", "model6a", "model7a")){
-      cur_out = sim_trial(dArb=kwargs$dArb, dLott=kwargs$dLott, dFrac=kwargs$dFrac, sigmaArb = kwargs$sigmaArb, sigmaLott = kwargs$sigmaLott, sigmaFrac = kwargs$sigmaFrac, 
-                          barrier = kwargs$barrier,nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
-                          lotteryBias = kwargs$lotteryBias, timeStep = kwargs$timeStep,
-                          maxIter = kwargs$maxIter,
-                          epsilon = kwargs$epsilon,
-                          EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], 
-                          QVLeft = stimuli$QVLeft[i], QVRight= stimuli$QVRight[i], 
-                          probFractalDraw = stimuli$probFractalDraw[i])
-    } else if(model_name %in% c("model2a")){
-      cur_out = sim_trial(d=kwargs$d, sigma = kwargs$sigma, theta = kwargs$theta,
-                          barrier = kwargs$barrier, nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
-                          bias = kwargs$bias, timeStep = kwargs$timeStep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,
-                          stimDelay = kwargs$stimDelay, 
-                          EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], 
-                          QVLeft = stimuli$QVLeft[i], QVRight= stimuli$QVRight[i] , 
-                          probFractalDraw = stimuli$probFractalDraw[i])
-      
-    } else if(model_name %in% c("model2b")){
-      cur_out = sim_trial(d=kwargs$d, sigma = kwargs$sigma, delta = kwargs$delta, gamma = kwargs$gamma,
-                          barrier = kwargs$barrier, nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
-                          bias = kwargs$bias, timeStep = kwargs$timeStep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,
-                          stimDelay = kwargs$stimDelay, recallDelay = kwargs$recallDelay,
-                          EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], 
-                          QVLeft = stimuli$QVLeft[i], QVRight= stimuli$QVRight[i] , 
-                          probFractalDraw = stimuli$probFractalDraw[i])
-      } else{
-      cur_out = sim_trial(d=kwargs$d, sigma = kwargs$sigma, 
-                          barrier = kwargs$barrier, nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
-                          bias = kwargs$bias, timeStep = kwargs$timeStep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,
-                          stimDelay = kwargs$stimDelay, 
-                          EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], 
-                          QVLeft = stimuli$QVLeft[i], QVRight= stimuli$QVRight[i] , 
-                          probFractalDraw = stimuli$probFractalDraw[i])
-      
+      sim_trial(d=kwargs$d, sigma = kwargs$sigma, 
+                dArb=kwargs$dArb, dAttr=kwargs$dAttr, sigmaArb = kwargs$sigmaArb, sigmaAttr = kwargs$sigmaAttr,
+                dLott=kwargs$dLott, dFrac=kwargs$dFrac, sigmaLott = kwargs$sigmaLott, sigmaFrac = kwargs$sigmaFrac,
+                theta = kwargs$theta, delta = kwargs$delta, gamma = kwargs$gamma,
+                barrier = kwargs$barrier, nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
+                bias = kwargs$bias, timeStep = kwargs$timeStep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,
+                stimDelay = kwargs$stimDelay,
+                EVLeft=EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight= QVRight, probFractalDraw = probFractalDraw)
+
     }
-    
-    # Append the trial to the rest of the output
-    out = rbind.all.columns(out, cur_out)
-    
-  }
+  
   
   # Add details of the parameters used for the simulation
   out$model = model_name
@@ -146,5 +178,10 @@ sim_task = function(stimuli, model_name, ...){
   out$nonDecisionTime = kwargs$nonDecisionTime
   out$barrierDecay = kwargs$barrierDecay
   
+  # Stop cluster  
+  parallel::stopCluster(cl = my.cluster)
+  # rm(my.cluster)
+
   return(out)
 }
+

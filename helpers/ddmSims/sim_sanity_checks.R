@@ -1,3 +1,5 @@
+library(broom)
+
 sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE, yrange_lim = 25){
   #Check 1
   if (1 %in% checks){

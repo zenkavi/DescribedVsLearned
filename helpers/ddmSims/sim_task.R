@@ -15,32 +15,31 @@ rbind.all.columns <- function(x, y) {
   return(out)
 }
 
+# Parallelization setup based on this post
+# https://www.blasbenito.com/post/02_parallelizing_loops_with_r/
+n.cores <- parallel::detectCores() - 1
+
+#create the cluster
+my.cluster <- parallel::makeCluster(
+  n.cores, 
+  type = "FORK"
+)
+
+#check cluster definition (optional)
+# print(my.cluster)
+
+#register it to be used by %dopar%
+doParallel::registerDoParallel(cl = my.cluster)
+
+#check if it is registered (optional)
+# foreach::getDoParRegistered()
+
+#how many workers are available? (optional)
+# foreach::getDoParWorkers()
+
 
 # Function to simulate ddm process for a given set of stimuli using a model provided as a string in the model_name argument
-sim_task = function(stimuli, model_name, sim_trial_list = stim_trial_list, ...){
-  
-  # Parallelization setup based on this post
-  # https://www.blasbenito.com/post/02_parallelizing_loops_with_r/
-  n.cores <- parallel::detectCores() - 1
-  
-  #create the cluster
-  my.cluster <- parallel::makeCluster(
-    n.cores, 
-    type = "FORK"
-  )
-  
-  #check cluster definition (optional)
-  # print(my.cluster)
-  
-  #register it to be used by %dopar%
-  doParallel::registerDoParallel(cl = my.cluster)
-  
-  #check if it is registered (optional)
-  # foreach::getDoParRegistered()
-  
-  #how many workers are available? (optional)
-  # foreach::getDoParWorkers()
-  
+sim_task = function(stimuli, model_name, sim_trial_list_ = sim_trial_list, ...){
   
   kwargs = list(...)
   # 
@@ -119,7 +118,7 @@ sim_task = function(stimuli, model_name, sim_trial_list = stim_trial_list, ...){
   }
   
   # Extract the correct trial simulator for the model_name
-  sim_trial = sim_trial_list[[model_name]]
+  sim_trial = sim_trial_list_[[model_name]]
   
   # Print arguments that will be used for simulation if in debug mode
   if(kwargs$debug){
@@ -177,10 +176,6 @@ sim_task = function(stimuli, model_name, sim_trial_list = stim_trial_list, ...){
   }
   out$nonDecisionTime = kwargs$nonDecisionTime
   out$barrierDecay = kwargs$barrierDecay
-  
-  # Stop cluster  
-  parallel::stopCluster(cl = my.cluster)
-  # rm(my.cluster)
 
   return(out)
 }

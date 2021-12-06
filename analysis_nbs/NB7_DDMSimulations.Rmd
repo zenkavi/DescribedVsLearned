@@ -35,26 +35,6 @@ clean_beh_data = add_inferred_pars(clean_beh_data, par_ests, model_name="origina
 
 # True data
 
-### Motivation for competition
-
-Graph below shows the difference in strength of preference for the left bundle based on EV versus QV. The smaller this difference the harder it should be to make the decision based on one attribute only. 
-
-So if choice is faster when this value is larger that would suggest it is driven primarily by (the relative preference for) one attribute. Alternatively if choice is slower when this value is smaller it suggests integrating
-
-```{r}
-clean_beh_data %>%
-  mutate(wAbsLeftEVAdv = (1-probFractalDraw)*abs(leftEVAdv), # strength of left preference based on EV
-         wAbsLeftQVAdv = (probFractalDraw)*abs(leftQVAdv), # strength of left preference based on QV
-         EVAdvMinQVAdv = abs(wAbsLeftEVAdv - wAbsLeftQVAdv), # difference in strength of preference
-         probFractalDraw = as.factor(probFractalDraw)) %>%
-  group_by(probFractalDraw) %>%
-  summarise(meanEVAdvMinQVAdv = mean(EVAdvMinQVAdv),
-            semEVAdvMinQVAdv = sem(EVAdvMinQVAdv)) %>%
-  ggplot(aes(probFractalDraw, meanEVAdvMinQVAdv))+
-  geom_point()+
-  geom_errorbar(aes(ymin = meanEVAdvMinQVAdv - semEVAdvMinQVAdv, ymax = meanEVAdvMinQVAdv + semEVAdvMinQVAdv), width=.2)
-```
-
 Filter data for a few subjects with a range of learning rates (i.e. variance in QValue differences) to simulate RTs using DDM. Rename columns to work with task simulation function. 
 
 ```{r}
@@ -73,7 +53,9 @@ sim_sanity_checks(sub_data %>%
                   compare_rts = FALSE)
 ```
 
-Individual subject plots for the above stylized RT and choice plots
+## Individual subject plots 
+
+For the above stylized RT and choice plots
 
 ```{r}
 sub_data %>%
@@ -146,29 +128,37 @@ m1 = sim_task(sub_data, model_name="model1", d=0.04, sigma = 0.02)
 sim_sanity_checks(m1)
 ```
 
-### Spread vs mean
+```{r}
+m1_2 = sim_task(sub_data, model_name="model1", d=0.04, sigma = 0.02, epsilon = 0.03)
+```
 
 ```{r}
+sim_sanity_checks(m1_2)
+```
+
+### Spread vs mean
+
+```{r eval=FALSE, echo=FALSE}
 tmp1 = sim_task(sub_data, model_name = "model1", d=0.06, sigma = 0.03)
 sim_sanity_checks(tmp1, checks=c(3))
 ```
 
-```{r}
+```{r eval=FALSE, echo=FALSE}
 tmp2 = sim_task(sub_data, model_name = "model1", d=0.06, sigma = 0.003)
 sim_sanity_checks(tmp2, checks=c(3))
 ```
 
-```{r}
+```{r eval=FALSE, echo=FALSE}
 tmp3 = sim_task(sub_data, model_name = "model1", d=0.006, sigma = 0.03)
 sim_sanity_checks(tmp3, checks=c(3))
 ```
 
-```{r}
+```{r eval=FALSE, echo=FALSE}
 tmp4 = sim_task(sub_data, model_name = "model1", d=0.006, sigma = 0.003)
 sim_sanity_checks(tmp4, checks=c(3))
 ```
 
-```{r}
+```{r eval=FALSE, echo=FALSE}
 rm(tmp1, tmp2, tmp3, tmp4)
 ```
 
@@ -183,16 +173,20 @@ sim_trial_list[['model2']] = sim_trial
 
 ## Check sim task
 
-```{r eval=FALSE, echo=FALSE}
+```{r}
 m2 = sim_task(sub_data, model_name = "model2", d=0.05, sigma = 0.02)
-sim_sanity_checks(m2)
 ```
 
+```{r}
+sim_sanity_checks(m2)
+```
 When does integration reach a bound before the stim presentation?
 
 ```{r}
 with(m2, table(decPreStim, probFractalDraw))
 ```
+
+RT distributions depending on whether a decision was reached before stimulus presentation.
 
 ```{r}
 m2 %>%
@@ -209,6 +203,7 @@ m2 %>%
   facet_wrap(~probFractalDraw)+
   theme(legend.position = "bottom")
 ```
+Are the number of timeout trials similar across conditions? Yes.
 
 ```{r}
 with(m2, table(timeOut, probFractalDraw))
@@ -216,8 +211,7 @@ with(m2, table(timeOut, probFractalDraw))
 
 # Model 2a: asymmetric weighting 
 
-- Single parameter `theta` controls how much lotteries should be overweighted and how much fractals should be underweighted. It was an initial effort to induce different drift rates for the attributes.
-
+- Single parameter `theta` controls how much lotteries should be overweighted and how much fractals should be underweighted. It is an initial effort to induce different drift rates for the attributes.
 
 ```{r}
 source(paste0(helpers_path, 'ddmSims/ddm_model2a.R'))
@@ -226,8 +220,11 @@ sim_trial_list[['model2a']] = sim_trial
 
 ## Check sim task
 
-```{r eval=FALSE, echo=FALSE}
-m2a = sim_task(sub_data, model_name = "model2a", d=0.05, sigma = 0.02, theta = 0.1)
+```{r}
+m2a = sim_task(sub_data, model_name = "model2a", d=0.05, sigma = 0.02, theta = 0.025)
+```
+
+```{r}
 sim_sanity_checks(m2a, yrange_lim = 30)
 ```
 
@@ -256,7 +253,7 @@ sim_trial_list[['model2b']] = sim_trial
 
 ## Check sim task
 
-Can we get 0 logit slopes for probFractalDraw < .5 trials for the QV difference with an assymmetric prob weighting curve as above?
+Can we get 0 logit slopes for probFractalDraw < .5 trials for the QV difference with an assymmetric prob weighting curve as above? Yes.
 
 ```{r}
 m2b_1 = sim_task(sub_data, model_name = "model2b", d=0.04, sigma = 0.01, delta = 3, gamma = 3)
@@ -291,7 +288,7 @@ summary(glm(choiceLeft ~ EVDiff + QVDiff, data = tmp,family=binomial(link="logit
 And the logit for the simulation
 
 ```{r}
-tmp = m2_2 %>%
+tmp = m2b_2 %>%
   filter(probFractalDraw == 1) %>%
   mutate(QVDiff = scale(QVLeft - QVRight),
          EVDiff = scale(EVLeft - EVRight),
@@ -312,7 +309,7 @@ m2b_3 = sim_task(sub_data, model_name = "model2b", d=0.02, sigma = 0.007, delta 
 sim_sanity_checks(m2b_3)
 ```
 
-- What do the trials on the slow end of the bimodal distribution look like? Are they for particularly hard trials? Yes.
+- What do the trials on the slow end of the bimodal distribution look like? Are they for particularly hard trials? Yes, for slow trials the difference between the options is always lower.
 
 Should we add something to an effect of "if options are too close to each other choose..." randomly? the first one? 
 
@@ -322,16 +319,17 @@ m2b_3 %>%
          absEVDiff = abs(EVLeft - EVRight),
          slowTrial = factor(ifelse(reactionTime > 3, 1, 0))) %>%
   select(absQVDiff, absEVDiff, slowTrial) %>%
-  gather(key, value, -slowTrial) %>%
-  ggplot(aes(value, fill=slowTrial))+
-  # geom_histogram(position="identity", alpha = .5, bins=30)+
-  geom_density(alpha=.5, color=NA)+
-  theme(legend.position = "bottom")+
+  gather(key, value, -slowTrial)%>%
+  group_by(key, slowTrial) %>%
+  summarise(.groups = 'keep',
+            mean_diff = mean(value),
+            sem_diff = sem(value)) %>%
+  ggplot(aes(key, mean_diff, color=slowTrial))+
+  geom_point(position=position_dodge(width = .5))+
+  geom_errorbar(aes(ymin = mean_diff-sem_diff, ymax= mean_diff + sem_diff), width = .2, position=position_dodge(width = .5))+
   labs(x="")+
-  facet_wrap(~key)
+  theme(legend.position = "bottom")
 ```
-
-
 # Model 4a: 3 integrators
 
 - 3 integrators **all with their own drift and noise rates**
@@ -348,21 +346,18 @@ sim_trial_list[['model4a']] = sim_trial
 ## Check sim task
 
 ```{r}
-m4a = sim_task(sub_data, model_name = "model4a", dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.03)
-sim_sanity_checks(m4a)
+m4a_1 = sim_task(sub_data, model_name = "model4a", dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01)
 ```
 
 ```{r}
-m4a = sim_task(sub_data, model_name = "model4a", dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, lotteryBias= 1)
-sim_sanity_checks(m4a)
+sim_sanity_checks(m4a_1)
 ```
 
-```{r}
+```{r eval=FALSE, echo=FALSE}
 m4a_trial = sim_trial_list[['model4a']](dArb = .04, dLott=0.02, dFrac=0.03, sigmaArb = .01, sigmaLott = .03, sigmaFrac = .03, barrierDecay = 0, EVLeft = .7, EVRight = 0.5, QVLeft = 0, QVRight = 0, probFractalDraw = 0.5, debug=TRUE, nonDecisionTime = 0)
-m4a_trial$out
-```
 
-```{r}
+m4a_trial$out
+
 m4a_trial$debug_df %>%
   select(-arbitrator_mu_mean) %>%
   gather(key, value, -time, -barrier) %>%
@@ -373,6 +368,43 @@ m4a_trial$debug_df %>%
   geom_hline(aes(yintercept = 0), linetype="dashed")+
   facet_grid(key ~.)+
   theme_bw()
+```
+
+# Model 4b: 4a with asymmetric prob distortion
+
+```{r}
+source(paste0(helpers_path, 'ddmSims/ddm_model4b.R'))
+sim_trial_list[['model4b']] = sim_trial
+```
+
+## Check sim task
+
+```{r}
+m4b_1 = sim_task(sub_data, model_name = "model4b", dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, delta = 3, gamma = 3)
+```
+
+```{r}
+sim_sanity_checks(m4b_1)
+```
+
+Add some noise to decrease logit slopes
+
+```{r}
+m4b_2 = sim_task(sub_data, model_name = "model4b", dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, delta = 3, gamma = 3, epsilon = 0.015)
+```
+
+```{r}
+sim_sanity_checks(m4b_2)
+```
+
+Add barrier decay to reduce time outs
+
+```{r}
+m4b_3 = sim_task(sub_data, model_name = "model4b", dLott=0.025, dFrac=0.035, dArb=0.035, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, delta = 3, gamma = 3, epsilon = 0.015, barrierDecay = 0.004)
+```
+
+```{r}
+sim_sanity_checks(m4b_3)
 ```
 
 # Model 5a: 3 integrators
@@ -410,19 +442,26 @@ m5a_trial$debug_df %>%
 
 ## Check sim task
 
-```{r eval=FALSE, echo=FALSE}
-m5a = sim_task(sub_data, model_name = "model5a", dLott=0.02, dFrac=0.045, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01)
-sim_sanity_checks(tmp)
+```{r}
+m5a_1 = sim_task(sub_data, model_name = "model5a", dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01)
 ```
-
-```{r eval=FALSE, echo=FALSE}
-m5a = sim_task(sub_data, model_name = "model5a", dLott=0.035, dFrac=0.02, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01)
-sim_sanity_checks(tmp)
-```
-
 
 ```{r}
-m5a %>%
+sim_sanity_checks(m5a_1)
+```
+Slow down lottery integrator and lower the logit slopes
+
+```{r}
+m5a_2 = sim_task(sub_data, model_name = "model5a", dLott=0.02, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, epsilon = 0.025)
+```
+
+```{r}
+sim_sanity_checks(m5a_2)
+```
+RT distributions based on arbitrator used for the decision
+
+```{r}
+m5a_2 %>%
   select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, arbitrator) %>%
   mutate(data_type = "sim") %>%
   rbind(sub_data %>%
@@ -438,15 +477,30 @@ m5a %>%
   theme(legend.position = "bottom")
 ```
 
-# Model 6a: 3 integrators + early integration
+# Model 5b: 5a with asymmetric prob distortion
+
+```{r}
+source(paste0(helpers_path, 'ddmSims/ddm_model5b.R'))
+sim_trial_list[['model5b']] = sim_trial
+```
+
+## Check sim task
+
+```{r}
+m5b_1 = sim_task(sub_data, model_name = "model5b", dLott=0.02, dFrac=0.04, dArb=0.035, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, delta = 3, gamma = 3, epsilon = .02)
+```
+
+```{r}
+sim_sanity_checks(m5b_1)
+```
+
+# Model 6a: 5a + early integration
 
 - 3 integrators **all with their own drift and noise rates**
 - Arbitrator integrator starts from lottery bias
 - If pFractalDraw == 1 fractal and arbitrator integrator starts early. Arbitrator moves only towards fractal.
 - Attribute relevance (pFractalDraw) does not affect attribute integrators directly
 - Arbitrator integrator depends on the difference in absolute attribute integrator RDVs weighted by attribute relevance
-
-- Where should nondecision time come into play?
 
 ```{r}
 source(paste0(helpers_path, 'ddmSims/ddm_model6a.R'))
@@ -455,44 +509,46 @@ sim_trial_list[['model6a']] = sim_trial
 
 ## Check sim task
 
-```{r eval=FALSE, echo=FALSE}
-m6a = sim_task(sub_data, model_name = "model6a", dLott=0.01, dFrac=0.045, dArb=0.05, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, lotteryBias = .25)
+```{r}
+m6a = sim_task(sub_data, model_name = "model6a", dLott=0.015, dFrac=0.02, dArb=0.05, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, lotteryBias = .25, epsilon = 0.003)
+```
+
+```{r}
 sim_sanity_checks(m6a)
 ```
 
-# Trade-offs across models
-
-- Is the relationship between pars that optim rt vs choice the same across models?
-
-No. There can be a trade-off between the parameters depending on what you optimize for but it's not in the same direction for all models.
+# Model 6b: 6a with asymmetric prob distortion
 
 ```{r}
-all_opt_outs = list(m1_opt_out, m2_opt_out, m3_opt_out, m4_opt_out, m5_opt_out)
-opt_outs_df = data.frame()
-for (i in 1:length(all_opt_outs)){
-  opt_outs_df = rbind.all.columns(opt_outs_df,
-                                  all_opt_outs[[i]]$opt_rt_pars %>%
-                                    mutate(model_name = paste0("model", i),
-                                           opt_for = "opt_rt") %>%
-                                    rbind(all_opt_outs[[i]]$opt_choice_pars %>%
-                                            mutate(model_name = paste0("model", i),
-                                                   opt_for = "opt_choice")) %>%
-                                    rbind(all_opt_outs[[i]]$opt_avg_pars %>%
-                                            mutate(model_name = paste0("model", i),
-                                                   opt_for = "opt_avg")))
-}
-
-opt_outs_df %>%
-  select(-barrier_decay, -rt_sumsq, -choice_sumsq, -avg_sumsq) %>%
-  gather(par, value, -model_name, -opt_for) %>%
-  ggplot(aes(model_name, value, color=opt_for))+
-  geom_point(size=4, alpha=.5)+
-  facet_wrap(~par)+
-  labs(x="", y="", color="")+
-  theme(legend.position = "bottom")
+source(paste0(helpers_path, 'ddmSims/ddm_model6b.R'))
+sim_trial_list[['model6b']] = sim_trial
 ```
+
+## Check sim task
+
 ```{r}
-opt_outs_df
+m6b_1 = sim_task(sub_data, model_name = "model6b", dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, delta = 3, gamma = 3)
+```
+
+```{r}
+sim_sanity_checks(m6b_1)
+```
+
+# Model 6c: 4b with early integration
+
+```{r}
+source(paste0(helpers_path, 'ddmSims/ddm_model6c.R'))
+sim_trial_list[['model6c']] = sim_trial
+```
+
+## Check sim task
+
+```{r}
+m6c_1 = sim_task(sub_data, model_name = "model6c", dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, delta = 3, gamma = 3)
+```
+
+```{r}
+sim_sanity_checks(m6c_1)
 ```
 
 # Stop cluster
@@ -501,6 +557,10 @@ opt_outs_df
 parallel::stopCluster(cl = my.cluster)
 # rm(my.cluster)
 ```
+
+# Trade-offs across models
+
+- Is the relationship between pars that optim rt vs choice the same across models?
 
 # Older models
 
@@ -522,11 +582,10 @@ parallel::stopCluster(cl = my.cluster)
 - Arbitrator integrator depends on the difference in absolute attribute integrator RDVs weighted by attribute relevance
 - When stimulus is presented arbitrator moves only based on lotteryRDV for a short period
 
-
-
 # Questions
 
-- Why can I find a combination of parameters to match cases pFractalDraw > .5 but the same combination is too fast for other conditions?
+- True data logit slopes for QV difference never exceeds the slopes of lotteries. Why do I get this pattern in simulations?
 - Why is the slowest condition pFractalDraw == .6 for simulations but pFractalDraw == .5 in true data?
+- Where should NDT come into play for models with early integration?
 - Change grid search optimization for RT to KL divergence?
 - Incorporating EV and QV computation instead of using them as input

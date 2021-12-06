@@ -85,6 +85,26 @@ clean_beh_data %>%
 with(clean_beh_data, table(probFractalDraw, weightedAbsEVDiff))
 ```
 
+### Motivation for competition
+
+Graph below shows the difference in strength of preference for the left bundle based on EV versus QV. The smaller this difference the harder it should be to make the decision based on one attribute only. 
+
+So if choice is faster when this value is larger that would suggest it is driven primarily by (the relative preference for) one attribute. Alternatively if choice is slower when this value is smaller it suggests integrating
+
+```{r}
+clean_beh_data %>%
+  mutate(wAbsLeftEVAdv = (1-probFractalDraw)*abs(leftEVAdv), # strength of left preference based on EV
+         wAbsLeftQVAdv = (probFractalDraw)*abs(leftQVAdv), # strength of left preference based on QV
+         EVAdvMinQVAdv = abs(wAbsLeftEVAdv - wAbsLeftQVAdv), # difference in strength of preference
+         probFractalDraw = as.factor(probFractalDraw)) %>%
+  group_by(probFractalDraw) %>%
+  summarise(meanEVAdvMinQVAdv = mean(EVAdvMinQVAdv),
+            semEVAdvMinQVAdv = sem(EVAdvMinQVAdv)) %>%
+  ggplot(aes(probFractalDraw, meanEVAdvMinQVAdv))+
+  geom_point()+
+  geom_errorbar(aes(ymin = meanEVAdvMinQVAdv - semEVAdvMinQVAdv, ymax = meanEVAdvMinQVAdv + semEVAdvMinQVAdv), width=.2)
+```
+
 ## Response times 
 
 ### RT by attribute relevance

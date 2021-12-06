@@ -57,7 +57,7 @@ sim_sanity_checks(sub_data %>%
 
 For the above stylized RT and choice plots
 
-```{r}
+```{r eval=FALSE}
 sub_data %>%
   # select(-subnum) %>%
   mutate(choice = ifelse(choiceLeft == 1, "left", "right"))%>%
@@ -73,7 +73,7 @@ sub_data %>%
   facet_wrap(~subnum, scales = 'free')
 ```
 
-```{r}
+```{r eval=FALSE}
 sub_data %>%
   mutate(choice = ifelse(choiceLeft == 1, "left", "right"))%>%
   select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, subnum) %>%
@@ -203,6 +203,7 @@ m2 %>%
   facet_wrap(~probFractalDraw)+
   theme(legend.position = "bottom")
 ```
+
 Are the number of timeout trials similar across conditions? Yes.
 
 ```{r}
@@ -330,6 +331,7 @@ m2b_3 %>%
   labs(x="")+
   theme(legend.position = "bottom")
 ```
+
 # Model 4a: 3 integrators
 
 - 3 integrators **all with their own drift and noise rates**
@@ -341,16 +343,6 @@ m2b_3 %>%
 ```{r}
 source(paste0(helpers_path, 'ddmSims/ddm_model4a.R'))
 sim_trial_list[['model4a']] = sim_trial
-```
-
-## Check sim task
-
-```{r}
-m4a_1 = sim_task(sub_data, model_name = "model4a", dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01)
-```
-
-```{r}
-sim_sanity_checks(m4a_1)
 ```
 
 ```{r eval=FALSE, echo=FALSE}
@@ -370,6 +362,15 @@ m4a_trial$debug_df %>%
   theme_bw()
 ```
 
+## Check sim task
+
+```{r}
+m4a_1 = sim_task(sub_data, model_name = "model4a", dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01)
+```
+
+```{r}
+sim_sanity_checks(m4a_1)
+```
 # Model 4b: 4a with asymmetric prob distortion
 
 ```{r}
@@ -427,7 +428,7 @@ m5a_trial = sim_trial_list[['model5a']](dArb = .04, dLott=0.03, dFrac=0.02, sigm
 m5a$out
 ```
 
-```{r}
+```{r eval=FALSE, echo=FALSE}
 m5a_trial$debug_df %>%
   select(-arbitrator_mu_mean) %>%
   gather(key, value, -time, -barrier) %>%
@@ -449,6 +450,7 @@ m5a_1 = sim_task(sub_data, model_name = "model5a", dLott=0.03, dFrac=0.04, dArb=
 ```{r}
 sim_sanity_checks(m5a_1)
 ```
+
 Slow down lottery integrator and lower the logit slopes
 
 ```{r}
@@ -460,7 +462,7 @@ sim_sanity_checks(m5a_2)
 ```
 RT distributions based on arbitrator used for the decision
 
-```{r}
+```{r eval=FALSE}
 m5a_2 %>%
   select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, arbitrator) %>%
   mutate(data_type = "sim") %>%
@@ -527,7 +529,7 @@ sim_trial_list[['model6b']] = sim_trial
 ## Check sim task
 
 ```{r}
-m6b_1 = sim_task(sub_data, model_name = "model6b", dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, delta = 3, gamma = 3)
+m6b_1 = sim_task(sub_data, model_name = "model6b", dLott=0.02, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, delta = 3, gamma = 3)
 ```
 
 ```{r}

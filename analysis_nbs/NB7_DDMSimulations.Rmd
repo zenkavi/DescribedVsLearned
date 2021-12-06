@@ -236,7 +236,7 @@ sim_sanity_checks(m2a, yrange_lim = 30)
 
 ```{r}
 data.frame(pFrac = seq(0, 1, .1),
-           delta = 3, gamma = 3) %>%
+           delta = 3, gamma = 1.5) %>%
   mutate(distortedPFrac = exp( (-1) * delta * ((-1)*log(pFrac))^gamma) ) %>%
   ggplot(aes(pFrac, distortedPFrac))+
   geom_point()+
@@ -336,9 +336,9 @@ m2b_3 %>%
 
 - 3 integrators **all with their own drift and noise rates**
 - Arbitrator integrator starts biased towards lotteries
-- If pFractalDraw == 1 fractal integrator starts biased towards the better fractal
+- If pFractalDraw == 1 fractal integrator (not the arbitrator) starts biased towards the better fractal
 - Attribute relevance (pFractalDraw) affects attribute integrators directly, not the arbitrator
-- Arbitrator integrator depends on the difference in absolute attribute integrator RDVs
+- Arbitrator depends on the difference in absolute attribute integrator RDVs
 
 ```{r}
 source(paste0(helpers_path, 'ddmSims/ddm_model4a.R'))
@@ -371,6 +371,18 @@ m4a_1 = sim_task(sub_data, model_name = "model4a", dLott=0.03, dFrac=0.04, dArb=
 ```{r}
 sim_sanity_checks(m4a_1)
 ```
+
+Reduce logit slopes and try to increase lottery bias to see if you would see a change in logit slopes at pFrac == 0.5 
+
+
+```{r}
+m4a_2 = sim_task(sub_data, model_name = "model4a", dLott=0.025, dFrac=0.04, dArb=0.045, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, epsilon = 0.003, lotteryBias = 0.35)
+```
+
+```{r}
+sim_sanity_checks(m4a_2)
+```
+
 # Model 4b: 4a with asymmetric prob distortion
 
 ```{r}
@@ -387,7 +399,6 @@ m4b_1 = sim_task(sub_data, model_name = "model4b", dLott=0.03, dFrac=0.04, dArb=
 ```{r}
 sim_sanity_checks(m4b_1)
 ```
-
 Add some noise to decrease logit slopes
 
 ```{r}
@@ -401,7 +412,7 @@ sim_sanity_checks(m4b_2)
 Add barrier decay to reduce time outs
 
 ```{r}
-m4b_3 = sim_task(sub_data, model_name = "model4b", dLott=0.025, dFrac=0.035, dArb=0.035, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, delta = 3, gamma = 3, epsilon = 0.015, barrierDecay = 0.004)
+m4b_3 = sim_task(sub_data, model_name = "model4b", dLott=0.025, dFrac=0.035, dArb=0.035, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, delta = 3, gamma = 1.5, epsilon = 0.015, barrierDecay = 0.003)
 ```
 
 ```{r}
@@ -590,4 +601,4 @@ parallel::stopCluster(cl = my.cluster)
 - Why is the slowest condition pFractalDraw == .6 for simulations but pFractalDraw == .5 in true data?
 - Where should NDT come into play for models with early integration?
 - Change grid search optimization for RT to KL divergence?
-- Incorporating EV and QV computation instead of using them as input
+- Incorporating EV and QV computation instead of using them as input. If these models are capturing what is happening after the prob fractal draw screen until a decision is made then QV can remain as an input (maybe with an NDT for recall) but EV still can only be computed during the stimulus screen.

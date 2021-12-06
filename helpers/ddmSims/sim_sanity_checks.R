@@ -1,6 +1,6 @@
 library(broom)
 
-sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE, yrange_lim = 25){
+sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE, compare_logits = FALSE, true_data = sub_data, yrange_lim = 25){
   #Check 1
   if (1 %in% checks){
     print(paste0("Proportion of time out trials if no decision made: ", round(sum(is.na(sim_data$reactionTime))/nrow(sim_data), 3)))
@@ -41,7 +41,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       p = sim_data %>%
         select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
         mutate(data_type = "sim") %>%
-        rbind(sub_data %>%
+        rbind(true_data %>%
                 mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
                        data_type = "true") %>%
                 select(-subnum, -choiceLeft)) %>%
@@ -71,7 +71,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       p = sim_data %>%
         select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
         mutate(data_type = "sim") %>%
-        rbind(sub_data %>%
+        rbind(true_data %>%
                 mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
                        data_type = "true") %>%
                 select(-subnum, -choiceLeft)) %>%
@@ -105,7 +105,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
   
   # Check 5
   if(5 %in% checks){
-    p = sim_data %>%
+    tmp = sim_data %>%
       select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
       mutate(probFractalDraw = as.factor(probFractalDraw),
              choiceLeft = ifelse(choice == "left", 1, ifelse(choice=="right", 0, NA)),
@@ -119,6 +119,9 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       unnest(tidied) %>%
       filter(term != "(Intercept)") %>%
       select(probFractalDraw, term, estimate, std.error) %>%
+      mutate(data_type = "sim")
+    
+    p =  tmp %>%
       ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
       geom_point()+
       geom_line()+
@@ -127,6 +130,30 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       scale_color_manual(values = cbbPalette[2:1])+
       theme(legend.position = "bottom")+
       labs(color="", title="Relevant attribute effect on choice")
+    
+    if(compare_logits){
+      tmp_true = true_data %>%
+        select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choiceLeft, reactionTime) %>%
+        mutate(probFractalDraw = as.factor(probFractalDraw),
+               # choiceLeft = ifelse(choice == "left", 1, ifelse(choice=="right", 0, NA)),
+               EVDiff = EVLeft - EVRight, 
+               QVDiff = QVLeft - QVRight) %>%
+        nest(data = -probFractalDraw) %>% 
+        mutate(
+          fit = map(data, ~ glm(choiceLeft ~ scale(EVDiff) + scale(QVDiff), data = .x, family=binomial(link="logit"))),
+          tidied = map(fit, tidy)
+        ) %>% 
+        unnest(tidied) %>%
+        filter(term != "(Intercept)") %>%
+        select(probFractalDraw, term, estimate, std.error)
+      
+      p = p +
+        geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
+        geom_point( data=tmp_true, aes(probFractalDraw, estimate, col=term, group=term, alpha=.1))+
+        geom_line(data=tmp_true, aes(probFractalDraw, estimate, col=term, group=term, alpha=.1))+
+        geom_errorbar(data=tmp_true,aes(ymin = estimate - std.error, ymax = estimate +std.error, alpha=.1), width=0.2)
+        
+    } 
     
     yrange = layer_scales(p)$y$range$range
     large_range = abs(yrange) > yrange_lim

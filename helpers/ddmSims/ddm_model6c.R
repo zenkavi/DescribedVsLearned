@@ -143,7 +143,7 @@ sim_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
   }
   
   #Organize output 
-  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, arbitrator = arbitrator, decPreStim = decPreStim)
+  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, arbitrator = arbitrator, decPreStim = decPreStim, dArb = dArb, dLott=dLott, dFrac=dFrac, sigmaArb=sigmaArb, sigmaLott=sigmaLott, sigmaFrac=sigmaFrac, barrierDecay = barrierDecay, delta = delta, gamma = gamma, barrier= barrier, nonDecisionTime=nonDecisionTime, lotteryBias=lotteryBias, timeStep=timeStep, maxIter=maxIter, epsilon = epsilon, stimDelay = stimDelay)
   
   if(debug){
     out = list(out=out, debug_df=debug_df)
@@ -151,3 +151,10 @@ sim_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
   
   return(out)
 }
+
+fit_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrierDecay, delta, gamma, barrier=1, nonDecisionTime=0, lotteryBias=0.01, timeStep=10, maxIter=400, epsilon = 0.002, stimDelay = 2000, debug=FALSE,...){
+  
+  out = data.frame(likelihood = likelihood, EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, arbitrator = arbitrator, decPreStim = decPreStim, dArb = dArb, dLott=dLott, dFrac=dFrac, sigmaArb=sigmaArb, sigmaLott=sigmaLott, sigmaFrac=sigmaFrac, barrierDecay = barrierDecay, delta = delta, gamma = gamma, barrier= barrier, nonDecisionTime=nonDecisionTime, lotteryBias=lotteryBias, timeStep=timeStep, maxIter=maxIter, epsilon = epsilon, stimDelay = stimDelay)
+  
+  return(out)
+  }

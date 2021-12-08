@@ -124,7 +124,7 @@ sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   }
   
   #Organize output 
-  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, decPreStim = decPreStim, leftFractalAdv = leftFractalAdv, leftLotteryAdv = leftLotteryAdv, d = d, sigma = sigma, barrierDecay = barrierDecay)
+  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, decPreStim = decPreStim, leftFractalAdv = leftFractalAdv, leftLotteryAdv = leftLotteryAdv, d = d, sigma = sigma, barrierDecay = barrierDecay, delta=delta, gamma=gamma, barrier=barrier[time], nonDecisionTime=nonDecisionTime, bias=boas, timeStep=timeStep, maxIter=maxIter, epsilon = epsilon, stimDelay = stimDelay, recallDelay = recallDelay)
   
   if(debug){
     return(list(out=out, debug_df = debug_df[-1,]))
@@ -132,3 +132,5 @@ sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
     return(out)
   }
 }
+
+fit_trial = function()

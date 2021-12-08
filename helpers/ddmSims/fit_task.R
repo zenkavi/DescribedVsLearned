@@ -39,7 +39,7 @@ doParallel::registerDoParallel(cl = my.cluster)
 
 
 # Function to simulate ddm process for a given set of stimuli using a model provided as a string in the model_name argument
-sim_task = function(stimuli, model_name, sim_trial_list_ = sim_trial_list, ...){
+fit_task = function(stimuli, model_name, fit_trial_list_ = fit_trial_list, ...){
   
   kwargs = list(...)
   # 
@@ -118,7 +118,7 @@ sim_task = function(stimuli, model_name, sim_trial_list_ = sim_trial_list, ...){
   }
   
   # Extract the correct trial simulator for the model_name
-  sim_trial = sim_trial_list_[[model_name]]
+  fit_trial = fit_trial_list_[[model_name]]
   
   # Print arguments that will be used for simulation if in debug mode
   if(kwargs$debug){
@@ -145,21 +145,21 @@ sim_task = function(stimuli, model_name, sim_trial_list_ = sim_trial_list, ...){
     .combine = 'rbind'
   ) %dopar% {
     # Simulate RT and choice for a single trial with given DDM parameters and trial stimulus values
-      sim_trial(d=kwargs$d, sigma = kwargs$sigma, 
-                dArb=kwargs$dArb, dAttr=kwargs$dAttr, sigmaArb = kwargs$sigmaArb, sigmaAttr = kwargs$sigmaAttr,
-                dLott=kwargs$dLott, dFrac=kwargs$dFrac, sigmaLott = kwargs$sigmaLott, sigmaFrac = kwargs$sigmaFrac,
-                theta = kwargs$theta, delta = kwargs$delta, gamma = kwargs$gamma,
-                barrier = kwargs$barrier, nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
-                bias = kwargs$bias, timeStep = kwargs$timeStep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,
-                stimDelay = kwargs$stimDelay,
-                EVLeft=EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight= QVRight, probFractalDraw = probFractalDraw)
-
-    }
+    fit_trial(d=kwargs$d, sigma = kwargs$sigma, 
+              dArb=kwargs$dArb, dAttr=kwargs$dAttr, sigmaArb = kwargs$sigmaArb, sigmaAttr = kwargs$sigmaAttr,
+              dLott=kwargs$dLott, dFrac=kwargs$dFrac, sigmaLott = kwargs$sigmaLott, sigmaFrac = kwargs$sigmaFrac,
+              theta = kwargs$theta, delta = kwargs$delta, gamma = kwargs$gamma,
+              barrier = kwargs$barrier, nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
+              bias = kwargs$bias, timeStep = kwargs$timeStep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,
+              stimDelay = kwargs$stimDelay,
+              EVLeft=EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight= QVRight, probFractalDraw = probFractalDraw)
+    
+  }
   
   
   # Add details of the parameters used for the simulation
   out$model = model_name
-
+  
   return(out)
 }
 

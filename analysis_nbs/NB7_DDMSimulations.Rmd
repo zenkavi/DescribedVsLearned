@@ -236,7 +236,7 @@ sim_sanity_checks(m2a, yrange_lim = 30)
 
 ```{r}
 data.frame(pFrac = seq(0, 1, .1),
-           delta = 3, gamma = 1.5) %>%
+           delta = 3, gamma = 3) %>%
   mutate(distortedPFrac = exp( (-1) * delta * ((-1)*log(pFrac))^gamma) ) %>%
   ggplot(aes(pFrac, distortedPFrac))+
   geom_point()+

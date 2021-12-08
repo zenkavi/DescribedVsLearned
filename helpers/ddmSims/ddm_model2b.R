@@ -1,4 +1,4 @@
-sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=400, epsilon = 0.0002, stimDelay = 2000, debug=FALSE, recallDelay = 0 ,...){
+sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=400, epsilon = 0.0002, stimDelay = 2000, debug=FALSE,,...){
   
   # d : drift rate
   # sigma: sd of the normal distribution 
@@ -27,7 +27,7 @@ sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   QVRight=kwargs$QVRight
   probFractalDraw=kwargs$probFractalDraw
   # Stimulus screen comes on 2 secs after the presentation of probFractalDraw
-  stimDelayIters = round((stimDelay - recallDelay) / timeStep)
+  stimDelayIters = (stimDelay / timeStep)
   nonDecIters = nonDecisionTime / timeStep
   
   # Integration starts before stim presentation (though meaningful move from 0 happens only for pFrac = 1 trials) but decision can only be indicated after stim. Since total iterations depend on maxIter the addition of iterations before stim presentation controls for the desired max time out for the trial. In the arguments to the function it is specified as the maximum time out duration after stim presentation
@@ -124,7 +124,7 @@ sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   }
   
   #Organize output 
-  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, decPreStim = decPreStim, leftFractalAdv = leftFractalAdv, leftLotteryAdv = leftLotteryAdv, d = d, sigma = sigma, barrierDecay = barrierDecay, delta=delta, gamma=gamma, barrier=barrier[time], nonDecisionTime=nonDecisionTime, bias=boas, timeStep=timeStep, maxIter=maxIter, epsilon = epsilon, stimDelay = stimDelay, recallDelay = recallDelay)
+  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, decPreStim = decPreStim, d = d, sigma = sigma, barrierDecay = barrierDecay, delta=delta, gamma=gamma, barrier=barrier[time], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, maxIter=maxIter, epsilon = epsilon, stimDelay = stimDelay)
   
   if(debug){
     return(list(out=out, debug_df = debug_df[-1,]))
@@ -133,4 +133,48 @@ sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   }
 }
 
-fit_trial = function()
+fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, epsilon = 0.0002, stimDelay = 2000, debug=FALSE,...){
+  
+  RDV = bias
+  time = 1
+  elapsedNDT = 0
+  
+  kwargs = list(...)
+  
+  choice=kwargs$choice #must be 1 for left and -1 for left
+  reactionTime=kwargs$reactionTime #in ms
+  EVLeft=kwargs$EVLeft
+  EVRight=kwargs$EVRight
+  QVLeft=kwargs$QVLeft
+  QVRight=kwargs$QVRight
+  probFractalDraw=kwargs$probFractalDraw
+  # Stimulus screen comes on 2 secs after the presentation of probFractalDraw
+  stimDelayIters = (stimDelay / timeStep)
+  nonDecIters = nonDecisionTime / timeStep
+  
+  numIter = round(reactionTime / timeStep)
+  numIter = numIter + stimDelayIters
+  
+  initialBarrier = barrier
+  barrier = rep(initialBarrier, maxIter)
+  
+  # The values of the barriers can change over time
+  # Barrier decay starts after stim presentation. Not during any possible sampling before that
+  for(t in seq(stimDelayIters, maxIter, 1)){
+    barrier[t] = initialBarrier / (1 + barrierDecay * (t-stimDelayIters))
+  }
+  
+  qv_mu_mean = d*(QVLeft - QVRight)
+  
+  distortedProbFractalDraw = exp((-1)*delta*((-1)*log(probFractalDraw))^gamma)
+  leftFractalAdv =  distortedProbFractalDraw * (QVLeft - QVRight)
+  leftLotteryAdv = (1-probFractalDraw) * (EVLeft - EVRight)
+  weighted_mu_mean = d * (leftFractalAdv + leftLotteryAdv)
+  
+  
+  
+  
+  
+  out = data.frame(likelihood = likelihood, EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, d = d, sigma = sigma, barrierDecay = barrierDecay, delta=delta, gamma=gamma, barrier=barrier[time], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, epsilon = epsilon, stimDelay = stimDelay)
+  
+}

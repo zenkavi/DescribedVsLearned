@@ -1,0 +1,77 @@
+---
+title: "Experience vs. description based decision-making project: DDM fitting to subject data"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: 'hide'
+---
+
+# Setup
+
+Set up environment and load in data
+
+```{r include=FALSE}
+library(tidyverse)
+library(here)
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+theme_set(theme_classic())
+sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
+helpers_path = here('helpers/')
+
+set.seed(38573)
+```
+
+Adding in parameters from the two systems model for all subjects (i.e. not choosing the best fitting one per subject)
+
+```{r}
+source(paste0(helpers_path,'ddmSims/fit_task.R')) # do this first not to mess with cluster setup
+source(paste0(helpers_path,'ddmSims/sim_sanity_checks.R'))
+source(paste0(helpers_path,'twoSystemsFitting/fit_twoValSystemsWithRL_hierarchical.R'))
+source(paste0(helpers_path,'add_inferred_pars.R'))
+clean_beh_data = add_inferred_pars(clean_beh_data, par_ests, model_name="original")
+
+```
+
+Create empty list that will store the trial simulators for the forthcoming models.
+
+```{r}
+sim_trial_list = list()
+fit_trial_list = list()
+```
+
+
+# Testing parameter recovery
+
+## Model 2b: Asymmetric prob distortion
+
+- Distort probFractalDraw when integrating info about fractals but no distortion for lotteries
+- Intended to capture the stepwise nature of the logit slopes for the QV difference but the linear nature for the EV difference
+
+```{r}
+source(paste0(helpers_path, 'ddmSims/ddm_model2b.R'))
+sim_trial_list[['model2b']] = sim_trial
+fit_trial_list[['model2b']] = fit_trial
+```
+
+```{r}
+20 %>% 
+  rerun() %>%
+  map_df(~data.frame(sim_trial(d=.04, sigma=0.01, barrierDecay=0, delta=3, gamma=3, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .4))) %>%
+  summarise(meanRT = mean(reactionTime),
+            numLeft = sum(choice == "left"))
+
+```
+
+```{r}
+20 %>% 
+  rerun() %>%
+  map_df(~data.frame(fit_trial(d=.04, sigma=0.01, barrierDecay=0, delta=3, gamma=3, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .4, choice = "left", reactionTime = .7)))
+```
+```{r}
+20 %>% 
+  rerun() %>%
+  map_df(~data.frame(fit_trial(d=.002, sigma=0.1, barrierDecay=0, delta=3, gamma=3, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .4, choice = "left", reactionTime = .7)))
+```
+
+Can the likelihood function correctly identify the parameter combination that generated the data? Is the sum of likelihoods for all trials highest for the correct combination than any other combination?

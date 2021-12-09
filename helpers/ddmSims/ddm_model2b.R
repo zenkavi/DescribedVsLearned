@@ -1,4 +1,4 @@
-sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=400, epsilon = 0.0002, stimDelay = 2000, debug=FALSE,,...){
+sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=400, epsilon = 0.0002, stimDelay = 2000, debug=FALSE,...){
   
   # d : drift rate
   # sigma: sd of the normal distribution 
@@ -140,7 +140,15 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   kwargs = list(...)
   
   choice=kwargs$choice #must be 1 for left and -1 for left
+  if(choice == "left"){
+    choice = 1
+  } else if (choice == "right"){
+    choice = -1
+  }
   reactionTime=kwargs$reactionTime #in ms
+  if(reactionTime < 100){
+    reactionTime = reactionTime *1000
+  }
   EVLeft=kwargs$EVLeft
   EVRight=kwargs$EVRight
   QVLeft=kwargs$QVLeft
@@ -263,6 +271,8 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
     }
   }
   
-  out = data.frame(likelihood = likelihood, EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, d = d, sigma = sigma, barrierDecay = barrierDecay, delta=delta, gamma=gamma, barrier=barrier[numTimeSteps], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, epsilon = epsilon, stimDelay = stimDelay)
+  out = data.frame(likelihood = likelihood, EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = reactionTime, d = d, sigma = sigma, barrierDecay = barrierDecay, delta=delta, gamma=gamma, barrier=barrier[numTimeSteps], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, epsilon = epsilon, stimDelay = stimDelay)
+  
+  return(out)
   
 }

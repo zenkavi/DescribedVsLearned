@@ -1,5 +1,5 @@
 ---
-title: "Experience vs. description based decision-making project: Adding arbitration to behavioral modeling"
+title: "Experience vs. description based decision-making project: DDM modeling to explain both RT and coice patterns"
 output: 
   html_document:
     toc: true
@@ -32,6 +32,13 @@ source(paste0(helpers_path,'add_inferred_pars.R'))
 clean_beh_data = add_inferred_pars(clean_beh_data, par_ests, model_name="original")
 
 ```
+
+Create empty list that will store the trial simulators for the forthcoming models.
+
+```{r}
+sim_trial_list = list()
+```
+
 
 # True data
 
@@ -99,12 +106,6 @@ sub_data %>%
   labs(color="", title="Relevant attribute effect on choice")+
   facet_wrap(~subnum, scales="free")+
   ylim(-2.5, 10)
-```
-
-Create empty list that will store the trial simulators for the forthcoming models.
-
-```{r}
-sim_trial_list = list()
 ```
 
 # Model 1: Simplest

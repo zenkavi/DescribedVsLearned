@@ -136,7 +136,7 @@ sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
 fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, epsilon = 0.0002, stimDelay = 2000, approxStateStep = 0.1, ...){
   
   RDV = bias
-
+  
   kwargs = list(...)
   
   choice=kwargs$choice #must be 1 for left and -1 for left
@@ -198,9 +198,10 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   leftLotteryAdv = (1-probFractalDraw) * (EVLeft - EVRight)
   weighted_mu_mean = d * (leftFractalAdv + leftLotteryAdv)
   
-  for(time in 1:numTimeSteps){
-   
-     if (time < stimDelayIters){
+  # Start at 2 to match python indexing that starts at 0
+  for(nextTime in 2:numTimeSteps){
+    curTime = nextTime - 1 
+    if (curTime < stimDelayIters){
       if (probFractalDraw == 1){
         mu_mean = qv_mu_mean
       } else {
@@ -217,7 +218,7 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
     }
     
     mu = rnorm(1, mu_mean, epsilon)
-
+    
     # Update the probability of the states that remain inside the
     # barriers. The probability of being in state B is the sum, over
     # all states A, of the probability of being in A at the previous
@@ -225,27 +226,43 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
     # multiply the probability by the stateStep to ensure that the area
     # under the curves for the probability distributions probUpCrossing
     # and probDownCrossing add up to 1.
-    # If there is barrier decay and there are states that are crossing
+    # If there is barrier decay and there are next states that are cross
     # the decayed barrier set their probabilities to 0.
-    prStatesNew = (stateStep * (dnorm(changeMatrix, mu, sigma) %*% prStates[,time]) )
-    prStatesNew[states >= barrier[time] | states <= -barrier[time]] = 0
+    prStatesNew = (stateStep * (dnorm(changeMatrix, mu, sigma) %*% prStates[,curTime]) )
+    prStatesNew[states >= barrier[nextTime] | states <= -barrier[nextTime]] = 0
     
     # Calculate the probabilities of crossing the up barrier and the
     # down barrier. This is given by the sum, over all states A, of the
     # probability of being in A at the previous timestep times the
     # probability of crossing the barrier if A is the previous state.
-    tempUpCross = (prStates[,time] %*% (1 - pnorm(changeUp[,time], mu, sigma)))[1]
-    tempDownCross = (prStates[,time] %*% (1 - pnorm(changeDown[,time], mu, sigma)))[1]
+    tempUpCross = (prStates[,curTime] %*% (1 - pnorm(changeUp[,nextTime], mu, sigma)))[1]
+    tempDownCross = (prStates[,curTime] %*% (pnorm(changeDown[,nextTime], mu, sigma)))[1]
     
     # Renormalize to cope with numerical approximations.
-    sumIn = sum(prStates[,time])
+    sumIn = sum(prStates[,curTime])
     sumCurrent = sum(prStatesNew) + tempUpCross + tempDownCross
     prStatesNew = prStatesNew * sumIn / sumCurrent
     tempUpCross = tempUpCross * sumIn / sumCurrent
     tempDownCross = tempDownCross * sumIn / sumCurrent
     
+    # Update the probabilities of each state and the probabilities of
+    # crossing each barrier at this timestep.
+    prStates[, nextTime] = prStatesNew
+    probUpCrossing[nextTime] = tempUpCross
+    probDownCrossing[nextTime] = tempDownCross
   }
   
-  out = data.frame(likelihood = likelihood, EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, d = d, sigma = sigma, barrierDecay = barrierDecay, delta=delta, gamma=gamma, barrier=barrier[time], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, epsilon = epsilon, stimDelay = stimDelay)
+  likelihood = 0
+  if (choice == -1){ # Choice was left.
+    if (probUpCrossing[numTimeSteps] > 0){
+      likelihood = probUpCrossing[numTimeSteps]
+    }
+  } else if (choice == 1){
+    if(probDownCrossing[numTimeSteps] > 0){
+      likelihood = probDownCrossing[numTimeSteps]
+    }
+  }
+  
+  out = data.frame(likelihood = likelihood, EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, d = d, sigma = sigma, barrierDecay = barrierDecay, delta=delta, gamma=gamma, barrier=barrier[numTimeSteps], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, epsilon = epsilon, stimDelay = stimDelay)
   
 }

@@ -38,8 +38,8 @@ sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   
   # The values of the barriers can change over time
   # Barrier decay starts after stim presentation. Not during any possible sampling before that
-  for(t in seq(stimDelayIters, maxIter, 1)){
-    barrier[t] = initialBarrier / (1 + barrierDecay * (t-stimDelayIters))
+  for(t in seq(2, maxIter, 1)){
+    barrier[t] = initialBarrier / (1 + (barrierDecay * t))
   }
   
   qv_mu_mean = d*(QVLeft - QVRight)
@@ -157,8 +157,8 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   barrier = rep(initialBarrier, numTimeSteps)
   
   # The values of the barriers can change over time
-  for(t in seq(1, numTimeSteps, 1)){
-    barrier[t] = initialBarrier / (1 + (barrierDecay * t))
+  for(t in seq(2, numTimeSteps, 1)){
+    barrier[t] = initialBarrier / (1 + (barrierDecay * (t-1)) )
   }
   
   # Obtain correct state step.
@@ -181,15 +181,15 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   probDownCrossing = rep(0, numTimeSteps)
   
   # Rows of these matrices correspond to array elements in python
+  
+  # How much change is required from each state to move onto every other state
   changeMatrix = matrix(data = states, ncol=length(states), nrow=length(states), byrow=FALSE) - matrix(data = states, ncol=length(states), nrow=length(states), byrow=TRUE)
-  changeUp = matrix(data = barrier, ncol=numTimeSteps, nrow=length(states), byrow=FALSE) - matrix(data = states, ncol=numTimeSteps, nrow=length(states), byrow=FALSE)
-  changeDown = matrix(data = -barrier, ncol=numTimeSteps, nrow=length(states), byrow=FALSE) - matrix(data = states, ncol=numTimeSteps, nrow=length(states), byrow=FALSE)
+  
+  # How much change is required from each state to cross the up or down barrier at each time point
+  changeUp = matrix(data = barrier, ncol=numTimeSteps, nrow=length(states), byrow=TRUE) - matrix(data = states, ncol=numTimeSteps, nrow=length(states), byrow=FALSE)
+  changeDown = matrix(data = -barrier, ncol=numTimeSteps, nrow=length(states), byrow=TRUE) - matrix(data = states, ncol=numTimeSteps, nrow=length(states), byrow=FALSE)
   
   elapsedNDT = 0
-  
-  for(time in 1:numTimeSteps){
-    
-  }
   
   qv_mu_mean = d*(QVLeft - QVRight)
   
@@ -197,6 +197,54 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   leftFractalAdv =  distortedProbFractalDraw * (QVLeft - QVRight)
   leftLotteryAdv = (1-probFractalDraw) * (EVLeft - EVRight)
   weighted_mu_mean = d * (leftFractalAdv + leftLotteryAdv)
+  
+  for(time in 1:numTimeSteps){
+   
+     if (time < stimDelayIters){
+      if (probFractalDraw == 1){
+        mu_mean = qv_mu_mean
+      } else {
+        # No integration before stim presentation for any other trial type
+        mu_mean = 0
+      }
+    } else{
+      if (elapsedNDT < nonDecIters){
+        mu_mean = 0
+        elapsedNDT = elapsedNDT + 1
+      } else{
+        mu_mean = weighted_mu_mean
+      }
+    }
+    
+    mu = rnorm(1, mu_mean, epsilon)
+
+    # Update the probability of the states that remain inside the
+    # barriers. The probability of being in state B is the sum, over
+    # all states A, of the probability of being in A at the previous
+    # time step times the probability of changing from A to B. We
+    # multiply the probability by the stateStep to ensure that the area
+    # under the curves for the probability distributions probUpCrossing
+    # and probDownCrossing add up to 1.
+    # If there is barrier decay and there are states that are crossing
+    # the decayed barrier set their probabilities to 0.
+    prStatesNew = (stateStep * (dnorm(changeMatrix, mu, sigma) %*% prStates[,time]) )
+    prStatesNew[states >= barrier[time] | states <= -barrier[time]] = 0
+    
+    # Calculate the probabilities of crossing the up barrier and the
+    # down barrier. This is given by the sum, over all states A, of the
+    # probability of being in A at the previous timestep times the
+    # probability of crossing the barrier if A is the previous state.
+    tempUpCross = (prStates[,time] %*% (1 - pnorm(changeUp[,time], mu, sigma)))[1]
+    tempDownCross = (prStates[,time] %*% (1 - pnorm(changeDown[,time], mu, sigma)))[1]
+    
+    # Renormalize to cope with numerical approximations.
+    sumIn = sum(prStates[,time])
+    sumCurrent = sum(prStatesNew) + tempUpCross + tempDownCross
+    prStatesNew = prStatesNew * sumIn / sumCurrent
+    tempUpCross = tempUpCross * sumIn / sumCurrent
+    tempDownCross = tempDownCross * sumIn / sumCurrent
+    
+  }
   
   out = data.frame(likelihood = likelihood, EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, d = d, sigma = sigma, barrierDecay = barrierDecay, delta=delta, gamma=gamma, barrier=barrier[time], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, epsilon = epsilon, stimDelay = stimDelay)
   

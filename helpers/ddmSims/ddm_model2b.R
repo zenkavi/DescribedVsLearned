@@ -133,12 +133,10 @@ sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   }
 }
 
-fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, epsilon = 0.0002, stimDelay = 2000, debug=FALSE,...){
+fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, epsilon = 0.0002, stimDelay = 2000, approxStateStep = 0.1, ...){
   
   RDV = bias
-  time = 1
-  elapsedNDT = 0
-  
+
   kwargs = list(...)
   
   choice=kwargs$choice #must be 1 for left and -1 for left
@@ -152,16 +150,45 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   stimDelayIters = (stimDelay / timeStep)
   nonDecIters = nonDecisionTime / timeStep
   
-  numIter = round(reactionTime / timeStep)
-  numIter = numIter + stimDelayIters
+  numTimeSteps = round(reactionTime / timeStep)
+  numTimeSteps = numTimeSteps + stimDelayIters
   
   initialBarrier = barrier
-  barrier = rep(initialBarrier, maxIter)
+  barrier = rep(initialBarrier, numTimeSteps)
   
   # The values of the barriers can change over time
-  # Barrier decay starts after stim presentation. Not during any possible sampling before that
-  for(t in seq(stimDelayIters, maxIter, 1)){
-    barrier[t] = initialBarrier / (1 + barrierDecay * (t-stimDelayIters))
+  for(t in seq(1, numTimeSteps, 1)){
+    barrier[t] = initialBarrier / (1 + (barrierDecay * t))
+  }
+  
+  # Obtain correct state step.
+  halfNumStateBins = round(initialBarrier / approxStateStep)
+  stateStep = initialBarrier / (halfNumStateBins + 0.5)
+  
+  # The vertical axis is divided into states.
+  states = seq(-1*(initialBarrier) + (stateStep / 2), initialBarrier - (stateStep / 2), stateStep)
+  
+  # Find the state corresponding to the bias parameter.
+  biasState = which.min(abs(states - bias))
+  
+  # Initial probability for all states is zero, except the bias state,
+  # for which the initial probability is one.
+  prStates = matrix(data = 0, nrow = length(states), ncol = numTimeSteps)
+  prStates[biasState,1] = 1
+  
+  # The probability of crossing each barrier over the time of the trial.
+  probUpCrossing = rep(0, numTimeSteps)
+  probDownCrossing = rep(0, numTimeSteps)
+  
+  # Rows of these matrices correspond to array elements in python
+  changeMatrix = matrix(data = states, ncol=length(states), nrow=length(states), byrow=FALSE) - matrix(data = states, ncol=length(states), nrow=length(states), byrow=TRUE)
+  changeUp = matrix(data = barrier, ncol=numTimeSteps, nrow=length(states), byrow=FALSE) - matrix(data = states, ncol=numTimeSteps, nrow=length(states), byrow=FALSE)
+  changeDown = matrix(data = -barrier, ncol=numTimeSteps, nrow=length(states), byrow=FALSE) - matrix(data = states, ncol=numTimeSteps, nrow=length(states), byrow=FALSE)
+  
+  elapsedNDT = 0
+  
+  for(time in 1:numTimeSteps){
+    
   }
   
   qv_mu_mean = d*(QVLeft - QVRight)
@@ -170,10 +197,6 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   leftFractalAdv =  distortedProbFractalDraw * (QVLeft - QVRight)
   leftLotteryAdv = (1-probFractalDraw) * (EVLeft - EVRight)
   weighted_mu_mean = d * (leftFractalAdv + leftLotteryAdv)
-  
-  
-  
-  
   
   out = data.frame(likelihood = likelihood, EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, d = d, sigma = sigma, barrierDecay = barrierDecay, delta=delta, gamma=gamma, barrier=barrier[time], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, epsilon = epsilon, stimDelay = stimDelay)
   

@@ -135,7 +135,7 @@ sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
 
 fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, epsilon = 0.0002, stimDelay = 2000, approxStateStep = 0.1, ...){
   
-  RDV = bias
+  # RDV = bias
   
   kwargs = list(...)
   
@@ -261,14 +261,14 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   }
   
   likelihood = 0
-  if (choice == -1){ # Choice was left.
+  if (choice == 1){ # Choice was left.
     if (probUpCrossing[numTimeSteps] > 0){
       likelihood = probUpCrossing[numTimeSteps]
     }
-  } else if (choice == 1){
+  } else if (choice == -1){
     if(probDownCrossing[numTimeSteps] > 0){
       likelihood = probDownCrossing[numTimeSteps]
-    }
+    } 
   }
   
   out = data.frame(likelihood = likelihood, EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = reactionTime, d = d, sigma = sigma, barrierDecay = barrierDecay, delta=delta, gamma=gamma, barrier=barrier[numTimeSteps], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, epsilon = epsilon, stimDelay = stimDelay)

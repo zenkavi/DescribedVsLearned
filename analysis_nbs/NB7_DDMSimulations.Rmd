@@ -568,7 +568,7 @@ sim_sanity_checks(m6c_1)
 # Stop cluster
 
 ```{r}
-parallel::stopCluster(cl = my.cluster)
+parallel::stopCluster(cl = my.sim.cluster)
 # rm(my.cluster)
 ```
 

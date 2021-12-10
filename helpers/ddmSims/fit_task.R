@@ -20,7 +20,7 @@ rbind.all.columns <- function(x, y) {
 n.cores <- parallel::detectCores() - 1
 
 #create the cluster
-my.cluster <- parallel::makeCluster(
+my.fit.cluster <- parallel::makeCluster(
   n.cores, 
   type = "FORK"
 )
@@ -29,7 +29,7 @@ my.cluster <- parallel::makeCluster(
 # print(my.cluster)
 
 #register it to be used by %dopar%
-doParallel::registerDoParallel(cl = my.cluster)
+doParallel::registerDoParallel(cl = my.fit.cluster)
 
 #check if it is registered (optional)
 # foreach::getDoParRegistered()
@@ -110,9 +110,6 @@ fit_task = function(stimuli, model_name, fit_trial_list_ = fit_trial_list, ...){
   if (!("stimDelay" %in% names(kwargs))){
     kwargs$stimDelay = 2000
   }
-  if (!("recallDelay" %in% names(kwargs))){
-    kwargs$recallDelay = 0
-  }
   if (!("debug" %in% names(kwargs))){
     kwargs$debug = FALSE
   }
@@ -142,6 +139,8 @@ fit_task = function(stimuli, model_name, fit_trial_list_ = fit_trial_list, ...){
     QVLeft = stimuli$QVLeft, 
     QVRight= stimuli$QVRight , 
     probFractalDraw = stimuli$probFractalDraw,
+    choice = stimuli$choice,
+    reactionTime = stimuli$reactionTime,
     .combine = 'rbind'
   ) %dopar% {
     # Simulate RT and choice for a single trial with given DDM parameters and trial stimulus values
@@ -152,7 +151,7 @@ fit_task = function(stimuli, model_name, fit_trial_list_ = fit_trial_list, ...){
               barrier = kwargs$barrier, nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
               bias = kwargs$bias, timeStep = kwargs$timeStep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,
               stimDelay = kwargs$stimDelay,
-              EVLeft=EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight= QVRight, probFractalDraw = probFractalDraw)
+              EVLeft=EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight= QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = reactionTime)
     
   }
   

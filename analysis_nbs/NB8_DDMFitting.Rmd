@@ -25,12 +25,16 @@ set.seed(38573)
 Adding in parameters from the two systems model for all subjects (i.e. not choosing the best fitting one per subject)
 
 ```{r}
-source(paste0(helpers_path,'ddmSims/fit_task.R')) # do this first not to mess with cluster setup
+ # do this first not to mess with cluster setup
+source(paste0(helpers_path,'ddmSims/fit_task.R'))
+# source(paste0(helpers_path,'ddmSims/sim_task.R'))
+
 source(paste0(helpers_path,'ddmSims/sim_sanity_checks.R'))
 source(paste0(helpers_path,'twoSystemsFitting/fit_twoValSystemsWithRL_hierarchical.R'))
 source(paste0(helpers_path,'add_inferred_pars.R'))
 clean_beh_data = add_inferred_pars(clean_beh_data, par_ests, model_name="original")
 
+rm(fit, g_par_ests, par_ests, get_qvals, organize_stan_output, add_inferred_pars, extract_var_for_stan)
 ```
 
 Create empty list that will store the trial simulators for the forthcoming models.
@@ -54,24 +58,63 @@ sim_trial_list[['model2b']] = sim_trial
 fit_trial_list[['model2b']] = fit_trial
 ```
 
+## Test single trial
+
 ```{r}
-20 %>% 
+100 %>% 
   rerun() %>%
   map_df(~data.frame(sim_trial(d=.04, sigma=0.01, barrierDecay=0, delta=3, gamma=3, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .4))) %>%
   summarise(meanRT = mean(reactionTime),
             numLeft = sum(choice == "left"))
 
 ```
+Are likelihoods lower on average for a paramerter combination that is far from the true parameters? Yes.
 
 ```{r}
-20 %>% 
+tmp1 = 100 %>% 
   rerun() %>%
-  map_df(~data.frame(fit_trial(d=.04, sigma=0.01, barrierDecay=0, delta=3, gamma=3, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .4, choice = "left", reactionTime = .7)))
+  map_df(~data.frame(fit_trial(d=.04, sigma=0.01, barrierDecay=0, delta=3, gamma=3, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .4, choice = "left", reactionTime = .7))) %>%
+  mutate(par_type = "true")
+```
+
+```{r}
+tmp2 = 100 %>% 
+  rerun() %>%
+  map_df(~data.frame(fit_trial(d=.002, sigma=0.1, barrierDecay=0, delta=3, gamma=3, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .4, choice = "left", reactionTime = .7))) %>%
+  mutate(par_type = "far")
+```
+
+```{r}
+rbind(tmp1, tmp2) %>%
+  ggplot(aes(par_type, log(likelihood))) +
+  geom_boxplot()
 ```
 ```{r}
-20 %>% 
-  rerun() %>%
-  map_df(~data.frame(fit_trial(d=.002, sigma=0.1, barrierDecay=0, delta=3, gamma=3, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .4, choice = "left", reactionTime = .7)))
+rm(tmp1, tmp2)
 ```
+
+## Test all trials in a task
 
 Can the likelihood function correctly identify the parameter combination that generated the data? Is the sum of likelihoods for all trials highest for the correct combination than any other combination?
+
+```{r}
+sub_data = clean_beh_data %>%
+  filter(subnum  %in% c("19")) %>%
+  select(leftQValue, rightQValue, leftLotteryEV, rightLotteryEV, probFractalDraw, reactionTime, choiceLeft, subnum) %>%
+  rename(EVLeft = leftLotteryEV, EVRight = rightLotteryEV, QVLeft = leftQValue, QVRight = rightQValue)
+```
+
+```{r}
+# true_dat = sim_task(sub_data, model_name = "model2b", d=0.02, sigma = 0.007, delta = 3, gamma = 3, barrierDecay = 0.004, epsilon = 0.03, nonDecisionTime = 0)
+true_dat = read.csv('/Users/zeynepenkavi/Downloads/true_dat.csv')
+true_dat
+```
+
+
+```{r}
+fit1_data = fit_task(true_dat, model_name = "model2b", d=0.02, sigma = 0.007, delta = 3, gamma = 3, barrierDecay = 0.004, epsilon = 0.03, nonDecisionTime = 0)
+```
+
+```{r}
+fit2_data = fit_task(sub_data, model_name = "model2b", d=0.05, sigma = 0.01, delta = 2, gamma = 2, barrierDecay = 0.001, epsilon = 0, nonDecisionTime = 0)
+```

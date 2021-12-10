@@ -20,7 +20,7 @@ rbind.all.columns <- function(x, y) {
 n.cores <- parallel::detectCores() - 1
 
 #create the cluster
-my.cluster <- parallel::makeCluster(
+my.sim.cluster <- parallel::makeCluster(
   n.cores, 
   type = "FORK"
 )
@@ -29,7 +29,7 @@ my.cluster <- parallel::makeCluster(
 # print(my.cluster)
 
 #register it to be used by %dopar%
-doParallel::registerDoParallel(cl = my.cluster)
+doParallel::registerDoParallel(cl = my.sim.cluster)
 
 #check if it is registered (optional)
 # foreach::getDoParRegistered()

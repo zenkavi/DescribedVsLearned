@@ -68,7 +68,8 @@ fit_trial_list[['model2b']] = fit_trial
             numLeft = sum(choice == "left"))
 
 ```
-Are likelihoods lower on average for a paramerter combination that is far from the true parameters? Yes.
+
+Are likelihoods higher on average for a paramerter combination that is far from the true parameters? 
 
 ```{r}
 tmp1 = 100 %>% 
@@ -93,6 +94,17 @@ rbind(tmp1, tmp2) %>%
 rm(tmp1, tmp2)
 ```
 
+Why are the likelihoods for the true parameter combination not higher?
+
+```{r}
+out = fit_trial(d=.04, sigma=0.01, barrierDecay=0, delta=3, gamma=3, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .4, choice = "left", reactionTime = .7, debug=TRUE)
+names(out)
+```
+
+```{r}
+out$prStates[10,]
+```
+
 ## Test all trials in a task
 
 Can the likelihood function correctly identify the parameter combination that generated the data? Is the sum of likelihoods for all trials highest for the correct combination than any other combination?
@@ -109,7 +121,6 @@ sub_data = clean_beh_data %>%
 true_dat = read.csv('/Users/zeynepenkavi/Downloads/true_dat.csv')
 true_dat
 ```
-
 
 ```{r}
 fit1_data = fit_task(true_dat, model_name = "model2b", d=0.02, sigma = 0.007, delta = 3, gamma = 3, barrierDecay = 0.004, epsilon = 0.03, nonDecisionTime = 0)

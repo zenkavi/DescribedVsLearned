@@ -253,6 +253,14 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
     tempUpCross = tempUpCross * sumIn / sumCurrent
     tempDownCross = tempDownCross * sumIn / sumCurrent
     
+    # Avoid NAs for likelihood conditional statements
+    if (is.na(tempUpCross)){
+      tempUpCross = 0
+    }
+    if (is.na(tempDownCross)){
+      tempDownCross = 0
+    }
+    
     # Update the probabilities of each state and the probabilities of
     # crossing each barrier at this timestep.
     prStates[, nextTime] = prStatesNew

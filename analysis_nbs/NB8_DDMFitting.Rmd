@@ -27,7 +27,7 @@ Adding in parameters from the two systems model for all subjects (i.e. not choos
 ```{r}
  # do this first not to mess with cluster setup
 source(paste0(helpers_path,'ddmSims/fit_task.R'))
-# source(paste0(helpers_path,'ddmSims/sim_task.R'))
+source(paste0(helpers_path,'ddmSims/sim_task.R'))
 
 source(paste0(helpers_path,'ddmSims/sim_sanity_checks.R'))
 source(paste0(helpers_path,'twoSystemsFitting/fit_twoValSystemsWithRL_hierarchical.R'))
@@ -117,9 +117,7 @@ sub_data = clean_beh_data %>%
 ```
 
 ```{r}
-# true_dat = sim_task(sub_data, model_name = "model2b", d=0.02, sigma = 0.007, delta = 3, gamma = 3, barrierDecay = 0.004, epsilon = 0.03, nonDecisionTime = 0)
-true_dat = read.csv('/Users/zeynepenkavi/Downloads/true_dat.csv')
-true_dat
+true_dat = sim_task(sub_data, model_name = "model2b", d=0.02, sigma = 0.007, delta = 3, gamma = 3, barrierDecay = 0.004, epsilon = 0.03, nonDecisionTime = 0)
 ```
 
 ```{r}
@@ -127,5 +125,17 @@ fit1_data = fit_task(true_dat, model_name = "model2b", d=0.02, sigma = 0.007, de
 ```
 
 ```{r}
-fit2_data = fit_task(sub_data, model_name = "model2b", d=0.05, sigma = 0.01, delta = 2, gamma = 2, barrierDecay = 0.001, epsilon = 0, nonDecisionTime = 0)
+fit2_data = fit_task(true_dat, model_name = "model2b", d=0.05, sigma = 0.01, delta = 2, gamma = 2, barrierDecay = 0.001, epsilon = 0, nonDecisionTime = 0)
+```
+
+```{r}
+sum(fit1_data$likelihood) > sum(fit2_data$likelihood)
+```
+
+```{r}
+fit1_data %>%
+  mutate(par_type = "true") %>%
+  rbind(fit2_data %>% mutate(par_type = "false")) %>%
+  ggplot(aes(par_type, log(likelihood))) +
+  geom_boxplot()
 ```

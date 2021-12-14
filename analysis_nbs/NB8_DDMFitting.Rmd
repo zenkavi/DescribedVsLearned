@@ -94,17 +94,6 @@ rbind(tmp1, tmp2) %>%
 rm(tmp1, tmp2)
 ```
 
-Why are the likelihoods for the true parameter combination not higher?
-
-```{r}
-out = fit_trial(d=.04, sigma=0.01, barrierDecay=0, delta=3, gamma=3, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .4, choice = "left", reactionTime = .7, debug=TRUE)
-names(out)
-```
-
-```{r}
-out$prStates[10,]
-```
-
 ## Test all trials in a task
 
 Can the likelihood function correctly identify the parameter combination that generated the data? Is the sum of likelihoods for all trials highest for the correct combination than any other combination?
@@ -129,13 +118,25 @@ fit2_data = fit_task(true_dat, model_name = "model2b", d=0.05, sigma = 0.01, del
 ```
 
 ```{r}
+fit3_data = fit_task(true_dat, model_name = "model2b", d=0.03, sigma = 0.01, delta = 3, gamma = 3, barrierDecay = 0, epsilon = 0.0004, nonDecisionTime = 0)
+```
+
+Are the sum of likelihoods are higher using the true parameter combination compared to false combinations?
+
+```{r}
 sum(fit1_data$likelihood) > sum(fit2_data$likelihood)
+```
+
+```{r}
+sum(fit1_data$likelihood) > sum(fit3_data$likelihood)
 ```
 
 ```{r}
 fit1_data %>%
   mutate(par_type = "true") %>%
-  rbind(fit2_data %>% mutate(par_type = "false")) %>%
+  rbind(fit2_data %>% mutate(par_type = "false_1")) %>%
+  rbind(fit3_data %>% mutate(par_type = "false_2")) %>%
   ggplot(aes(par_type, log(likelihood))) +
-  geom_boxplot()
+  geom_boxplot()+
+  xlab("")
 ```

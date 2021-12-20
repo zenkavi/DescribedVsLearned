@@ -68,6 +68,7 @@ fit_trial_list[['model2b']] = fit_trial
             numLeft = sum(choice == "left"))
 
 ```
+
 Are likelihoods higher on average for a parameter combination that is far from the true parameters? No. Not sure why.
 
 ```{r}
@@ -142,4 +143,12 @@ fit1_data %>%
 ```
 
 # Parameter recovery
+
+```{r}
+true_dat = sim_task(sub_data, model_name = "model2b", d=0.02, sigma = 0.007, delta = 3, gamma = 3, barrierDecay = 0.004, epsilon = 0.03, nonDecisionTime = 0)
+```
+
+```{r}
+optim(c(.01, .01, 1.5, 1.5, .004), get_task_nll, data=true_dat, par_names = c("d", "sigma", "delta", "gamma", "epsilon"), model_name="model2b", method="L-BFGS-B", lower = c(0,0,1,1,0), upper = c(.5, 1, 5, 5, .1))
+```
 

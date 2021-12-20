@@ -111,15 +111,18 @@ true_dat = sim_task(sub_data, model_name = "model2b", d=0.02, sigma = 0.007, del
 ```
 
 ```{r}
-fit1_data = fit_task(true_dat, model_name = "model2b", d=0.02, sigma = 0.007, delta = 3, gamma = 3, barrierDecay = 0.004, epsilon = 0.03, nonDecisionTime = 0)
+pars = list(d=0.02, sigma = 0.007, delta = 3, gamma = 3, barrierDecay = 0.004, epsilon = 0.03, nonDecisionTime = 0)
+fit1_data = fit_task(true_dat, model_name = "model2b", pars_ = pars)
 ```
 
 ```{r}
-fit2_data = fit_task(true_dat, model_name = "model2b", d=0.05, sigma = 0.01, delta = 2, gamma = 2, barrierDecay = 0.001, epsilon = 0, nonDecisionTime = 0)
+pars = list(d=0.05, sigma = 0.01, delta = 2, gamma = 2, barrierDecay = 0.001, epsilon = 0, nonDecisionTime = 0)
+fit2_data = fit_task(true_dat, model_name = "model2b", pars_ = pars)
 ```
 
 ```{r}
-fit3_data = fit_task(true_dat, model_name = "model2b", d=0.03, sigma = 0.01, delta = 3, gamma = 3, barrierDecay = 0, epsilon = 0.0004, nonDecisionTime = 0)
+pars = list(d=0.03, sigma = 0.01, delta = 3, gamma = 3, barrierDecay = 0, epsilon = 0.0004, nonDecisionTime = 0)
+fit3_data = fit_task(true_dat, model_name = "model2b", pars_ = pars)
 ```
 
 Are the sum of likelihoods are higher using the true parameter combination compared to false combinations?
@@ -149,6 +152,23 @@ true_dat = sim_task(sub_data, model_name = "model2b", d=0.02, sigma = 0.007, del
 ```
 
 ```{r}
-optim(c(.01, .01, 1.5, 1.5, .004), get_task_nll, data=true_dat, par_names = c("d", "sigma", "delta", "gamma", "epsilon"), model_name="model2b", method="L-BFGS-B", lower = c(0,0,1,1,0), upper = c(.5, 1, 5, 5, .1))
+get_task_nll(data=true_dat, par=c(.02, .007), par_names=c("d", "sigma"), model_name="model2b")
+```
+
+```{r}
+get_task_nll(data=true_dat, par=c(10, 1, .0004), par_names=c("d", "sigma", "epsilon"), model_name="model2b")
+```
+
+```{r}
+pars = setNames(as.list(c(.02, .007)), c("d", "sigma")) 
+fit_task(true_dat, model_name = "model2b", pars_ = pars, debug=TRUE)
+```
+
+```{r}
+optim_out = optim(c(.01, .01), get_task_nll, data=true_dat, par_names = c("d", "sigma"), model_name="model2b")
+```
+
+```{r}
+optim_out
 ```
 

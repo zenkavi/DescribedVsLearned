@@ -39,102 +39,102 @@ doParallel::registerDoParallel(cl = my.fit.cluster)
 
 
 # Function to simulate ddm process for a given set of stimuli using a model provided as a string in the model_name argument
-fit_task = function(stimuli, model_name_, fit_trial_list_ = fit_trial_list, ...){
+fit_task = function(stimuli, model_name_, pars_, fit_trial_list_ = fit_trial_list, debug=FALSE){
   
-  kwargs = list(...)
+  # pars_ = list(...)
   
-  # Unpack kwargs if pars are passed as a list
-  if(length(kwargs) == 1){
-    kwargs = kwargs[[1]]
-  }
+  # Unpack pars_ if pars_ are passed as a list
+  # if(length(pars_) == 1){
+  #   pars_ = pars_[[1]]
+  # }
   
   # 
   # Initialize any missing arguments. Some are useless defaults to make sure different sim_trial functions from different models can run without errors even if they don't make use of that argument
-  if (!("d" %in% names(kwargs))){
-    kwargs$d = 0
+  if (!("d" %in% names(pars_))){
+    pars_$d = 0
   }
-  if (!("sigma" %in% names(kwargs))){
-    kwargs$sigma = 1e-9
+  if (!("sigma" %in% names(pars_))){
+    pars_$sigma = 1e-9
   }
-  if (!("dArb" %in% names(kwargs))){
-    kwargs$dArb = 0
+  if (!("dArb" %in% names(pars_))){
+    pars_$dArb = 0
   }
-  if (!("dAttr" %in% names(kwargs))){
-    kwargs$dAttr = 0
+  if (!("dAttr" %in% names(pars_))){
+    pars_$dAttr = 0
   }
-  if (!("dLott" %in% names(kwargs))){
-    kwargs$dLott = 0
+  if (!("dLott" %in% names(pars_))){
+    pars_$dLott = 0
   }
-  if (!("dFrac" %in% names(kwargs))){
-    kwargs$dFrac = 0
+  if (!("dFrac" %in% names(pars_))){
+    pars_$dFrac = 0
   }
-  if (!("sigmaArb" %in% names(kwargs))){
-    kwargs$sigmaArb = 1e-9
+  if (!("sigmaArb" %in% names(pars_))){
+    pars_$sigmaArb = 1e-9
   }
-  if (!("sigmaAttr" %in% names(kwargs))){
-    kwargs$sigmaAttr = 1e-9
+  if (!("sigmaAttr" %in% names(pars_))){
+    pars_$sigmaAttr = 1e-9
   }
-  if (!("sigmaLott" %in% names(kwargs))){
-    kwargs$sigmaLott = 1e-9
+  if (!("sigmaLott" %in% names(pars_))){
+    pars_$sigmaLott = 1e-9
   }
-  if (!("sigmaFrac" %in% names(kwargs))){
-    kwargs$sigmaFrac = 1e-9
+  if (!("sigmaFrac" %in% names(pars_))){
+    pars_$sigmaFrac = 1e-9
   }
-  if (!("theta" %in% names(kwargs))){
-    kwargs$theta = 0
+  if (!("theta" %in% names(pars_))){
+    pars_$theta = 0
   }
-  if (!("delta" %in% names(kwargs))){
-    kwargs$delta = 1
+  if (!("delta" %in% names(pars_))){
+    pars_$delta = 1
   }
-  if (!("gamma" %in% names(kwargs))){
-    kwargs$gamma = 1
+  if (!("gamma" %in% names(pars_))){
+    pars_$gamma = 1
   }
-  if (!("nonDecisionTime" %in% names(kwargs))){
-    kwargs$nonDecisionTime = 0
+  if (!("nonDecisionTime" %in% names(pars_))){
+    pars_$nonDecisionTime = 0
   }
-  if (!("barrier" %in% names(kwargs))){
-    kwargs$barrier = 1
+  if (!("barrier" %in% names(pars_))){
+    pars_$barrier = 1
   }
-  if (!("barrierDecay" %in% names(kwargs))){
-    kwargs$barrierDecay = 0
+  if (!("barrierDecay" %in% names(pars_))){
+    pars_$barrierDecay = 0
   }
-  if (!("bias" %in% names(kwargs))){
-    kwargs$bias = 0
+  if (!("bias" %in% names(pars_))){
+    pars_$bias = 0
   }
-  if (!("lotteryBias" %in% names(kwargs))){
-    kwargs$lotteryBias = 0.1
+  if (!("lotteryBias" %in% names(pars_))){
+    pars_$lotteryBias = 0.1
   }
-  if (!("timeStep" %in% names(kwargs))){
-    kwargs$timeStep = 10
+  if (!("timeStep" %in% names(pars_))){
+    pars_$timeStep = 10
   }
-  if (!("maxIter" %in% names(kwargs))){
-    kwargs$maxIter = 400
+  if (!("maxIter" %in% names(pars_))){
+    pars_$maxIter = 400
   }
-  if (!("epsilon" %in% names(kwargs))){
-    kwargs$epsilon = 0.0002
+  if (!("epsilon" %in% names(pars_))){
+    pars_$epsilon = 0.0002
   }
-  if (!("stimDelay" %in% names(kwargs))){
-    kwargs$stimDelay = 2000
+  if (!("stimDelay" %in% names(pars_))){
+    pars_$stimDelay = 2000
   }
-  if (!("debug" %in% names(kwargs))){
-    kwargs$debug = FALSE
+  if (!("debug" %in% names(pars_))){
+    pars_$debug = FALSE
   }
   
   # Extract the correct trial simulator for the model_name
   fit_trial = fit_trial_list_[[model_name_]]
   
   # Print arguments that will be used for simulation if in debug mode
-  if(kwargs$debug){
+  if(pars_$debug){
     print(paste0("Simulating task with parameters: model_name = ", model_name_,
-                 ", non-decision time = ", kwargs$nonDecisionTime,
-                 ", barrier = ", kwargs$barrier,
-                 ", barrierDecay = ", kwargs$barrierDecay,
-                 ", bias = ", kwargs$bias,
-                 ", lotteryBias = ", kwargs$lotteryBias,
-                 ", timeStep = ", kwargs$timeStep,
-                 ", maxIter = ", kwargs$maxIter,
-                 ", epsilon = ", kwargs$epsilon,
-                 ", stimDelay = ", kwargs$stimDelay
+                 ", non-decision time = ", pars_$nonDecisionTime,
+                 ", barrier = ", pars_$barrier,
+                 ", barrierDecay = ", pars_$barrierDecay,
+                 ", bias = ", pars_$bias,
+                 ", lotteryBias = ", pars_$lotteryBias,
+                 ", timeStep = ", pars_$timeStep,
+                 ", maxIter = ", pars_$maxIter,
+                 ", epsilon = ", pars_$epsilon,
+                 ", stimDelay = ", pars_$stimDelay
     ))
   }
   
@@ -150,13 +150,13 @@ fit_task = function(stimuli, model_name_, fit_trial_list_ = fit_trial_list, ...)
     .combine = 'rbind'
   ) %dopar% {
     # Simulate RT and choice for a single trial with given DDM parameters and trial stimulus values
-    fit_trial(d=kwargs$d, sigma = kwargs$sigma, 
-              dArb=kwargs$dArb, dAttr=kwargs$dAttr, sigmaArb = kwargs$sigmaArb, sigmaAttr = kwargs$sigmaAttr,
-              dLott=kwargs$dLott, dFrac=kwargs$dFrac, sigmaLott = kwargs$sigmaLott, sigmaFrac = kwargs$sigmaFrac,
-              theta = kwargs$theta, delta = kwargs$delta, gamma = kwargs$gamma,
-              barrier = kwargs$barrier, nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
-              bias = kwargs$bias, timeStep = kwargs$timeStep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,
-              stimDelay = kwargs$stimDelay,
+    fit_trial(d=pars_$d, sigma = pars_$sigma, 
+              dArb=pars_$dArb, dAttr=pars_$dAttr, sigmaArb = pars_$sigmaArb, sigmaAttr = pars_$sigmaAttr,
+              dLott=pars_$dLott, dFrac=pars_$dFrac, sigmaLott = pars_$sigmaLott, sigmaFrac = pars_$sigmaFrac,
+              theta = pars_$theta, delta = pars_$delta, gamma = pars_$gamma,
+              barrier = pars_$barrier, nonDecisionTime = pars_$nonDecisionTime, barrierDecay = pars_$barrierDecay,
+              bias = pars_$bias, timeStep = pars_$timeStep, maxIter = pars_$maxIter, epsilon = pars_$epsilon,
+              stimDelay = pars_$stimDelay,
               EVLeft=EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight= QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = reactionTime)
     
   }
@@ -170,7 +170,7 @@ fit_task = function(stimuli, model_name_, fit_trial_list_ = fit_trial_list, ...)
 
 # Usage in optim
 # optim(par, get_task_nll, data, par_names, model_name)
-get_task_nll = function(data, par, par_names, model_name,...){
+get_task_nll = function(data, par, par_names, model_name){
   
   # Initialize parameters
   # Different models will have different sets of parameters. Optim will optimize over all the parameters it is passed in
@@ -179,9 +179,9 @@ get_task_nll = function(data, par, par_names, model_name,...){
   pars = setNames(as.list(par), par_names)
   
   # Get trial likelihoods for the stimuli using the initialized parameters
-  out = fit_task(stimuli = data, model_name_ = model_name, pars)
+  out = fit_task(stimuli = data, model_name_ = model_name, pars_ = pars)
   
-  nll = (-1)*sum(log(out$likelihood))
+  nll = -sum(log(out$likelihood+1e-200))
   
   return(nll)
 }

@@ -68,8 +68,7 @@ fit_trial_list[['model2b']] = fit_trial
             numLeft = sum(choice == "left"))
 
 ```
-
-Are likelihoods higher on average for a paramerter combination that is far from the true parameters? 
+Are likelihoods higher on average for a parameter combination that is far from the true parameters? No. Not sure why.
 
 ```{r}
 tmp1 = 100 %>% 
@@ -90,6 +89,7 @@ rbind(tmp1, tmp2) %>%
   ggplot(aes(par_type, log(likelihood))) +
   geom_boxplot()
 ```
+
 ```{r}
 rm(tmp1, tmp2)
 ```
@@ -140,3 +140,6 @@ fit1_data %>%
   geom_boxplot()+
   xlab("")
 ```
+
+# Parameter recovery
+

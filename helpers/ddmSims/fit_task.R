@@ -39,9 +39,15 @@ doParallel::registerDoParallel(cl = my.fit.cluster)
 
 
 # Function to simulate ddm process for a given set of stimuli using a model provided as a string in the model_name argument
-fit_task = function(stimuli, model_name, fit_trial_list_ = fit_trial_list, ...){
+fit_task = function(stimuli_, model_name_, fit_trial_list_ = fit_trial_list, ...){
   
   kwargs = list(...)
+  
+  # Unpack kwargs if pars are passed as a list
+  if(length(kwargs) == 1){
+    kwargs = kwargs[[1]]
+  }
+  
   # 
   # Initialize any missing arguments. Some are useless defaults to make sure different sim_trial functions from different models can run without errors even if they don't make use of that argument
   if (!("d" %in% names(kwargs))){
@@ -160,5 +166,27 @@ fit_task = function(stimuli, model_name, fit_trial_list_ = fit_trial_list, ...){
   out$model = model_name
   
   return(out)
+}
+
+# Usage in optim
+# optim(par, get_task_nll, data)
+get_task_nll = function(data, par, ...){
+  
+  # Initialize parameters
+  # Different models will have different sets of parameters. To avoid conditional statements for each model need to initialize this with defaults when parsing the par vector for all passed in values from optim
+  d = ...
+  sigma = ...
+  delta = ...
+  gamma = ...
+  barrierDecay = ...
+  
+  
+  
+  # Get trial likelihoods for the stimuli using the initialized parameters
+  out = fit_task(stimuli_ = data, model_name_ = model_name, pars)
+  
+  nll = (-1)*sum(log(out$likelihood))
+  
+  return(nll)
 }
 

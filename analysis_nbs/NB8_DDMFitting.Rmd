@@ -125,7 +125,7 @@ pars = list(d=0.03, sigma = 0.01, delta = 3, gamma = 3, barrierDecay = 0, epsilo
 fit3_data = fit_task(true_dat, model_name = "model2b", pars_ = pars)
 ```
 
-Are the sum of likelihoods are higher using the true parameter combination compared to false combinations?
+Are the sum of likelihoods higher using the true parameter combination compared to false combinations?
 
 ```{r}
 sum(fit1_data$likelihood) > sum(fit2_data$likelihood)
@@ -152,6 +152,13 @@ true_dat = sim_task(sub_data, model_name = "model2b", d=0.02, sigma = 0.007, del
 ```
 
 ```{r}
+pars = setNames(as.list(c(.02, .007)), c("d", "sigma")) 
+fit_task(true_dat, model_name = "model2b", pars_ = pars, debug=TRUE)
+```
+
+Is the task neg log likelihood smaller for the true parameters compared to wrong ones?
+
+```{r}
 get_task_nll(data=true_dat, par=c(.02, .007), par_names=c("d", "sigma"), model_name="model2b")
 ```
 
@@ -159,10 +166,10 @@ get_task_nll(data=true_dat, par=c(.02, .007), par_names=c("d", "sigma"), model_n
 get_task_nll(data=true_dat, par=c(10, 1, .0004), par_names=c("d", "sigma", "epsilon"), model_name="model2b")
 ```
 
-```{r}
-pars = setNames(as.list(c(.02, .007)), c("d", "sigma")) 
-fit_task(true_dat, model_name = "model2b", pars_ = pars, debug=TRUE)
-```
+This takes forever so it doesn't work. 
+- Work on a simpler example unrelated to our models to make sure the optim function works ok
+- Can the optim function work with the parallelization?
+- Use a smaller dataset than true_dat?
 
 ```{r}
 optim_out = optim(c(.01, .01), get_task_nll, data=true_dat, par_names = c("d", "sigma"), model_name="model2b")

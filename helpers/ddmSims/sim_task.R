@@ -122,16 +122,29 @@ sim_task = function(stimuli, model_name, sim_trial_list_ = sim_trial_list, ...){
   
   # Print arguments that will be used for simulation if in debug mode
   if(kwargs$debug){
-    print(paste0("Simulating task with parameters: model_name = ", model_name,
-                 ", non-decision time = ", kwargs$nonDecisionTime,
-                 ", barrier = ", kwargs$barrier,
-                 ", barrierDecay = ", kwargs$barrierDecay,
-                 ", bias = ", kwargs$bias,
-                 ", lotteryBias = ", kwargs$lotteryBias,
-                 ", timeStep = ", kwargs$timeStep,
-                 ", maxIter = ", kwargs$maxIter,
-                 ", epsilon = ", kwargs$epsilon,
-                 ", stimDelay = ", kwargs$stimDelay
+    print(paste0("Simulating task with parameters: model_name = ", model_name_,
+                ", barrier = ", pars_$barrier,
+                ", barrierDecay = ", pars_$barrierDecay,
+                ", bias = ", pars_$bias,
+                ", d = ", pars_$d,
+                ", dArb = ", pars_$dArb,
+                ", dAttr = ", pars_$dAttr,
+                ", dFrac = ", pars_$dFrac,
+                ", dLott = ", pars_$dLott,
+                ", delta = ", pars_$delta,
+                ", epsilon = ", pars_$epsilon,
+                ", gamma = ", pars_$gamma,
+                ", lotteryBias = ", pars_$lotteryBias,
+                ", maxIter = ", pars_$maxIter,
+                ", non-decision time = ", pars_$nonDecisionTime,
+                ", sigma = ", pars_$sigma,
+                ", sigmaArb = ", pars_$sigmaArb,
+                ", sigmaAttr = ", pars_$sigmaAttr,
+                ", sigmaFrac = ", pars_$sigmaFrac,
+                ", sigmaLott = ", pars_$sigmaLott,
+                ", stimDelay = ", pars_$stimDelay,
+                ", timeStep = ", pars_$timeStep,
+                
     ))
   }
   

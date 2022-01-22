@@ -115,21 +115,29 @@ sub_data = clean_beh_data %>%
 Use the trials from that subject's data to simulate data (not fitting anything to real data yet to see if recovery with known true parameters is possible)
 
 ```{r}
-true_dat = sim_task(sub_data, model_name = "model2b", d=0.02, sigma = 0.007, delta = 3, gamma = 3, barrierDecay = 0.004, epsilon = 0.03, nonDecisionTime = 0)
+true_dat = sim_task(sub_data, model_name = "model2b", d=0.005, sigma = 0.007, delta = 3, gamma = 3, barrierDecay = 0.004, epsilon = 0.03)
 ```
 
+Do these paramters generate reasonable data?
+
 ```{r}
-pars = list(d=0.02, sigma = 0.007, delta = 3, gamma = 3, barrierDecay = 0.004, epsilon = 0.03, nonDecisionTime = 0)
+sim_sanity_checks(true_dat)
+```
+
+Fit using three parameter combinations.
+
+```{r}
+pars = list(d=0.02, sigma = 0.007, delta = 3, gamma = 3, barrierDecay = 0.004, epsilon = 0.03)
 fit1_data = fit_task(true_dat, model_name = "model2b", pars_ = pars)
 ```
 
 ```{r}
-pars = list(d=0.05, sigma = 0.01, delta = 2, gamma = 2, barrierDecay = 0.001, epsilon = 0, nonDecisionTime = 0)
+pars = list(d=0.05, sigma = 0.01)
 fit2_data = fit_task(true_dat, model_name = "model2b", pars_ = pars)
 ```
 
 ```{r}
-pars = list(d=0.03, sigma = 0.01, delta = 3, gamma = 3, barrierDecay = 0, epsilon = 0.0004, nonDecisionTime = 0)
+pars = list(d=0.03, sigma = 0.01)
 fit3_data = fit_task(true_dat, model_name = "model2b", pars_ = pars)
 ```
 
@@ -159,33 +167,77 @@ fit1_data %>%
 # Parameter recovery
 
 ```{r}
-true_dat = sim_task(sub_data, model_name = "model2b", d=0.02, sigma = 0.007, delta = 3, gamma = 3, barrierDecay = 0.004, epsilon = 0.03, nonDecisionTime = 0)
+true_dat = sim_task(sub_data, model_name = "model2b", d=0.02, sigma = 0.007)
 ```
 
 Is the task neg log likelihood **smaller** for the true parameters compared to wrong ones? **No! So identifiability is problematic?**
 
 ```{r}
-get_task_nll(data=true_dat, par=c(.02, .007, 3, 3, .004, .03), par_names=c("d", "sigma", "delta", "gamma", "barrierDecay", "epsilon"), model_name="model2b")
+get_task_nll(data=true_dat, par=c(.02, .007), par_names=c("d", "sigma"), model_name="model2b")
 ```
 
 ```{r}
-get_task_nll(data=true_dat, par=c(1, 1, .0004), par_names=c("d", "sigma", "epsilon"), model_name="model2b")
+get_task_nll(data=true_dat, par=c(.0115, .0115), par_names=c("d", "sigma"), model_name="model2b")
 ```
 
-# Fit to data
+What do the trial likelihoods look like with true data generating and false parameters? Is there any variability? Are they all 0? Do these parameters generate sensible data, e.g. for a trial with large EV/QV differences? 
+
+```{r}
+pars = list(d=0.02, sigma = 0.007)
+fit1_data = fit_task(true_dat, model_name = "model2b", pars_ = pars)
+unique(fit1_data$likelihood)
+```
+
+```{r}
+pars = list(d=0.0115, sigma = 0.0115)
+fit2_data = fit_task(true_dat, model_name = "model2b", pars_ = pars)
+unique(fit2_data$likelihood)
+```
+
+```{r}
+true_dat
+```
+
+```{r}
+sim_sanity_checks(true_dat)
+```
 
 ## Built-in optimizer
 
-This does work (checked with fewer iterations) but it takes forever. 
+This does work (checked with fewer iterations) but very slowly. **But I currently don't know if it gets to estimates that are any good.**
 
-```{r eval=FALSE}
-optim_out = optim(c(.01, .01), get_task_nll, data=true_dat, par_names = c("d", "sigma"), model_name="model2b", control = list(maxit=5))
+Still, I could get subject estimates running this with an appropriate number of iterations on a cluster. Note that locally I did this with 7 cores per subject so would need to make sure there are sufficient cores in the AWS instance type. **How long would this take per subject on a single AWS instance with sufficient resources (make sure to try it with data you know the true parameters for)?**
+
+But especially with this number of subjects and given that the research question is not one of individual differences the more important question here will be to do a model comparison. **What do I need for the model comparison?**
+
+Note also that in simulations timeouts are possible. The decisions are not entirely random for these trials but **a large number of timeout trials could influence the optimizers ability to recover parameters.**
+
+```{r}
+true_dat = sim_task(sub_data, model_name = "model2b", d=0.02, sigma = 0.007)
+sum(true_dat$timeOut)/nrow(true_dat)
 ```
+
+```{r}
+optim_out = optim(c(.01, .01), get_task_nll, data=true_dat, par_names = c("d", "sigma"), model_name="model2b", control = list(maxit=25))
+```
+
+Convergence 1 means max it was reached.
 
 ```{r}
 optim_out
 ```
 
-## Grid search
+```{r}
+pars = list(d=0.02, sigma = 0.007)
+fit1_data = fit_task(true_dat, model_name = "model2b", pars_ = pars)
+```
 
-Since fit to one subject when parallelized only takes a few seconds, what if you run a parallelized grid search?
+```{r}
+unique(fit1_data$likelihood)
+```
+
+```{r}
+fit1_data %>%
+  ggplot(aes(-log(likelihood+1e-20))) +
+  geom_histogram()
+```

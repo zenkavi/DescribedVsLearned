@@ -60,6 +60,8 @@ fit_trial_list[['model2b']] = fit_trial
 
 ## Test single trial
 
+Make sure trial simulator works. Use the mean RT from trials simulated using this model (2b) as the input for fitting in the next step. 
+
 ```{r}
 100 %>% 
   rerun() %>%
@@ -82,8 +84,10 @@ tmp1 = 100 %>%
 tmp2 = 100 %>% 
   rerun() %>%
   map_df(~data.frame(fit_trial(d=.002, sigma=0.1, barrierDecay=0, delta=3, gamma=3, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .4, choice = "left", reactionTime = .7))) %>%
-  mutate(par_type = "far")
+  mutate(par_type = "false")
 ```
+
+**Why is the likelihood for the false parameters consistently (for all 100 iterations) higher than the likelihood for the true parameters?**
 
 ```{r}
 rbind(tmp1, tmp2) %>%
@@ -99,12 +103,16 @@ rm(tmp1, tmp2)
 
 Can the likelihood function correctly identify the parameter combination that generated the data? Is the sum of likelihoods for all trials highest for the correct combination than any other combination?
 
+Filter one subject's data.
+
 ```{r}
 sub_data = clean_beh_data %>%
   filter(subnum  %in% c("19")) %>%
   select(leftQValue, rightQValue, leftLotteryEV, rightLotteryEV, probFractalDraw, reactionTime, choiceLeft, subnum) %>%
   rename(EVLeft = leftLotteryEV, EVRight = rightLotteryEV, QVLeft = leftQValue, QVRight = rightQValue)
 ```
+
+Use the trials from that subject's data to simulate data (not fitting anything to real data yet to see if recovery with known true parameters is possible)
 
 ```{r}
 true_dat = sim_task(sub_data, model_name = "model2b", d=0.02, sigma = 0.007, delta = 3, gamma = 3, barrierDecay = 0.004, epsilon = 0.03, nonDecisionTime = 0)
@@ -125,7 +133,7 @@ pars = list(d=0.03, sigma = 0.01, delta = 3, gamma = 3, barrierDecay = 0, epsilo
 fit3_data = fit_task(true_dat, model_name = "model2b", pars_ = pars)
 ```
 
-Are the sum of likelihoods higher using the true parameter combination compared to false combinations?
+Are the sum of likelihoods higher using the true parameter combination compared to false combinations? Yes.
 
 ```{r}
 sum(fit1_data$likelihood) > sum(fit2_data$likelihood)
@@ -140,9 +148,12 @@ fit1_data %>%
   mutate(par_type = "true") %>%
   rbind(fit2_data %>% mutate(par_type = "false_1")) %>%
   rbind(fit3_data %>% mutate(par_type = "false_2")) %>%
-  ggplot(aes(par_type, log(likelihood))) +
-  geom_boxplot()+
-  xlab("")
+  group_by(par_type) %>%
+  summarise(neg_log_lik = -sum(log(likelihood+1e-200))) %>%
+  ggplot(aes(par_type, neg_log_lik))+
+  geom_bar(stat="identity", width=.5)+
+  geom_hline(aes(yintercept = min(neg_log_lik)), linetype="dashed")
+
 ```
 
 # Parameter recovery
@@ -151,31 +162,30 @@ fit1_data %>%
 true_dat = sim_task(sub_data, model_name = "model2b", d=0.02, sigma = 0.007, delta = 3, gamma = 3, barrierDecay = 0.004, epsilon = 0.03, nonDecisionTime = 0)
 ```
 
-```{r}
-pars = setNames(as.list(c(.02, .007)), c("d", "sigma")) 
-fit_task(true_dat, model_name = "model2b", pars_ = pars, debug=TRUE)
-```
-
-Is the task neg log likelihood smaller for the true parameters compared to wrong ones?
+Is the task neg log likelihood **smaller** for the true parameters compared to wrong ones? **No! So identifiability is problematic?**
 
 ```{r}
-get_task_nll(data=true_dat, par=c(.02, .007), par_names=c("d", "sigma"), model_name="model2b")
+get_task_nll(data=true_dat, par=c(.02, .007, 3, 3, .004, .03), par_names=c("d", "sigma", "delta", "gamma", "barrierDecay", "epsilon"), model_name="model2b")
 ```
 
 ```{r}
-get_task_nll(data=true_dat, par=c(10, 1, .0004), par_names=c("d", "sigma", "epsilon"), model_name="model2b")
+get_task_nll(data=true_dat, par=c(1, 1, .0004), par_names=c("d", "sigma", "epsilon"), model_name="model2b")
 ```
 
-This takes forever so it doesn't work. 
-- Work on a simpler example unrelated to our models to make sure the optim function works ok
-- Can the optim function work with the parallelization?
-- Use a smaller dataset than true_dat?
+# Fit to data
 
-```{r}
-optim_out = optim(c(.01, .01), get_task_nll, data=true_dat, par_names = c("d", "sigma"), model_name="model2b")
+## Built-in optimizer
+
+This does work (checked with fewer iterations) but it takes forever. 
+
+```{r eval=FALSE}
+optim_out = optim(c(.01, .01), get_task_nll, data=true_dat, par_names = c("d", "sigma"), model_name="model2b", control = list(maxit=5))
 ```
 
 ```{r}
 optim_out
 ```
 
+## Grid search
+
+Since fit to one subject when parallelized only takes a few seconds, what if you run a parallelized grid search?

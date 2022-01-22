@@ -126,15 +126,28 @@ fit_task = function(stimuli, model_name_, pars_, fit_trial_list_ = fit_trial_lis
   # Print arguments that will be used for simulation if in debug mode
   if(pars_$debug){
     print(paste0("Simulating task with parameters: model_name = ", model_name_,
-                 ", non-decision time = ", pars_$nonDecisionTime,
                  ", barrier = ", pars_$barrier,
                  ", barrierDecay = ", pars_$barrierDecay,
                  ", bias = ", pars_$bias,
-                 ", lotteryBias = ", pars_$lotteryBias,
-                 ", timeStep = ", pars_$timeStep,
-                 ", maxIter = ", pars_$maxIter,
+                 ", d = ", pars_$d,
+                 ", dArb = ", pars_$dArb,
+                 ", dAttr = ", pars_$dAttr,
+                 ", dFrac = ", pars_$dFrac,
+                 ", dLott = ", pars_$dLott,
+                 ", delta = ", pars_$delta,
                  ", epsilon = ", pars_$epsilon,
-                 ", stimDelay = ", pars_$stimDelay
+                 ", gamma = ", pars_$gamma,
+                 ", lotteryBias = ", pars_$lotteryBias,
+                 ", maxIter = ", pars_$maxIter,
+                 ", non-decision time = ", pars_$nonDecisionTime,
+                 ", sigma = ", pars_$sigma,
+                 ", sigmaArb = ", pars_$sigmaArb,
+                 ", sigmaAttr = ", pars_$sigmaAttr,
+                 ", sigmaFrac = ", pars_$sigmaFrac,
+                 ", sigmaLott = ", pars_$sigmaLott,
+                 ", stimDelay = ", pars_$stimDelay,
+                 ", timeStep = ", pars_$timeStep,
+
     ))
   }
   
@@ -170,7 +183,7 @@ fit_task = function(stimuli, model_name_, pars_, fit_trial_list_ = fit_trial_lis
 
 # Usage in optim
 # optim(par, get_task_nll, data, par_names, model_name)
-get_task_nll = function(data, par, par_names, model_name){
+get_task_nll = function(data, par, par_names, model_name, debug=FALSE){
   
   # Initialize parameters
   # Different models will have different sets of parameters. Optim will optimize over all the parameters it is passed in
@@ -179,7 +192,7 @@ get_task_nll = function(data, par, par_names, model_name){
   pars = setNames(as.list(par), par_names)
   
   # Get trial likelihoods for the stimuli using the initialized parameters
-  out = fit_task(stimuli = data, model_name_ = model_name, pars_ = pars)
+  out = fit_task(stimuli = data, model_name_ = model_name, pars_ = pars, debug=debug)
   
   nll = -sum(log(out$likelihood+1e-200))
   

@@ -29,7 +29,7 @@ my.fit.cluster <- parallel::makeCluster(
 # print(my.cluster)
 
 #register it to be used by %dopar%
-doParallel::registerDoParallel(cl = my.fit.cluster)
+# doParallel::registerDoParallel(cl = my.fit.cluster)
 
 #check if it is registered (optional)
 # foreach::getDoParRegistered()
@@ -151,6 +151,9 @@ fit_task = function(stimuli, model_name_, pars_, fit_trial_list_ = fit_trial_lis
     ))
   }
   
+  #register it to be used by %dopar%
+  doParallel::registerDoParallel(cl = my.fit.cluster)
+  
   # Parallel loop
   out <- foreach(
     EVLeft=stimuli$EVLeft, 
@@ -174,6 +177,7 @@ fit_task = function(stimuli, model_name_, pars_, fit_trial_list_ = fit_trial_lis
     
   }
   
+  parallel::stopCluster(cl = my.sim.cluster)
   
   # Add details of the parameters used for the simulation
   out$model = model_name_

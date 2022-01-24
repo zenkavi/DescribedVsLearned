@@ -145,13 +145,20 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
         ) %>% 
         unnest(tidied) %>%
         filter(term != "(Intercept)") %>%
-        select(probFractalDraw, term, estimate, std.error)
+        select(probFractalDraw, term, estimate, std.error)%>%
+        mutate(data_type = "true")
       
-      p = p +
+      p = tmp %>%
+        rbind(tmp_true) %>%
+        ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
+        geom_point()+
+        geom_line()+
         geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
-        geom_point( data=tmp_true, aes(probFractalDraw, estimate, col=term, group=term, alpha=.1))+
-        geom_line(data=tmp_true, aes(probFractalDraw, estimate, col=term, group=term, alpha=.1))+
-        geom_errorbar(data=tmp_true,aes(ymin = estimate - std.error, ymax = estimate +std.error, alpha=.1), width=0.2)
+        geom_hline(aes(yintercept=0), linetype="dashed")+
+        facet_wrap(~data_type)+
+        scale_color_manual(values = cbbPalette[2:1])+
+        theme(legend.position = "bottom")+
+        labs(color="", title="Relevant attribute effect on choice") 
         
     } 
     

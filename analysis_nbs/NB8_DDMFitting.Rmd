@@ -121,7 +121,7 @@ true_dat = sim_task(sub_data, model_name = "model2b", d=0.005, sigma = 0.007, de
 Do these paramters generate reasonable data?
 
 ```{r}
-sim_sanity_checks(true_dat)
+sim_sanity_checks(true_dat, compare_logits = TRUE)
 ```
 
 Fit using three parameter combinations.

@@ -206,6 +206,8 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   leftLotteryAdv = (1-probFractalDraw) * (EVLeft - EVRight)
   weighted_mu_mean = d * (leftFractalAdv + leftLotteryAdv)
   
+  # LOOP of state probability updating up to reaction time
+  
   # Start at 2 to match python indexing that starts at 0
   for(nextTime in 2:numTimeSteps){
     curTime = nextTime - 1 
@@ -226,6 +228,7 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
     }
     
     mu = rnorm(1, mu_mean, epsilon)
+    print(mu)
     
     # Update the probability of the states that remain inside the
     # barriers. The probability of being in state B is the sum, over
@@ -281,12 +284,7 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   
   out = data.frame(likelihood = likelihood, EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = reactionTime, d = d, sigma = sigma, barrierDecay = barrierDecay, delta=delta, gamma=gamma, barrier=barrier[numTimeSteps], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, epsilon = epsilon, stimDelay = stimDelay)
   
-  if (debug){
-    list(out = out, probUpCrossing=probUpCrossing, probDownCrossing=probDownCrossing, prStates = prStates)
-  }else{
-    return(out)
-  }
   
-  
+  return(out)
   
 }

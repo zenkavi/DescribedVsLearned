@@ -47,6 +47,22 @@ fit_trial_list = list()
 
 # Testing parameter recovery
 
+## Model 1:
+
+I had started with model 2b but was confused about how the prob of states was being calculated in each step 
+
+I'm wondering if there is a problem with implementing the integration of the sampled value when computing the probability of being in the next state
+
+Going back to the simpler model.
+
+```{r}
+source(paste0(helpers_path, 'ddmSims/ddm_model1.R'))
+```
+
+```{r}
+sim_trial(d = .04, sigma = 0.02)
+```
+
 ## Model 2b: Asymmetric prob distortion
 
 - Distort probFractalDraw when integrating info about fractals but no distortion for lotteries
@@ -63,40 +79,87 @@ fit_trial_list[['model2b']] = fit_trial
 Make sure trial simulator works. Use the mean RT from trials simulated using this model (2b) as the input for fitting in the next step. 
 
 ```{r}
-100 %>% 
+tmp1 = 100 %>% 
   rerun() %>%
-  map_df(~data.frame(sim_trial(d=.04, sigma=0.01, barrierDecay=0, delta=3, gamma=3, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .4))) %>%
+  map_df(~data.frame(sim_trial(d=.04, sigma=0.01, barrierDecay=0, delta=3, gamma=3, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .4))) 
+
+tmp1%>%
   summarise(meanRT = mean(reactionTime),
             numLeft = sum(choice == "left"))
 
 ```
-
-Are likelihoods higher on average for a parameter combination that is far from the true parameters? No. Not sure why.
-
-```{r}
-tmp1 = 100 %>% 
-  rerun() %>%
-  map_df(~data.frame(fit_trial(d=.04, sigma=0.01, barrierDecay=0, delta=3, gamma=3, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .4, choice = "left", reactionTime = .7))) %>%
-  mutate(par_type = "true")
-```
+Do the false parameters generate sufficiently different trials? Yes. They are slower and more noisy.
 
 ```{r}
 tmp2 = 100 %>% 
   rerun() %>%
-  map_df(~data.frame(fit_trial(d=.002, sigma=0.1, barrierDecay=0, delta=3, gamma=3, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .4, choice = "left", reactionTime = .7))) %>%
-  mutate(par_type = "false")
+  map_df(~data.frame(sim_trial(d=.001, sigma=0.1, barrierDecay=0, delta=3, gamma=3, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .4))) 
+
+tmp2 %>%
+  summarise(meanRT = mean(reactionTime),
+            numLeft = sum(choice == "left"))
+
+```
+Are likelihoods higher on average for a parameter combination that is far from the true parameters? No. Not sure why.
+
+```{r}
+pars = list(d=0.04, sigma = 0.01, delta = 3, gamma = 3, barrierDecay = 0)
+fit1_data = fit_task(tmp1, model_name = "model2b", pars_ = pars)
+fit1_data = fit1_data %>% mutate(par_type="true")
+```
+
+```{r}
+pars = list(d=0.002, sigma = 0.1, delta = 3, gamma = 3, barrierDecay = 0)
+fit2_data = fit_task(tmp1, model_name = "model2b", pars_ = pars)
+fit2_data = fit2_data %>% mutate(par_type="false")
 ```
 
 **Why is the likelihood for the false parameters consistently (for all 100 iterations) higher than the likelihood for the true parameters?**
 
 ```{r}
-rbind(tmp1, tmp2) %>%
-  ggplot(aes(par_type, log(likelihood))) +
-  geom_boxplot()
+rbind(fit1_data, fit2_data) %>%
+  ggplot(aes(fill=par_type, log(likelihood))) +
+  geom_histogram(position="identity", alpha=.5, bins=30)
+```
+Is something weird with the simulated data? I didn't notice anything.
+
+```{r}
+sum(tmp1$timeOut)
+sum(tmp1$decPreStim)
+tmp1 %>% 
+  ggplot(aes(reactionTime))+
+  # geom_histogram(bins=30)
+  geom_density()
+tmp1
 ```
 
 ```{r}
-rm(tmp1, tmp2)
+sum(tmp2$timeOut)
+sum(tmp2$decPreStim)
+tmp2 %>% 
+  ggplot(aes(reactionTime))+
+  # geom_histogram(bins=30)
+  geom_density()
+```
+
+Is something weird with the fits? What do the likelihoods look like?
+
+Why isn't there more variability in the likelihoods for either dataset? Probably because it's always the same trial.
+
+Why is the probability to cross a bound so small for the true parameters, especially despite the larger drift rate? --> Step through ddm_model2b::fit_trial to debug
+
+```{r}
+length(unique(fit1_data$likelihood))
+fit1_data
+```
+
+```{r}
+length(unique(fit2_data$likelihood))
+fit2_data
+```
+
+```{r}
+rm(tmp1, tmp2, fit1_data, fit2_data)
 ```
 
 ## Test all trials in a task
@@ -240,4 +303,11 @@ unique(fit1_data$likelihood)
 fit1_data %>%
   ggplot(aes(-log(likelihood+1e-20))) +
   geom_histogram()
+```
+
+# Stop clusters
+
+```{r}
+parallel::stopCluster(cl = my.fit.cluster)
+parallel::stopCluster(cl = my.sim.cluster)
 ```

@@ -29,7 +29,7 @@ my.sim.cluster <- parallel::makeCluster(
 # print(my.cluster)
 
 #register it to be used by %dopar%
-# doParallel::registerDoParallel(cl = my.sim.cluster)
+doParallel::registerDoParallel(cl = my.sim.cluster)
 
 #check if it is registered (optional)
 # foreach::getDoParRegistered()
@@ -149,7 +149,7 @@ sim_task = function(stimuli, model_name, sim_trial_list_ = sim_trial_list, ...){
   }
   
   #register it to be used by %dopar%
-  doParallel::registerDoParallel(cl = my.sim.cluster)
+  # doParallel::registerDoParallel(cl = my.sim.cluster)
   
   # Parallel loop
   out <- foreach(
@@ -172,7 +172,7 @@ sim_task = function(stimuli, model_name, sim_trial_list_ = sim_trial_list, ...){
 
     }
   
-  parallel::stopCluster(cl = my.sim.cluster)
+  # parallel::stopCluster(cl = my.sim.cluster)
   
   # Add details of the parameters used for the simulation
   out$model = model_name

@@ -139,7 +139,10 @@ fit_trial = function(d, sigma, barrier=1, nonDecisionTime=0, bias=0, timeStep=10
     
     
     mu = rnorm(1, mu_mean, epsilon)
-    print(mu)
+    
+    if(debug){
+      print(mu)
+    }
     
     # Update the probability of the states that remain inside the
     # barriers. The probability of being in state B is the sum, over
@@ -195,6 +198,10 @@ fit_trial = function(d, sigma, barrier=1, nonDecisionTime=0, bias=0, timeStep=10
   
   out = data.frame(likelihood = likelihood, EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = reactionTime, d = d, sigma = sigma, nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, epsilon = epsilon)
   
-  return(out)
+  if(debug){
+    return(list(prStates=data.frame(prStates), probUpCrossing=data.frame(probUpCrossing), probDownCrossing=data.frame(probDownCrossing), out=out))
+  } else{
+    return(out)
+  }
   
 }

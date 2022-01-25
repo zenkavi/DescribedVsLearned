@@ -44,10 +44,9 @@ sim_trial_list = list()
 fit_trial_list = list()
 ```
 
-
 # Testing parameter recovery
 
-## Model 1:
+## Model 1: Simplest
 
 I had started with model 2b but was confused about how the prob of states was being calculated in each step 
 
@@ -59,114 +58,91 @@ Going back to the simpler model.
 source(paste0(helpers_path, 'ddmSims/ddm_model1.R'))
 ```
 
-```{r}
-sim_trial(d = .04, sigma = 0.02)
-```
+### Single trial 
 
-## Model 2b: Asymmetric prob distortion
-
-- Distort probFractalDraw when integrating info about fractals but no distortion for lotteries
-- Intended to capture the stepwise nature of the logit slopes for the QV difference but the linear nature for the EV difference
+Compare likelihoods for four trials generated with different `d` and `sigma` combinations.
 
 ```{r}
-source(paste0(helpers_path, 'ddmSims/ddm_model2b.R'))
-sim_trial_list[['model2b']] = sim_trial
-fit_trial_list[['model2b']] = fit_trial
-```
-
-## Test single trial
-
-Make sure trial simulator works. Use the mean RT from trials simulated using this model (2b) as the input for fitting in the next step. 
-
-```{r}
-tmp1 = 100 %>% 
+100 %>% 
   rerun() %>%
-  map_df(~data.frame(sim_trial(d=.04, sigma=0.01, barrierDecay=0, delta=3, gamma=3, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .4))) 
-
-tmp1%>%
+  map_df(~data.frame(sim_trial(d = .04, sigma = .02, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .3))) %>%
   summarise(meanRT = mean(reactionTime),
             numLeft = sum(choice == "left"))
-
 ```
-Do the false parameters generate sufficiently different trials? Yes. They are slower and more noisy.
 
 ```{r}
-tmp2 = 100 %>% 
+100 %>% 
   rerun() %>%
-  map_df(~data.frame(sim_trial(d=.001, sigma=0.1, barrierDecay=0, delta=3, gamma=3, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .4))) 
-
-tmp2 %>%
+  map_df(~data.frame(sim_trial(d = .02, sigma = .02, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .3))) %>%
   summarise(meanRT = mean(reactionTime),
             numLeft = sum(choice == "left"))
-
-```
-Are likelihoods higher on average for a parameter combination that is far from the true parameters? No. Not sure why.
-
-```{r}
-pars = list(d=0.04, sigma = 0.01, delta = 3, gamma = 3, barrierDecay = 0)
-fit1_data = fit_task(tmp1, model_name = "model2b", pars_ = pars)
-fit1_data = fit1_data %>% mutate(par_type="true")
 ```
 
 ```{r}
-pars = list(d=0.002, sigma = 0.1, delta = 3, gamma = 3, barrierDecay = 0)
-fit2_data = fit_task(tmp1, model_name = "model2b", pars_ = pars)
-fit2_data = fit2_data %>% mutate(par_type="false")
-```
-
-**Why is the likelihood for the false parameters consistently (for all 100 iterations) higher than the likelihood for the true parameters?**
-
-```{r}
-rbind(fit1_data, fit2_data) %>%
-  ggplot(aes(fill=par_type, log(likelihood))) +
-  geom_histogram(position="identity", alpha=.5, bins=30)
-```
-Is something weird with the simulated data? I didn't notice anything.
-
-```{r}
-sum(tmp1$timeOut)
-sum(tmp1$decPreStim)
-tmp1 %>% 
-  ggplot(aes(reactionTime))+
-  # geom_histogram(bins=30)
-  geom_density()
-tmp1
+100 %>% 
+  rerun() %>%
+  map_df(~data.frame(sim_trial(d = .02, sigma = .04, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .3))) %>%
+  summarise(meanRT = mean(reactionTime),
+            numLeft = sum(choice == "left"))
 ```
 
 ```{r}
-sum(tmp2$timeOut)
-sum(tmp2$decPreStim)
-tmp2 %>% 
-  ggplot(aes(reactionTime))+
-  # geom_histogram(bins=30)
-  geom_density()
+100 %>% 
+  rerun() %>%
+  map_df(~data.frame(sim_trial(d = .04, sigma = .04, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .3))) %>%
+  summarise(meanRT = mean(reactionTime),
+            numLeft = sum(choice == "left"))
 ```
 
-Is something weird with the fits? What do the likelihoods look like?
+Is the likelihood higher for the correct parameter combination?
 
-Why isn't there more variability in the likelihoods for either dataset? Probably because it's always the same trial.
-
-Why is the probability to cross a bound so small for the true parameters, especially despite the larger drift rate? --> Step through ddm_model2b::fit_trial to debug
+Trial1 & Trial 4
 
 ```{r}
-length(unique(fit1_data$likelihood))
-fit1_data
+fit_trial(d = .04, sigma = .02, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .3, choice="left", reactionTime = .52)
 ```
 
 ```{r}
-length(unique(fit2_data$likelihood))
-fit2_data
+fit_trial(d = .02, sigma = .02, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .3, choice="left", reactionTime = .52)
 ```
 
 ```{r}
-rm(tmp1, tmp2, fit1_data, fit2_data)
+fit_trial(d = .02, sigma = .04, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .3, choice="left", reactionTime = .52)
 ```
 
-## Test all trials in a task
+```{r}
+fit_trial(d = .04, sigma = .04, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .3, choice="left", reactionTime = .52)
+```
 
-Can the likelihood function correctly identify the parameter combination that generated the data? Is the sum of likelihoods for all trials highest for the correct combination than any other combination?
+Trial2 & Trial 3
 
-Filter one subject's data.
+```{r}
+fit_trial(d = .04, sigma = .02, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .3, choice="left", reactionTime = 1.03)
+```
+
+```{r}
+fit_trial(d = .02, sigma = .02, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .3, choice="left", reactionTime = 1.03)
+```
+
+```{r}
+fit_trial(d = .02, sigma = .04, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .3, choice="left", reactionTime = 1.03)
+```
+
+```{r}
+fit_trial(d = .04, sigma = .04, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .3, choice="left", reactionTime = 1.03)
+```
+**For all trial types (generated by different parameter combinations) the likelihood is always higher for larger sigma's and larger d's with sigma having a larger effect.**
+
+### Whole task
+
+Is this true at whole task level true?
+
+```{r}
+sim_trial_list[['model1']] = sim_trial
+fit_trial_list[['model1']] = fit_trial
+```
+
+Filter one subject's data to get set of stimuli.
 
 ```{r}
 sub_data = clean_beh_data %>%
@@ -178,92 +154,95 @@ sub_data = clean_beh_data %>%
 Use the trials from that subject's data to simulate data (not fitting anything to real data yet to see if recovery with known true parameters is possible)
 
 ```{r}
-true_dat = sim_task(sub_data, model_name = "model2b", d=0.005, sigma = 0.007, delta = 3, gamma = 3, barrierDecay = 0.004, epsilon = 0.03)
+stim1 = sim_task(sub_data, model_name = "model1", d = .04, sigma = .02) %>%drop_na()
+stim2 = sim_task(sub_data, model_name = "model1", d = .02, sigma = .02) %>%drop_na()
+stim3 = sim_task(sub_data, model_name = "model1", d = .02, sigma = .04) %>%drop_na()
+stim4 = sim_task(sub_data, model_name = "model1", d = .04, sigma = .04) %>%drop_na()
 ```
 
 Do these paramters generate reasonable data?
 
 ```{r}
-sim_sanity_checks(true_dat, compare_logits = TRUE)
-```
-
-Fit using three parameter combinations.
-
-```{r}
-pars = list(d=0.02, sigma = 0.007, delta = 3, gamma = 3, barrierDecay = 0.004, epsilon = 0.03)
-fit1_data = fit_task(true_dat, model_name = "model2b", pars_ = pars)
+sim_sanity_checks(stim4, compare_logits = TRUE)
 ```
 
 ```{r}
-pars = list(d=0.05, sigma = 0.01)
-fit2_data = fit_task(true_dat, model_name = "model2b", pars_ = pars)
+stim1
+```
+
+Fit using the parameter combinations.
+
+```{r}
+stim1_fit1 = fit_task(stim1, model_name = "model1", pars_ = list(d=.04, sigma = .02))
+stim1_fit2 = fit_task(stim1, model_name = "model1", pars_ = list(d=.02, sigma = .02))
+stim1_fit3 = fit_task(stim1, model_name = "model1", pars_ = list(d=.02, sigma = .04))
+stim1_fit4 = fit_task(stim1, model_name = "model1", pars_ = list(d=.04, sigma = .04))
+```
+
+What has the smallest neg log likelihood?
+
+```{r}
+sum(-log(stim1_fit1$likelihood+1e-200))
+sum(-log(stim1_fit2$likelihood+1e-200))
+sum(-log(stim1_fit3$likelihood+1e-200))
+sum(-log(stim1_fit4$likelihood+1e-200))
+```
+
+
+## Drivers of the tradeoff
+
+What in `fit_trial` is different for these two parameter combinations?
+
+`changeMatrix`, `changeUp`, `changeDown` are the same for both. 
+
+What's different is the mu and sigma when calculating `dnorm(changeMatrix, mu, sigma)` and `pnorm(changeUp[,nextTime], mu, sigma)` which is then reflected in `prStates`, `probUpCrossing` and `probDownCrossing`
+
+```{r}
+fit_trial(d = .04, sigma = .02, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .3, choice="left", reactionTime = .6, debug=TRUE)
 ```
 
 ```{r}
-pars = list(d=0.03, sigma = 0.01)
-fit3_data = fit_task(true_dat, model_name = "model2b", pars_ = pars)
-```
-
-Are the sum of likelihoods higher using the true parameter combination compared to false combinations? Yes.
-
-```{r}
-sum(fit1_data$likelihood) > sum(fit2_data$likelihood)
+fit_trial(d = .02, sigma = .02, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .3, choice="left", reactionTime = .6, debug=TRUE)
 ```
 
 ```{r}
-sum(fit1_data$likelihood) > sum(fit3_data$likelihood)
+fit_trial(d = .02, sigma = .04, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .3, choice="left", reactionTime = .6, debug=TRUE)
+```
+
+`prStates` for the starting position declines a lot faster for the smaller mu.
+
+How do `dnorm(changeMatrix, mu, sigma)` and `pnorm(changeUp[,nextTime], mu, sigma)` change depending on mu and sigma?
+
+```{r}
+dnorm(changeMatrix[,11], .02, .02)
 ```
 
 ```{r}
-fit1_data %>%
-  mutate(par_type = "true") %>%
-  rbind(fit2_data %>% mutate(par_type = "false_1")) %>%
-  rbind(fit3_data %>% mutate(par_type = "false_2")) %>%
-  group_by(par_type) %>%
-  summarise(neg_log_lik = -sum(log(likelihood+1e-200))) %>%
-  ggplot(aes(par_type, neg_log_lik))+
-  geom_bar(stat="identity", width=.5)+
-  geom_hline(aes(yintercept = min(neg_log_lik)), linetype="dashed")
-
+dnorm(changeMatrix[,11], .01, .04)
 ```
 
-# Parameter recovery
+Is the spread of the prob change faster bc of sigma?
 
 ```{r}
-true_dat = sim_task(sub_data, model_name = "model2b", d=0.02, sigma = 0.007)
+dnorm(changeMatrix[,11], .01, .02)
 ```
 
-Is the task neg log likelihood **smaller** for the true parameters compared to wrong ones? **No! So identifiability is problematic?**
+What do these normal distributions look like?
 
 ```{r}
-get_task_nll(data=true_dat, par=c(.02, .007), par_names=c("d", "sigma"), model_name="model2b")
+data.frame(vals=rnorm(1000, .02, .02)) %>%
+  mutate(dist = 'mu=.02, sigma=.02') %>%
+  rbind(data.frame(vals=rnorm(1000, .01, .04)) %>%
+  mutate(dist = 'mu=.01, sigma=.04')) %>%
+  ggplot(aes(vals, fill=dist))+
+  geom_histogram(position="identity", alpha=.5, bins=30)+
+  geom_vline(aes(xintercept = .02))+
+  geom_vline(aes(xintercept = .01))+
+  labs(fill="")
 ```
 
-```{r}
-get_task_nll(data=true_dat, par=c(.0115, .0115), par_names=c("d", "sigma"), model_name="model2b")
-```
 
-What do the trial likelihoods look like with true data generating and false parameters? Is there any variability? Are they all 0? Do these parameters generate sensible data, e.g. for a trial with large EV/QV differences? 
 
-```{r}
-pars = list(d=0.02, sigma = 0.007)
-fit1_data = fit_task(true_dat, model_name = "model2b", pars_ = pars)
-unique(fit1_data$likelihood)
-```
-
-```{r}
-pars = list(d=0.0115, sigma = 0.0115)
-fit2_data = fit_task(true_dat, model_name = "model2b", pars_ = pars)
-unique(fit2_data$likelihood)
-```
-
-```{r}
-true_dat
-```
-
-```{r}
-sim_sanity_checks(true_dat)
-```
 
 ## Built-in optimizer
 

@@ -151,7 +151,7 @@ sub_data = clean_beh_data %>%
   rename(EVLeft = leftLotteryEV, EVRight = rightLotteryEV, QVLeft = leftQValue, QVRight = rightQValue)
 ```
 
-Use the trials from that subject's data to simulate data (not fitting anything to real data yet to see if recovery with known true parameters is possible)
+Use the trials from that subject's data to simulate data (not fitting anything to real data yet to see if recovery with known true parameters is possible). Note model1 has time outs so simulated data can have different number of rows depending on the parameters.
 
 ```{r}
 stim1 = sim_task(sub_data, model_name = "model1", d = .04, sigma = .02) %>%drop_na()
@@ -160,17 +160,13 @@ stim3 = sim_task(sub_data, model_name = "model1", d = .02, sigma = .04) %>%drop_
 stim4 = sim_task(sub_data, model_name = "model1", d = .04, sigma = .04) %>%drop_na()
 ```
 
-Do these paramters generate reasonable data?
+Do these parameters generate reasonable data?
 
-```{r}
+```{r eval=FALSE}
 sim_sanity_checks(stim4, compare_logits = TRUE)
 ```
 
-```{r}
-stim1
-```
-
-Fit using the parameter combinations.
+True pars d = .04, sigma =.02
 
 ```{r}
 stim1_fit1 = fit_task(stim1, model_name = "model1", pars_ = list(d=.04, sigma = .02))
@@ -182,12 +178,69 @@ stim1_fit4 = fit_task(stim1, model_name = "model1", pars_ = list(d=.04, sigma = 
 What has the smallest neg log likelihood?
 
 ```{r}
-sum(-log(stim1_fit1$likelihood+1e-200))
-sum(-log(stim1_fit2$likelihood+1e-200))
-sum(-log(stim1_fit3$likelihood+1e-200))
-sum(-log(stim1_fit4$likelihood+1e-200))
+print("True pars d = .04, sigma =.02")
+paste0("Fit pars d = .04, sigma =.02, nll = ", round(sum(-log(stim1_fit1$likelihood+1e-200)), 2))
+paste0("Fit pars d = .02, sigma =.02, nll = ", round(sum(-log(stim1_fit2$likelihood+1e-200)), 2))
+paste0("Fit pars d = .02, sigma =.04, nll = ", round(sum(-log(stim1_fit3$likelihood+1e-200)), 2))
+paste0("Fit pars d = .04, sigma =.04, nll = ", round(sum(-log(stim1_fit4$likelihood+1e-200)), 2))
 ```
 
+True pars d = .02, sigma =.02
+
+```{r}
+stim2_fit1 = fit_task(stim2, model_name = "model1", pars_ = list(d=.04, sigma = .02))
+stim2_fit2 = fit_task(stim2, model_name = "model1", pars_ = list(d=.02, sigma = .02))
+stim2_fit3 = fit_task(stim2, model_name = "model1", pars_ = list(d=.02, sigma = .04))
+stim2_fit4 = fit_task(stim2, model_name = "model1", pars_ = list(d=.04, sigma = .04))
+```
+
+What has the smallest neg log likelihood?
+
+```{r}
+print("True pars d = .02, sigma =.02")
+paste0("Fit pars d = .04, sigma =.02, nll = ", round(sum(-log(stim2_fit1$likelihood+1e-200)), 2))
+paste0("Fit pars d = .02, sigma =.02, nll = ", round(sum(-log(stim2_fit2$likelihood+1e-200)), 2))
+paste0("Fit pars d = .02, sigma =.04, nll = ", round(sum(-log(stim2_fit3$likelihood+1e-200)), 2))
+paste0("Fit pars d = .04, sigma =.04, nll = ", round(sum(-log(stim2_fit4$likelihood+1e-200)), 2))
+```
+
+True pars d = .02, sigma =.04
+
+```{r}
+stim3_fit1 = fit_task(stim3, model_name = "model1", pars_ = list(d=.04, sigma = .02))
+stim3_fit2 = fit_task(stim3, model_name = "model1", pars_ = list(d=.02, sigma = .02))
+stim3_fit3 = fit_task(stim3, model_name = "model1", pars_ = list(d=.02, sigma = .04))
+stim3_fit4 = fit_task(stim3, model_name = "model1", pars_ = list(d=.04, sigma = .04))
+```
+
+What has the smallest neg log likelihood?
+
+```{r}
+print("True pars d = .02, sigma =.04")
+paste0("Fit pars d = .04, sigma =.02, nll = ", round(sum(-log(stim3_fit1$likelihood+1e-200)), 2))
+paste0("Fit pars d = .02, sigma =.02, nll = ", round(sum(-log(stim3_fit2$likelihood+1e-200)), 2))
+paste0("Fit pars d = .02, sigma =.04, nll = ", round(sum(-log(stim3_fit3$likelihood+1e-200)), 2))
+paste0("Fit pars d = .04, sigma =.04, nll = ", round(sum(-log(stim3_fit4$likelihood+1e-200)), 2))
+```
+
+True pars d = .04, sigma =.04
+
+```{r}
+stim4_fit1 = fit_task(stim4, model_name = "model1", pars_ = list(d=.04, sigma = .02))
+stim4_fit2 = fit_task(stim4, model_name = "model1", pars_ = list(d=.02, sigma = .02))
+stim4_fit3 = fit_task(stim4, model_name = "model1", pars_ = list(d=.02, sigma = .04))
+stim4_fit4 = fit_task(stim4, model_name = "model1", pars_ = list(d=.04, sigma = .04))
+```
+
+What has the smallest neg log likelihood?
+
+```{r}
+print("True pars d = .02, sigma =.04")
+paste0("Fit pars d = .04, sigma =.02, nll = ", round(sum(-log(stim4_fit1$likelihood+1e-200)), 2))
+paste0("Fit pars d = .02, sigma =.02, nll = ", round(sum(-log(stim4_fit2$likelihood+1e-200)), 2))
+paste0("Fit pars d = .02, sigma =.04, nll = ", round(sum(-log(stim4_fit3$likelihood+1e-200)), 2))
+paste0("Fit pars d = .04, sigma =.04, nll = ", round(sum(-log(stim4_fit4$likelihood+1e-200)), 2))
+```
 
 ## Drivers of the tradeoff
 
@@ -209,36 +262,133 @@ fit_trial(d = .02, sigma = .02, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight 
 fit_trial(d = .02, sigma = .04, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .3, choice="left", reactionTime = .6, debug=TRUE)
 ```
 
-`prStates` for the starting position declines a lot faster for the smaller mu.
+```{r}
+fit_trial(d = .04, sigma = .04, EVLeft = .7, EVRight = .2, QVLeft = .7, QVRight = .2, probFractalDraw = .3, choice="left", reactionTime = .6, debug=TRUE)
+```
+
+`prStates` for the starting position declines a lot faster when sigma is large.
 
 How do `dnorm(changeMatrix, mu, sigma)` and `pnorm(changeUp[,nextTime], mu, sigma)` change depending on mu and sigma?
 
 ```{r}
-dnorm(changeMatrix[,11], .02, .02)
+reactionTime = 600
+timeStep = 10
+barrier = 1
+bias = 0
+approxStateStep = .1
+
+numTimeSteps = round(reactionTime / timeStep)
+  
+initialBarrier = barrier
+barrier = rep(initialBarrier, numTimeSteps)
+
+# Obtain correct state step.
+halfNumStateBins = round(initialBarrier / approxStateStep)
+stateStep = initialBarrier / (halfNumStateBins + 0.5)
+
+# The vertical axis is divided into states.
+states = seq(-1*(initialBarrier) + (stateStep / 2), initialBarrier - (stateStep / 2), stateStep)
+
+# Find the state corresponding to the bias parameter.
+biasState = which.min(abs(states - bias))
+
+# Initial probability for all states is zero, except the bias state,
+# for which the initial probability is one.
+prStates = matrix(data = 0, nrow = length(states), ncol = numTimeSteps)
+prStates[biasState,1] = 1
+
+# How much change is required from each state to move onto every other state
+changeMatrix = matrix(data = states, ncol=length(states), nrow=length(states), byrow=FALSE) - matrix(data = states, ncol=length(states), nrow=length(states), byrow=TRUE)
+
+# How much change is required from each state to cross the up or down barrier at each time point
+changeUp = matrix(data = barrier, ncol=numTimeSteps, nrow=length(states), byrow=TRUE) - matrix(data = states, ncol=numTimeSteps, nrow=length(states), byrow=FALSE)
+changeDown = matrix(data = -barrier, ncol=numTimeSteps, nrow=length(states), byrow=TRUE) - matrix(data = states, ncol=numTimeSteps, nrow=length(states), byrow=FALSE)
+```
+
+What are the RDV states?
+
+```{r}
+states
+```
+
+How much change in required to get to each state from the starting state of 0.
+
+```{r}
+changeMatrix[,11]
+```
+
+How much change in required to cross the upper bound from each state at each time step?
+
+```{r}
+changeUp[,1]
+```
+
+How much change in required to cross the lower bound at each time step?
+
+```{r}
+changeDown[,1]
+```
+
+What do the normal distributions, of which the PDF and CDF will be used to compute probabilities during fitting, look like?
+
+```{r}
+data.frame(vals=rnorm(2500, .02, .02)) %>%
+  mutate(dist = 'mu=.02, d= .04, sigma=.02') %>%
+  rbind(data.frame(vals=rnorm(2500, .01, .02)) %>%
+          mutate(dist = 'mu=.01, d= .02, sigma=.02')) %>%
+  rbind(data.frame(vals=rnorm(2500, .01, .04)) %>%
+          mutate(dist = 'mu=.01, d= .02, sigma=.04')) %>%
+  rbind(data.frame(vals=rnorm(2500, .02, .04)) %>%
+          mutate(dist = 'mu=.02, d= .04,, sigma=.04')) %>%
+  ggplot(aes(vals))+
+  # geom_histogram(position="identity", alpha=.5, bins=30)+
+  geom_density()+
+  facet_wrap(~dist)
+```
+Probability of transition from starting state to every other state is given by the height prob density for the distribution from which the RDV increment is sampled (i.e. the density of observing a change of size x)
+
+```{r}
+mu = .02
+sigma = .02
+print("Transition probability densities from the starting state")
+round(dnorm(changeMatrix[,11], mu, sigma), 5)
+print("1 - AOC to cross the upper bound from each state")
+round(1 - pnorm(changeUp[,1], mu, sigma), 5) # all columns of changeUp and changeDown are the same without barrier decay
+print("AOC to cross the lower bound from each state")
+round(pnorm(changeDown[,1], mu, sigma), 5)
 ```
 
 ```{r}
-dnorm(changeMatrix[,11], .01, .04)
+mu = .01
+sigma = .02
+print("Transition probability densities from the starting state")
+round(dnorm(changeMatrix[,11], mu, sigma), 5)
+print("1 - AOC to cross the upper bound from each state")
+round(1 - pnorm(changeUp[,1], mu, sigma), 5) # all columns of changeUp and changeDown are the same without barrier decay
+print("AOC to cross the lower bound from each state")
+round(pnorm(changeDown[,1], mu, sigma), 5)
 ```
 
-Is the spread of the prob change faster bc of sigma?
-
 ```{r}
-dnorm(changeMatrix[,11], .01, .02)
+mu = .01
+sigma = .04
+print("Transition probability densities from the starting state")
+round(dnorm(changeMatrix[,11], mu, sigma), 5)
+print("1 - AOC to cross the upper bound from each state")
+round(1 - pnorm(changeUp[,1], mu, sigma), 5) # all columns of changeUp and changeDown are the same without barrier decay
+print("AOC to cross the lower bound from each state")
+round(pnorm(changeDown[,1], mu, sigma), 5)
 ```
 
-What do these normal distributions look like?
-
 ```{r}
-data.frame(vals=rnorm(1000, .02, .02)) %>%
-  mutate(dist = 'mu=.02, sigma=.02') %>%
-  rbind(data.frame(vals=rnorm(1000, .01, .04)) %>%
-  mutate(dist = 'mu=.01, sigma=.04')) %>%
-  ggplot(aes(vals, fill=dist))+
-  geom_histogram(position="identity", alpha=.5, bins=30)+
-  geom_vline(aes(xintercept = .02))+
-  geom_vline(aes(xintercept = .01))+
-  labs(fill="")
+mu = .02
+sigma = .04
+print("Transition probability densities from the starting state")
+round(dnorm(changeMatrix[,11], mu, sigma), 5)
+print("1 - AOC to cross the upper bound from each state")
+round(1 - pnorm(changeUp[,1], mu, sigma), 5) # all columns of changeUp and changeDown are the same without barrier decay
+print("AOC to cross the lower bound from each state")
+round(pnorm(changeDown[,1], mu, sigma), 5)
 ```
 
 

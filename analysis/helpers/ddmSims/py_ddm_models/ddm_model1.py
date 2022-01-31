@@ -1,4 +1,9 @@
 from addm_toolbox.ddm import DDMTrial
+from helpers.ddmSims.py_ddm_models.util import load_trial_conditions_from_csv
+import numpy as np
+from multiprocessing import Pool
+from scipy.stats import norm
+
 
 class DDM(object):
     """
@@ -156,6 +161,70 @@ class DDM(object):
                             probDownCrossing, fileName=fileName)
 
         return likelihood
+    
+    def get_model_log_likelihood(self, trialConditions, numSimulations,
+                                 histBins, dataHistLeft, dataHistRight):
+        """
+        Computes the log-likelihood of a data set given the model. Data set is
+        provided in the form of response time histograms conditioned on choice.
+        Args:
+          trialConditions: list of pairs corresponding to the different trial
+              conditions. Each pair contains the values of left and right
+              items.
+          numSimulations: integer, number of simulations per trial condition to
+              be generated when creating response time histograms.
+          histBins: list of numbers corresponding to the time bins used to
+              create the response time histograms.
+          dataHistLeft: dict indexed by trial condition (where each trial
+              condition is a pair (valueLeft, valueRight)). Each entry is a
+              numpy array corresponding to the response time histogram
+              conditioned on left choice for the data. It is assumed that this
+              histogram was created using the same time bins as argument
+              histBins.
+          dataHistRight: same as dataHistLeft, except that the response time
+              histograms are conditioned on right choice.
+          Returns:
+              The log-likelihood for the data given the model.
+        """
+        logLikelihood = 0
+        for trialCondition in trialConditions:
+            RTsLeft = list()
+            RTsRight = list()
+            sim = 0
+            while sim < numSimulations:
+                try:
+                    ddmTrial = self.simulate_trial(trialCondition[0],trialCondition[1],trialCondition[2],trialCondition[3],trialCondition[4])
+                except:
+                    print(u"An exception occurred while generating "
+                          "artificial trial " + str(sim) + u" for condition " +
+                          str(trialCondition[0]) + u", " +
+                          str(trialCondition[1]) + u", during the " +
+                          u"log-likelihood computation for model " +
+                          str(self.params) + u".")
+                    raise
+                if ddmTrial.choice == -1:
+                    RTsLeft.append(ddmTrial.RT)
+                elif ddmTrial.choice == 1:
+                    RTsRight.append(ddmTrial.RT)
+                sim += 1
+
+            simulLeft = np.histogram(RTsLeft, bins=histBins)[0]
+            if np.sum(simulLeft) != 0:
+                simulLeft = simulLeft / np.sum(simulLeft)
+            with np.errstate(divide=u"ignore"):
+                logSimulLeft = np.where(simulLeft > 0, np.log(simulLeft), 0)
+            dataLeft = np.array(dataHistLeft[trialCondition])
+            logLikelihood += np.dot(logSimulLeft, dataLeft)
+
+            simulRight = np.histogram(RTsRight, bins=histBins)[0]
+            if np.sum(simulRight) != 0:
+                simulRight = simulRight / np.sum(simulRight)
+            with np.errstate(divide=u"ignore"):
+                logSimulRight = np.where(simulRight > 0, np.log(simulRight), 0)
+            dataRight = np.array(dataHistRight[trialCondition])
+            logLikelihood += np.dot(logSimulRight, dataRight)
+
+        return logLikelihood
 
 
     def parallel_get_likelihoods(self, ddmTrials, timeStep=10, stateStep=0.1,
@@ -330,20 +399,20 @@ def recover_pars_pta(d, sigma, rangeD, rangeSigma, trialsFileName=None,
     """
     # Load trial conditions.
     if not trialsFileName:
-        trialsFileName = ("../helpers/ddmSims/test_data/test_trial_conditions.csv")
+        trialsFileName = ("helpers/ddmSims/test_data/test_trial_conditions.csv")
     trialConditions = load_trial_conditions_from_csv(trialsFileName)
 
     # Generate artificial data.
     model = DDM(d, sigma)
     trials = list()
-    for (valueLeft, valueRight) in trialConditions:
+    for (QVLeft, QVRight, EVLeft, EVRight, probFractalDraw) in trialConditions:
         for t in range(trialsPerCondition):
             try:
-                trials.append(model.simulate_trial(valueLeft, valueRight))
+                trials.append(model.simulate_trial(QVLeft, QVRight, EVLeft, EVRight, probFractalDraw))
             except:
                 print(u"An exception occurred while generating artificial "
                       "trial " + str(t) + u" for condition (" +
-                      str(valueLeft) + u", " + str(valueRight) + u").")
+                      str(QVLeft) + u", " + str(QVRight) + u").")
                 raise
 
     # Get likelihoods for all models and all artificial trials.
@@ -388,6 +457,117 @@ def recover_pars_pta(d, sigma, rangeD, rangeSigma, trialsFileName=None,
             print(u"P" + str(model.params) +  u" = " +
                   str(posteriors[model.params]))
         print(u"Sum: " + str(sum(list(posteriors.values()))))
-
         
-def recover_pars_mla
+    return trials, models, likelihoods, posteriors
+
+
+def wrap_ddm_get_model_log_likelihood(args):
+    """
+    Wrapper for DDM.get_model_log_likelihood(), intended for parallel
+    computation using a threadpool.
+    Args:
+      args: a tuple where the first item is a DDM object, and the remaining
+          item are the same arguments required by
+          DDM.get_model_log_likelihood().
+    Returns:
+      The output of DDM.get_model_log_likelihood().
+    """
+    model = args[0]
+    return model.get_model_log_likelihood(*args[1:])
+
+def unwrap_ddm_get_trial_likelihood(arg, **kwarg):
+    """
+    Wrapper for DDM.get_trial_likelihood(), intended for parallel computation
+    using a threadpool. This method should stay outside the class, allowing it
+    to be pickled (as required by multiprocessing).
+    Args:
+      params: same arguments required by DDM.get_trial_likelihood().
+    Returns:
+      The output of DDM.get_trial_likelihood().
+    """
+    return DDM.get_trial_likelihood(*arg, **kwarg)
+
+def recover_pars_mla(d, sigma, rangeD, rangeSigma, trialsFileName=None, numTrials=10,
+         numSimulations=10, binStep=100, maxRT=8000, numThreads=9,
+         verbose=False):
+    """
+    Args:
+      d: float, DDM parameter for generating artificial data.
+      sigma: float, DDM parameter for generating artificial data.
+      rangeD: list of floats, search range for parameter d.
+      rangeSigma: list of floats, search range for parameter sigma.
+      trialsFileName: string, path of trial conditions file.
+      numTrials: int, number of artificial data trials to be generated per
+          trial condition.
+      numSimulations: int, number of simulations to be generated per trial
+          condition, to be used in the RT histograms.
+      binStep: int, size of the bin step to be used in the RT histograms.
+      maxRT: int, maximum RT to be used in the RT histograms.
+      numThreads: int, size of the thread pool.
+      verbose: boolean, whether or not to increase output verbosity.
+    """
+    pool = Pool(numThreads)
+
+    histBins = list(range(0, maxRT + binStep, binStep))
+
+    # Load trial conditions.
+    if not trialsFileName:
+        trialsFileName = ("helpers/ddmSims/test_data/test_trial_conditions.csv")
+    trialConditions = load_trial_conditions_from_csv(trialsFileName)
+
+    # Generate artificial data.
+    dataRTLeft = dict()
+    dataRTRight = dict()
+    for trialCondition in trialConditions:
+        dataRTLeft[trialCondition] = list()
+        dataRTRight[trialCondition] = list()
+    model = DDM(d, sigma)
+    for trialCondition in trialConditions:
+        t = 0
+        while t < numTrials:
+            try:
+                trial = model.simulate_trial(
+                    trialCondition[0], trialCondition[1], trialCondition[2], trialCondition[3], trialCondition[4])
+            except:
+                print(u"An exception occurred while generating artificial "
+                      "trial " + str(t) + u" for condition " +
+                      str(trialCondition[0]) + u", " + str(trialCondition[1]) +
+                      u".")
+                raise
+            if trial.choice == -1:
+                dataRTLeft[trialCondition].append(trial.RT)
+            elif trial.choice == 1:
+                dataRTRight[trialCondition].append(trial.RT)
+            t += 1
+
+    # Generate histograms for artificial data.
+    dataHistLeft = dict()
+    dataHistRight = dict()
+    for trialCondition in trialConditions:
+        dataHistLeft[trialCondition] = np.histogram(
+            dataRTLeft[trialCondition], bins=histBins)[0]
+        dataHistRight[trialCondition] = np.histogram(
+            dataRTRight[trialCondition], bins=histBins)[0]
+
+    # Grid search on the parameters of the model.
+    if verbose:
+        print(u"Performing grid search over the model parameters...")
+    listParams = list()
+    models = list()
+    for d in rangeD:
+        for sigma in rangeSigma:
+            model = DDM(d, sigma)
+            models.append(model)
+            listParams.append((model, trialConditions, numSimulations,
+                              histBins, dataHistLeft, dataHistRight))
+    logLikelihoods = pool.map(wrap_ddm_get_model_log_likelihood, listParams)
+    pool.close()
+
+    if verbose:
+        for i, model in enumerate(models):
+            print(u"L" + str(model.params) + u" = " + str(logLikelihoods[i]))
+        bestIndex = logLikelihoods.index(max(logLikelihoods))
+        print(u"Best fit: " + str(models[bestIndex].params))
+
+    return dataRTLeft, dataRTRight, dataHistLeft, dataHistRight, models, logLikelihoods
+

@@ -383,6 +383,32 @@ class DDM(object):
         
         pp.close()
         
+def wrap_ddm_get_model_log_likelihood(args):
+    """
+    Wrapper for DDM.get_model_log_likelihood(), intended for parallel
+    computation using a threadpool.
+    Args:
+      args: a tuple where the first item is a DDM object, and the remaining
+          item are the same arguments required by
+          DDM.get_model_log_likelihood().
+    Returns:
+      The output of DDM.get_model_log_likelihood().
+    """
+    model = args[0]
+    return model.get_model_log_likelihood(*args[1:])
+
+def unwrap_ddm_get_trial_likelihood(arg, **kwarg):
+    """
+    Wrapper for DDM.get_trial_likelihood(), intended for parallel computation
+    using a threadpool. This method should stay outside the class, allowing it
+    to be pickled (as required by multiprocessing).
+    Args:
+      params: same arguments required by DDM.get_trial_likelihood().
+    Returns:
+      The output of DDM.get_trial_likelihood().
+    """
+    return DDM.get_trial_likelihood(*arg, **kwarg)
+        
 def recover_pars_pta(d, sigma, rangeD, rangeSigma, trialsFileName=None,
          trialsPerCondition=800, numThreads=9, verbose=False):
     """
@@ -460,32 +486,6 @@ def recover_pars_pta(d, sigma, rangeD, rangeSigma, trialsFileName=None,
         
     return trials, models, likelihoods, posteriors
 
-
-def wrap_ddm_get_model_log_likelihood(args):
-    """
-    Wrapper for DDM.get_model_log_likelihood(), intended for parallel
-    computation using a threadpool.
-    Args:
-      args: a tuple where the first item is a DDM object, and the remaining
-          item are the same arguments required by
-          DDM.get_model_log_likelihood().
-    Returns:
-      The output of DDM.get_model_log_likelihood().
-    """
-    model = args[0]
-    return model.get_model_log_likelihood(*args[1:])
-
-def unwrap_ddm_get_trial_likelihood(arg, **kwarg):
-    """
-    Wrapper for DDM.get_trial_likelihood(), intended for parallel computation
-    using a threadpool. This method should stay outside the class, allowing it
-    to be pickled (as required by multiprocessing).
-    Args:
-      params: same arguments required by DDM.get_trial_likelihood().
-    Returns:
-      The output of DDM.get_trial_likelihood().
-    """
-    return DDM.get_trial_likelihood(*arg, **kwarg)
 
 def recover_pars_mla(d, sigma, rangeD, rangeSigma, trialsFileName=None, numTrials=10,
          numSimulations=10, binStep=100, maxRT=8000, numThreads=9,

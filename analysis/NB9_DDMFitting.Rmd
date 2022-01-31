@@ -346,6 +346,7 @@ data.frame(vals=rnorm(2500, .02, .02)) %>%
   geom_density()+
   facet_wrap(~dist)
 ```
+
 Probability of transition from starting state to every other state is given by the height prob density for the distribution from which the RDV increment is sampled (i.e. the density of observing a change of size x)
 
 ```{r}

@@ -1,0 +1,87 @@
+---
+title: "Experience vs. description based decision-making project: DDM recovery comparison"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: 'hide'
+---
+
+# Setup
+
+Set up environment and load in data
+
+```{r include=FALSE}
+library(tidyverse)
+library(here)
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+theme_set(theme_classic())
+sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
+helpers_path = here('analysis/helpers/')
+
+set.seed(38573)
+```
+
+```{r}
+source(paste0(helpers_path,'ddmSims/fit_task.R'))
+source(paste0(helpers_path,'ddmSims/sim_task.R'))
+source(paste0(helpers_path,'ddmSims/sim_sanity_checks.R'))
+```
+
+# Set parameters 
+
+```{r}
+d = .06
+sigma = .08
+rangeD = c(0.05, 0.06, 0.07)
+rangeSigma = c(0.065, 0.08, 0.095)
+trialsFileName=NA
+trialsPerCondition=250 
+numTrials = 250
+numThreads = 9
+verbose = FALSE
+```
+
+Create empty list that will store the trial simulators for the forthcoming models.
+
+```{r}
+sim_trial_list = list()
+fit_trial_list = list()
+```
+
+# Parameter recovery
+
+## Model 1: Simplest
+
+```{r}
+source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model1.R'))
+```
+
+```{r}
+sim_trial_list[['model1']] = sim_trial
+fit_trial_list[['model1']] = fit_trial
+```
+
+### Simulate data
+
+```{r}
+test_data = read.csv(paste0(helpers_path, 'ddmSims/test_data/test_trial_conditions.csv'))
+
+# Replicate same conditions n times
+test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_data, simplify = FALSE))
+
+# Simulate choice and RT for the replicated trial conditions
+test_data = sim_task(test_data, model_name = "model1", d = d, sigma = sigma) %>%drop_na()
+```
+
+### Fit using PTA
+
+```{r}
+fit_task(stim1, model_name = "model1", pars_ = list(d=.04, sigma = .02))
+```
+
+### Fit using MLA
+
+```{r}
+
+```

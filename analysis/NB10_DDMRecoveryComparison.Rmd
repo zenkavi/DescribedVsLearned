@@ -77,7 +77,34 @@ test_data = sim_task(test_data, model_name = "model1", d = d, sigma = sigma) %>%
 ### Fit using PTA
 
 ```{r}
-fit_task(stim1, model_name = "model1", pars_ = list(d=.04, sigma = .02))
+numModels = length(rangeD) * length(rangeSigma)
+likelihoods = list()
+models = c()
+posteriors = list()
+
+# Get likelihoods for all models and all artificial trials.
+for (i in 1:length(rangeD)){
+  curD = rangeD[i]
+  for (j in 1:length(rangeSigma)){
+    curSigma = rangeSigma[j]
+    model = paste0(as.character(curD), ", ", as.character(curSigma))
+    curFit = fit_task(test_data, model_name = "model1", pars_ = list(d=curD, sigma = curSigma))
+    likelihoods[model] = curFit$likelihood
+    models = c(models, model)
+    posteriors[model] = 1/numModels
+  }
+}
+
+# Compute the posteriors.
+for(t in 1:nrow(test_data)){
+  
+}
+
+
+```
+
+```{r}
+fit_task(test_data[1:100,], model_name = "model1", pars_ = list(d=.04, sigma = .02))
 ```
 
 ### Fit using MLA

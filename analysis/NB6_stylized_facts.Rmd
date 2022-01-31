@@ -1,0 +1,284 @@
+---
+title: "Experience vs. description based decision-making project: Stylized facts"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: 'hide'
+---
+
+Set up environment and load in data
+
+```{r include=FALSE}
+library(tidyverse)
+library(gridExtra)
+library(brms)
+library(here)
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+# theme_set(theme_bw())
+theme_set(theme_classic())
+sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
+helpers_path = here('analysis/helpers/')
+```
+
+```{r}
+source(paste0(helpers_path, 'save_imaging_events_wBestRpe.R'))
+```
+
+# Stylized facts
+
+## Relative strength of preference
+
+[Previously we briefly looked at](https://zenkavi.github.io/DescribedVsLearned_beh/analysis_nbs/NB3_psychometrics_logits.html) how trials might be grouped as conflict vs. non-conflict. This was a crude measure because it was a binary measure that checked whether both attribute values (EV and QV) for a bundle were better than the other bundle's. But it did not take into account how relevant each attribute was for that trial's reward. For example, for a trial where the probFractalDraw is 0 the fact that the fractals point to a different bundle as the better option compared to the lotteries should not matter since they have no bearing on the trial's reward.
+
+A more refined measure would be the relative strength of preference. Here we operationalize this as the ratio of absolute value differences for each attribute weighted by their relevance (i.e. the probability that the reward would depend on that attribute). It is plotted on a log scale due a long tail. Therefore 0 is where the weighted value difference ratio is 1 (no stronger relative preference across the attributes), positive values are where the ratio is >1 (relative preference for lotteries is larger than for relative preference for fractals), negative values are where the ration is <1 (relative preference for fractals is larger than that for lotteries).
+
+```{r}
+clean_beh_data = clean_beh_data %>%
+  mutate(absEVDiff = abs(leftEVAdv),
+         absQVDiff = abs(leftQVAdv),
+         weightedAbsEVDiff = (1-probFractalDraw)*absEVDiff,
+         weightedAbsQVDiff = probFractalDraw*absQVDiff,
+         absValDiffRatio = absEVDiff/(absQVDiff+1e-6),
+         weightedAbsValDiffRatio = weightedAbsEVDiff/(weightedAbsQVDiff+1e-6),
+         logAbsValDiffRatio = log(absValDiffRatio+1e-5),
+         logWeightedAbsValDiffRatio = log(weightedAbsValDiffRatio+1e-5),
+         log_rt = log(reactionTime)) 
+```
+
+```{r}
+clean_beh_data %>%
+  ggplot(aes(logWeightedAbsValDiffRatio))+
+  geom_histogram(bins=30)+
+  geom_vline(aes(xintercept=0), linetype="dashed", color="dark red")+
+  annotate(geom = "text", label = "Larger difference\nbetween fractals", x=-8, y=1000)+
+  annotate(geom = "text", label = "Larger difference\nbetween lotteries", x=8, y=1000)
+```
+How does weighting by the relevance for the reward change the absolute value difference ratio? Amplifies the difference for the more relevant attribute.
+
+```{r}
+clean_beh_data %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
+  ggplot(aes(logAbsValDiffRatio, logWeightedAbsValDiffRatio, color=probFractalDraw))+
+  geom_point()+
+  geom_abline(aes(slope=1, intercept=0), linetype="dashed")+
+  theme(legend.position = "bottom")+
+  guides(color=guide_legend(nrow=2,byrow=TRUE))+
+  scale_color_manual(values=c('#40004b','#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'))
+```
+What do the distributions of the weighted differences look like for each attribute? For Q-values it is mostly continuous whereas for the EV's there only three values for each level of relevance.
+
+```{r}
+clean_beh_data %>%
+  select(weightedAbsEVDiff, weightedAbsQVDiff, probFractalDraw) %>%
+  gather(key, value, -probFractalDraw) %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
+  ggplot(aes(value, fill=probFractalDraw))+
+  geom_histogram(bins=30, position="identity") +
+  facet_grid(probFractalDraw~key)+
+  theme(legend.position = "none")+
+  guides(fill=guide_legend(nrow=2,byrow=TRUE))+
+  scale_fill_manual(values=c('#40004b','#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'))+
+  labs(x="Weighted absolute Attribute Value Difference")
+```
+```{r}
+with(clean_beh_data, table(probFractalDraw, weightedAbsEVDiff))
+```
+
+### Motivation for competition
+
+Graph below shows the difference in strength of preference for the left bundle based on EV versus QV. The smaller this difference the harder it should be to make the decision based on one attribute only. 
+
+So if choice is faster when this value is larger that would suggest it is driven primarily by (the relative preference for) one attribute. Alternatively if choice is slower when this value is smaller it suggests integrating
+
+```{r}
+clean_beh_data %>%
+  mutate(wAbsLeftEVAdv = (1-probFractalDraw)*abs(leftEVAdv), # strength of left preference based on EV
+         wAbsLeftQVAdv = (probFractalDraw)*abs(leftQVAdv), # strength of left preference based on QV
+         EVAdvMinQVAdv = abs(wAbsLeftEVAdv - wAbsLeftQVAdv), # difference in strength of preference
+         probFractalDraw = as.factor(probFractalDraw)) %>%
+  group_by(probFractalDraw) %>%
+  summarise(meanEVAdvMinQVAdv = mean(EVAdvMinQVAdv),
+            semEVAdvMinQVAdv = sem(EVAdvMinQVAdv)) %>%
+  ggplot(aes(probFractalDraw, meanEVAdvMinQVAdv))+
+  geom_point()+
+  geom_errorbar(aes(ymin = meanEVAdvMinQVAdv - semEVAdvMinQVAdv, ymax = meanEVAdvMinQVAdv + semEVAdvMinQVAdv), width=.2)
+```
+
+## Response times 
+
+### RT by attribute relevance
+
+- Decisions are slower the more the reward depends on both attributes. They are faster the less uncertainty there is about what the reward depends on.  
+- Subjects choose much faster when reward depends only on fractals suggesting a categorical shift for this condition.
+
+```{r}
+clean_beh_data %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
+  group_by(subnum, probFractalDraw) %>%
+  summarise(mean_rt = mean(reactionTime), .groups='keep') %>%
+  ungroup()%>%
+  group_by(probFractalDraw)%>%
+  summarise(sem_rt = sem(mean_rt),
+            mean_rt = mean(mean_rt))
+```
+
+```{r}
+clean_beh_data %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
+  group_by(subnum, probFractalDraw) %>%
+  summarise(mean_log_rt = mean(log_rt), .groups='keep') %>%
+  ungroup()%>%
+  group_by(probFractalDraw)%>%
+  summarise(sem_log_rt = sem(mean_log_rt),
+            mean_log_rt = mean(mean_log_rt)) %>%
+  ggplot(aes(probFractalDraw, mean_log_rt))+
+  geom_point()+
+  geom_errorbar(aes(ymin=  mean_log_rt - sem_log_rt, ymax=mean_log_rt + sem_log_rt), width=.2)
+```
+
+Based on prior psychometric curves we know that when pFrac = 1 choice depends on the QV difference but not the EV difference. So is recall of cached fractal value faster than EV computation?
+
+If for trials where the reward depends only on fractals the decision is being made before the stimuli are even presented (because their values are being looked up from memory) then information presented on the stimulus screen should not affect response times.**But nothing is really presented about the fractals on the stimulus screen so the Q value dependence of RTs for pFrac=1 (see plot below) trials should not completely rule out this possibility**
+
+### RT by attribute value difference
+
+Does RT depend similarly on the EV and QV difference (relative preference for each attribute) at each level of prob fractal draw?
+
+```{r}
+clean_beh_data %>%
+  select(log_rt, absEVDiff, absQVDiff, probFractalDraw) %>%
+  gather(key, value, -log_rt, -probFractalDraw) %>%
+  mutate(probFractalDraw=as.factor(probFractalDraw))%>%
+  ggplot(aes(value, log_rt, color=probFractalDraw))+
+  geom_smooth(method = "lm", formula = y ~ x, alpha=.1)+
+  facet_wrap(~key, scales='free_x')+
+  theme(legend.position = "bottom")+
+  guides(color=guide_legend(nrow=2,byrow=TRUE))+
+  scale_color_manual(values=c('#40004b','#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'))+
+  labs(x="Absolute Attribute Value Difference")
+```
+- For pFrac = 1 the slope is <0 for the QV difference and 0 for the EV difference.
+- For pFrac != 1 the slopes for the QV difference are 0.
+- For pFrac != 1 the slope for the EV difference are <0 but decreasingly so as pFractalDraw increases (i.e. the EV difference becomes less relevant).
+
+```{r}
+tmp = clean_beh_data %>% mutate(pFracOne = as.factor(ifelse(probFractalDraw == 1, 1, 0)))
+
+m = brm(log_rt ~ probFractalDraw + pFracOne +
+          absEVDiff + absQVDiff + 
+          probFractalDraw:absEVDiff + probFractalDraw:absQVDiff + 
+          pFracOne:absEVDiff+ pFracOne:absQVDiff + 
+          (1|subnum), 
+        data=tmp, silent=2, refresh=0)
+```
+
+```{r}
+summary(m)
+```
+
+### RT by relative strength of preference
+
+When probFractalDraw = 1 or 0 there is little to no variance in val diff ratio so those trials are not depicted below.
+
+For other trials there is an interaction between probFractalDraw and the relative strength of preference. Choices are slower when the value difference between the more relevant attribute are slower.
+
+```{r}
+clean_beh_data %>%
+  mutate(probFractalDraw=as.factor(probFractalDraw)) %>%
+  filter(probFractalDraw != "0" & probFractalDraw != "1") %>%
+  ggplot(aes(logWeightedAbsValDiffRatio, log_rt, color=probFractalDraw))+
+  geom_smooth(method = "lm", formula = y ~ x, alpha=.1)+
+  theme(legend.position = "bottom")+
+  guides(color=guide_legend(nrow=2,byrow=TRUE))+
+  scale_color_manual(values=c('#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'))+
+  annotate(geom="text", label="Bigger fractal difference",x=-8, y=-0.2)+
+  annotate(geom="text", label="Bigger lottery difference",x=8, y=-0.2)
+```
+
+```{r}
+tmp = clean_beh_data %>% filter(probFractalDraw != 1 & probFractalDraw != 0)
+
+m = brm(log_rt ~ probFractalDraw * logWeightedAbsValDiffRatio +
+          (1|subnum), 
+        data=tmp, silent=2, refresh=0)
+```
+
+```{r}
+summary(m)
+```
+
+Does the relative preference for both attributes affect RT the same way?
+
+```{r}
+clean_beh_data %>%
+  select(log_rt, weightedAbsEVDiff, weightedAbsQVDiff, probFractalDraw) %>%
+  gather(key, value, -log_rt, -probFractalDraw) %>%
+  mutate(probFractalDraw=as.factor(probFractalDraw))%>%
+  ggplot(aes(value, log_rt, color=probFractalDraw))+
+  geom_smooth(method = "lm", formula = y ~ x, alpha=.1)+
+  facet_wrap(~key, scales='free_x')+
+  # facet_grid(probFractalDraw ~ key)+
+  theme(legend.position = "bottom")+
+  guides(color=guide_legend(nrow=2,byrow=TRUE))+
+  scale_color_manual(values=c('#40004b','#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'))+
+  labs(x="Weighted absolute Attribute Value Difference")
+```
+- The slope of the weightedAbsQVDiff for probFractalDraw = 0 is not different than the other levels of probFractalDraw.
+- The average slope of weightedAbsQVDiff for all levels of probFractalDraw is significantly >0 (odd) but becomes significantly <0 as probFractalDraw increases. Decisions become faster the larger the weighted value difference between the fractals as fractals become more relevant.
+- The average slope of weightedAbsEVDiff is significantly <0 (i.e. the larger the value difference the faster the choice) but it also significantly flattens out (i.e. depends less on the lottery value difference) as probFractalDraw increases and the lotteries become less relevant for the reward.
+
+```{r}
+tmp = clean_beh_data %>% mutate(pFracOne = as.factor(ifelse(probFractalDraw == 1, 1, 0)))
+
+m = brm(log_rt ~ probFractalDraw + pFracOne +
+          weightedAbsEVDiff + weightedAbsQVDiff + 
+          probFractalDraw:weightedAbsEVDiff + probFractalDraw:weightedAbsQVDiff + 
+         pFracOne:weightedAbsQVDiff + 
+          (1|subnum), 
+        data=tmp, silent=2, refresh=0)
+```
+
+```{r}
+summary(m)
+```
+
+### RT distributions
+
+```{r}
+clean_beh_data %>%
+  mutate(choiceLeft = as.factor(choiceLeft)) %>%
+  ggplot(aes(reactionTime, color=choiceLeft))+
+  geom_histogram(bins=100, position="identity", fill=NA, aes(y=..density..))+
+  geom_density()
+```
+
+## Choice
+
+Logit by relative strength of preference
+
+```{r}
+m = brm(choseBetterLottery ~ probFractalDraw * logWeightedAbsValDiffRatio + (1|subnum),
+            data=clean_beh_data, family=bernoulli(link="logit"), silent=2, refresh=0)
+```
+
+```{r}
+summary(m)
+```
+
+Subjects are more likely to choose the bundle with the better lottery the larger the lottery value difference (compared to the fractal value difference) but this effect decreases as the relevance of lotteries for the trial reward decreases.
+
+```{r}
+clean_beh_data %>%
+  mutate(probFractalDraw=as.factor(probFractalDraw)) %>%
+  filter(probFractalDraw != "0" & probFractalDraw != "1") %>%
+  ggplot(aes(logWeightedAbsValDiffRatio, choseBetterLottery, color=probFractalDraw))+
+  # geom_point()+
+  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, alpha=.1)+
+  theme(legend.position = "bottom")+
+  guides(color=guide_legend(nrow=2,byrow=TRUE))+
+  scale_color_manual(values=c('#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'))+
+  annotate(geom="text", label="Bigger fractal difference",x=-8, y=0.3)+
+  annotate(geom="text", label="Bigger lottery difference",x=8, y=0.3)
+```
+

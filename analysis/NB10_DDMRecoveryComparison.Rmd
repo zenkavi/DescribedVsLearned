@@ -89,22 +89,53 @@ for (i in 1:length(rangeD)){
     curSigma = rangeSigma[j]
     model = paste0(as.character(curD), ", ", as.character(curSigma))
     curFit = fit_task(test_data, model_name = "model1", pars_ = list(d=curD, sigma = curSigma))
-    likelihoods[model] = curFit$likelihood
+    likelihoods[[model]] = curFit$likelihood
     models = c(models, model)
-    posteriors[model] = 1/numModels
+    posteriors[[model]] = 1/numModels
   }
 }
-
-# Compute the posteriors.
-for(t in 1:nrow(test_data)){
-  
-}
-
-
 ```
 
 ```{r}
-fit_task(test_data[1:100,], model_name = "model1", pars_ = list(d=.04, sigma = .02))
+# Compute the posteriors.
+for(t in 1:nrow(test_data)){
+  denominator = 0
+  for(m in 1:length(models)){
+    model = models[m]
+    denominator = denominator + (posteriors[[model]] * likelihoods[[model]][t]) #this indexing might be incorrect
+    if(denominator == 0){
+      next
+    }
+  }
+  
+  for(m in 1:length(models)){
+    model = models[m]
+    prior = posteriors[[model]]
+    posteriors[[model]] = likelihoods[[model]][t] * prior /denominator
+  }
+}
+```
+
+Likelihood surface
+
+```{r}
+data.frame(m = models) %>%
+  separate(m, c("d", "sigma"), sep= ",") %>%
+  mutate(likelihoods = unlist(lapply(likelihoods, sum), use.names = FALSE)) %>%
+  ggplot(aes(sigma, d, fill=likelihoods))+
+  geom_tile()
+```
+
+Model posteriors
+
+```{r}
+data.frame(m = models) %>%
+  separate(m, c("d", "sigma"), sep= ",") %>%
+  mutate(posteriors = unlist(posteriors, use.names = FALSE)) %>%
+  ggplot(aes(sigma, d, fill=posteriors))+
+  geom_tile()
+
+
 ```
 
 ### Fit using MLA

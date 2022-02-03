@@ -243,6 +243,8 @@ out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model2b", rangeD_ = r
 
 Both with 50 and 250 particles converged on the wrong parameter combination.
 
+**But note that I think I need to revise how the state likelihood estimation should work when early integration is allowed**
+
 ```{r}
 data.frame(m = out$models) %>%
   separate(m, c("d", "sigma"), sep= ",") %>%
@@ -251,12 +253,23 @@ data.frame(m = out$models) %>%
   geom_tile()
 ```
 
-Is this true in python as well? (epsilon might make a difference)
+So first check if a model with distortion but no early integration converges on the correct parameter combination.
+
+## Model 1a
+
+```{r}
+
+```
+
+Then check if either behavior differently in python? (epsilon might make a difference)
+
+```{r}
+
+```
 
 Why would a model converge on the wrong combination?
 
 **What is this posterior? Can I use it to compare models to each other? Go back to textbook to check elpd formulae.**
-
 
 How can you use the trial likelihood method with other optimization algorithms?
 

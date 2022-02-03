@@ -253,7 +253,7 @@ data.frame(m = out$models) %>%
   geom_tile()
 ```
 
-So first check if a model with distortion but no early integration converges on the correct parameter combination.
+So first check if a model with distortion but no early integration converges on the correct parameter combination. -- running in python, need to test translation in R
 
 ## Model 1a
 

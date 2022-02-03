@@ -4,7 +4,7 @@ from multiprocessing import Pool
 from scipy.stats import norm
 
 class DDMTrial(object):
-    def __init__(self, RT, choice, valueLeft, valueRight, QVRight, QVLeft, EVRight, EVLeft, probFractalDraw):
+    def __init__(self, RT, choice, QVRight, QVLeft, EVRight, EVLeft, probFractalDraw):
         """
         Args:
           RT: response time in milliseconds.
@@ -14,8 +14,6 @@ class DDMTrial(object):
         """
         self.RT = RT
         self.choice = choice
-        self.valueLeft = valueLeft
-        self.valueRight = valueRight
         self.QVRight = QVRight
         self.QVLeft = QVLeft
         self.EVRight = EVRight
@@ -113,7 +111,11 @@ class DDM(object):
 
         # Iterate over the time of this trial.
         
-        distortedProbFractalDraw = np.exp((-1)*self.delta*((-1)*np.log(trial.probFractalDraw))**self.gamma)
+        if trial.probFractalDraw != 0 and trial.probFractalDraw != 1:
+            distortedProbFractalDraw = np.exp((-1)*self.delta*((-1)*np.log(trial.probFractalDraw))**self.gamma)
+        else:
+            distortedProbFractalDraw = trial.probFractalDraw
+                
         leftFractalAdv =  distortedProbFractalDraw * (trial.QVLeft - trial.QVRight)
         leftLotteryAdv = (1-trial.probFractalDraw) * (trial.EVLeft - trial.EVRight)
         weighted_mu = self.d * (leftFractalAdv + leftLotteryAdv)
@@ -283,11 +285,15 @@ class DDM(object):
         RDV = self.bias
         time = 0
         elapsedNDT = 0
-        stimDelayIters = int(stimDelay / timeStep)
         
         # Paradigm specific changes        
 #         valueLeft = probFractalDraw*QVLeft + (1-probFractalDraw)*(EVLeft)
 #         valueRight = probFractalDraw*QVRight + (1-probFractalDraw)*(EVRight)
+        
+        if probFractalDraw != 0 and probFractalDraw != 1:
+            distortedProbFractalDraw = np.exp((-1)*self.delta*((-1)*np.log(probFractalDraw))**self.gamma)
+        else:
+            distortedProbFractalDraw = probFractalDraw
         
         distortedProbFractalDraw = np.exp((-1)*self.delta*((-1)*np.log(probFractalDraw))**self.gamma)
         leftFractalAdv =  distortedProbFractalDraw * (QVLeft - QVRight)
@@ -297,6 +303,7 @@ class DDM(object):
         while True:
             # If the RDV hit one of the barriers, the trial is over.
             if RDV >= self.barrier or RDV <= -self.barrier:
+                RT = time * timeStep
                 if RDV >= self.barrier:
                     choice = -1
                 elif RDV <= -self.barrier:
@@ -314,7 +321,7 @@ class DDM(object):
 
             time += 1
 
-        return DDMTrial(RT, choice, valueLeft, valueRight, QVRight, QVLeft, EVRight, EVLeft, probFractalDraw)
+        return DDMTrial(RT, choice, QVRight, QVLeft, EVRight, EVLeft, probFractalDraw)
 
         
 def wrap_ddm_get_model_log_likelihood(args):

@@ -1,4 +1,4 @@
-sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=400, epsilon = 0.0002, stimDelay = 2000, debug=FALSE,...){
+sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=400, epsilon = 0.0002, debug=FALSE,...){
   
   # d : drift rate
   # sigma: sd of the normal distribution 
@@ -16,7 +16,6 @@ sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   choice = 0
   RT = NA
   
-  decPreStim = 0
   timeOut = 0
   
   kwargs = list(...)
@@ -30,9 +29,6 @@ sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   stimDelayIters = (stimDelay / timeStep)
   nonDecIters = nonDecisionTime / timeStep
   
-  # Integration starts before stim presentation (though meaningful move from 0 happens only for pFrac = 1 trials) but decision can only be indicated after stim. Since total iterations depend on maxIter the addition of iterations before stim presentation controls for the desired max time out for the trial. In the arguments to the function it is specified as the maximum time out duration after stim presentation
-  maxIter = maxIter + stimDelayIters
-  
   initialBarrier = barrier
   barrier = rep(initialBarrier, maxIter)
   
@@ -44,7 +40,8 @@ sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   
   qv_mu_mean = d*(QVLeft - QVRight)
   
-  distortedProbFractalDraw = exp((-1)*delta*((-1)*log(probFractalDraw))^gamma)
+  distortedProbFractalDraw = probFractalDraw
+  
   leftFractalAdv =  distortedProbFractalDraw * (QVLeft - QVRight)
   leftLotteryAdv = (1-probFractalDraw) * (EVLeft - EVRight)
   weighted_mu_mean = d * (leftFractalAdv + leftLotteryAdv)
@@ -57,20 +54,6 @@ sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
       # Convert ms back to secs
       RT = (time * timeStep)/1000 
       
-      # Debugging
-      if(debug){
-        print(paste0("pre subtraction RT = ", RT))
-      }
-      
-      #subtract stimDelay
-      RT = RT - (stimDelay/1000) 
-      
-      # If decision is reached before the stim screen sample rt from log normal distribution similar to choice RT 
-      if (RT < 0){
-        decPreStim = 1
-        RT=rlnorm(1, mean = -.25, sd = 0.5)
-      }
-      
       if (RDV >= barrier[time]){
         choice = "left"
       } else if (RDV <= -barrier[time]){
@@ -79,20 +62,12 @@ sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
       break
     } 
     
-    if (time < stimDelayIters){
-      if (probFractalDraw == 1){
-        mu_mean = qv_mu_mean
-      } else {
-        # No integration before stim presentation for any other trial type
-        mu_mean = 0
-      }
+    
+    if (elapsedNDT < nonDecIters){
+      mu_mean = 0
+      elapsedNDT = elapsedNDT + 1
     } else{
-      if (elapsedNDT < nonDecIters){
-        mu_mean = 0
-        elapsedNDT = elapsedNDT + 1
-      } else{
-        mu_mean = weighted_mu_mean
-      }
+      mu_mean = weighted_mu_mean
     }
     
     # Sample the change in RDV from the distribution.
@@ -133,7 +108,7 @@ sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   }
 }
 
-fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, epsilon = 0.0002, stimDelay = 2000, approxStateStep = 0.1, debug=FALSE, ...){
+fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, epsilon = 0.0002, approxStateStep = 0.1, debug=FALSE, ...){
   
   # RDV = bias
   
@@ -155,12 +130,10 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   QVRight=kwargs$QVRight
   probFractalDraw=kwargs$probFractalDraw
   # Stimulus screen comes on 2 secs after the presentation of probFractalDraw
-  stimDelayIters = (stimDelay / timeStep)
   nonDecIters = nonDecisionTime / timeStep
   
   numTimeSteps = round(reactionTime / timeStep)
-  numTimeSteps = numTimeSteps + stimDelayIters
-  
+
   initialBarrier = barrier
   barrier = rep(initialBarrier, numTimeSteps)
   
@@ -211,22 +184,13 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   # Start at 2 to match python indexing that starts at 0
   for(nextTime in 2:numTimeSteps){
     curTime = nextTime - 1 
-    if (curTime < stimDelayIters){
-      if (probFractalDraw == 1){
-        mu_mean = qv_mu_mean
-      } else {
-        # No integration before stim presentation for any other trial type
-        mu_mean = 0
-      }
+    if (elapsedNDT < nonDecIters){
+      mu_mean = 0
+      elapsedNDT = elapsedNDT + 1
     } else{
-      if (elapsedNDT < nonDecIters){
-        mu_mean = 0
-        elapsedNDT = elapsedNDT + 1
-      } else{
-        mu_mean = weighted_mu_mean
-      }
+      mu_mean = weighted_mu_mean
     }
-    
+
     mu = rnorm(1, mu_mean, epsilon)
     print(mu)
     

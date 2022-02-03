@@ -138,7 +138,64 @@ data.frame(m = models) %>%
 
 ```
 
+How do the posteriors change across trials for each parameter combination?
+
+Expand previous code to keep track of trial by trial posterior for each model.
+
+```{r}
+posteriors_tbt = list()
+
+for (i in 1:length(models)){
+  model = models[i]
+  posteriors_tbt[[model]] = c(1/numModels, rep(NA,length(likelihoods[[1]])-1))
+}
+
+```
+
+```{r}
+# Compute the posteriors.
+for(t in 1:nrow(test_data)){
+  denominator = 0
+  for(m in 1:length(models)){
+    model = models[m]
+    denominator = denominator + (posteriors_tbt[[model]][t] * likelihoods[[model]][t]) 
+    if(denominator == 0){
+      next
+    }
+  }
+  
+  for(m in 1:length(models)){
+    model = models[m]
+    prior = posteriors_tbt[[model]][t]
+    posteriors_tbt[[model]][t+1] = likelihoods[[model]][t] * prior /denominator
+  }
+}
+```
+
+```{r}
+tmp = dplyr::bind_rows(replicate(nrow(test_data)+1, data.frame(m = models), simplify = FALSE)) %>%
+  arrange(m) %>%
+  mutate(posteriors = unlist(posteriors_tbt, use.names = FALSE)) %>%
+  group_by(m) %>%
+  mutate(trial = 1:n()) 
+```
+
+```{r}
+tmp %>%
+  ggplot(aes(trial, posteriors, color=m))+
+  geom_line()+
+  theme(legend.position = "bottom")
+```
+
+How can you use the trial likelihood method with other optimization algorithms?
+
+```{r}
+
+```
+
 ### Fit using MLA
+
+Using RT histograms conditioned on choice.
 
 ```{r}
 

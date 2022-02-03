@@ -25,21 +25,7 @@ set.seed(38573)
 ```{r}
 source(paste0(helpers_path,'ddmSims/fit_task.R'))
 source(paste0(helpers_path,'ddmSims/sim_task.R'))
-source(paste0(helpers_path,'ddmSims/sim_sanity_checks.R'))
-```
-
-# Set parameters 
-
-```{r}
-d = .06
-sigma = .08
-rangeD = c(0.05, 0.06, 0.07)
-rangeSigma = c(0.065, 0.08, 0.095)
-trialsFileName=NA
-trialsPerCondition=250 
-numTrials = 250
-numThreads = 9
-verbose = FALSE
+test_trial_conditions = read.csv(paste0(helpers_path, 'ddmSims/test_data/test_trial_conditions.csv'))
 ```
 
 Create empty list that will store the trial simulators for the forthcoming models.
@@ -65,10 +51,17 @@ fit_trial_list[['model1']] = fit_trial
 ### Simulate data
 
 ```{r}
-test_data = read.csv(paste0(helpers_path, 'ddmSims/test_data/test_trial_conditions.csv'))
+d = .06
+sigma = .08
+rangeD = c(0.05, 0.06, 0.07)
+rangeSigma = c(0.065, 0.08, 0.095)
+trialsFileName=NA
+trialsPerCondition=250 
+```
 
+```{r}
 # Replicate same conditions n times
-test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_data, simplify = FALSE))
+test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
 
 # Simulate choice and RT for the replicated trial conditions
 test_data = sim_task(test_data, model_name = "model1", d = d, sigma = sigma) %>%drop_na()
@@ -180,12 +173,90 @@ tmp = dplyr::bind_rows(replicate(nrow(test_data)+1, data.frame(m = models), simp
   mutate(trial = 1:n()) 
 ```
 
+Posteriors maxes out in relatively few trials for the true model. 
+
+Is that after that many iterations of the same trials or after iterating through all the trials?
+
 ```{r}
 tmp %>%
   ggplot(aes(trial, posteriors, color=m))+
   geom_line()+
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom")+
+  xlim(0, 400)
 ```
+Remember in this case there are 21 combinations repeated 250 times. Since fit_task takes in test_data which repeats these 21 trials in a single block the maxing out should be happening after all trials have been fit about 20 times (400 on the plot above). So you should be able to get to correct parameter combination with much fewer trials.
+
+Confirm that you can do this.
+
+#### Recovery with fewer trials
+
+```{r}
+trialsPerCondition=25 
+
+# Replicate same conditions n times
+test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
+
+# Simulate choice and RT for the replicated trial conditions
+test_data = sim_task(test_data, model_name = "model1", d = d, sigma = sigma) %>%drop_na()
+```
+
+```{r}
+out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model1", rangeD_ = rangeD, rangeSigma_ = rangeSigma)
+```
+
+```{r}
+data.frame(m = out$models) %>%
+  separate(m, c("d", "sigma"), sep= ",") %>%
+  mutate(posteriors = unlist(out$posteriors, use.names = FALSE)) %>%
+  ggplot(aes(sigma, d, fill=posteriors))+
+  geom_tile()
+```
+
+Ok, this was for the simplest model. Does it work for a more complicated model?
+
+## Model 2b:
+
+```{r}
+source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model2b.R'))
+```
+
+```{r}
+sim_trial_list[['model2b']] = sim_trial
+fit_trial_list[['model2b']] = fit_trial
+```
+
+### Simulate data 
+
+```{r}
+trialsPerCondition=250 
+
+# Replicate same conditions n times
+test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
+
+# Simulate choice and RT for the replicated trial conditions
+test_data = sim_task(test_data, model_name = "model2b", d = d, sigma = sigma) %>%drop_na()
+```
+
+```{r}
+out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model2b", rangeD_ = rangeD, rangeSigma_ = rangeSigma)
+```
+
+Both with 50 and 250 particles converged on the wrong parameter combination.
+
+```{r}
+data.frame(m = out$models) %>%
+  separate(m, c("d", "sigma"), sep= ",") %>%
+  mutate(posteriors = unlist(out$posteriors, use.names = FALSE)) %>%
+  ggplot(aes(sigma, d, fill=posteriors))+
+  geom_tile()
+```
+
+Is this true in python as well? (epsilon might make a difference)
+
+Why would a model converge on the wrong combination?
+
+**What is this posterior? Can I use it to compare models to each other? Go back to textbook to check elpd formulae.**
+
 
 How can you use the trial likelihood method with other optimization algorithms?
 
@@ -193,10 +264,3 @@ How can you use the trial likelihood method with other optimization algorithms?
 
 ```
 
-### Fit using MLA
-
-Using RT histograms conditioned on choice.
-
-```{r}
-
-```

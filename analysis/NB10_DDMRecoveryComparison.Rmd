@@ -253,18 +253,65 @@ data.frame(m = out$models) %>%
   geom_tile()
 ```
 
-So first check if a model with distortion but no early integration converges on the correct parameter combination. -- running in python, need to test translation in R
+So first check if a model with distortion but no early integration converges on the correct parameter combination. 
 
 ## Model 1a
 
 ```{r}
-
+source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model1a.R'))
 ```
 
-Then check if either behavior differently in python? (epsilon might make a difference)
+```{r}
+sim_trial_list[['model1a']] = sim_trial
+fit_trial_list[['model1a']] = fit_trial
+```
+
+### Simulate data 
 
 ```{r}
+trialsPerCondition=50 
 
+# Replicate same conditions n times
+test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
+
+# Simulate choice and RT for the replicated trial conditions
+test_data = sim_task(test_data, model_name = "model1a", d = d, sigma = sigma) %>%drop_na()
+```
+
+```{r}
+out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model1a", rangeD_ = rangeD, rangeSigma_ = rangeSigma)
+```
+
+Successful recovery even with 50 particles per trial condition.
+
+```{r}
+data.frame(m = out$models) %>%
+  separate(m, c("d", "sigma"), sep= ",") %>%
+  mutate(posteriors = unlist(out$posteriors, use.names = FALSE)) %>%
+  ggplot(aes(sigma, d, fill=posteriors))+
+  geom_tile()
+```
+What about with a different combination of delta and gamma but still only doing a grid search through delta and sigma?
+
+```{r}
+trialsPerCondition=150 
+
+# Replicate same conditions n times
+test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
+
+test_data = sim_task(test_data, model_name = "model1a", d = d, sigma = sigma, delta=3, gamma=3) %>%drop_na()
+
+out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model1a", rangeD_ = rangeD, rangeSigma_ = rangeSigma)
+```
+
+Failed recovery in the same way both with 50 and 150 particles particles.
+
+```{r}
+data.frame(m = out$models) %>%
+  separate(m, c("d", "sigma"), sep= ",") %>%
+  mutate(posteriors = unlist(out$posteriors, use.names = FALSE)) %>%
+  ggplot(aes(sigma, d, fill=posteriors))+
+  geom_tile()
 ```
 
 Why would a model converge on the wrong combination?

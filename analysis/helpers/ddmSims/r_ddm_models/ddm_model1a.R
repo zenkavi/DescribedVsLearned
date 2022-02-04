@@ -26,7 +26,6 @@ sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   QVRight=kwargs$QVRight
   probFractalDraw=kwargs$probFractalDraw
   # Stimulus screen comes on 2 secs after the presentation of probFractalDraw
-  stimDelayIters = (stimDelay / timeStep)
   nonDecIters = nonDecisionTime / timeStep
   
   initialBarrier = barrier
@@ -38,10 +37,7 @@ sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
     barrier[t] = initialBarrier / (1 + (barrierDecay * t))
   }
   
-  qv_mu_mean = d*(QVLeft - QVRight)
-  
-  distortedProbFractalDraw = probFractalDraw
-  
+  distortedProbFractalDraw = exp((-1)*delta*((-1)*log(probFractalDraw))^gamma)
   leftFractalAdv =  distortedProbFractalDraw * (QVLeft - QVRight)
   leftLotteryAdv = (1-probFractalDraw) * (EVLeft - EVRight)
   weighted_mu_mean = d * (leftFractalAdv + leftLotteryAdv)
@@ -99,7 +95,7 @@ sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   }
   
   #Organize output 
-  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, decPreStim = decPreStim, d = d, sigma = sigma, barrierDecay = barrierDecay, delta=delta, gamma=gamma, barrier=barrier[time], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, maxIter=maxIter, epsilon = epsilon, stimDelay = stimDelay)
+  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, d = d, sigma = sigma, barrierDecay = barrierDecay, delta=delta, gamma=gamma, barrier=barrier[time], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, maxIter=maxIter, epsilon = epsilon)
   
   if(debug){
     return(list(out=out, debug_df = debug_df[-1,]))
@@ -171,8 +167,6 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   changeDown = matrix(data = -barrier, ncol=numTimeSteps, nrow=length(states), byrow=TRUE) - matrix(data = states, ncol=numTimeSteps, nrow=length(states), byrow=FALSE)
   
   elapsedNDT = 0
-  
-  qv_mu_mean = d*(QVLeft - QVRight)
   
   distortedProbFractalDraw = exp((-1)*delta*((-1)*log(probFractalDraw))^gamma)
   leftFractalAdv =  distortedProbFractalDraw * (QVLeft - QVRight)
@@ -246,7 +240,7 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
     } 
   }
   
-  out = data.frame(likelihood = likelihood, EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = reactionTime, d = d, sigma = sigma, barrierDecay = barrierDecay, delta=delta, gamma=gamma, barrier=barrier[numTimeSteps], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, epsilon = epsilon, stimDelay = stimDelay)
+  out = data.frame(likelihood = likelihood, EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = reactionTime, d = d, sigma = sigma, barrierDecay = barrierDecay, delta=delta, gamma=gamma, barrier=barrier[numTimeSteps], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, epsilon = epsilon)
   
   
   return(out)

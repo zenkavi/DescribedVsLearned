@@ -243,7 +243,7 @@ out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model2b", rangeD_ = r
 
 Both with 50 and 250 particles converged on the wrong parameter combination.
 
-**But note that I think I need to revise how the state likelihood estimation should work when early integration is allowed**
+**How should the state likelihood estimation work when early integration is allowed???**
 
 ```{r}
 data.frame(m = out$models) %>%
@@ -313,12 +313,32 @@ data.frame(m = out$models) %>%
   ggplot(aes(sigma, d, fill=posteriors))+
   geom_tile()
 ```
+How do the posteriors change trial by trial? Is the convergence on the wrong model fast?
+
+```{r}
+
+```
+
+Can you recover the true combination if the grid search included all the parameters?
+
+```{r}
+
+```
 
 Why would a model converge on the wrong combination?
 
 **What is this posterior? Can I use it to compare models to each other? Go back to textbook to check elpd formulae.**
 
 How can you use the trial likelihood method with other optimization algorithms?
+Can you get the posteriors if you don't do a grid search?
+What do you need for the posterior?
+  1. Likelihood for each trial.
+  2. (Assuming equally likely models) number of models trials.
+Can you get these using the optim function in R?
+  1. Not sure
+  2. I expect this would be the number of iterations
+  
+How viable is this with Stan using hierarchical models? Can you use the trial likelihood function to code the bespoke model in Stan?
 
 ```{r}
 

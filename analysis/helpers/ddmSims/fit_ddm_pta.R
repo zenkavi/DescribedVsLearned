@@ -1,5 +1,5 @@
 
-fit_ddm_pta = function(data_to_fit_, model_name_, rangeD_, rangeSigma_, posteriors_tbt_ = FALSE){
+fit_ddm_pta = function(data_to_fit_, model_name_, search_space_, posteriors_tbt_ = FALSE){
   
   # Initiallize ranges for the parameter search space
   if("rangeD" %in% names(search_space_)){

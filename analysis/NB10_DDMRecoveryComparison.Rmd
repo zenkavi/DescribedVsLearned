@@ -240,6 +240,8 @@ So first check if a model with distortion but no early integration converges on 
 
 ## Model 1a
 
+This model expands the simplest model by adding probability distortion to the fractals but does not have early integration for the probFractalDraw == 1 case.
+
 ```{r}
 source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model1a.R'))
 ```
@@ -250,6 +252,8 @@ fit_trial_list[['model1a']] = fit_trial
 ```
 
 ### Simulate data 
+
+Setting only d and sigma and leaving delta and gamma at 1.
 
 ```{r}
 trialsPerCondition=50 
@@ -262,7 +266,7 @@ test_data = sim_task(test_data, model_name = "model1a", d = d, sigma = sigma) %>
 ```
 
 ```{r}
-out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model1a", rangeD_ = rangeD, rangeSigma_ = rangeSigma)
+out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model1a", search_space_= list(rangeD = rangeD, rangeSigma = rangeSigma))
 ```
 
 Successful recovery even with 50 particles per trial condition.

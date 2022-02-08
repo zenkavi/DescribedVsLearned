@@ -25,6 +25,7 @@ set.seed(38573)
 ```{r}
 source(paste0(helpers_path,'ddmSims/fit_task.R'))
 source(paste0(helpers_path,'ddmSims/sim_task.R'))
+source(paste0(helpers_path,'ddmSims/fit_ddm_pta.R'))
 test_trial_conditions = read.csv(paste0(helpers_path, 'ddmSims/test_data/test_trial_conditions.csv'))
 ```
 
@@ -119,6 +120,25 @@ data.frame(m = models) %>%
   geom_tile()
 ```
 
+What do the likelihoods for each trial look like for each model? Of comparable ranges, rising and falling similarly for each trial.
+
+```{r eval=FALSE}
+data.frame(likelihoods) %>%
+  gather(key, value) %>%
+  ggplot(aes(value))+
+  geom_histogram(bins=30, alpha=.5, position="identity")+
+  facet_grid(key~.)
+
+data.frame(likelihoods) %>%
+  gather(key, value) %>%
+  group_by(key) %>%
+  mutate(trial = 1:n()) %>%
+  ggplot(aes(trial, value))+
+  geom_line()+
+  facet_grid(key~.)+
+  xlim(0, 200)
+```
+
 Model posteriors
 
 ```{r}
@@ -127,13 +147,9 @@ data.frame(m = models) %>%
   mutate(posteriors = unlist(posteriors, use.names = FALSE)) %>%
   ggplot(aes(sigma, d, fill=posteriors))+
   geom_tile()
-
-
 ```
 
 How do the posteriors change across trials for each parameter combination?
-
-Expand previous code to keep track of trial by trial posterior for each model.
 
 ```{r}
 posteriors_tbt = list()
@@ -214,44 +230,11 @@ data.frame(m = out$models) %>%
 
 Ok, this was for the simplest model. Does it work for a more complicated model?
 
-## Model 2b:
+Initially considered trying Model 2b. This is the one with early integration for the probFractalDraw == 1 case and probability distortion for the fractals. This had captured several aspects of the true data in simulations. 
 
-```{r}
-source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model2b.R'))
-```
-
-```{r}
-sim_trial_list[['model2b']] = sim_trial
-fit_trial_list[['model2b']] = fit_trial
-```
-
-### Simulate data 
-
-```{r}
-trialsPerCondition=250 
-
-# Replicate same conditions n times
-test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
-
-# Simulate choice and RT for the replicated trial conditions
-test_data = sim_task(test_data, model_name = "model2b", d = d, sigma = sigma) %>%drop_na()
-```
-
-```{r}
-out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model2b", rangeD_ = rangeD, rangeSigma_ = rangeSigma)
-```
-
-Both with 50 and 250 particles converged on the wrong parameter combination.
-
-**How should the state likelihood estimation work when early integration is allowed???**
-
-```{r}
-data.frame(m = out$models) %>%
-  separate(m, c("d", "sigma"), sep= ",") %>%
-  mutate(posteriors = unlist(out$posteriors, use.names = FALSE)) %>%
-  ggplot(aes(sigma, d, fill=posteriors))+
-  geom_tile()
-```
+Initial efforts (no longer shown here) failed to recover the true parameters. There might be at least two reasons for this:
+1. Grid search happened only for d and sigma and not for the other two parameters (delta and gamma), which were set to 1 both in simulating and fitting the task.  
+2. The trial likelihood calculation using the state-space approach depends on the assumption that integration happens until the RT as a function of the value difference. For a model where early integration is allowed it is possible that a decision is reached before the stimuli are presented and the RT is then sampled from some log-normal distribution. In such cases the RT that would be looped until is not generated as a function of the value difference in the model. **So how would the state likelihood estimation should work when early integration is allowed???**  
 
 So first check if a model with distortion but no early integration converges on the correct parameter combination. 
 
@@ -291,10 +274,11 @@ data.frame(m = out$models) %>%
   ggplot(aes(sigma, d, fill=posteriors))+
   geom_tile()
 ```
+
 What about with a different combination of delta and gamma but still only doing a grid search through delta and sigma?
 
 ```{r}
-trialsPerCondition=150 
+trialsPerCondition=50 
 
 # Replicate same conditions n times
 test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
@@ -313,6 +297,7 @@ data.frame(m = out$models) %>%
   ggplot(aes(sigma, d, fill=posteriors))+
   geom_tile()
 ```
+
 How do the posteriors change trial by trial? Is the convergence on the wrong model fast?
 
 ```{r}
@@ -327,20 +312,38 @@ Can you recover the true combination if the grid search included all the paramet
 
 Why would a model converge on the wrong combination?
 
-**What is this posterior? Can I use it to compare models to each other? Go back to textbook to check elpd formulae.**
-
-How can you use the trial likelihood method with other optimization algorithms?
-Can you get the posteriors if you don't do a grid search?
-What do you need for the posterior?
-  1. Likelihood for each trial.
-  2. (Assuming equally likely models) number of models trials.
-Can you get these using the optim function in R?
-  1. Not sure
-  2. I expect this would be the number of iterations
-  
-How viable is this with Stan using hierarchical models? Can you use the trial likelihood function to code the bespoke model in Stan?
+1. If the trials consistently have higher likelihoods
+  - Clarify how the likelihoods would necessarily be larger for different sampling distributions based on the parameters
+2. ...
 
 ```{r}
 
 ```
 
+How can you use the trial likelihoods to compute model posteriors with other optimization algorithms?
+
+What do you need for the posterior?
+  1. Likelihood for each trial.
+  2. (Assuming equally likely models) number of models trials.
+
+Can you get these using the optim function in R?
+  1. Not sure
+  2. I expect this would be the number of iterations
+  
+If I can get the parameter combinations used by optim in each iteration using something like as described here https://stackoverflow.com/questions/52552143/how-to-save-the-coefficients-for-each-optim-iteration
+I should be able to generate trial likelihoods and 
+
+Try this first with the simpler model model1.
+
+Step 1: Does optim recover the true parameters? Or at least move in the right direction?
+
+```{r}
+# Previous code that worked with the built-in optim 
+# optim(c(.04, .02), get_task_nll, data=stim1, par_names = c("d", "sigma"), model_name="model1", control = list(maxit=75))
+```
+
+How viable is this with Stan using hierarchical models? Can you use the trial likelihood function to code the bespoke model in Stan?
+
+```{r}
+
+```

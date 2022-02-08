@@ -292,7 +292,7 @@ test_data = sim_task(test_data, model_name = "model1a", d = d, sigma = sigma, de
 out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model1a", search_space_ = list(rangeD = rangeD, rangeSigma = rangeSigma), posteriors_tbt_ = TRUE)
 ```
 
-Split posterior with with 50 particles.
+Have seen both failied recovery, successful recovery and split posterior with with 50 particles.
 
 ```{r}
 data.frame(m = out$models) %>%
@@ -302,7 +302,7 @@ data.frame(m = out$models) %>%
   geom_tile()
 ```
 
-How do the posteriors change trial by trial? Is the convergence on the wrong model fast?
+How do the posteriors change trial by trial? Is the convergence fast or is there an in-between period with high uncertainty?
 
 ```{r}
 tmp = dplyr::bind_rows(replicate(nrow(test_data)+1, data.frame(m = out$models), simplify = FALSE)) %>%
@@ -353,6 +353,8 @@ tmp %>%
   theme(legend.position = "bottom")
 ```
 
+These managed to recover the true d and sigma but delta and gamma were incorrectly fixed at 1. What if you expand to search space to do a grid search across those as well?
+
 Can you recover the true combination if the grid search included all the parameters?
 
 ```{r}
@@ -361,8 +363,52 @@ rangeGamma = c(1.5, 3, 4.5)
 ```
 
 ```{r}
+# Reducing number of trials per condition because the search space will be much larger
+trialsPerCondition=30 
+
+# Replicate same conditions n times
+test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
+
+test_data = sim_task(test_data, model_name = "model1a", d = d, sigma = sigma, delta=3, gamma=3) %>%drop_na()
+
 out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model1a", search_space_ = list(rangeD = rangeD, rangeSigma = rangeSigma, rangeDelta = rangeDelta, rangeGamma =
                                                                                           rangeGamma), posteriors_tbt_ = TRUE)
+```
+
+```{r}
+data.frame(m = out$models) %>%
+  separate(m, c("d", "sigma", "delta", "gamma"), sep= ",") %>%
+  mutate(posteriors = unlist(out$posteriors, use.names = FALSE)) %>%
+  mutate(d_sigma_comb = paste0("d= ", d, ", sigma= ", sigma),
+         delta_gamma_comb = paste0("delta= ", delta, ", gamma= ", gamma)) %>%
+  ggplot(aes(d_sigma_comb, delta_gamma_comb, fill=posteriors))+
+  geom_tile()+
+  labs(x="", y = "")+
+  theme(axis.text.x = element_text(angle=45))
+```
+How do the posteriors change over trials?
+
+```{r}
+tmp = dplyr::bind_rows(replicate(nrow(test_data)+1, data.frame(m = out$models), simplify = FALSE)) %>%
+  arrange(m) %>%
+  mutate(posteriors = unlist(out$posteriors_tbt, use.names = FALSE)) %>%
+  group_by(m) %>%
+  mutate(trial = 1:n()) 
+```
+
+```{r}
+tmp %>%
+  separate(m, c("d", "sigma", "delta", "gamma"), sep= ",") %>%
+  # mutate(d = as.numeric(d),
+  #        sigma = as.numeric(sigma),
+  #        # delta = as.numeric(delta),
+  #        gamma = as.numeric(gamma)) %>%
+# color, alpha, linetype, size
+  ggplot(aes(trial, posteriors))+
+  geom_line(aes(color=d, alpha=sigma))+
+  theme(legend.position = "None")+
+  facet_grid(delta ~ gamma)+
+  scale_alpha_manual(values=c(.3, .5, .7))
 ```
 
 Why would a model converge on the wrong combination?
@@ -398,6 +444,12 @@ Step 1: Does optim recover the true parameters? Or at least move in the right di
 ```
 
 How viable is this with Stan using hierarchical models? Can you use the trial likelihood function to code the bespoke model in Stan?
+
+```{r}
+
+```
+
+Moving things over to remote cluster for subject estimation
 
 ```{r}
 

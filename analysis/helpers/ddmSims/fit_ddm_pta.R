@@ -56,9 +56,6 @@ fit_ddm_pta = function(data_to_fit_, model_name_, search_space_, posteriors_tbt_
     denominator = 0
     for(m in 1:length(models)){
       model = models[m]
-      
-      #Debug
-      # print(paste("Model = ", model, ", trial = ", t))
       denominator = denominator + (posteriors[[model]] * likelihoods[[model]][t]) 
       if(denominator == 0){
         next

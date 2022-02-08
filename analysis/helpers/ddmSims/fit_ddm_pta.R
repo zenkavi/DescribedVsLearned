@@ -1,6 +1,33 @@
 
 fit_ddm_pta = function(data_to_fit_, model_name_, rangeD_, rangeSigma_, posteriors_tbt_ = FALSE){
-  numModels = length(rangeD_) * length(rangeSigma_)
+  
+  # Initiallize ranges for the parameter search space
+  if("rangeD" %in% names(search_space_)){
+    rangeD_ = search_space_[["rangeD"]]
+  } else{
+    rangeD_ = c(0)
+  }
+  
+  if("rangeSigma" %in% names(search_space_)){
+    rangeSigma_ = search_space_[["rangeSigma"]]
+  } else{
+    rangeSigma_ = c(1e-9)
+  }
+  
+  if("rangeDelta" %in% names(search_space_)){
+    rangeDelta_ = search_space_[["rangeDelta"]]
+  } else{
+    rangeDelta_ = c(1)
+  }
+  
+  if("rangeGamma" %in% names(search_space_)){
+    rangeGamma_ = search_space_[["rangeGamma"]]
+  } else{
+    rangeGamma_ = c(1)
+  }
+  
+  # Initialize additional objects that will hold the outputs of fitting
+  numModels = nrow(expand.grid(search_space_))
   likelihoods = list()
   models = c()
   posteriors = list()
@@ -9,12 +36,18 @@ fit_ddm_pta = function(data_to_fit_, model_name_, rangeD_, rangeSigma_, posterio
   for (i in 1:length(rangeD_)){
     curD = rangeD_[i]
     for (j in 1:length(rangeSigma_)){
-      curSigma = rangeSigma_[j]
-      model = paste0(as.character(curD), ", ", as.character(curSigma))
-      curFit = fit_task(data_to_fit_, model_name = model_name_, pars_ = list(d=curD, sigma = curSigma))
-      likelihoods[[model]] = curFit$likelihood
-      models = c(models, model)
-      posteriors[[model]] = 1/numModels
+      curSigma = rangeSigma_[j] 
+      for(k in 1:length(rangeDelta_)){
+        curDelta = rangeDelta_[k]
+        for(l in 1:length(rangeGamma_)){
+          curGamma = rangeGamma_[l]
+          model = paste0(as.character(curD), ", ", as.character(curSigma), ", ", as.character(curDelta), ", ", as.character(curGamma))
+          curFit = fit_task(data_to_fit_, model_name = model_name_, pars_ = list(d=curD, sigma = curSigma, delta = curDelta, gamma = curGamma))
+          likelihoods[[model]] = curFit$likelihood
+          models = c(models, model)
+          posteriors[[model]] = 1/numModels
+        }
+      }
     }
   }
   
@@ -35,6 +68,7 @@ fit_ddm_pta = function(data_to_fit_, model_name_, rangeD_, rangeSigma_, posterio
       posteriors[[model]] = likelihoods[[model]][t] * prior /denominator
     }
     
+    # Compute the posteriors trial by trial
     posteriors_tbt = NA
     
     if(posteriors_tbt_){
@@ -45,7 +79,6 @@ fit_ddm_pta = function(data_to_fit_, model_name_, rangeD_, rangeSigma_, posterio
         posteriors_tbt[[model]] = c(1/numModels, rep(NA,length(likelihoods[[1]])-1))
       }
       
-      # Compute the posteriors.
       for(t in 1:nrow(data_to_fit_)){
         denominator = 0
         for(m in 1:length(models)){

@@ -186,7 +186,7 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
     }
 
     mu = rnorm(1, mu_mean, epsilon)
-    print(mu)
+    # print(mu)
     
     # Update the probability of the states that remain inside the
     # barriers. The probability of being in state B is the sum, over

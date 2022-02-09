@@ -200,6 +200,10 @@ tmp %>%
   theme(legend.position = "bottom")+
   xlim(0, 500)
 ```
+```{r}
+rm(likelihoods, posteriors, posteriors_tbt, numModels, models)
+```
+
 Remember in this case there are 21 combinations repeated 250 times. Since fit_task takes in test_data which repeats these 21 trials in a single block the maxing out should be happening after all trials have been fit about 20 times (400 on the plot above). So you should be able to get to correct parameter combination with much fewer trials.
 
 Confirm that you can do this.
@@ -375,6 +379,8 @@ out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model1a", search_spac
                                                                                           rangeGamma), posteriors_tbt_ = TRUE)
 ```
 
+Posterior surface is split between two models but at least one of them is the correct one.
+
 ```{r}
 data.frame(m = out$models) %>%
   separate(m, c("d", "sigma", "delta", "gamma"), sep= ",") %>%
@@ -382,6 +388,22 @@ data.frame(m = out$models) %>%
   mutate(d_sigma_comb = paste0("d= ", d, ", sigma= ", sigma),
          delta_gamma_comb = paste0("delta= ", delta, ", gamma= ", gamma)) %>%
   ggplot(aes(d_sigma_comb, delta_gamma_comb, fill=posteriors))+
+  geom_tile()+
+  labs(x="", y = "")+
+  theme(axis.text.x = element_text(angle=45))
+```
+Note that, if you had tried to use the sum of trial likelihoods, you would not have been able to tell many models apart from each other.
+
+**Sum of trial likelihoods from the state-space approach does not seem viable to estimate parameters**
+**What is the intuition behind the likelihood computation from the RT histograms conditioned on choice?**
+
+```{r}
+data.frame(m = out$models) %>%
+  separate(m, c("d", "sigma", "delta", "gamma"), sep= ",") %>%
+  mutate(d_sigma_comb = paste0("d= ", d, ", sigma= ", sigma),
+         delta_gamma_comb = paste0("delta= ", delta, ", gamma= ", gamma)) %>%
+  mutate(likelihoods = unlist(lapply(out$likelihoods, sum), use.names = FALSE)) %>%
+  ggplot(aes(d_sigma_comb, delta_gamma_comb, fill=likelihoods))+
   geom_tile()+
   labs(x="", y = "")+
   theme(axis.text.x = element_text(angle=45))
@@ -399,36 +421,22 @@ tmp = dplyr::bind_rows(replicate(nrow(test_data)+1, data.frame(m = out$models), 
 ```{r}
 tmp %>%
   separate(m, c("d", "sigma", "delta", "gamma"), sep= ",") %>%
-  # mutate(d = as.numeric(d),
-  #        sigma = as.numeric(sigma),
-  #        # delta = as.numeric(delta),
-  #        gamma = as.numeric(gamma)) %>%
-# color, alpha, linetype, size
   ggplot(aes(trial, posteriors))+
-  geom_line(aes(color=d, alpha=sigma))+
-  theme(legend.position = "None")+
+  geom_line(aes(linetype=d, color=sigma))+
+  theme(legend.position = "bottom")+
   facet_grid(delta ~ gamma)+
-  scale_alpha_manual(values=c(.3, .5, .7))
+  scale_linetype_manual(values=c("solid", "twodash", "dotted"))
 ```
-
-Why would a model converge on the wrong combination?
-
-1. If the trials consistently have higher likelihoods
-  - Clarify how the likelihoods would necessarily be larger for different sampling distributions based on the parameters
-2. ...
-
-```{r}
-
-```
-
 How can you use the trial likelihoods to compute model posteriors with other optimization algorithms?
+
+## Optimizer
 
 What do you need for the posterior?
   1. Likelihood for each trial.
   2. (Assuming equally likely models) number of models trials.
 
 Can you get these using the optim function in R?
-  1. Not sure
+  1. I don't think so but if I can trace each parameter combination in iterations then I can compute them after the fact
   2. I expect this would be the number of iterations
   
 If I can get the parameter combinations used by optim in each iteration using something like as described here https://stackoverflow.com/questions/52552143/how-to-save-the-coefficients-for-each-optim-iteration
@@ -439,11 +447,45 @@ Try this first with the simpler model model1.
 Step 1: Does optim recover the true parameters? Or at least move in the right direction?
 
 ```{r}
-# Previous code that worked with the built-in optim 
-# optim(c(.04, .02), get_task_nll, data=stim1, par_names = c("d", "sigma"), model_name="model1", control = list(maxit=75))
+trialsPerCondition=25 
+
+# Replicate same conditions n times
+test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
+
+# Simulate choice and RT for the replicated trial conditions
+test_data = sim_task(test_data, model_name = "model1", d = d, sigma = sigma) %>%drop_na()
 ```
 
-How viable is this with Stan using hierarchical models? Can you use the trial likelihood function to code the bespoke model in Stan?
+True parameters
+
+```{r}
+d
+sigma
+```
+
+```{r}
+# Previous code that worked with the built-in optim 
+# optim(c(.01, .01), get_task_nll, data=stim1, par_names = c("d", "sigma"), model_name="model1", control = list(maxit=25), control=list(trace=TRUE))
+
+## use `capture.output` to get raw output
+out <- capture.output(df <- optim(c(.01, .01), get_task_nll, data=stim1, 
+                                  par_names = c("d", "sigma"), model_name="model1", control = list(maxit=25, trace=TRUE)))
+## lines that contain parameters
+start <- grep("parameters", out)
+param_line <- outer(seq_len(start[2] - start[1] - 1) - 1, start, "+")
+## parameter message
+param_msg <- gsub("parameters", "", out[param_line])
+## parameter matrix (a row per iteration)
+param <- matrix(scan(text = param_msg), ncol = length(df$par), byrow = TRUE)
+```
+
+Compute parameter combination trial by trial likelihoods for the optim search space
+
+```{r}
+
+```
+
+How viable is this with Stan or with the Lombardi toolbox using hierarchical models? Can you use the trial likelihood function to code the bespoke model in Stan?
 
 ```{r}
 

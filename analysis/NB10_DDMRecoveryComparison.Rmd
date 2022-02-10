@@ -38,7 +38,7 @@ fit_trial_list = list()
 
 # Grid search with posterior model probability
 
-## Model 1: Simplest
+## Model 1
 
 ```{r}
 source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model1.R'))
@@ -433,6 +433,8 @@ Can you get these using the `optim` function in R?
   
 If I can get the parameter combinations used by optim in each iteration (I can using jbryer/visualMLE package) I should be able to generate trial likelihoods and then compute posteriors for the parameters that were tried by the optimizer. Then I can also compare them to its "best-fitting" parameters as well.
 
+## Model 1
+
 Try this first with the simpler model model1. Does optim recover the true parameters? Or at least move in the right direction?
 
 ```{r}
@@ -445,27 +447,10 @@ test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions
 test_data = sim_task(test_data, model_name = "model1", d = d, sigma = sigma) %>%drop_na()
 ```
 
-True parameters
+Got pretty close to the true parameters without convergence due to `maxit` limit. But even with no limit it doesn't change much more.
 
 ```{r}
-d
-sigma
-```
-
-Got pretty close to the true parameters without convergence due to `maxit` limit.
-
-```{r}
-optim_out = optim_save(c(.01, .01), get_task_nll, data=test_data, par_names = c("d", "sigma"), model_name="model1", control = list(maxit=100))
-```
-
-```{r}
-optim_out$par
-```
-
-Does it converge and on the correct parameters if you remove the `maxit`? Doesn't get much closer than the 100 iterations but takes longer.
-
-```{r eval=FALSE}
-optim_out = optim_save(c(.01, .01), get_task_nll, data=test_data, par_names = c("d", "sigma"), model_name="model1")
+optim_out = optim_save(c(.01, .01), get_task_nll, data=test_data, par_names = c("d", "sigma"), model_name="model1", control = list(maxit=75))
 ```
 
 ```{r}
@@ -475,7 +460,7 @@ optim_out$par
 What about starting from another point? Didn't make a big difference.
 
 ```{r}
-optim_out = optim_save(c(.1, .1), get_task_nll, data=test_data, par_names = c("d", "sigma"), model_name="model1", control = list(maxit=100))
+optim_out = optim_save(c(.1, .1), get_task_nll, data=test_data, par_names = c("d", "sigma"), model_name="model1", control = list(maxit=75))
 ```
 
 ```{r}
@@ -497,7 +482,8 @@ optim_out$iterations_df %>%
   geom_hline(data=tmp, aes(yintercept = true_val), linetype="dashed")+
   theme(legend.position="bottom")
 ```
-Does `optim` get to the true parameters with number of trials that each subject has in the empirical data?
+
+How about with number of trials that each subject has in the empirical data?
 
 ```{r}
 trialsPerCondition=15 
@@ -510,7 +496,7 @@ test_data = sim_task(test_data, model_name = "model1", d = d, sigma = sigma) %>%
 ```
 
 ```{r}
-optim_out = optim_save(c(.01, .01), get_task_nll, data=test_data, par_names = c("d", "sigma"), model_name="model1", control = list(maxit=100))
+optim_out = optim_save(c(.01, .01), get_task_nll, data=test_data, par_names = c("d", "sigma"), model_name="model1", control = list(maxit=75))
 ```
 
 Still pretty good. Though note that this is different than empirical data in that it repeats the same condition several times. 
@@ -532,15 +518,49 @@ optim_out$iterations_df %>%
   geom_hline(data=tmp, aes(yintercept = true_val), linetype="dashed")+
   theme(legend.position="bottom")
 ```
-How about same number of trial but without repeated conditions?
+
+### Non-repeated conditions
+
+How about same number of trials but without repeated conditions?
 
 ```{r}
+sub_data = read.csv(paste0(helpers_path, 'ddmSims/test_data/single_sub_data.csv'))
+sub_data = sub_data %>%
+  select(leftQValue, rightQValue, leftLotteryEV, rightLotteryEV, probFractalDraw) %>%
+  rename(QVLeft = leftQValue, QVRight = rightQValue, EVLeft = leftLotteryEV, EVRight = rightLotteryEV)
+```
 
+```{r}
+sub_data = sim_task(sub_data, model_name = "model1", d = d, sigma = sigma) %>%drop_na()
+```
+
+```{r}
+optim_out = optim_save(c(.01, .01), get_task_nll, data=sub_data, par_names = c("d", "sigma"), model_name="model1", control = list(maxit=75))
+```
+
+```{r}
+optim_out$par
+```
+
+```{r}
+tmp = data.frame(key = c("d", "sigma"), true_val = c(d, sigma))
+
+optim_out$iterations_df %>%
+  gather(key, value, -Result, -Iteration) %>%
+  mutate(key =ifelse(key == "Param1", "d", "sigma")) %>%
+  ggplot(aes(Iteration, value))+
+  geom_point(aes(color=Result))+
+  geom_line(alpha=.5, color="gray")+
+  facet_wrap(~key)+
+  geom_hline(data=tmp, aes(yintercept = true_val), linetype="dashed")+
+  theme(legend.position="bottom")
 ```
 
 How about more complex model?
 
-Complex model fitting two parameters.
+## Model1a
+
+Fitting two parameters, d and sigma.
 
 ```{r}
 trialsPerCondition=15 
@@ -553,7 +573,7 @@ test_data = sim_task(test_data, model_name = "model1a", d = d, sigma = sigma) %>
 ```
 
 ```{r}
-optim_out = optim_save(c(.01, .01), get_task_nll, data=test_data, par_names = c("d", "sigma"), model_name="model1a", control = list(maxit=100))
+optim_out = optim_save(c(.01, .01), get_task_nll, data=test_data, par_names = c("d", "sigma"), model_name="model1a", control = list(maxit=75))
 ```
 
 Not bad.
@@ -576,7 +596,9 @@ optim_out$iterations_df %>%
   theme(legend.position="bottom")
 ```
 
-Complex model fitting four parameters
+Complex model fitting four parameters.
+
+d and sigma are somewhat robust but haven't found success in recovering delta and gamma.
 
 ```{r}
 trialsPerCondition=15 
@@ -589,7 +611,7 @@ test_data = sim_task(test_data, model_name = "model1a", d = d, sigma = sigma, de
 ```
 
 ```{r}
-optim_out = optim_save(c(.01, .01, 1, 1), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=100))
+optim_out = optim_save(c(.01, .01, 1, 1), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=75))
 ```
 
 ```{r}
@@ -605,20 +627,96 @@ optim_out$iterations_df %>%
   ggplot(aes(Iteration, value))+
   geom_point(aes(color=Result))+
   geom_line(alpha=.5, color="gray")+
-  facet_wrap(~key)+
+  facet_wrap(~key, scales="free")+
   geom_hline(data=tmp, aes(yintercept = true_val), linetype="dashed")+
   theme(legend.position="bottom")
 ```
 
+```{r}
+optim_out = optim_save(c(.01, .01, 3, 3), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=75))
+```
+
+```{r}
+optim_out$par
+```
+
+```{r}
+tmp = data.frame(key = c("d", "sigma", "delta", "gamma"), true_val = c(d, sigma, 3, 3))
+
+optim_out$iterations_df %>%
+  gather(key, value, -Result, -Iteration) %>%
+  mutate(key =ifelse(key == "Param1", "d", ifelse(key == "Param2", "sigma", ifelse(key == "Param3", "delta", "gamma")))) %>%
+  ggplot(aes(Iteration, value))+
+  geom_point(aes(color=Result))+
+  geom_line(alpha=.5, color="gray")+
+  facet_wrap(~key, scales="free")+
+  geom_hline(data=tmp, aes(yintercept = true_val), linetype="dashed")+
+  theme(legend.position="bottom")
+```
+
+```{r}
+optim_out = optim_save(c(.01, .01, 2, 2), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=75))
+```
+
+```{r}
+optim_out$par
+```
+
+```{r}
+tmp = data.frame(key = c("d", "sigma", "delta", "gamma"), true_val = c(d, sigma, 3, 3))
+
+optim_out$iterations_df %>%
+  gather(key, value, -Result, -Iteration) %>%
+  mutate(key =ifelse(key == "Param1", "d", ifelse(key == "Param2", "sigma", ifelse(key == "Param3", "delta", "gamma")))) %>%
+  ggplot(aes(Iteration, value))+
+  geom_point(aes(color=Result))+
+  geom_line(alpha=.5, color="gray")+
+  facet_wrap(~key, scales="free")+
+  geom_hline(data=tmp, aes(yintercept = true_val), linetype="dashed")+
+  theme(legend.position="bottom")
+```
+
+```{r}
+optim_out = optim_save(c(.1, .1, 2, 2), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=75))
+```
+
+```{r}
+optim_out$par
+```
+
+```{r}
+tmp = data.frame(key = c("d", "sigma", "delta", "gamma"), true_val = c(d, sigma, 3, 3))
+
+optim_out$iterations_df %>%
+  gather(key, value, -Result, -Iteration) %>%
+  mutate(key =ifelse(key == "Param1", "d", ifelse(key == "Param2", "sigma", ifelse(key == "Param3", "delta", "gamma")))) %>%
+  ggplot(aes(Iteration, value))+
+  geom_point(aes(color=Result))+
+  geom_line(alpha=.5, color="gray")+
+  facet_wrap(~key, scales="free")+
+  geom_hline(data=tmp, aes(yintercept = true_val), linetype="dashed")+
+  theme(legend.position="bottom")
+```
+
+
+
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 How viable is this with Stan or with the Lombardi toolbox using hierarchical models? Can you use the trial likelihood function to code the bespoke model in Stan?
 
 ```{r}
 
 ```
 
-What will we do with these parameters? What do we know so far?
+What do we know so far?
+  Slight lottery bias
+  Large individual differences
+  Categorically faster RTs when probFractalDraw == 1
+  Slower decisions the more both attributes need to be considered
+What will we do with these parameters? 
   Individual difference analyses?
-  Any trial level covariate for imaging?
+  Trial level covariate for imaging?
 Move things over to remote cluster for subject estimation?
 
 # Stop clusters

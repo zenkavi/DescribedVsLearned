@@ -11,7 +11,7 @@ output:
 
 Set up environment and load in data
 
-```{r include=FALSE}
+```{r include=FALSE, message=FALSE}
 library(tidyverse)
 library(here)
 cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
@@ -27,6 +27,9 @@ source(paste0(helpers_path,'ddmSims/fit_task.R'))
 source(paste0(helpers_path,'ddmSims/sim_task.R'))
 source(paste0(helpers_path,'ddmSims/fit_ddm_pta.R'))
 test_trial_conditions = read.csv(paste0(helpers_path, 'ddmSims/test_data/test_trial_conditions.csv'))
+```
+
+```{r include=FALSE, message=FALSE}
 library(visualMLE)
 ```
 
@@ -147,6 +150,7 @@ data.frame(m = models) %>%
   ggplot(aes(sigma, d, fill=posteriors))+
   geom_tile()
 ```
+
 How do the posteriors change across trials for each parameter combination?
 
 ```{r}
@@ -225,13 +229,16 @@ data.frame(m = out$models) %>%
   ggplot(aes(sigma, d, fill=posteriors))+
   geom_tile()
 ```
+
 Ok, this was for the simplest model. Does it work for a more complicated model?
 
 Initially considered trying Model 2b. This is the one with early integration for the `probFractalDraw == 1` case and probability distortion for the fractals. This had captured several aspects of the true data in simulations. 
 
-Initial efforts (no longer shown here) failed to recover the true parameters. There might be at least two reasons for this:
+Initial efforts (no longer shown here) failed to recover the true parameters. There might be at least two reasons for this:  
+
 1. Grid search happened only for d and sigma and not for the other two parameters (delta and gamma), which were set to 1 both in simulating and fitting the task.  
-2. The trial likelihood calculation using the state-space approach depends on the assumption that integration happens until the RT as a function of the value difference. For a model where early integration is allowed it is possible that a decision is reached before the stimuli are presented and the RT is then sampled from some log-normal distribution. In such cases the RT that would be looped until is not generated as a function of the value difference in the model. **So how would the state likelihood estimation should work when early integration is allowed???**  
+
+2. The trial likelihood calculation using the state-space approach depends on the assumption that integration happens until the RT as a function of the value difference. For a model where early integration is allowed it is possible that a decision is reached before the stimuli are presented and the RT is then sampled from some log-normal distribution. In such cases the RT that would be looped until is not generated as a function of the value difference in the model. **So how would the state likelihood estimation should work when early integration is allowed?**  
 
 So first check if a model with distortion but no early integration converges on the correct parameter combination. 
 
@@ -273,6 +280,7 @@ data.frame(m = out$models) %>%
   ggplot(aes(sigma, d, fill=posteriors))+
   geom_tile()
 ```
+
 What about with a different combination of delta and gamma but still only doing a grid search through delta and sigma?
 
 ```{r}
@@ -383,6 +391,7 @@ data.frame(m = out$models) %>%
   labs(x="", y = "")+
   theme(axis.text.x = element_text(angle=45))
 ```
+
 Note that, if you had tried to use the sum of trial likelihoods, you would not have been able to tell many models apart from each other.
 
 ```{r}
@@ -396,6 +405,7 @@ data.frame(m = out$models) %>%
   labs(x="", y = "")+
   theme(axis.text.x = element_text(angle=45))
 ```
+
 How do the posteriors change over trials?
 
 ```{r}
@@ -415,6 +425,7 @@ tmp %>%
   facet_grid(delta ~ gamma)+
   scale_linetype_manual(values=c("twodash", "solid", "dotted"))
 ```
+
 *Interim conclusion: Sum of trial likelihoods from the state-space approach does not seem viable to estimate parameters when doing a grid search. Model posteriors based on trial likelihoods are able to recover parameters successfully.*
 
 **Question: [Not immediately crucial but to understand how ML with what I understand to be the "standard" way of fitting with RT histograms] What is the intuition behind the likelihood computation from the RT histograms conditioned on choice?**
@@ -423,15 +434,7 @@ So is a grid search and then computing the parameter combination posteriors the 
 
 # Built-in Optimizer
 
-What do you need for the posterior?
-  1. Likelihood for each trial.
-  2. (Assuming equally likely models) number of models trials.
-
-Can you get these using the `optim` function in R?
-  1. I don't think so but if I can trace each parameter combination in iterations then I can compute them after the fact
-  2. I expect this would be the number of iterations
-  
-If I can get the parameter combinations used by optim in each iteration (I can using jbryer/visualMLE package) I should be able to generate trial likelihoods and then compute posteriors for the parameters that were tried by the optimizer. Then I can also compare them to its "best-fitting" parameters as well.
+If I save the parameter combinations used by `optim` in each iteration (using `jbryer/visualMLE` package) I should be able to generate trial likelihoods and then compute posteriors for the parameters that were tried by the optimizer. Then I can also compare them to its "best-fitting" parameters as well.
 
 ## Model 1
 
@@ -560,7 +563,7 @@ How about more complex model?
 
 ## Model1a
 
-Fitting two parameters, d and sigma.
+### Fitting two parameters, d and sigma
 
 ```{r}
 trialsPerCondition=15 
@@ -596,7 +599,7 @@ optim_out$iterations_df %>%
   theme(legend.position="bottom")
 ```
 
-Complex model fitting four parameters.
+### Fitting four parameters
 
 d and sigma are somewhat robust but haven't found success in recovering delta and gamma.
 
@@ -609,6 +612,10 @@ test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions
 # Simulate choice and RT for the replicated trial conditions
 test_data = sim_task(test_data, model_name = "model1a", d = d, sigma = sigma, delta = 3, gamma = 3) %>%drop_na()
 ```
+
+Examples with different starting points for the same data.
+
+Example 1: c(.01, .01, 1, 1)
 
 ```{r}
 optim_out = optim_save(c(.01, .01, 1, 1), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=75))
@@ -632,6 +639,8 @@ optim_out$iterations_df %>%
   theme(legend.position="bottom")
 ```
 
+Example 2: c(.01, .01, 3, 3)
+
 ```{r}
 optim_out = optim_save(c(.01, .01, 3, 3), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=75))
 ```
@@ -654,6 +663,8 @@ optim_out$iterations_df %>%
   theme(legend.position="bottom")
 ```
 
+Example 3: c(.01, .01, 2, 2)
+
 ```{r}
 optim_out = optim_save(c(.01, .01, 2, 2), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=75))
 ```
@@ -675,6 +686,8 @@ optim_out$iterations_df %>%
   geom_hline(data=tmp, aes(yintercept = true_val), linetype="dashed")+
   theme(legend.position="bottom")
 ```
+
+Example 4: c(.1, .1, 2, 2)
 
 ```{r}
 optim_out = optim_save(c(.1, .1, 2, 2), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=75))

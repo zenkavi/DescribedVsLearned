@@ -37,6 +37,17 @@ sim_trial_list = list()
 fit_trial_list = list()
 ```
 
+Path plots to see how to think through the perturbations
+
+```{r}
+source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model1a.R'))
+
+sim_trial_list[['model1a']] = sim_trial
+fit_trial_list[['model1a']] = fit_trial
+```
+
+
+
 # Stop clusters
 
 ```{r}

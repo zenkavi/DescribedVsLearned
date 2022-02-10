@@ -1,5 +1,5 @@
 ---
-title: "Experience vs. description based decision-making project: DDM recovery comparison"
+title: "Experience vs. description based decision-making project: DDM parameter recovery exercises"
 output: 
   html_document:
     toc: true
@@ -29,7 +29,7 @@ source(paste0(helpers_path,'ddmSims/fit_ddm_pta.R'))
 test_trial_conditions = read.csv(paste0(helpers_path, 'ddmSims/test_data/test_trial_conditions.csv'))
 ```
 
-Create empty list that will store the trial simulators for the forthcoming models.
+Empty lists to store the trial simulators for the forthcoming models.
 
 ```{r}
 sim_trial_list = list()
@@ -42,9 +42,7 @@ fit_trial_list = list()
 
 ```{r}
 source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model1.R'))
-```
 
-```{r}
 sim_trial_list[['model1']] = sim_trial
 fit_trial_list[['model1']] = fit_trial
 ```
@@ -96,7 +94,7 @@ for(t in 1:nrow(test_data)){
   denominator = 0
   for(m in 1:length(models)){
     model = models[m]
-    denominator = denominator + (posteriors[[model]] * likelihoods[[model]][t]) #this indexing might be incorrect
+    denominator = denominator + (posteriors[[model]] * likelihoods[[model]][t]) 
     if(denominator == 0){
       next
     }
@@ -120,9 +118,9 @@ data.frame(m = models) %>%
   geom_tile()
 ```
 
-What do the likelihoods for each trial look like for each model? Of comparable ranges, rising and falling similarly for each trial.
-
 ```{r eval=FALSE}
+# What do the likelihoods for each trial look like for each model? Of comparable ranges, rising and falling similarly for each trial.
+
 data.frame(likelihoods) %>%
   gather(key, value) %>%
   ggplot(aes(value))+
@@ -148,7 +146,6 @@ data.frame(m = models) %>%
   ggplot(aes(sigma, d, fill=posteriors))+
   geom_tile()
 ```
-
 How do the posteriors change across trials for each parameter combination?
 
 ```{r}
@@ -189,9 +186,9 @@ tmp = dplyr::bind_rows(replicate(nrow(test_data)+1, data.frame(m = models), simp
   mutate(trial = 1:n()) 
 ```
 
-Posteriors maxes out in relatively few trials for the true model. 
+Posteriors maxes out in relatively few trials for the true model.  
 
-Is that after that many iterations of the same trials or after iterating through all the trials?
+In this case there are 21 combinations repeated 250 times. Since `fit_task` takes in `test_data` which repeats these 21 trials in a single block the maxing out should be happening after all trials have been fit about 20 times (400 on the plot above). So you should be able to get to correct parameter combination with much fewer trials.
 
 ```{r}
 tmp %>%
@@ -204,9 +201,7 @@ tmp %>%
 rm(likelihoods, posteriors, posteriors_tbt, numModels, models)
 ```
 
-Remember in this case there are 21 combinations repeated 250 times. Since fit_task takes in test_data which repeats these 21 trials in a single block the maxing out should be happening after all trials have been fit about 20 times (400 on the plot above). So you should be able to get to correct parameter combination with much fewer trials.
-
-Confirm that you can do this.
+Confirm that you can indeed recover the parameters with fewer repetitions.
 
 #### Recovery with fewer trials
 
@@ -234,7 +229,7 @@ data.frame(m = out$models) %>%
 
 Ok, this was for the simplest model. Does it work for a more complicated model?
 
-Initially considered trying Model 2b. This is the one with early integration for the probFractalDraw == 1 case and probability distortion for the fractals. This had captured several aspects of the true data in simulations. 
+Initially considered trying Model 2b. This is the one with early integration for the `probFractalDraw == 1` case and probability distortion for the fractals. This had captured several aspects of the true data in simulations. 
 
 Initial efforts (no longer shown here) failed to recover the true parameters. There might be at least two reasons for this:
 1. Grid search happened only for d and sigma and not for the other two parameters (delta and gamma), which were set to 1 both in simulating and fitting the task.  
@@ -244,7 +239,7 @@ So first check if a model with distortion but no early integration converges on 
 
 ## Model 1a
 
-This model expands the simplest model by adding probability distortion to the fractals but does not have early integration for the probFractalDraw == 1 case.
+This model expands the simplest model by adding probability distortion to the fractals but does not have early integration for the `probFractalDraw == 1` case.
 
 ```{r}
 source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model1a.R'))
@@ -296,7 +291,7 @@ test_data = sim_task(test_data, model_name = "model1a", d = d, sigma = sigma, de
 out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model1a", search_space_ = list(rangeD = rangeD, rangeSigma = rangeSigma), posteriors_tbt_ = TRUE)
 ```
 
-Have seen both failied recovery, successful recovery and split posterior with with 50 particles.
+Have seen all possible cases (failed recovery, successful recovery and split posterior) with with 50 particles.
 
 ```{r}
 data.frame(m = out$models) %>%
@@ -366,8 +361,9 @@ rangeDelta = c(1.5, 3, 4.5)
 rangeGamma = c(1.5, 3, 4.5)
 ```
 
+Reducing number of trials per condition because the search space will be much larger
+
 ```{r}
-# Reducing number of trials per condition because the search space will be much larger
 trialsPerCondition=30 
 
 # Replicate same conditions n times
@@ -379,7 +375,7 @@ out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model1a", search_spac
                                                                                           rangeGamma), posteriors_tbt_ = TRUE)
 ```
 
-Posterior surface is split between two models but at least one of them is the correct one.
+I have seen both successful recovery and split posteriors between models but at least one of them is the correct one.
 
 ```{r}
 data.frame(m = out$models) %>%
@@ -393,9 +389,6 @@ data.frame(m = out$models) %>%
   theme(axis.text.x = element_text(angle=45))
 ```
 Note that, if you had tried to use the sum of trial likelihoods, you would not have been able to tell many models apart from each other.
-
-**Sum of trial likelihoods from the state-space approach does not seem viable to estimate parameters**
-**What is the intuition behind the likelihood computation from the RT histograms conditioned on choice?**
 
 ```{r}
 data.frame(m = out$models) %>%
@@ -425,8 +418,13 @@ tmp %>%
   geom_line(aes(linetype=d, color=sigma))+
   theme(legend.position = "bottom")+
   facet_grid(delta ~ gamma)+
-  scale_linetype_manual(values=c("solid", "twodash", "dotted"))
+  scale_linetype_manual(values=c("twodash", "solid", "dotted"))
 ```
+
+*Conclusion: Sum of trial likelihoods from the state-space approach does not seem viable to estimate parameters. Model posteriors based on trial likelihoods are able to recover parameters successfully.*
+
+**Question: [Not immediately crucial but to understand how ML with what I understand to be the "standard" way of fitting with RT histograms] What is the intuition behind the likelihood computation from the RT histograms conditioned on choice?**
+
 How can you use the trial likelihoods to compute model posteriors with other optimization algorithms?
 
 ## Optimizer
@@ -435,16 +433,13 @@ What do you need for the posterior?
   1. Likelihood for each trial.
   2. (Assuming equally likely models) number of models trials.
 
-Can you get these using the optim function in R?
+Can you get these using the `optim` function in R?
   1. I don't think so but if I can trace each parameter combination in iterations then I can compute them after the fact
   2. I expect this would be the number of iterations
   
-If I can get the parameter combinations used by optim in each iteration using something like as described here https://stackoverflow.com/questions/52552143/how-to-save-the-coefficients-for-each-optim-iteration
-I should be able to generate trial likelihoods and 
+If I can get the parameter combinations used by optim in each iteration (I can using jbryer/visualMLE package) I should be able to generate trial likelihoods and then compute posteriors for the parameters that were tried by the optimizer. Then I can also compare them to its "best-fitting" parameters as well.
 
-Try this first with the simpler model model1.
-
-Step 1: Does optim recover the true parameters? Or at least move in the right direction?
+Try this first with the simpler model model1. Does optim recover the true parameters? Or at least move in the right direction?
 
 ```{r}
 trialsPerCondition=25 
@@ -463,20 +458,34 @@ d
 sigma
 ```
 
-```{r}
-# Previous code that worked with the built-in optim 
-# optim(c(.01, .01), get_task_nll, data=stim1, par_names = c("d", "sigma"), model_name="model1", control = list(maxit=25), control=list(trace=TRUE))
+Got pretty close to the true parameters without convergence due to `maxit` limit.
 
-## use `capture.output` to get raw output
-out <- capture.output(df <- optim(c(.01, .01), get_task_nll, data=stim1, 
-                                  par_names = c("d", "sigma"), model_name="model1", control = list(maxit=25, trace=TRUE)))
-## lines that contain parameters
-start <- grep("parameters", out)
-param_line <- outer(seq_len(start[2] - start[1] - 1) - 1, start, "+")
-## parameter message
-param_msg <- gsub("parameters", "", out[param_line])
-## parameter matrix (a row per iteration)
-param <- matrix(scan(text = param_msg), ncol = length(df$par), byrow = TRUE)
+```{r}
+optim_out = optim_save(c(.01, .01), get_task_nll, data=test_data, par_names = c("d", "sigma"), model_name="model1", control = list(maxit=100))
+```
+
+```{r}
+optim_out$par
+```
+
+Does it converge and on the correct parameters if you remove the `maxit`? Doesn't get much closer than the 100 iterations.
+
+```{r eval=FALSE}
+optim_out = optim_save(c(.01, .01), get_task_nll, data=test_data, par_names = c("d", "sigma"), model_name="model1")
+```
+
+```{r}
+optim_out$par
+```
+
+What about starting from another point?
+
+```{r}
+optim_out = optim_save(c(.1, .1), get_task_nll, data=test_data, par_names = c("d", "sigma"), model_name="model1", control = list(maxit=100))
+```
+
+```{r}
+optim_out$par
 ```
 
 Compute parameter combination trial by trial likelihoods for the optim search space
@@ -495,4 +504,11 @@ Moving things over to remote cluster for subject estimation
 
 ```{r}
 
+```
+
+# Stop clusters
+
+```{r}
+parallel::stopCluster(cl = my.fit.cluster)
+parallel::stopCluster(cl = my.sim.cluster)
 ```

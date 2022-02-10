@@ -14,6 +14,7 @@ Set up environment and load in data
 ```{r include=FALSE}
 library(tidyverse)
 library(here)
+library(visualMLE)
 cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 theme_set(theme_classic())
 sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
@@ -414,12 +415,11 @@ tmp %>%
   facet_grid(delta ~ gamma)+
   scale_linetype_manual(values=c("twodash", "solid", "dotted"))
 ```
-
-*Conclusion: Sum of trial likelihoods from the state-space approach does not seem viable to estimate parameters when doing a grid search. Model posteriors based on trial likelihoods are able to recover parameters successfully.*
+*Interim conclusion: Sum of trial likelihoods from the state-space approach does not seem viable to estimate parameters when doing a grid search. Model posteriors based on trial likelihoods are able to recover parameters successfully.*
 
 **Question: [Not immediately crucial but to understand how ML with what I understand to be the "standard" way of fitting with RT histograms] What is the intuition behind the likelihood computation from the RT histograms conditioned on choice?**
 
-How can you use the trial likelihoods to compute model posteriors with other optimization algorithms?
+So is a grid search and then computing the parameter combination posteriors the way to go for estimation? Or can the built-in optimizers work as well?
 
 # Built-in Optimizer
 
@@ -710,10 +710,10 @@ How viable is this with Stan or with the Lombardi toolbox using hierarchical mod
 ```
 
 What do we know so far?
-  Slight lottery bias
-  Large individual differences
-  Categorically faster RTs when probFractalDraw == 1
-  Slower decisions the more both attributes need to be considered
+  Slight lottery bias in pooled data
+  Categorically faster RTs when probFractalDraw == 1 in pooled data
+  Slower decisions the more both attributes need to be considered in pooled data
+  Individual differences both in all of the above stylized facts and in the best fitting RL model
 What will we do with these parameters? 
   Individual difference analyses?
   Trial level covariate for imaging?
@@ -722,6 +722,6 @@ Move things over to remote cluster for subject estimation?
 # Stop clusters
 
 ```{r}
-parallel::stopCluster(cl = my.fit.cluster)
-parallel::stopCluster(cl = my.sim.cluster)
+# parallel::stopCluster(cl = my.fit.cluster)
+# parallel::stopCluster(cl = my.sim.cluster)
 ```

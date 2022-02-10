@@ -36,7 +36,7 @@ sim_trial_list = list()
 fit_trial_list = list()
 ```
 
-# Parameter recovery
+# Grid search with posterior model probability
 
 ## Model 1: Simplest
 
@@ -47,7 +47,7 @@ sim_trial_list[['model1']] = sim_trial
 fit_trial_list[['model1']] = fit_trial
 ```
 
-### Simulate data
+Simulate data
 
 ```{r}
 d = .06
@@ -66,7 +66,7 @@ test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions
 test_data = sim_task(test_data, model_name = "model1", d = d, sigma = sigma) %>%drop_na()
 ```
 
-### Fit using PTA
+Fit using PTA
 
 ```{r}
 numModels = length(rangeD) * length(rangeSigma)
@@ -203,8 +203,6 @@ rm(likelihoods, posteriors, posteriors_tbt, numModels, models)
 
 Confirm that you can indeed recover the parameters with fewer repetitions.
 
-#### Recovery with fewer trials
-
 ```{r}
 trialsPerCondition=25 
 
@@ -226,7 +224,6 @@ data.frame(m = out$models) %>%
   ggplot(aes(sigma, d, fill=posteriors))+
   geom_tile()
 ```
-
 Ok, this was for the simplest model. Does it work for a more complicated model?
 
 Initially considered trying Model 2b. This is the one with early integration for the `probFractalDraw == 1` case and probability distortion for the fractals. This had captured several aspects of the true data in simulations. 
@@ -249,8 +246,6 @@ source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model1a.R'))
 sim_trial_list[['model1a']] = sim_trial
 fit_trial_list[['model1a']] = fit_trial
 ```
-
-### Simulate data 
 
 Setting only d and sigma and leaving delta and gamma at 1.
 
@@ -277,7 +272,6 @@ data.frame(m = out$models) %>%
   ggplot(aes(sigma, d, fill=posteriors))+
   geom_tile()
 ```
-
 What about with a different combination of delta and gamma but still only doing a grid search through delta and sigma?
 
 ```{r}
@@ -421,13 +415,13 @@ tmp %>%
   scale_linetype_manual(values=c("twodash", "solid", "dotted"))
 ```
 
-*Conclusion: Sum of trial likelihoods from the state-space approach does not seem viable to estimate parameters. Model posteriors based on trial likelihoods are able to recover parameters successfully.*
+*Conclusion: Sum of trial likelihoods from the state-space approach does not seem viable to estimate parameters when doing a grid search. Model posteriors based on trial likelihoods are able to recover parameters successfully.*
 
 **Question: [Not immediately crucial but to understand how ML with what I understand to be the "standard" way of fitting with RT histograms] What is the intuition behind the likelihood computation from the RT histograms conditioned on choice?**
 
 How can you use the trial likelihoods to compute model posteriors with other optimization algorithms?
 
-## Optimizer
+# Built-in Optimizer
 
 What do you need for the posterior?
   1. Likelihood for each trial.
@@ -468,7 +462,7 @@ optim_out = optim_save(c(.01, .01), get_task_nll, data=test_data, par_names = c(
 optim_out$par
 ```
 
-Does it converge and on the correct parameters if you remove the `maxit`? Doesn't get much closer than the 100 iterations.
+Does it converge and on the correct parameters if you remove the `maxit`? Doesn't get much closer than the 100 iterations but takes longer.
 
 ```{r eval=FALSE}
 optim_out = optim_save(c(.01, .01), get_task_nll, data=test_data, par_names = c("d", "sigma"), model_name="model1")
@@ -478,7 +472,7 @@ optim_out = optim_save(c(.01, .01), get_task_nll, data=test_data, par_names = c(
 optim_out$par
 ```
 
-What about starting from another point?
+What about starting from another point? Didn't make a big difference.
 
 ```{r}
 optim_out = optim_save(c(.1, .1), get_task_nll, data=test_data, par_names = c("d", "sigma"), model_name="model1", control = list(maxit=100))
@@ -488,10 +482,132 @@ optim_out = optim_save(c(.1, .1), get_task_nll, data=test_data, par_names = c("d
 optim_out$par
 ```
 
-Compute parameter combination trial by trial likelihoods for the optim search space
+What does the search space look like with the optimizer?
+
+```{r}
+tmp = data.frame(key = c("d", "sigma"), true_val = c(d, sigma))
+
+optim_out$iterations_df %>%
+  gather(key, value, -Result, -Iteration) %>%
+  mutate(key =ifelse(key == "Param1", "d", "sigma")) %>%
+  ggplot(aes(Iteration, value))+
+  geom_point(aes(color=Result))+
+  geom_line(alpha=.5, color="gray")+
+  facet_wrap(~key)+
+  geom_hline(data=tmp, aes(yintercept = true_val), linetype="dashed")+
+  theme(legend.position="bottom")
+```
+Does `optim` get to the true parameters with number of trials that each subject has in the empirical data?
+
+```{r}
+trialsPerCondition=15 
+
+# Replicate same conditions n times
+test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
+
+# Simulate choice and RT for the replicated trial conditions
+test_data = sim_task(test_data, model_name = "model1", d = d, sigma = sigma) %>%drop_na()
+```
+
+```{r}
+optim_out = optim_save(c(.01, .01), get_task_nll, data=test_data, par_names = c("d", "sigma"), model_name="model1", control = list(maxit=100))
+```
+
+Still pretty good. Though note that this is different than empirical data in that it repeats the same condition several times. 
+
+```{r}
+optim_out$par
+```
+
+```{r}
+tmp = data.frame(key = c("d", "sigma"), true_val = c(d, sigma))
+
+optim_out$iterations_df %>%
+  gather(key, value, -Result, -Iteration) %>%
+  mutate(key =ifelse(key == "Param1", "d", "sigma")) %>%
+  ggplot(aes(Iteration, value))+
+  geom_point(aes(color=Result))+
+  geom_line(alpha=.5, color="gray")+
+  facet_wrap(~key)+
+  geom_hline(data=tmp, aes(yintercept = true_val), linetype="dashed")+
+  theme(legend.position="bottom")
+```
+How about same number of trial but without repeated conditions?
 
 ```{r}
 
+```
+
+How about more complex model?
+
+Complex model fitting two parameters.
+
+```{r}
+trialsPerCondition=15 
+
+# Replicate same conditions n times
+test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
+
+# Simulate choice and RT for the replicated trial conditions
+test_data = sim_task(test_data, model_name = "model1a", d = d, sigma = sigma) %>%drop_na()
+```
+
+```{r}
+optim_out = optim_save(c(.01, .01), get_task_nll, data=test_data, par_names = c("d", "sigma"), model_name="model1a", control = list(maxit=100))
+```
+
+Not bad.
+
+```{r}
+optim_out$par
+```
+
+```{r}
+tmp = data.frame(key = c("d", "sigma"), true_val = c(d, sigma))
+
+optim_out$iterations_df %>%
+  gather(key, value, -Result, -Iteration) %>%
+  mutate(key =ifelse(key == "Param1", "d", "sigma")) %>%
+  ggplot(aes(Iteration, value))+
+  geom_point(aes(color=Result))+
+  geom_line(alpha=.5, color="gray")+
+  facet_wrap(~key)+
+  geom_hline(data=tmp, aes(yintercept = true_val), linetype="dashed")+
+  theme(legend.position="bottom")
+```
+
+Complex model fitting four parameters
+
+```{r}
+trialsPerCondition=15 
+
+# Replicate same conditions n times
+test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
+
+# Simulate choice and RT for the replicated trial conditions
+test_data = sim_task(test_data, model_name = "model1a", d = d, sigma = sigma, delta = 3, gamma = 3) %>%drop_na()
+```
+
+```{r}
+optim_out = optim_save(c(.01, .01, 1, 1), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=100))
+```
+
+```{r}
+optim_out$par
+```
+
+```{r}
+tmp = data.frame(key = c("d", "sigma", "delta", "gamma"), true_val = c(d, sigma, 3, 3))
+
+optim_out$iterations_df %>%
+  gather(key, value, -Result, -Iteration) %>%
+  mutate(key =ifelse(key == "Param1", "d", ifelse(key == "Param2", "sigma", ifelse(key == "Param3", "delta", "gamma")))) %>%
+  ggplot(aes(Iteration, value))+
+  geom_point(aes(color=Result))+
+  geom_line(alpha=.5, color="gray")+
+  facet_wrap(~key)+
+  geom_hline(data=tmp, aes(yintercept = true_val), linetype="dashed")+
+  theme(legend.position="bottom")
 ```
 
 How viable is this with Stan or with the Lombardi toolbox using hierarchical models? Can you use the trial likelihood function to code the bespoke model in Stan?
@@ -500,11 +616,10 @@ How viable is this with Stan or with the Lombardi toolbox using hierarchical mod
 
 ```
 
-Moving things over to remote cluster for subject estimation
-
-```{r}
-
-```
+What will we do with these parameters? What do we know so far?
+  Individual difference analyses?
+  Any trial level covariate for imaging?
+Move things over to remote cluster for subject estimation?
 
 # Stop clusters
 

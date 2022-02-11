@@ -53,6 +53,8 @@ true_delta = 3
 true_gamma = 3
 ```
 
+# Prob distortion detection fails
+
 ```{r}
 trialsPerCondition=15 
 
@@ -62,8 +64,6 @@ test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions
 # Simulate choice and RT for the replicated trial conditions
 test_data = sim_task(test_data, model_name = "model1b", d = true_d, sigma = true_sigma, delta = true_delta, gamma = true_gamma) %>%drop_na()
 ```
-
-Examples with different starting points for the same data.
 
 Example 1: c(.01, .01, 1, 1)
 
@@ -88,6 +88,8 @@ optim_out$iterations_df %>%
   geom_hline(data=tmp, aes(yintercept = true_val), linetype="dashed")+
   theme(legend.position="bottom")
 ```
+
+## Path plots
 
 Path plots to see how to think through the perturbations
 
@@ -133,53 +135,8 @@ optim_out$iterations_df %>%
   scale_size_manual(values=c(2.5,2,2.5))
 ```
 
-Example 2: c(.01, .01, 2, 2)
+## Change in NLL
 
-```{r}
-optim_out = optim_save(c(.01, .01, 2, 2), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1b", control = list(maxit=75))
-```
-
-```{r}
-optim_out$par
-```
-
-```{r}
-optim_out$iterations_df %>%
-  mutate(iter_block = round(Iteration/10),
-         start_point = c(1,diff(iter_block)),
-         end_point = -1*lead(c(0, diff(iter_block))),
-         end_point = ifelse(is.na(end_point), 0, end_point),
-         point_shape = as.factor(start_point+end_point),
-         iter_block = paste0("Iteration block = ", iter_block)) %>%
-  rename(d= Param1, sigma = Param2)%>%
-  ggplot(aes(d, sigma, color=Iteration))+
-  geom_point(aes(shape=point_shape, size=point_shape))+
-  geom_path(arrow = arrow(type = "closed", length = unit(0.05, "npc")))+
-  geom_point(aes(x = true_d, y = true_sigma), size=3, color="red", pch=8)+
-  facet_wrap(~iter_block, scales="free")+
-  theme(legend.position = "none")+
-  scale_shape_manual(values = c(22,20,21))+
-  scale_size_manual(values=c(2.5,2,2.5))
-```
-
-```{r}
-optim_out$iterations_df %>%
-  mutate(iter_block = round(Iteration/10),
-         start_point = c(1,diff(iter_block)),
-         end_point = -1*lead(c(0, diff(iter_block))),
-         end_point = ifelse(is.na(end_point), 0, end_point),
-         point_shape = as.factor(start_point+end_point),
-         iter_block = paste0("Iteration block = ", iter_block)) %>%
-  rename(delta= Param3, gamma = Param4)%>%
-  ggplot(aes(delta, gamma, color=Iteration))+
-  geom_point(aes(shape=point_shape, size=point_shape))+
-  geom_path(arrow = arrow(type = "closed", length = unit(0.05, "npc")))+
-  geom_point(aes(x = true_delta, y = true_gamma), size=3, color="red", pch=8)+
-  facet_wrap(~iter_block, scales="free")+
-  theme(legend.position = "none")+
-  scale_shape_manual(values = c(22,20,21))+
-  scale_size_manual(values=c(2.5,2,2.5))
-```
 Why don't delta and gamma move? Why were we able to estimate the correct d and sigma even when delta and gamma were incorrectly fixed at 1?
 Because changing them even drastically leads to very small improvement in the objective function (nll).
 
@@ -206,7 +163,9 @@ On the other hand, a similar change in d and sigma leads to a massive difference
 (get_task_nll(test_data, par = c(true_d/3, true_sigma/3, 1, 1), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1b")-true_nll)/true_nll
 ```
 
-How do things look like for the prob distortion function used in the RL modeling?
+## Alternative parameterization
+
+How do things look like with a differently parameterized prob distortion function?
 How does the prob distortion and the ranges of the parameters change?
 
 ```{r}
@@ -297,6 +256,28 @@ optim_out$iterations_df %>%
   theme(legend.position = "none")+
   scale_shape_manual(values = c(22,20,21))+
   scale_size_manual(values=c(2.5,2,2.5))
+```
+```{r}
+true_nll = get_task_nll(test_data, par = c(true_d, true_sigma, true_delta, true_gamma), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1a")
+true_nll
+```
+
+Proportional difference in NLL when using different delta and gamma values compared to the true NLL.
+
+In this specific example, the absence of a big difference between setting delta and gamma to 1 means that the recovery can't tell if there is prob distortion or not.
+
+```{r}
+(get_task_nll(test_data, par = c(true_d, true_sigma, 1, 1), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1a")-true_nll)/true_nll
+```
+
+```{r}
+(get_task_nll(test_data, par = c(true_d, true_sigma, 2, 2), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1a")-true_nll)/true_nll
+```
+
+On the other hand, a similar change in d and sigma leads to a massive difference
+
+```{r}
+(get_task_nll(test_data, par = c(true_d/3, true_sigma/3, 1, 1), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1a")-true_nll)/true_nll
 ```
 
 

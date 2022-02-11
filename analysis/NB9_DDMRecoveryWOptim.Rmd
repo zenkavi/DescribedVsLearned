@@ -1,5 +1,5 @@
 ---
-title: "Experience vs. description based decision-making project: DDM parameter recovery exercises"
+title: "Experience vs. description based decision-making project: DDM parameter recovery by perturbing the `optim` function"
 output: 
   html_document:
     toc: true
@@ -11,10 +11,9 @@ output:
 
 Set up environment and load in data
 
-```{r include=FALSE}
+```{r include=FALSE, message=FALSE}
 library(tidyverse)
 library(here)
-library(visualMLE)
 cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 theme_set(theme_classic())
 sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
@@ -23,11 +22,14 @@ helpers_path = here('analysis/helpers/')
 set.seed(38573)
 ```
 
-```{r}
+```{r message=FALSE}
 source(paste0(helpers_path,'ddmSims/fit_task.R'))
 source(paste0(helpers_path,'ddmSims/sim_task.R'))
-source(paste0(helpers_path,'ddmSims/fit_ddm_pta.R'))
 test_trial_conditions = read.csv(paste0(helpers_path, 'ddmSims/test_data/test_trial_conditions.csv'))
+```
+
+```{r include=FALSE, message=FALSE}
+library(visualMLE)
 ```
 
 Empty lists to store the trial simulators for the forthcoming models.
@@ -37,8 +39,6 @@ sim_trial_list = list()
 fit_trial_list = list()
 ```
 
-Path plots to see how to think through the perturbations
-
 ```{r}
 source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model1a.R'))
 
@@ -46,7 +46,74 @@ sim_trial_list[['model1a']] = sim_trial
 fit_trial_list[['model1a']] = fit_trial
 ```
 
+```{r}
+true_d = .06
+true_sigma = .08
+true_delta = 3
+true_gamma = 3
+```
 
+```{r}
+trialsPerCondition=15 
+
+# Replicate same conditions n times
+test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
+
+# Simulate choice and RT for the replicated trial conditions
+test_data = sim_task(test_data, model_name = "model1a", d = true_d, sigma = true_sigma, delta = true_delta, gamma = true_gamma) %>%drop_na()
+```
+
+Examples with different starting points for the same data.
+
+Example 1: c(.01, .01, 1, 1)
+
+```{r}
+optim_out = optim_save(c(.01, .01, 1, 1), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=75))
+```
+
+```{r}
+optim_out$par
+```
+
+```{r}
+tmp = data.frame(key = c("d", "sigma", "delta", "gamma"), true_val = c(true_d, true_sigma, true_delta, true_gamma))
+
+optim_out$iterations_df %>%
+  gather(key, value, -Result, -Iteration) %>%
+  mutate(key =ifelse(key == "Param1", "d", ifelse(key == "Param2", "sigma", ifelse(key == "Param3", "delta", "gamma")))) %>%
+  ggplot(aes(Iteration, value))+
+  geom_point(aes(color=Result))+
+  geom_line(alpha=.5, color="gray")+
+  facet_wrap(~key, scales="free")+
+  geom_hline(data=tmp, aes(yintercept = true_val), linetype="dashed")+
+  theme(legend.position="bottom")
+```
+
+```{r}
+optim_out$iterations_df %>%
+  ggplot(aes(Param1, Param2, color=Iteration))+
+  geom_point()
+```
+
+Path plots to see how to think through the perturbations
+
+```{r}
+# library(gganimate)
+
+optim_out$iterations_df %>%
+  ggplot(aes(Param1, Param2, color=Iteration, group=Iteration))+
+  geom_point()+
+  # geom_line(group=1)+
+  geom_point(aes(x = true_d, y = true_sigma), size=3, color="red")+
+  transition_reveal(Iteration)
+```
+
+How much to perturb in what dimension?
+How would that be different from many random starts?
+
+```{r}
+
+```
 
 # Stop clusters
 

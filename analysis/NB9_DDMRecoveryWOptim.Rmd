@@ -97,6 +97,8 @@ optim_out$iterations_df %>%
 
 Path plots to see how to think through the perturbations
 
+Look into the Nelder-Mead algorithm to understand how the particle moves.
+
 ```{r}
 # library(gganimate)
 
@@ -114,6 +116,9 @@ How would that be different from many random starts?
 Random starts can be parallelized more by generating a list of starter values and then submitting each as a separate job.
 Can also generate many random datasets.
 How would you then organize the output of each?
+Would you compute posterior among these different optimized values?
+
+Quick test with a loop to make sure naming and saving works
 
 ```{r}
 num_starts = 2
@@ -134,6 +139,10 @@ for(i in 1:num_starts){
 
 ```{r}
 names(all_optim_out)
+```
+
+```{r}
+all_optim_out[[1]]$iterations_df
 ```
 
 # Stop clusters

@@ -40,10 +40,10 @@ fit_trial_list = list()
 ```
 
 ```{r}
-source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model1a.R'))
+source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model1b.R'))
 
-sim_trial_list[['model1a']] = sim_trial
-fit_trial_list[['model1a']] = fit_trial
+sim_trial_list[['model1b']] = sim_trial
+fit_trial_list[['model1b']] = fit_trial
 ```
 
 ```{r}
@@ -60,7 +60,7 @@ trialsPerCondition=15
 test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
 
 # Simulate choice and RT for the replicated trial conditions
-test_data = sim_task(test_data, model_name = "model1a", d = true_d, sigma = true_sigma, delta = true_delta, gamma = true_gamma) %>%drop_na()
+test_data = sim_task(test_data, model_name = "model1b", d = true_d, sigma = true_sigma, delta = true_delta, gamma = true_gamma) %>%drop_na()
 ```
 
 Examples with different starting points for the same data.
@@ -68,7 +68,7 @@ Examples with different starting points for the same data.
 Example 1: c(.01, .01, 1, 1)
 
 ```{r}
-optim_out = optim_save(c(.01, .01, 1, 1), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=75))
+optim_out = optim_save(c(.01, .01, 1, 1), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1b", control = list(maxit=75))
 ```
 
 ```{r}
@@ -93,6 +93,7 @@ Path plots to see how to think through the perturbations
 
 Look into the Nelder-Mead algorithm to understand how the particle moves.
 [Here's a quick tutorial](http://www.brnt.eu/phd/node10.html#SECTION00622200000000000000) on how it works
+[Here's some R code that walks through the moves of the simplex](https://m-clark.github.io/models-by-example/nelder-mead.html)
 
 ```{r}
 optim_out$iterations_df %>%
@@ -100,7 +101,8 @@ optim_out$iterations_df %>%
          start_point = c(1,diff(iter_block)),
          end_point = -1*lead(c(0, diff(iter_block))),
          end_point = ifelse(is.na(end_point), 0, end_point),
-         point_shape = as.factor(start_point+end_point)) %>%
+         point_shape = as.factor(start_point+end_point),
+         iter_block = paste0("Iteration block = ", iter_block)) %>%
   rename(d= Param1, sigma = Param2)%>%
   ggplot(aes(d, sigma, color=Iteration))+
   geom_point(aes(shape=point_shape, size=point_shape))+
@@ -112,7 +114,194 @@ optim_out$iterations_df %>%
   scale_size_manual(values=c(2.5,2,2.5))
 ```
 
+```{r}
+optim_out$iterations_df %>%
+  mutate(iter_block = round(Iteration/10),
+         start_point = c(1,diff(iter_block)),
+         end_point = -1*lead(c(0, diff(iter_block))),
+         end_point = ifelse(is.na(end_point), 0, end_point),
+         point_shape = as.factor(start_point+end_point),
+         iter_block = paste0("Iteration block = ", iter_block)) %>%
+  rename(delta= Param3, gamma = Param4)%>%
+  ggplot(aes(delta, gamma, color=Iteration))+
+  geom_point(aes(shape=point_shape, size=point_shape))+
+  geom_path(arrow = arrow(type = "closed", length = unit(0.05, "npc")))+
+  geom_point(aes(x = true_delta, y = true_gamma), size=3, color="red", pch=8)+
+  facet_wrap(~iter_block, scales="free")+
+  theme(legend.position = "none")+
+  scale_shape_manual(values = c(22,20,21))+
+  scale_size_manual(values=c(2.5,2,2.5))
+```
+
+Example 2: c(.01, .01, 2, 2)
+
+```{r}
+optim_out = optim_save(c(.01, .01, 2, 2), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1b", control = list(maxit=75))
+```
+
+```{r}
+optim_out$par
+```
+
+```{r}
+optim_out$iterations_df %>%
+  mutate(iter_block = round(Iteration/10),
+         start_point = c(1,diff(iter_block)),
+         end_point = -1*lead(c(0, diff(iter_block))),
+         end_point = ifelse(is.na(end_point), 0, end_point),
+         point_shape = as.factor(start_point+end_point),
+         iter_block = paste0("Iteration block = ", iter_block)) %>%
+  rename(d= Param1, sigma = Param2)%>%
+  ggplot(aes(d, sigma, color=Iteration))+
+  geom_point(aes(shape=point_shape, size=point_shape))+
+  geom_path(arrow = arrow(type = "closed", length = unit(0.05, "npc")))+
+  geom_point(aes(x = true_d, y = true_sigma), size=3, color="red", pch=8)+
+  facet_wrap(~iter_block, scales="free")+
+  theme(legend.position = "none")+
+  scale_shape_manual(values = c(22,20,21))+
+  scale_size_manual(values=c(2.5,2,2.5))
+```
+
+```{r}
+optim_out$iterations_df %>%
+  mutate(iter_block = round(Iteration/10),
+         start_point = c(1,diff(iter_block)),
+         end_point = -1*lead(c(0, diff(iter_block))),
+         end_point = ifelse(is.na(end_point), 0, end_point),
+         point_shape = as.factor(start_point+end_point),
+         iter_block = paste0("Iteration block = ", iter_block)) %>%
+  rename(delta= Param3, gamma = Param4)%>%
+  ggplot(aes(delta, gamma, color=Iteration))+
+  geom_point(aes(shape=point_shape, size=point_shape))+
+  geom_path(arrow = arrow(type = "closed", length = unit(0.05, "npc")))+
+  geom_point(aes(x = true_delta, y = true_gamma), size=3, color="red", pch=8)+
+  facet_wrap(~iter_block, scales="free")+
+  theme(legend.position = "none")+
+  scale_shape_manual(values = c(22,20,21))+
+  scale_size_manual(values=c(2.5,2,2.5))
+```
+Why don't delta and gamma move? Why were we able to estimate the correct d and sigma even when delta and gamma were incorrectly fixed at 1?
+Because changing them even drastically leads to very small improvement in the objective function (nll).
+
+```{r}
+true_nll = get_task_nll(test_data, par = c(true_d, true_sigma, true_delta, true_gamma), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1b")
+true_nll
+```
+
+Proportional difference in NLL when using different delta and gamma values compared to the true NLL.
+
+In this specific example, the absence of a big difference between setting delta and gamma to 1 means that the recovery can't tell if there is prob distortion or not.
+
+```{r}
+(get_task_nll(test_data, par = c(true_d, true_sigma, 1, 1), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1b")-true_nll)/true_nll
+```
+
+```{r}
+(get_task_nll(test_data, par = c(true_d, true_sigma, 2, 2), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1b")-true_nll)/true_nll
+```
+
+On the other hand, a similar change in d and sigma leads to a massive difference
+
+```{r}
+(get_task_nll(test_data, par = c(true_d/3, true_sigma/3, 1, 1), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1b")-true_nll)/true_nll
+```
+
+How do things look like for the prob distortion function used in the RL modeling?
+How does the prob distortion and the ranges of the parameters change?
+
+```{r}
+delta = 3
+gamma = 3
+
+data.frame(prob = seq(0,1,.1)) %>%
+  mutate(distorted_prob_1a = (delta * (prob)^gamma) / ( (delta * (prob)^gamma) + (1-prob)^gamma ),
+         distorted_prob_1b = exp(-delta*(-log(prob))^gamma)  ) %>%
+  gather(key, value, -prob) %>%
+  ggplot(aes(prob, value, color=key))+
+  geom_point()+
+  geom_line()+
+  geom_abline(aes(intercept=0, slope = 1), linetype="dashed")+
+  theme(legend.position = "bottom")+
+  labs(color="")
+```
+
+Is recovery any better for these prob distortion parameters?
+
+```{r}
+trialsPerCondition=15 
+
+# Replicate same conditions n times
+test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
+
+# Simulate choice and RT for the replicated trial conditions
+test_data = sim_task(test_data, model_name = "model1a", d = true_d, sigma = true_sigma, delta = true_delta, gamma = true_gamma) %>%drop_na()
+```
+
+```{r}
+optim_out = optim_save(c(.01, .01, 1, 1), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=75))
+```
+
+```{r}
+optim_out$par
+```
+
+```{r}
+tmp = data.frame(key = c("d", "sigma", "delta", "gamma"), true_val = c(true_d, true_sigma, true_delta, true_gamma))
+
+optim_out$iterations_df %>%
+  gather(key, value, -Result, -Iteration) %>%
+  mutate(key =ifelse(key == "Param1", "d", ifelse(key == "Param2", "sigma", ifelse(key == "Param3", "delta", "gamma")))) %>%
+  ggplot(aes(Iteration, value))+
+  geom_point(aes(color=Result))+
+  geom_line(alpha=.5, color="gray")+
+  facet_wrap(~key, scales="free")+
+  geom_hline(data=tmp, aes(yintercept = true_val), linetype="dashed")+
+  theme(legend.position="bottom")
+```
+
+Path plots
+
+```{r}
+optim_out$iterations_df %>%
+  mutate(iter_block = round(Iteration/10),
+         start_point = c(1,diff(iter_block)),
+         end_point = -1*lead(c(0, diff(iter_block))),
+         end_point = ifelse(is.na(end_point), 0, end_point),
+         point_shape = as.factor(start_point+end_point),
+         iter_block = paste0("Iteration block = ", iter_block)) %>%
+  rename(d= Param1, sigma = Param2)%>%
+  ggplot(aes(d, sigma, color=Iteration))+
+  geom_point(aes(shape=point_shape, size=point_shape))+
+  geom_path(arrow = arrow(type = "closed", length = unit(0.05, "npc")))+
+  geom_point(aes(x = true_d, y = true_sigma), size=3, color="red", pch=8)+
+  facet_wrap(~iter_block, scales="free")+
+  theme(legend.position = "none")+
+  scale_shape_manual(values = c(22,20,21))+
+  scale_size_manual(values=c(2.5,2,2.5))
+```
+
+```{r}
+optim_out$iterations_df %>%
+  mutate(iter_block = round(Iteration/10),
+         start_point = c(1,diff(iter_block)),
+         end_point = -1*lead(c(0, diff(iter_block))),
+         end_point = ifelse(is.na(end_point), 0, end_point),
+         point_shape = as.factor(start_point+end_point),
+         iter_block = paste0("Iteration block = ", iter_block)) %>%
+  rename(delta= Param3, gamma = Param4)%>%
+  ggplot(aes(delta, gamma, color=Iteration))+
+  geom_point(aes(shape=point_shape, size=point_shape))+
+  geom_path(arrow = arrow(type = "closed", length = unit(0.05, "npc")))+
+  geom_point(aes(x = true_delta, y = true_gamma), size=3, color="red", pch=8)+
+  facet_wrap(~iter_block, scales="free")+
+  theme(legend.position = "none")+
+  scale_shape_manual(values = c(22,20,21))+
+  scale_size_manual(values=c(2.5,2,2.5))
+```
+
+
 How much to perturb in what dimension?
+Stopping criteria for perturbations?
 
 ```{r}
 
@@ -139,7 +328,7 @@ for(i in 1:num_starts){
   
   start_str = paste(round(start_d, 2), round(start_sigma, 2), round(start_delta, 2), round(start_gamma, 2), sep = ", ")
   
-  all_optim_out[[start_str]] = optim_save(c(start_d, start_sigma, start_delta, start_sigma), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=10))
+  all_optim_out[[start_str]] = optim_save(c(start_d, start_sigma, start_delta, start_sigma), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1b", control = list(maxit=10))
 }
 ```
 

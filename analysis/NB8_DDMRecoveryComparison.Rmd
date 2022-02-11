@@ -242,17 +242,17 @@ Initial efforts (no longer shown here) failed to recover the true parameters. Th
 
 So first check if a model with distortion but no early integration converges on the correct parameter combination. 
 
-## Model 1a
+## Model 1b
 
 This model expands the simplest model by adding probability distortion to the fractals but does not have early integration for the `probFractalDraw == 1` case.
 
 ```{r}
-source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model1a.R'))
+source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model1b.R'))
 ```
 
 ```{r}
-sim_trial_list[['model1a']] = sim_trial
-fit_trial_list[['model1a']] = fit_trial
+sim_trial_list[['model1b']] = sim_trial
+fit_trial_list[['model1b']] = fit_trial
 ```
 
 Setting only d and sigma and leaving delta and gamma at 1.
@@ -264,11 +264,11 @@ trialsPerCondition=50
 test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
 
 # Simulate choice and RT for the replicated trial conditions
-test_data = sim_task(test_data, model_name = "model1a", d = d, sigma = sigma) %>%drop_na()
+test_data = sim_task(test_data, model_name = "model1b", d = d, sigma = sigma) %>%drop_na()
 ```
 
 ```{r}
-out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model1a", search_space_= list(rangeD = rangeD, rangeSigma = rangeSigma))
+out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model1b", search_space_= list(rangeD = rangeD, rangeSigma = rangeSigma))
 ```
 
 Successful recovery even with 50 particles per trial condition.
@@ -289,9 +289,9 @@ trialsPerCondition=50
 # Replicate same conditions n times
 test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
 
-test_data = sim_task(test_data, model_name = "model1a", d = d, sigma = sigma, delta=3, gamma=3) %>%drop_na()
+test_data = sim_task(test_data, model_name = "model1b", d = d, sigma = sigma, delta=3, gamma=3) %>%drop_na()
 
-out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model1a", search_space_ = list(rangeD = rangeD, rangeSigma = rangeSigma), posteriors_tbt_ = TRUE)
+out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model1b", search_space_ = list(rangeD = rangeD, rangeSigma = rangeSigma), posteriors_tbt_ = TRUE)
 ```
 
 Have seen all possible cases (failed recovery, successful recovery and split posterior) with with 50 particles.
@@ -329,9 +329,9 @@ trialsPerCondition=150
 # Replicate same conditions n times
 test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
 
-test_data = sim_task(test_data, model_name = "model1a", d = d, sigma = sigma, delta=3, gamma=3) %>%drop_na()
+test_data = sim_task(test_data, model_name = "model1b", d = d, sigma = sigma, delta=3, gamma=3) %>%drop_na()
 
-out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model1a", search_space_ = list(rangeD = rangeD, rangeSigma = rangeSigma), posteriors_tbt_ = TRUE)
+out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model1b", search_space_ = list(rangeD = rangeD, rangeSigma = rangeSigma), posteriors_tbt_ = TRUE)
 
 data.frame(m = out$models) %>%
   separate(m, c("d", "sigma", "delta", "gamma"), sep= ",") %>%
@@ -372,9 +372,9 @@ trialsPerCondition=30
 # Replicate same conditions n times
 test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
 
-test_data = sim_task(test_data, model_name = "model1a", d = d, sigma = sigma, delta=3, gamma=3) %>%drop_na()
+test_data = sim_task(test_data, model_name = "model1b", d = d, sigma = sigma, delta=3, gamma=3) %>%drop_na()
 
-out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model1a", search_space_ = list(rangeD = rangeD, rangeSigma = rangeSigma, rangeDelta = rangeDelta, rangeGamma =
+out = fit_ddm_pta(data_to_fit_ = test_data, model_name_ = "model1b", search_space_ = list(rangeD = rangeD, rangeSigma = rangeSigma, rangeDelta = rangeDelta, rangeGamma =
                                                                                           rangeGamma), posteriors_tbt_ = TRUE)
 ```
 
@@ -561,7 +561,7 @@ optim_out$iterations_df %>%
 
 How about more complex model?
 
-## Model1a
+## Model1b
 
 ### Fitting two parameters, d and sigma
 
@@ -572,11 +572,11 @@ trialsPerCondition=15
 test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
 
 # Simulate choice and RT for the replicated trial conditions
-test_data = sim_task(test_data, model_name = "model1a", d = d, sigma = sigma) %>%drop_na()
+test_data = sim_task(test_data, model_name = "model1b", d = d, sigma = sigma) %>%drop_na()
 ```
 
 ```{r}
-optim_out = optim_save(c(.01, .01), get_task_nll, data=test_data, par_names = c("d", "sigma"), model_name="model1a", control = list(maxit=75))
+optim_out = optim_save(c(.01, .01), get_task_nll, data=test_data, par_names = c("d", "sigma"), model_name="model1b", control = list(maxit=75))
 ```
 
 Not bad.
@@ -610,7 +610,7 @@ trialsPerCondition=15
 test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
 
 # Simulate choice and RT for the replicated trial conditions
-test_data = sim_task(test_data, model_name = "model1a", d = d, sigma = sigma, delta = 3, gamma = 3) %>%drop_na()
+test_data = sim_task(test_data, model_name = "model1b", d = d, sigma = sigma, delta = 3, gamma = 3) %>%drop_na()
 ```
 
 Examples with different starting points for the same data.
@@ -618,7 +618,7 @@ Examples with different starting points for the same data.
 Example 1: c(.01, .01, 1, 1)
 
 ```{r}
-optim_out = optim_save(c(.01, .01, 1, 1), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=75))
+optim_out = optim_save(c(.01, .01, 1, 1), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1b", control = list(maxit=75))
 ```
 
 ```{r}
@@ -642,7 +642,7 @@ optim_out$iterations_df %>%
 Example 2: c(.01, .01, 3, 3)
 
 ```{r}
-optim_out = optim_save(c(.01, .01, 3, 3), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=75))
+optim_out = optim_save(c(.01, .01, 3, 3), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1b", control = list(maxit=75))
 ```
 
 ```{r}
@@ -666,7 +666,7 @@ optim_out$iterations_df %>%
 Example 3: c(.01, .01, 2, 2)
 
 ```{r}
-optim_out = optim_save(c(.01, .01, 2, 2), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=75))
+optim_out = optim_save(c(.01, .01, 2, 2), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1b", control = list(maxit=75))
 ```
 
 ```{r}
@@ -690,7 +690,7 @@ optim_out$iterations_df %>%
 Example 4: c(.1, .1, 2, 2)
 
 ```{r}
-optim_out = optim_save(c(.1, .1, 2, 2), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=75))
+optim_out = optim_save(c(.1, .1, 2, 2), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1b", control = list(maxit=75))
 ```
 
 ```{r}

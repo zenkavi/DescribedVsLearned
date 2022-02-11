@@ -37,7 +37,7 @@ sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
     barrier[t] = initialBarrier / (1 + (barrierDecay * t))
   }
   
-  distortedProbFractalDraw = (delta * (probFractalDraw)^gamma) / ( (delta * (probFractalDraw)^gamma) + (1-probFractalDraw)^gamma )
+  distortedProbFractalDraw = exp((-1)*delta*((-1)*log(probFractalDraw))^gamma)
   leftFractalAdv =  distortedProbFractalDraw * (QVLeft - QVRight)
   leftLotteryAdv = (1-probFractalDraw) * (EVLeft - EVRight)
   weighted_mu_mean = d * (leftFractalAdv + leftLotteryAdv)
@@ -129,7 +129,7 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   nonDecIters = nonDecisionTime / timeStep
   
   numTimeSteps = round(reactionTime / timeStep)
-
+  
   initialBarrier = barrier
   barrier = rep(initialBarrier, numTimeSteps)
   
@@ -184,7 +184,7 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
     } else{
       mu_mean = weighted_mu_mean
     }
-
+    
     mu = rnorm(1, mu_mean, epsilon)
     # print(mu)
     

@@ -109,10 +109,31 @@ optim_out$iterations_df %>%
 ```
 
 How much to perturb in what dimension?
+
 How would that be different from many random starts?
+Random starts can be parallelized more by generating a list of starter values and then submitting each as a separate job.
+Can also generate many random datasets.
+How would you then organize the output of each?
 
 ```{r}
+num_starts = 2
 
+all_optim_out = list()
+
+for(i in 1:num_starts){
+  start_d = runif(1, 0, 1)
+  start_sigma = runif(1, 0, 1)
+  start_delta = runif(1, 1, 5)
+  start_gamma = runif(1, 1, 5)
+  
+  start_str = paste(round(start_d, 2), round(start_sigma, 2), round(start_delta, 2), round(start_gamma, 2), sep = ", ")
+  
+  all_optim_out[[start_str]] = optim_save(c(start_d, start_sigma, start_delta, start_sigma), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=10))
+}
+```
+
+```{r}
+names(all_optim_out)
 ```
 
 # Stop clusters
@@ -138,3 +159,7 @@ What will we do with these parameters?
   Individual difference analyses?
   Trial level covariate for imaging?
 Move things over to remote cluster for subject estimation?
+Combined DDM + RL modeling:
+  Wouldn't be able to take advantage of `foreach` package in `sim_task` and `fit_task`.
+  Without paralellization how would you implement it in `sim_task` and `fit_task` with serial updating of QValues?
+  Would it be possible to implement in Stan?

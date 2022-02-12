@@ -40,13 +40,6 @@ fit_trial_list = list()
 ```
 
 ```{r}
-source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model1b.R'))
-
-sim_trial_list[['model1b']] = sim_trial
-fit_trial_list[['model1b']] = fit_trial
-```
-
-```{r}
 true_d = .06
 true_sigma = .08
 true_delta = 3
@@ -54,6 +47,15 @@ true_gamma = 3
 ```
 
 # Prob distortion detection fails
+
+With model1b, closest model to model2b without early integration
+
+```{r}
+source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model1b.R'))
+
+sim_trial_list[['model1b']] = sim_trial
+fit_trial_list[['model1b']] = fit_trial
+```
 
 ```{r}
 trialsPerCondition=15 
@@ -169,12 +171,12 @@ How do things look like with a differently parameterized prob distortion functio
 How does the prob distortion and the ranges of the parameters change?
 
 ```{r}
-delta = 3
-gamma = 3
+delt = 3
+gamm = 3
 
 data.frame(prob = seq(0,1,.1)) %>%
-  mutate(distorted_prob_1a = (delta * (prob)^gamma) / ( (delta * (prob)^gamma) + (1-prob)^gamma ),
-         distorted_prob_1b = exp(-delta*(-log(prob))^gamma)  ) %>%
+  mutate(distorted_prob_1a = (delt * (prob)^gamm) / ( (delt * (prob)^gamm) + (1-prob)^gamm ),
+         distorted_prob_1b = exp(-delt*(-log(prob))^gamm)  ) %>%
   gather(key, value, -prob) %>%
   ggplot(aes(prob, value, color=key))+
   geom_point()+
@@ -182,6 +184,13 @@ data.frame(prob = seq(0,1,.1)) %>%
   geom_abline(aes(intercept=0, slope = 1), linetype="dashed")+
   theme(legend.position = "bottom")+
   labs(color="")
+```
+
+```{r}
+source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model1a.R'))
+
+sim_trial_list[['model1a']] = sim_trial
+fit_trial_list[['model1a']] = fit_trial
 ```
 
 Is recovery any better for these prob distortion parameters?
@@ -257,6 +266,7 @@ optim_out$iterations_df %>%
   scale_shape_manual(values = c(22,20,21))+
   scale_size_manual(values=c(2.5,2,2.5))
 ```
+
 ```{r}
 true_nll = get_task_nll(test_data, par = c(true_d, true_sigma, true_delta, true_gamma), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1a")
 true_nll
@@ -280,6 +290,36 @@ On the other hand, a similar change in d and sigma leads to a massive difference
 (get_task_nll(test_data, par = c(true_d/3, true_sigma/3, 1, 1), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1a")-true_nll)/true_nll
 ```
 
+Changing the objective function might, but what to change it to?
+Before that try to understand the effect of the distortion parameters (delta and gamma) on the likelihood computation.
+These two come into play for the likelihood computation in the weighted mu
+
+E.g. what does a 10% change in each parameter do to the weightedMuMean on average across trials
+
+```{r}
+delt = 3
+gamm = 3
+dR = .06
+changeFactor = 1.1
+
+test_trial_conditions %>%
+  mutate(QVDiff = QVLeft-QVRight,
+         EVDiff = EVLeft-EVRight,
+         distortedProb = (delt * (probFractalDraw)^gamm) / ( (delt * (probFractalDraw)^gamm) + (1-probFractalDraw)^gamm ),
+         distortedProbDelt = (delt * changeFactor * (probFractalDraw)^gamm) / ( (delt* changeFactor * (probFractalDraw)^gamm) + (1-probFractalDraw)^gamm ),
+         distortedProbGamm = (delt * (probFractalDraw)^(gamm* changeFactor)) / ( (delt* changeFactor * (probFractalDraw)^(gamm* changeFactor)) + (1-probFractalDraw)^(gamm* changeFactor) ),
+         weightedMuMean = dR * ( (distortedProb*QVDiff) + ((1-probFractalDraw)*EVDiff) ),
+         wmmDr =  dR *changeFactor* ( (distortedProb*QVDiff) + ((1-probFractalDraw)*EVDiff) ),
+         wmmDelt = dR * ( (distortedProbDelt*QVDiff) + ((1-probFractalDraw)*EVDiff) ),
+         wmmGamm = dR * ( (distortedProbGamm*QVDiff) + ((1-probFractalDraw)*EVDiff) ) ) %>%
+  select(weightedMuMean, wmmDr, wmmDelt, wmmGamm) %>%
+  gather(key, value, -weightedMuMean) %>%
+  mutate(wmmAbsDiff = abs(abs(value) - abs(weightedMuMean)) ) %>%
+  ggplot(aes(wmmAbsDiff, fill=key))+
+  geom_density(position="identity", alpha=.5, bins=30)+
+  theme(legend.position="bottom")+
+  labs(fill="")
+```
 
 How much to perturb in what dimension?
 Stopping criteria for perturbations?

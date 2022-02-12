@@ -1,4 +1,4 @@
-sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=400, epsilon = 0.0002, debug=FALSE,...){
+sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=400, epsilon = 0, debug=FALSE,...){
   
   # d : drift rate
   # sigma: sd of the normal distribution 
@@ -104,7 +104,7 @@ sim_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   }
 }
 
-fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, epsilon = 0.0002, approxStateStep = 0.1, debug=FALSE, ...){
+fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, epsilon = 0, approxStateStep = 0.1, debug=FALSE, ...){
   
   # RDV = bias
   
@@ -168,7 +168,7 @@ fit_trial = function(d, sigma, barrierDecay, delta, gamma, barrier=1, nonDecisio
   
   elapsedNDT = 0
   
-  distortedProbFractalDraw = exp((-1)*delta*((-1)*log(probFractalDraw))^gamma)
+  distortedProbFractalDraw = (delta * (probFractalDraw)^gamma) / ( (delta * (probFractalDraw)^gamma) + (1-probFractalDraw)^gamma )
   leftFractalAdv =  distortedProbFractalDraw * (QVLeft - QVRight)
   leftLotteryAdv = (1-probFractalDraw) * (EVLeft - EVRight)
   weighted_mu_mean = d * (leftFractalAdv + leftLotteryAdv)

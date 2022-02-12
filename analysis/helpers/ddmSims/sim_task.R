@@ -105,7 +105,7 @@ sim_task = function(stimuli, model_name, sim_trial_list_ = sim_trial_list, ...){
     kwargs$maxIter = 400
   }
   if (!("epsilon" %in% names(kwargs))){
-    kwargs$epsilon = 0.0002
+    kwargs$epsilon = 0
   }
   if (!("stimDelay" %in% names(kwargs))){
     kwargs$stimDelay = 2000

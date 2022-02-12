@@ -111,7 +111,7 @@ fit_task = function(stimuli, model_name_, pars_, fit_trial_list_ = fit_trial_lis
     pars_$maxIter = 400
   }
   if (!("epsilon" %in% names(pars_))){
-    pars_$epsilon = 0.0002
+    pars_$epsilon = 0
   }
   if (!("stimDelay" %in% names(pars_))){
     pars_$stimDelay = 2000

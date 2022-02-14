@@ -143,8 +143,8 @@ How do things look like with a differently parameterized prob distortion functio
 How does the prob distortion and the ranges of the parameters change?
 
 ```{r}
-delt = 3
-gamm = 3
+delt = 2
+gamm = 2
 
 data.frame(prob = seq(0,1,.1)) %>%
   mutate(distorted_prob_1a = (delt * (prob)^gamm) / ( (delt * (prob)^gamm) + (1-prob)^gamm ),
@@ -312,16 +312,28 @@ tmp %>%
   ggplot(aes(changeFactor, muPropDiff, color=key))+
   geom_boxplot()+
   theme(legend.position = "bottom")+
-  scale_y_continuous(breaks=c(0, .25, .5, .75, 1, 2, 3))
+  scale_y_continuous(breaks=c(0, .25, .5, .75, 1, 2, 3))+
+  labs(color="", y="Proportional change in mu")
 ```
-Changing the objective function might, but what to change it to?
-
-How much to perturb in what dimension?
-Stopping criteria for perturbations?
+I think this suggests that the objective function (the likelihood computation) is not sensitive to pick up changes in delta and gamma. Possible next steps:
+- Changing the objective function might help, but what to change it to?  
+- Likelihood surface depending on the delta and gamma - would a (big) grid search be the answer? See previous notebook.  
+- Changing the perspective: instead of trying to recover exact model parameters, distinguish between a model with distortion versus no distortion?  
+-Moving to joint modeling of choice and RT with Stan by expanding the previous RL models? How well did these do in parameter recovery?
 
 ```{r}
 
 ```
+
+How much to perturb in what dimension?
+Stopping criteria for perturbations?
+
+
+```{r}
+
+```
+
+Write code to run many random starts and large grid searches on a cluster.
 
 How would that be different from many random starts?
 Random starts can be parallelized more by generating a list of starter values and then submitting each as a separate job.
@@ -363,12 +375,7 @@ all_optim_out[[1]]$iterations_df
 # parallel::stopCluster(cl = my.sim.cluster)
 ```
 
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-How viable is this with Stan or with the Lombardi toolbox using hierarchical models? Can you use the trial likelihood function to code the bespoke model in Stan?
-
-```{r}
-
-```
+------------------------------------------------------------------------------------------------------------------------------------------
 
 What do we know so far?
   Slight lottery bias in pooled data

@@ -137,34 +137,6 @@ optim_out$iterations_df %>%
   scale_size_manual(values=c(2.5,2,2.5))
 ```
 
-## Change in NLL
-
-Why don't delta and gamma move? Why were we able to estimate the correct d and sigma even when delta and gamma were incorrectly fixed at 1?
-Because changing them even drastically leads to very small improvement in the objective function (nll).
-
-```{r}
-true_nll = get_task_nll(test_data, par = c(true_d, true_sigma, true_delta, true_gamma), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1b")
-true_nll
-```
-
-Proportional difference in NLL when using different delta and gamma values compared to the true NLL.
-
-In this specific example, the absence of a big difference between setting delta and gamma to 1 means that the recovery can't tell if there is prob distortion or not.
-
-```{r}
-(get_task_nll(test_data, par = c(true_d, true_sigma, 1, 1), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1b")-true_nll)/true_nll
-```
-
-```{r}
-(get_task_nll(test_data, par = c(true_d, true_sigma, 2, 2), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1b")-true_nll)/true_nll
-```
-
-On the other hand, a similar change in d and sigma leads to a massive difference
-
-```{r}
-(get_task_nll(test_data, par = c(true_d/3, true_sigma/3, 1, 1), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1b")-true_nll)/true_nll
-```
-
 ## Alternative parameterization
 
 How do things look like with a differently parameterized prob distortion function?
@@ -209,9 +181,6 @@ test_data = sim_task(test_data, model_name = "model1a", d = true_d, sigma = true
 optim_out = optim_save(c(.01, .01, 1, 1), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=75))
 ```
 
-```{r}
-optim_out$par
-```
 
 ```{r}
 tmp = data.frame(key = c("d", "sigma", "delta", "gamma"), true_val = c(true_d, true_sigma, true_delta, true_gamma))
@@ -267,6 +236,11 @@ optim_out$iterations_df %>%
   scale_size_manual(values=c(2.5,2,2.5))
 ```
 
+# Change in NLL
+
+Why don't delta and gamma move? Why were we able to estimate the correct d and sigma even when delta and gamma were incorrectly fixed at 1?
+Because changing them even drastically leads to very small improvement in the objective function (nll).
+
 ```{r}
 true_nll = get_task_nll(test_data, par = c(true_d, true_sigma, true_delta, true_gamma), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1a")
 true_nll
@@ -274,7 +248,7 @@ true_nll
 
 Proportional difference in NLL when using different delta and gamma values compared to the true NLL.
 
-In this specific example, the absence of a big difference between setting delta and gamma to 1 means that the recovery can't tell if there is prob distortion or not.
+In this specific example, the absence of a big difference between setting delta and gamma to 1 (compared to the true value of 3 which leads to distortion) means that the recovery can't tell if there is prob distortion or not.
 
 ```{r}
 (get_task_nll(test_data, par = c(true_d, true_sigma, 1, 1), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1a")-true_nll)/true_nll
@@ -290,36 +264,57 @@ On the other hand, a similar change in d and sigma leads to a massive difference
 (get_task_nll(test_data, par = c(true_d/3, true_sigma/3, 1, 1), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1a")-true_nll)/true_nll
 ```
 
-Changing the objective function might, but what to change it to?
-Before that try to understand the effect of the distortion parameters (delta and gamma) on the likelihood computation.
-These two come into play for the likelihood computation in the weighted mu
 
-E.g. what does a 10% change in each parameter do to the weightedMuMean on average across trials
+What is the effect of changing the distortion parameters (delta and gamma) on the likelihood computation compared to the change in the other parameters?
+
+The likelihood computation depends on the distribution `N(mu, sigma)` where mu is determined by the option values and the distorted probability of attribute relevance. Sigma has a direct effect on this distribution. The effect of the drift rate, delta and gamma are indirect through the following equations: 
+
+```
+distortedProbFractalDraw = (delta * (probFractalDraw)^gamma) / ( (delta * (probFractalDraw)^gamma) + (1-probFractalDraw)^gamma )  
+leftFractalAdv =  distortedProbFractalDraw * (QVLeft - QVRight)  
+leftLotteryAdv = (1-probFractalDraw) * (EVLeft - EVRight)  
+mu = d * (leftFractalAdv + leftLotteryAdv)  
+```
+
+Increasing the drift rate has a consistent effect for all trial conditions that scales with the size of the change.
+Increasing delta has a small and somewhat variable effect.
+Increasing gamma has an effect larger than changing delta but smaller than changing the drift rate and it is most variable.
 
 ```{r}
-delt = 3
-gamm = 3
-dR = .06
-changeFactor = 1.1
+delt = 2
+gamm = 2
+dR = .03
+changeFactor = seq(1.1, 2, .1)
 
-test_trial_conditions %>%
+tmp = bind_rows(replicate(length(changeFactor), test_trial_conditions, simplify = FALSE)) %>%
+  cbind(bind_rows(replicate(nrow(test_trial_conditions), data.frame(changeFactor), simplify = FALSE)) %>%
+          arrange(changeFactor))  %>%
   mutate(QVDiff = QVLeft-QVRight,
          EVDiff = EVLeft-EVRight,
          distortedProb = (delt * (probFractalDraw)^gamm) / ( (delt * (probFractalDraw)^gamm) + (1-probFractalDraw)^gamm ),
          distortedProbDelt = (delt * changeFactor * (probFractalDraw)^gamm) / ( (delt* changeFactor * (probFractalDraw)^gamm) + (1-probFractalDraw)^gamm ),
          distortedProbGamm = (delt * (probFractalDraw)^(gamm* changeFactor)) / ( (delt* changeFactor * (probFractalDraw)^(gamm* changeFactor)) + (1-probFractalDraw)^(gamm* changeFactor) ),
-         weightedMuMean = dR * ( (distortedProb*QVDiff) + ((1-probFractalDraw)*EVDiff) ),
-         wmmDr =  dR *changeFactor* ( (distortedProb*QVDiff) + ((1-probFractalDraw)*EVDiff) ),
-         wmmDelt = dR * ( (distortedProbDelt*QVDiff) + ((1-probFractalDraw)*EVDiff) ),
-         wmmGamm = dR * ( (distortedProbGamm*QVDiff) + ((1-probFractalDraw)*EVDiff) ) ) %>%
-  select(weightedMuMean, wmmDr, wmmDelt, wmmGamm) %>%
-  gather(key, value, -weightedMuMean) %>%
-  mutate(wmmAbsDiff = abs(abs(value) - abs(weightedMuMean)) ) %>%
-  ggplot(aes(wmmAbsDiff, fill=key))+
-  geom_density(position="identity", alpha=.5, bins=30)+
-  theme(legend.position="bottom")+
-  labs(fill="")
+         mu = dR * ( (distortedProb*QVDiff) + ((1-probFractalDraw)*EVDiff) ),
+         mu_driftRateChange =  dR *changeFactor* ( (distortedProb*QVDiff) + ((1-probFractalDraw)*EVDiff) ),
+         mu_deltaChange = dR * ( (distortedProbDelt*QVDiff) + ((1-probFractalDraw)*EVDiff) ),
+         mu_gammaChange = dR * ( (distortedProbGamm*QVDiff) + ((1-probFractalDraw)*EVDiff) ) ) %>%
+  select(mu, mu_driftRateChange, mu_deltaChange, mu_gammaChange, changeFactor) %>%
+  gather(key, value, -mu, -changeFactor) %>%
+  mutate(muAbsDiff = abs(abs(value) - abs(mu)),
+         muPropDiff = muAbsDiff / abs(mu))
+
+tmp %>%  
+  group_by(key, changeFactor) %>%
+  summarise(meanPropDiff = mean(muPropDiff),
+            semPropDiff = sem(muPropDiff), .groups="keep")
+tmp %>%
+  mutate(changeFactor = as.factor(changeFactor-1)) %>%
+  ggplot(aes(changeFactor, muPropDiff, color=key))+
+  geom_boxplot()+
+  theme(legend.position = "bottom")+
+  scale_y_continuous(breaks=c(0, .25, .5, .75, 1, 2, 3))
 ```
+Changing the objective function might, but what to change it to?
 
 How much to perturb in what dimension?
 Stopping criteria for perturbations?

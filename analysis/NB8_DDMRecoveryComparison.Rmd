@@ -22,7 +22,7 @@ helpers_path = here('analysis/helpers/')
 set.seed(38573)
 ```
 
-```{r}
+```{r message=FALSE}
 source(paste0(helpers_path,'ddmSims/fit_task.R'))
 source(paste0(helpers_path,'ddmSims/sim_task.R'))
 source(paste0(helpers_path,'ddmSims/fit_ddm_pta.R'))

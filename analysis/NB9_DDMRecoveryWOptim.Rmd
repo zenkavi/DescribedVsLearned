@@ -319,7 +319,8 @@ I think this suggests that the objective function (the likelihood computation) i
 - Changing the objective function might help, but what to change it to?  
 - Likelihood surface depending on the delta and gamma - would a (big) grid search be the answer? See previous notebook.  
 - Changing the perspective: instead of trying to recover exact model parameters, distinguish between a model with distortion versus no distortion?  
--Moving to joint modeling of choice and RT with Stan by expanding the previous RL models? How well did these do in parameter recovery?
+- Moving to joint modeling of choice and RT with Stan by expanding the previous RL models? How well did these do in parameter recovery?
+    - How does Dolan et al. do it?
 
 ```{r}
 

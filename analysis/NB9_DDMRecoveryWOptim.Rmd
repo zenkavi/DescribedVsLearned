@@ -95,7 +95,7 @@ optim_out$iterations_df %>%
 
 Path plots to see how to think through the perturbations
 
-Look into the Nelder-Mead algorithm to understand how the particle moves.
+How is a particle supposed to move with the Nelder-Mead algorithm?
 [Here's a quick tutorial](http://www.brnt.eu/phd/node10.html#SECTION00622200000000000000) on how it works
 [Here's some R code that walks through the moves of the simplex](https://m-clark.github.io/models-by-example/nelder-mead.html)
 
@@ -137,7 +137,7 @@ optim_out$iterations_df %>%
   scale_size_manual(values=c(2.5,2,2.5))
 ```
 
-## Alternative parameterization
+## Alternative parameterization of probability distortion
 
 How do things look like with a differently parameterized prob distortion function?
 How does the prob distortion and the ranges of the parameters change?
@@ -165,7 +165,7 @@ sim_trial_list[['model1a']] = sim_trial
 fit_trial_list[['model1a']] = fit_trial
 ```
 
-Is recovery any better for these prob distortion parameters?
+Is recovery any better for these prob distortion parameters? No.
 
 ```{r}
 trialsPerCondition=15 
@@ -180,7 +180,6 @@ test_data = sim_task(test_data, model_name = "model1a", d = true_d, sigma = true
 ```{r}
 optim_out = optim_save(c(.01, .01, 1, 1), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=75))
 ```
-
 
 ```{r}
 tmp = data.frame(key = c("d", "sigma", "delta", "gamma"), true_val = c(true_d, true_sigma, true_delta, true_gamma))
@@ -276,9 +275,9 @@ leftLotteryAdv = (1-probFractalDraw) * (EVLeft - EVRight)
 mu = d * (leftFractalAdv + leftLotteryAdv)  
 ```
 
-Increasing the drift rate has a consistent effect for all trial conditions that scales with the size of the change.
-Increasing delta has a small and somewhat variable effect.
-Increasing gamma has an effect larger than changing delta but smaller than changing the drift rate and it is most variable.
+- Increasing the drift rate has a consistent effect for all trial conditions that scales with the size of the change.
+- Increasing delta has a small and somewhat variable effect.
+- Increasing gamma has an effect larger than changing delta but smaller than changing the drift rate and it is most variable.
 
 ```{r}
 delt = 2
@@ -316,19 +315,23 @@ tmp %>%
   labs(color="", y="Proportional change in mu")
 ```
 I think this suggests that the objective function (the likelihood computation) is not sensitive to pick up changes in delta and gamma. Possible next steps:
+
 - Changing the objective function might help, but what to change it to?  
   - Read a recent paper on probability distortion functions ([Zhang, Ren, Maloney, 2020, PNAS](https://www.pnas.org/content/117/36/22024#sec-23)) but wasn't sure how to make use of it for a different likelihood function 
+
 - Likelihood surface depending on the delta and gamma - would a (big) grid search be the answer? See previous notebook.  
-  - Change is larger for levels of gamma versus delta
+  - Change is larger for change in levels of gamma versus delta
+
 - Changing the perspective: instead of trying to recover exact model parameters, distinguish between a model with distortion versus no distortion?  
-- Moving to joint modeling of choice and RT with Stan by expanding the previous RL models? How well did these do in parameter recovery?
-    - How does Dolan et al. do it?
+
+- Moving to joint modeling of choice and RT with Stan by expanding the previous RL models? How well did these RL only do in parameter recovery?
+    - How do [Shahar et al., 2019](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1006803#sec008) do it? They model a two two-step task with a combined DDM-RL model. The addition of DDM helps recovering learning rate and model-based vs model-free allocation weight parameter to be recovered in much fewer trials. 
 
 ```{r}
 
 ```
 
-How much to perturb in what dimension? Stopping criteria for perturbations? I'd prefer not to write my own algorithm. Two potentially relevant papers:  
+How much to perturb in what dimension? Stopping criteria for perturbations? Two potentially relevant papers:  
 
 - [The Nelder–Mead simplex algorithm with perturbed centroid for high-dimensional function optimization](https://link.springer.com/article/10.1007/s11590-018-1306-2)
 - [Stochastic Nelder–Mead simplex method – A new globally convergent direct search method for simulation optimization](https://www.sciencedirect.com/science/article/pii/S0377221712001609#b0175)
@@ -336,8 +339,6 @@ How much to perturb in what dimension? Stopping criteria for perturbations? I'd 
 ```{r}
 
 ```
-
-Write code to run many random starts and large grid searches on a cluster.
 
 Parallelize random starts by generating a list of starter values and submitting each as a separate job.
 Can also generate many random datasets.

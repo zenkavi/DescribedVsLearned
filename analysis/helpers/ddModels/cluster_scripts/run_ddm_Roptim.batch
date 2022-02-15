@@ -1,0 +1,19 @@
+#!/bin/bash
+
+#SBATCH -J ddm-Roptim-...
+#SBATCH -c 8
+
+# Outputs ----------------------------------
+#SBATCH -o /shared/.out/ddm-Roptim-....out
+#SBATCH -e /shared/.err/ddm-Roptim-....err
+# ------------------------------------------
+
+export DATA_PATH=/shared/...
+export OUT_PATH=/shared/...
+export CODE_PATH=/shared/...
+
+docker run --rm -e DATA_PATH=/data -e OUT_PATH=/out \
+-v $DATA_PATH:/data -v $OUT_PATH:/out -v $CODE_PATH:/code \
+zenkavi/... Rscript --vanilla ddm_Roptim.R --start_vals {START_VALS} 
+
+aws s3 sync $OUT_PATH/... s3://described-vs-experienced/...

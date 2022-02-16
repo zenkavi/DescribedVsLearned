@@ -1,20 +1,5 @@
 library(foreach)
 
-# Helper function to combine outputs with different column names
-rbind.all.columns <- function(x, y) {
-  
-  if(ncol(x) == 0 | ncol(y) == 0){
-    out = plyr::rbind.fill(x, y)
-  } else{
-    x.diff <- setdiff(colnames(x), colnames(y))
-    y.diff <- setdiff(colnames(y), colnames(x))
-    x[, c(as.character(y.diff))] <- NA
-    y[, c(as.character(x.diff))] <- NA
-    out = rbind(x, y)
-  }
-  return(out)
-}
-
 # Parallelization setup based on this post
 # https://www.blasbenito.com/post/02_parallelizing_loops_with_r/
 n.cores <- parallel::detectCores() - 1
@@ -39,7 +24,7 @@ doParallel::registerDoParallel(cl = my.fit.cluster)
 
 
 # Function to simulate ddm process for a given set of stimuli using a model provided as a string in the model_name argument
-fit_task = function(stimuli, model_name_, pars_, fit_trial_list_ = fit_trial_list, debug=FALSE){
+fit_task = function(data_, model_name_, pars_, fit_trial_list_ = fit_trial_list, debug=FALSE){
   
   # pars_ = list(...)
   
@@ -156,13 +141,13 @@ fit_task = function(stimuli, model_name_, pars_, fit_trial_list_ = fit_trial_lis
   
   # Parallel loop
   out <- foreach(
-    EVLeft=stimuli$EVLeft, 
-    EVRight = stimuli$EVRight, 
-    QVLeft = stimuli$QVLeft, 
-    QVRight= stimuli$QVRight , 
-    probFractalDraw = stimuli$probFractalDraw,
-    choice = stimuli$choice,
-    reactionTime = stimuli$reactionTime,
+    EVLeft=data_$EVLeft, 
+    EVRight = data_$EVRight, 
+    QVLeft = data_$QVLeft, 
+    QVRight= data_$QVRight , 
+    probFractalDraw = data_$probFractalDraw,
+    choice = data_$choice,
+    reactionTime = data_$reactionTime,
     .combine = 'rbind'
   ) %dopar% {
     # Simulate RT and choice for a single trial with given DDM parameters and trial stimulus values
@@ -187,16 +172,16 @@ fit_task = function(stimuli, model_name_, pars_, fit_trial_list_ = fit_trial_lis
 
 # Usage in optim
 # optim(par, get_task_nll, data, par_names, model_name)
-get_task_nll = function(data, par, par_names, model_name, debug=FALSE){
+get_task_nll = function(data_, par_, par_names_, model_name_, debug=FALSE){
   
   # Initialize parameters
   # Different models will have different sets of parameters. Optim will optimize over all the parameters it is passed in
   # There might be a way to use L-BFGS-B and set min's and max's for unused parameters to 0 to avoid optimizing over them but that seems equally bad/worse bc a. you need specify the bounds every time you're fitting anything, b. it won't work with any other algorithm
   
-  pars = setNames(as.list(par), par_names)
+  pars = setNames(as.list(par_), par_names_)
   
   # Get trial likelihoods for the stimuli using the initialized parameters
-  out = fit_task(stimuli = data, model_name_ = model_name, pars_ = pars, debug=debug)
+  out = fit_task(data_ = data_, model_name_ = model_name_, pars_ = pars, debug=debug)
   
   nll = -sum(log(out$likelihood+1e-200))
   

@@ -346,10 +346,13 @@ How would you then organize the output of each?
 
 What do you need:
 ```
-Job submitting shell script looping through starter values
-Batch script that calls the R script
-R script that runs optim with the feeded starter values
+run_ddm_Roptim.sh: Job submitting shell script looping through starter values
+run_ddm_Roptim.batch: Batch script that calls the R script
+dmm_Roptim.R: R script that runs optim with the feeded starter values
 ```
+Packages to install in container: here, visualMLE, foreach
+AWS instance m5.4xlarge with 16 vCPUs
+How many compute nodes?
 
 Would you compute posterior among these different optimized values?
 

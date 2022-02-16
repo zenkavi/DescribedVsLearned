@@ -9,3 +9,4 @@ results_file/
 expdata/
 mcmc_chains/
 figure-html/
+test*

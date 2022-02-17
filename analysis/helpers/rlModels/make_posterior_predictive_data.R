@@ -5,7 +5,7 @@ library(tidyverse)
 library(rstan)
 helpers_path = here('analysis/helpers/')
 
-source(paste0(helpers_path, 'sim_choice_data.R'))
+source(paste0(helpers_path, 'rlModels/sim_choice_data.R'))
 
 sample_from_posterior = function(parEsts, subId){
   
@@ -57,7 +57,7 @@ make_posterior_predictive_data = function(numDraws,
     }
   }
   
-  saveRDS(pp_data, paste0(helpers_path, 'pp_data_', modelName, '.RDS'))
+  saveRDS(pp_data, paste0(helpers_path, 'rlModels/pp_data_', modelName, '.RDS'))
   
   return(pp_data)
 }

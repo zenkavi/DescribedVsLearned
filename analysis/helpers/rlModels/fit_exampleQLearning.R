@@ -10,16 +10,16 @@ if (!exists('clean_beh_data')){
 }
 
 if(!exists('extract_var_for_stan')){
-  source(paste0(helpers_path, 'extract_var_for_stan.R'))
+  source(paste0(helpers_path, 'rlModels/extract_var_for_stan.R'))
 }
 
 if(!exists('get_qvals')){
-  source(paste0(helpers_path, 'get_qvals.R'))
+  source(paste0(helpers_path, 'rlModels/get_qvals.R'))
 }
 
 ## If there is a fit object read it in
-if(file.exists(paste0(helpers_path, 'stanModels/fit_qlearning.RDS'))){
-  fit = readRDS(paste0(helpers_path, 'stanModels/fit_qlearning.RDS'))
+if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_exampleQLearning.RDS'))){
+  fit = readRDS(paste0(helpers_path, 'rlModels/stanModels/fit_exampleQLearning.RDS'))
 } else {## Otherwise fit the model
   ## Reshape data
   num_subjs = length(unique(clean_beh_data$subnum))
@@ -45,9 +45,9 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_qlearning.RDS'))){
   rm(num_subjs, num_trials, choices, outcomes_left, outcomes_right)
   
   ## Fit model for all subjects
-  m = stan_model(paste0(helpers_path, 'stanModels/fit_qlearning.stan'))
+  m = stan_model(paste0(helpers_path, 'rlModels/stanModels/fit_exampleQLearning.stan'))
   fit = sampling(m, data=m_data)
-  saveRDS(fit, paste0(helpers_path, 'stanModels/fit_qlearning.RDS'))
+  saveRDS(fit, paste0(helpers_path, 'rlModels/stanModels/fit_exampleQLearning.RDS'))
   
   ## Clean up work space
   rm(choices, m, m_data, outcomes_left, outcomes_right, par_ests, num_subjs, num_trials)

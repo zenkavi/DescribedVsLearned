@@ -10,16 +10,16 @@ if (!exists('clean_beh_data')){
 }
 
 if(!exists('extract_var_for_stan')){
-  source(paste0(helpers_path, 'extract_var_for_stan.R'))
+  source(paste0(helpers_path, 'rlModels/extract_var_for_stan.R'))
 }
 
 if(!exists('organize_stan_output')){
-  source(paste0(helpers_path, 'organize_stan_output.R'))
+  source(paste0(helpers_path, 'rlModels/organize_stan_output.R'))
 }
 
 ## If there is a fit object read it in
-if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarchical_rpeWhenFractalRewarded.RDS'))){
-  fit = readRDS(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarchical_rpeWhenFractalRewarded.RDS'))
+if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_rpeChosenBundleFractal.RDS'))){
+  fit = readRDS(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_rpeChosenBundleFractal.RDS'))
 } else {## Otherwise fit the model
   
   ## Reshape data
@@ -47,7 +47,7 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarch
   
   trial_pFrac = extract_var_for_stan(clean_beh_data, probFractalDraw)
   
-  fractal_draw = extract_var_for_stan(clean_beh_data, fractalDraw)
+  pe_update_left = extract_var_for_stan(clean_beh_data, choiceLeft)
   
   m_data=list(num_subjs = num_subjs,
               num_trials = num_trials,
@@ -56,16 +56,16 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarch
               ev_right = ev_right,
               fractal_outcomes_left = fractal_outcomes_left,
               fractal_outcomes_right = fractal_outcomes_right,
-              trial_pFrac = trial_pFrac,
-              fractal_draw = fractal_draw)
+              trial_pFrac = trial_pFrac, 
+              pe_update_left = pe_update_left)
   
-  rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac, fractal_draw)
+  rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac, pe_update_left)
   
   ## Fit model for all subjects
-  m = stan_model(paste0(helpers_path,'stanModels/fit_twoValSystemsWithRL_hierarchical_rpeWhenFractalRewarded.stan'))
+  m = stan_model(paste0(helpers_path,'rlModels/stanModels/fit_rl_hierarchical_rpeChosenBundleFractal.stan'))
   
   fit = sampling(m, data=m_data)
-  saveRDS(fit, paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarchical_rpeWhenFractalRewarded.RDS'))
+  saveRDS(fit, paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_rpeChosenBundleFractal.RDS'))
 }
 
 ## Organize output

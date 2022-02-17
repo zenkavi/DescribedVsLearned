@@ -4,7 +4,8 @@ library(here)
 library(optparse)
 library(visualMLE)
 
-helpers_path = here('analysis/helpers/')
+# helpers_path = here('analysis/helpers/')
+helpers_path = here()
 source(paste0(helpers_path,'ddmSims/fit_task.R'))
 
 
@@ -31,7 +32,7 @@ data = read.csv(opt$data)
 start_vals = strsplit(opt$start_vals, ",")[[1]]
 
 model = opt$model
-source(paste0(helpers_path, 'ddmSims/r_ddm_models/', model,'.R'))
+source(paste0(helpers_path, 'ddModels/r_ddm_models/', model,'.R'))
 sim_trial_list = list()
 fit_trial_list = list()
 sim_trial_list[[model]] = sim_trial

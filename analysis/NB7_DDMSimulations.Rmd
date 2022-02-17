@@ -27,7 +27,7 @@ Adding in parameters from the two systems model for all subjects (i.e. not choos
 ```{r}
 source(paste0(helpers_path,'ddmSims/r_ddm_models/sim_task.R')) # do this first not to mess with cluster setup?
 source(paste0(helpers_path,'ddmSims/r_ddm_models/sim_sanity_checks.R'))
-source(paste0(helpers_path,'twoSystemsFitting/fit_twoValSystemsWithRL_hierarchical.R'))
+source(paste0(helpers_path,'rlModels/fit_twoValSystemsWithRL_hierarchical.R'))
 source(paste0(helpers_path,'add_inferred_pars.R'))
 clean_beh_data = add_inferred_pars(clean_beh_data, par_ests, model_name="original")
 

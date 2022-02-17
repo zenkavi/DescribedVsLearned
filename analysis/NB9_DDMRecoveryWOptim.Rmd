@@ -23,9 +23,9 @@ set.seed(38573)
 ```
 
 ```{r message=FALSE}
-source(paste0(helpers_path,'ddmSims/fit_task.R'))
-source(paste0(helpers_path,'ddmSims/sim_task.R'))
-test_trial_conditions = read.csv(paste0(helpers_path, 'ddmSims/test_data/test_trial_conditions.csv'))
+source(paste0(helpers_path,'ddModels/fit_task.R'))
+source(paste0(helpers_path,'ddModels/sim_task.R'))
+test_trial_conditions = read.csv(paste0(helpers_path, 'ddModels/test_data/test_trial_conditions.csv'))
 ```
 
 ```{r include=FALSE, message=FALSE}
@@ -51,7 +51,7 @@ true_gamma = 3
 With model1b, closest model to model2b without early integration
 
 ```{r}
-source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model1b.R'))
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model1b.R'))
 
 sim_trial_list[['model1b']] = sim_trial
 fit_trial_list[['model1b']] = fit_trial
@@ -159,7 +159,7 @@ data.frame(prob = seq(0,1,.1)) %>%
 ```
 
 ```{r}
-source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model1a.R'))
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model1a.R'))
 
 sim_trial_list[['model1a']] = sim_trial
 fit_trial_list[['model1a']] = fit_trial

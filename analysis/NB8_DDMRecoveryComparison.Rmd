@@ -23,10 +23,10 @@ set.seed(38573)
 ```
 
 ```{r message=FALSE}
-source(paste0(helpers_path,'ddmSims/fit_task.R'))
-source(paste0(helpers_path,'ddmSims/sim_task.R'))
-source(paste0(helpers_path,'ddmSims/fit_ddm_pta.R'))
-test_trial_conditions = read.csv(paste0(helpers_path, 'ddmSims/test_data/test_trial_conditions.csv'))
+source(paste0(helpers_path,'ddModels/fit_task.R'))
+source(paste0(helpers_path,'ddModels/sim_task.R'))
+source(paste0(helpers_path,'ddModels/fit_ddm_pta.R'))
+test_trial_conditions = read.csv(paste0(helpers_path, 'ddModels/test_data/test_trial_conditions.csv'))
 ```
 
 ```{r include=FALSE, message=FALSE}
@@ -45,7 +45,7 @@ fit_trial_list = list()
 ## Model 1
 
 ```{r}
-source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model1.R'))
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model1.R'))
 
 sim_trial_list[['model1']] = sim_trial
 fit_trial_list[['model1']] = fit_trial
@@ -247,7 +247,7 @@ So first check if a model with distortion but no early integration converges on 
 This model expands the simplest model by adding probability distortion to the fractals but does not have early integration for the `probFractalDraw == 1` case.
 
 ```{r}
-source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model1b.R'))
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model1b.R'))
 ```
 
 ```{r}
@@ -527,7 +527,7 @@ optim_out$iterations_df %>%
 How about same number of trials but without repeated conditions?
 
 ```{r}
-sub_data = read.csv(paste0(helpers_path, 'ddmSims/test_data/single_sub_data.csv'))
+sub_data = read.csv(paste0(helpers_path, 'ddModels/test_data/single_sub_data.csv'))
 sub_data = sub_data %>%
   select(leftQValue, rightQValue, leftLotteryEV, rightLotteryEV, probFractalDraw) %>%
   rename(QVLeft = leftQValue, QVRight = rightQValue, EVLeft = leftLotteryEV, EVRight = rightLotteryEV)

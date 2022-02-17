@@ -10,16 +10,16 @@ if (!exists('clean_beh_data')){
 }
 
 if(!exists('extract_var_for_stan')){
-  source(paste0(helpers_path, 'extract_var_for_stan.R'))
+  source(paste0(helpers_path, 'rlModels/extract_var_for_stan.R'))
 }
 
 if(!exists('organize_stan_output')){
-  source(paste0(helpers_path, 'organize_stan_output.R'))
+  source(paste0(helpers_path, 'rlModels/organize_stan_output.R'))
 }
 
 ## If there is a fit object read it in
-if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarchical_linearW.RDS'))){
-  fit = readRDS(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarchical_linearW.RDS'))
+if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_noProbDistortion.RDS'))){
+  fit = readRDS(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_noProbDistortion.RDS'))
 } else {## Otherwise fit the model
   
   ## Reshape data
@@ -59,16 +59,16 @@ if(file.exists(paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarch
   rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac)
   
   ## Fit model for all subjects
-  m = stan_model(paste0(helpers_path,'stanModels/fit_twoValSystemsWithRL_hierarchical_linearW.stan'))
+  m = stan_model(paste0(helpers_path,'rlModels/stanModels/fit_rl_hierarchical_noProbDistortion.stan'))
   
-  fit_linearW = sampling(m, data=m_data)
-  saveRDS(fit_linearW, paste0(helpers_path, 'stanModels/fit_twoValSystemsWithRL_hierarchical_linearW.RDS'))
+  fit_noProbDistortion = sampling(m, data=m_data)
+  saveRDS(fit_noProbDistortion, paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_noProbDistortion.RDS'))
 }
 
 ## Organize output
 out = organize_stan_output(fit, 
-                           subj_par_names=c("alpha","w_int", "w_slope", "beta"),
-                           group_par_names=c("g_alpha","g_w_int", "g_w_slope", "g_beta"))
-par_ests_linearW = out$par_ests
-g_par_ests_linearW = out$g_par_ests
+                           subj_par_names=c("alpha", "beta"),
+                           group_par_names=c("g_alpha","g_beta"))
+par_ests_noProbDistortion = out$par_ests
+g_par_ests_noProbDistortion = out$g_par_ests
 rm(out)

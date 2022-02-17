@@ -1,6 +1,6 @@
 library(here)
 
-helpers_path = here('analysis/helpers/')
+helpers_path = here('analysis/helpers/rlModels')
 
 source(paste0(helpers_path, 'sim_choice_data.R'))
 

@@ -6,7 +6,7 @@ library(visualMLE)
 
 # helpers_path = here('analysis/helpers/')
 helpers_path = here()
-source(paste0(helpers_path,'ddmSims/fit_task.R'))
+source(paste0(helpers_path,'ddModels/fit_task.R'))
 
 
 #######################
@@ -27,12 +27,13 @@ opt = parse_args(opt_parser)
 #######################
 # Initialize parameters from input arguments
 #######################
-data = read.csv(opt$data)
+data = read.csv(paste0(helpers_path, 'ddModels/', opt$data))
 
-start_vals = strsplit(opt$start_vals, ",")[[1]]
+# Convert to numeric so optim can work with it
+start_vals = as.numeric(strsplit(opt$start_vals, ",")[[1]])
 
 model = opt$model
-source(paste0(helpers_path, 'ddModels/r_ddm_models/', model,'.R'))
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_', model,'.R'))
 sim_trial_list = list()
 fit_trial_list = list()
 sim_trial_list[[model]] = sim_trial
@@ -40,11 +41,13 @@ fit_trial_list[[model]] = fit_trial
 
 max_iter = opt$max_iter
 
+# If using string input must be separated by ", " (with trailing space)
 par_names = opt$par_names
 if(grepl(',', par_names)){
-  par_names = strsplit(par_names, ',')[[1]]
+  par_names = strsplit(par_names, ', ')[[1]]
 }
 
+# Must end with /
 out_path = opt$out_path
 
 #######################
@@ -57,6 +60,8 @@ suffix = paste(format(Sys.time(), "%F-%H-%M-%S"), round(runif(1, max=1000)), sep
 #######################
 # Save output
 #######################
+dir.create(out_path, showWarnings = FALSE)
+
 write.csv(optim_out$iterations_df, paste0(out_path, 'optim_iter_', model ,'_', suffix,'.csv'), row.names=FALSE)
 write.csv(optim_out$par, paste0(out_path, 'optim_par_', model ,'_', suffix,'.csv'), row.names=FALSE)
 

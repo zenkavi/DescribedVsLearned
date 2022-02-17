@@ -14,6 +14,6 @@ export CODE_PATH=/shared/...
 
 docker run --rm -e DATA_PATH=/data -e OUT_PATH=/out \
 -v $DATA_PATH:/data -v $OUT_PATH:/out -v $CODE_PATH:/code \
-zenkavi/... Rscript --vanilla ddm_Roptim.R --model {MODEL} --start_vals {START_VALS}
+zenkavi/roptim Rscript --vanilla ddm_Roptim.R --model {MODEL} --start_vals {START_VALS}
 
 aws s3 sync $OUT_PATH/... s3://described-vs-experienced/...

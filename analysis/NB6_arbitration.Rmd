@@ -26,7 +26,7 @@ helpers_path = here('analysis/helpers/')
 Get behavioral data with the parameter estimates and **RPE's from the best fitting model for each subject**. So depending on the best model for the best subject new RPEs might not be generated for each trial for all subjects. Then RPE = 0 does **NOT** always mean that the model about the fractals is good; it might instead mean no learning about that fractal took place in that trial.
 
 ```{r}
-source(paste0(helpers_path, 'save_imaging_events_wBestRpe.R'))
+source(paste0(helpers_path, 'fmriSaves/save_imaging_events_wBestRpe.R'))
 ```
 
 What do the RPEs look like? Is there enough variance in them if you wanted to use their absolute value as a "reliability" signal?

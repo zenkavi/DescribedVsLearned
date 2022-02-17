@@ -2,7 +2,7 @@ library(tidyr)
 library(here)
 
 helpers_path = here('analysis/helpers/')
-source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical.R'))
+source(paste0(helpers_path,'rlModels/fit_rl_hierarchical.R'))
 
 learner_info = par_ests %>%
   filter(par == "alpha") %>%

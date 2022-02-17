@@ -2,7 +2,7 @@ library(tidyverse)
 library(here)
 
 helpers_path = here('analysis/helpers/')
-source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical.R'))
+source(paste0(helpers_path,'rlModels/fit_rl_hierarchical.R'))
 source(paste0(helpers_path,'add_inferred_pars.R'))
 
 clean_beh_data = add_inferred_pars(clean_beh_data, par_ests)

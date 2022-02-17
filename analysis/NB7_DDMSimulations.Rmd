@@ -25,9 +25,9 @@ set.seed(38573)
 Adding in parameters from the two systems model for all subjects (i.e. not choosing the best fitting one per subject)
 
 ```{r}
-source(paste0(helpers_path,'ddmSims/r_ddm_models/sim_task.R')) # do this first not to mess with cluster setup?
-source(paste0(helpers_path,'ddmSims/r_ddm_models/sim_sanity_checks.R'))
-source(paste0(helpers_path,'rlModels/fit_twoValSystemsWithRL_hierarchical.R'))
+source(paste0(helpers_path,'ddModels/r_ddm_models/sim_task.R')) # do this first not to mess with cluster setup?
+source(paste0(helpers_path,'ddModels/r_ddm_models/sim_sanity_checks.R'))
+source(paste0(helpers_path,'rlModels/fit_rl_hierarchical.R'))
 source(paste0(helpers_path,'add_inferred_pars.R'))
 clean_beh_data = add_inferred_pars(clean_beh_data, par_ests, model_name="original")
 
@@ -115,7 +115,7 @@ sub_data %>%
 - Bundle values are computed as sums of QV and EV weighted by their relevance (no distortion of probability)
 
 ```{r}
-source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model1.R'))
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model1.R'))
 sim_trial_list[['model1']] = sim_trial
 ```
 
@@ -168,7 +168,7 @@ rm(tmp1, tmp2, tmp3, tmp4)
 - Early integrator for pFractalDraw == 1 only.
 
 ```{r}
-source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model2.R'))
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model2.R'))
 sim_trial_list[['model2']] = sim_trial
 ```
 
@@ -216,7 +216,7 @@ with(m2, table(timeOut, probFractalDraw))
 - Single parameter `theta` controls how much lotteries should be overweighted and how much fractals should be underweighted. It is an initial effort to induce different drift rates for the attributes.
 
 ```{r}
-source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model2a.R'))
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model2a.R'))
 sim_trial_list[['model2a']] = sim_trial
 ```
 
@@ -249,7 +249,7 @@ data.frame(pFrac = seq(0, 1, .1),
 Overweight for larger pfrac
 
 ```{r}
-source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model2b.R'))
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model2b.R'))
 sim_trial_list[['model2b']] = sim_trial
 ```
 
@@ -342,7 +342,7 @@ m2b_3 %>%
 - Arbitrator depends on the difference in absolute attribute integrator RDVs
 
 ```{r}
-source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model4a.R'))
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model4a.R'))
 sim_trial_list[['model4a']] = sim_trial
 ```
 
@@ -387,7 +387,7 @@ sim_sanity_checks(m4a_2)
 # Model 4b: 4a with asymmetric prob distortion
 
 ```{r}
-source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model4b.R'))
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model4b.R'))
 sim_trial_list[['model4b']] = sim_trial
 ```
 
@@ -429,7 +429,7 @@ sim_sanity_checks(m4b_3)
 - Arbitrator integrator depends on the difference in absolute attribute integrator RDVs weighted by the attribute relevance
 
 ```{r}
-source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model5a.R'))
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model5a.R'))
 sim_trial_list[['model5a']] = sim_trial
 ```
 
@@ -494,7 +494,7 @@ m5a_2 %>%
 # Model 5b: 5a with asymmetric prob distortion
 
 ```{r}
-source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model5b.R'))
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model5b.R'))
 sim_trial_list[['model5b']] = sim_trial
 ```
 
@@ -517,7 +517,7 @@ sim_sanity_checks(m5b_1)
 - Arbitrator integrator depends on the difference in absolute attribute integrator RDVs weighted by attribute relevance
 
 ```{r}
-source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model6a.R'))
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model6a.R'))
 sim_trial_list[['model6a']] = sim_trial
 ```
 
@@ -534,7 +534,7 @@ sim_sanity_checks(m6a)
 # Model 6b: 6a with asymmetric prob distortion
 
 ```{r}
-source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model6b.R'))
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model6b.R'))
 sim_trial_list[['model6b']] = sim_trial
 ```
 
@@ -551,7 +551,7 @@ sim_sanity_checks(m6b_1)
 # Model 6c: 4b with early integration
 
 ```{r}
-source(paste0(helpers_path, 'ddmSims/r_ddm_models/ddm_model6c.R'))
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model6c.R'))
 sim_trial_list[['model6c']] = sim_trial
 ```
 

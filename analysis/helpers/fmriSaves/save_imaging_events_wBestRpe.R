@@ -4,17 +4,17 @@ library(here)
 helpers_path = here('analysis/helpers/')
 source(paste0(helpers_path,'add_inferred_pars.R'))
 
-source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical_rpeWhenFractalRewarded.R'))
+source(paste0(helpers_path,'rlModels/fit_rl_hierarchical_rpeWhenFractalRewarded.R'))
 fit_rpeWhenFractalRewarded = fit
 g_par_ests_rpeWhenFractalRewarded = g_par_ests
 par_ests_rpeWhenFractalRewarded = par_ests
 
-source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical_rpeChosenBundleFractal.R'))
+source(paste0(helpers_path,'rlModels/fit_rl_hierarchical_rpeChosenBundleFractal.R'))
 fit_rpeChosenBundleFractal = fit
 g_par_ests_rpeChosenBundleFractal = g_par_ests
 par_ests_rpeChosenBundleFractal = par_ests
 
-source(paste0(helpers_path,'fit_twoValSystemsWithRL_hierarchical.R'))
+source(paste0(helpers_path,'rlModels/fit_rl_hierarchical.R'))
 
 # Function to rbind df's when they don't have all the same columns
 rbind.all.columns <- function(x, y) {

@@ -22,7 +22,7 @@ helpers_path = here('analysis/helpers/')
 ```
 
 ```{r}
-source(paste0(helpers_path, 'save_imaging_events_wBestRpe.R'))
+source(paste0(helpers_path, 'fmriSaves/save_imaging_events_wBestRpe.R'))
 ```
 
 # Stylized facts

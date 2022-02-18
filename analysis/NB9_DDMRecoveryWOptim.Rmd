@@ -343,6 +343,8 @@ They are theoretically interesting but unfortunately neither includes code and I
 
 # Recovery with random starts
 
+Note: This took ~1 hour for a single subject's data running two jobs on each node for 25 compute nodes.
+
 For each of the 1000 iterations where did each parameter start and end?
 
 ```{r}

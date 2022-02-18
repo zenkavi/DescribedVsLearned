@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH -J ddm-Roptim-{MODEL}_%j
-#SBATCH -c 5
+#SBATCH -c 4
 
 # Outputs ----------------------------------
 #SBATCH -o /shared/.out/ddm-Roptim-{MODEL}_%j.out
@@ -11,4 +11,4 @@
 export DATA_PATH=/shared/ddModels
 
 docker run --rm -v $DATA_PATH:/ddModels \
-zenkavi/roptim:0.0.4 Rscript --vanilla /ddModels/cluster_scripts/ddm_Roptim.R --model {MODEL} --start_vals {START_VALS}
+zenkavi/roptim:0.0.4 Rscript --vanilla /ddModels/cluster_scripts/ddm_Roptim.R --model {MODEL} --start_vals {START_VALS} --data {DATA}

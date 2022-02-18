@@ -48,6 +48,8 @@ true_gamma = 3
 
 # Prob distortion detection fails
 
+## Model1b
+
 With model1b, closest model to model2b without early integration
 
 ```{r}
@@ -91,7 +93,7 @@ optim_out$iterations_df %>%
   theme(legend.position="bottom")
 ```
 
-## Path plots
+### Path plots
 
 Path plots to see how to think through the perturbations
 
@@ -137,7 +139,9 @@ optim_out$iterations_df %>%
   scale_size_manual(values=c(2.5,2,2.5))
 ```
 
-## Alternative parameterization of probability distortion
+## Model1a
+
+Alternative parameterization of probability distortion
 
 How do things look like with a differently parameterized prob distortion function?
 How does the prob distortion and the ranges of the parameters change?
@@ -195,7 +199,7 @@ optim_out$iterations_df %>%
   theme(legend.position="bottom")
 ```
 
-Path plots
+### Path plots
 
 ```{r}
 optim_out$iterations_df %>%
@@ -235,7 +239,7 @@ optim_out$iterations_df %>%
   scale_size_manual(values=c(2.5,2,2.5))
 ```
 
-# Change in NLL
+# Change in NLL as a function of change in parameters
 
 Why don't delta and gamma move? Why were we able to estimate the correct d and sigma even when delta and gamma were incorrectly fixed at 1?
 Because changing them even drastically leads to very small improvement in the objective function (nll).
@@ -314,6 +318,7 @@ tmp %>%
   scale_y_continuous(breaks=c(0, .25, .5, .75, 1, 2, 3))+
   labs(color="", y="Proportional change in mu")
 ```
+
 I think this suggests that the objective function (the likelihood computation) is not sensitive to pick up changes in delta and gamma. Possible next steps:
 
 - Changing the objective function might help, but what to change it to?  
@@ -327,60 +332,51 @@ I think this suggests that the objective function (the likelihood computation) i
 - Moving to joint modeling of choice and RT with Stan by expanding the previous RL models? How well did these RL only do in parameter recovery?
     - How do [Shahar et al., 2019](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1006803#sec008) do it? They model a two two-step task with a combined DDM-RL model. The addition of DDM helps recovering learning rate and model-based vs model-free allocation weight parameter to be recovered in much fewer trials. 
 
-```{r}
-
-```
+# Perturbing the kernel
 
 How much to perturb in what dimension? Stopping criteria for perturbations? Two potentially relevant papers:  
 
 - [The Nelder–Mead simplex algorithm with perturbed centroid for high-dimensional function optimization](https://link.springer.com/article/10.1007/s11590-018-1306-2)
 - [Stochastic Nelder–Mead simplex method – A new globally convergent direct search method for simulation optimization](https://www.sciencedirect.com/science/article/pii/S0377221712001609#b0175)
 
+They are theoretically interesting but unfortunately neither includes code and I'm reluctant to implement the described algorithms myself.
+
+# Recovery with random starts
+
+For each of the 1000 iterations where did each parameter start and end?
+
+```{r}
+model_name = "model1a"
+data_name = "sim_single_sub_data"
+
+# List all files for this model and dataset combination
+
+# Read in all the converged values
+
+# Match them with their starting values
+# Prob best to use the iter df
+```
+
 ```{r}
 
 ```
 
-Parallelize random starts by generating a list of starter values and submitting each as a separate job.
-Can also generate many random datasets.
-How would you then organize the output of each?
+Which converged point has the highest likelihood?
 
-What do you need:
+```{r}
+
 ```
-run_ddm_Roptim.sh: Job submitting shell script looping through starter values
-run_ddm_Roptim.batch: Batch script that calls the R script
-dmm_Roptim.R: R script that runs optim with the feeded starter values
-```
-Packages to install in container: here, visualMLE, foreach
-AWS instance m5.4xlarge with 16 vCPUs
-How many compute nodes?
 
 Would you compute posterior among these different optimized values?
 
-Quick test with a loop to make sure naming and saving works
-
 ```{r}
-num_starts = 2
 
-all_optim_out = list()
-
-for(i in 1:num_starts){
-  start_d = runif(1, 0, 1)
-  start_sigma = runif(1, 0, 1)
-  start_delta = runif(1, 1, 5)
-  start_gamma = runif(1, 1, 5)
-  
-  start_str = paste(round(start_d, 2), round(start_sigma, 2), round(start_delta, 2), round(start_gamma, 2), sep = ", ")
-  
-  all_optim_out[[start_str]] = optim_save(c(start_d, start_sigma, start_delta, start_sigma), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1b", control = list(maxit=10))
-}
 ```
 
-```{r}
-names(all_optim_out)
-```
+# Recovery for random datasets
 
 ```{r}
-all_optim_out[[1]]$iterations_df
+
 ```
 
 # Stop clusters

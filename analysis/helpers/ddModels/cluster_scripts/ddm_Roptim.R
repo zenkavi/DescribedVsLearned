@@ -16,7 +16,7 @@ option_list = list(
   make_option("--data", type="character", default='test_trial_conditions'),
   make_option("--start_vals", type="character"),
   make_option("--model", type="character"),
-  make_option("--max_iter", type="integer", default = 500),
+  make_option("--max_iter", type="integer", default = as.integer(500)),
   make_option("--par_names", type="character", default = c("d", "sigma", "delta", "gamma")),
   make_option("--out_path", type="character", default = '/ddModels/cluster_scripts/optim_out/')
 ) 
@@ -57,6 +57,7 @@ out_path = opt$out_path
 # Run optim
 #######################
 optim_out = optim_save(par = start_vals, get_task_nll, data_= data, par_names_ = par_names, model_name_ = model, control = list(maxit=max_iter))
+# optim_out = optim_save(par = start_vals, get_task_nll, data_= data, par_names_ = par_names, model_name_ = model)
 
 suffix = paste(format(Sys.time(), "%F-%H-%M-%S"), round(runif(1, max=1000)), sep="_")
 suffix = paste0(model ,'_', data_suffix, '_', suffix, '.csv')

@@ -18,7 +18,7 @@ option_list = list(
   make_option("--model", type="character"),
   make_option("--max_iter", type="integer", default = 500),
   make_option("--par_names", type="character", default = c("d", "sigma", "delta", "gamma")),
-  make_option("--out_path", type="character", default = '/ddModels/cluster_scripts/out/')
+  make_option("--out_path", type="character", default = '/ddModels/cluster_scripts/optim_out/')
 ) 
 
 opt_parser = OptionParser(option_list=option_list)

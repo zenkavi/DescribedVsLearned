@@ -1,19 +1,14 @@
 #!/bin/bash
 
-#SBATCH -J ddm-Roptim-{MODEL}...
+#SBATCH -J ddm-Roptim-{MODEL}_%A
 #SBATCH -c 8
 
 # Outputs ----------------------------------
-#SBATCH -o /shared/.out/ddm-Roptim-{MODEL}....out
-#SBATCH -e /shared/.err/ddm-Roptim-{MODEL}....err
+#SBATCH -o /shared/.out/ddm-Roptim-{MODEL}_%A.out
+#SBATCH -e /shared/.err/ddm-Roptim-{MODEL}_%A.err
 # ------------------------------------------
 
-export DATA_PATH=/shared/...
-export OUT_PATH=/shared/...
-export CODE_PATH=/shared/...
+export DATA_PATH=/shared/ddModels
 
-docker run --rm -e DATA_PATH=/data -e OUT_PATH=/out \
--v $DATA_PATH:/data -v $OUT_PATH:/out -v $CODE_PATH:/code \
-zenkavi/roptim Rscript --vanilla ddm_Roptim.R --model {MODEL} --start_vals {START_VALS}
-
-aws s3 sync $OUT_PATH/... s3://described-vs-experienced/...
+docker run --rm -v $DATA_PATH:/ddModels \
+zenkavi/roptim:0.0.4 Rscript --vanilla ddm_Roptim.R --model {MODEL} --start_vals {START_VALS}

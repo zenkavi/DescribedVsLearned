@@ -5,20 +5,20 @@ library(optparse)
 library(visualMLE)
 
 # helpers_path = here('analysis/helpers/')
-helpers_path = here()
-source(paste0(helpers_path,'ddModels/fit_task.R'))
+helpers_path = here("/ddModels/")
+source(paste0(helpers_path,'/fit_task.R'))
 
 
 #######################
 # Parse input arguments
 #######################
 option_list = list(
-  make_option("--data", type="character", default=NULL),
+  make_option("--data", type="character", default='test_trial_conditions'),
   make_option("--start_vals", type="character"),
   make_option("--model", type="character"),
   make_option("--max_iter", type="integer", default = 500),
   make_option("--par_names", type="character", default = c("d", "sigma", "delta", "gamma")),
-  make_option("--out_path", type="character")
+  make_option("--out_path", type="character", default = '/ddModels/cluster_scripts/out/')
 ) 
 
 opt_parser = OptionParser(option_list=option_list)
@@ -27,13 +27,14 @@ opt = parse_args(opt_parser)
 #######################
 # Initialize parameters from input arguments
 #######################
-data = read.csv(paste0(helpers_path, 'ddModels/', opt$data))
+data_suffix = opt$data
+data = read.csv(paste0(helpers_path, 'test_data/', opt$data, '.csv'))
 
 # Convert to numeric so optim can work with it
 start_vals = as.numeric(strsplit(opt$start_vals, ",")[[1]])
 
 model = opt$model
-source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_', model,'.R'))
+source(paste0(helpers_path, 'r_ddm_models/ddm_', model,'.R'))
 sim_trial_list = list()
 fit_trial_list = list()
 sim_trial_list[[model]] = sim_trial
@@ -43,8 +44,10 @@ max_iter = opt$max_iter
 
 # If using string input must be separated by ", " (with trailing space)
 par_names = opt$par_names
-if(grepl(',', par_names)){
-  par_names = strsplit(par_names, ', ')[[1]]
+if(length(par_names) == 1){
+  if(grepl(',', par_names)){
+    par_names = strsplit(par_names, ', ')[[1]] 
+  }
 }
 
 # Must end with /
@@ -56,12 +59,13 @@ out_path = opt$out_path
 optim_out = optim_save(par = start_vals, get_task_nll, data_= data, par_names_ = par_names, model_name_ = model, control = list(maxit=max_iter))
 
 suffix = paste(format(Sys.time(), "%F-%H-%M-%S"), round(runif(1, max=1000)), sep="_")
+suffix = paste0(model ,'_', data_suffix, '_', suffix, '.csv')
 
 #######################
 # Save output
 #######################
 dir.create(out_path, showWarnings = FALSE)
 
-write.csv(optim_out$iterations_df, paste0(out_path, 'optim_iter_', model ,'_', suffix,'.csv'), row.names=FALSE)
-write.csv(optim_out$par, paste0(out_path, 'optim_par_', model ,'_', suffix,'.csv'), row.names=FALSE)
+write.csv(optim_out$iterations_df, paste0(out_path, 'optim_iter_', suffix), row.names=FALSE)
+write.csv(optim_out$par, paste0(out_path, 'optim_par_', suffix), row.names=FALSE)
 

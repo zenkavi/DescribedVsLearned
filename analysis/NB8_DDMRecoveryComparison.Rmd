@@ -527,7 +527,7 @@ optim_out$iterations_df %>%
 How about same number of trials but without repeated conditions?
 
 ```{r}
-sub_data = read.csv(paste0(helpers_path, 'ddModels/test_data/single_sub_data.csv'))
+sub_data = read.csv(paste0(helpers_path, 'ddModels/test_data/true_single_sub_data.csv'))
 sub_data = sub_data %>%
   select(leftQValue, rightQValue, leftLotteryEV, rightLotteryEV, probFractalDraw) %>%
   rename(QVLeft = leftQValue, QVRight = rightQValue, EVLeft = leftLotteryEV, EVRight = rightLotteryEV)

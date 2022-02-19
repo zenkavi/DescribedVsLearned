@@ -28,7 +28,7 @@ opt = parse_args(opt_parser)
 # Initialize parameters from input arguments
 #######################
 data_suffix = opt$data
-data = read.csv(paste0(helpers_path, 'test_data/', opt$data, '.csv'))
+data = read.csv(paste0(helpers_path, 'cluster_files/test_data/', opt$data, '.csv'))
 
 # Convert to numeric so optim can work with it
 start_vals = as.numeric(strsplit(opt$start_vals, ",")[[1]])
@@ -57,7 +57,6 @@ out_path = opt$out_path
 # Run optim
 #######################
 optim_out = optim_save(par = start_vals, get_task_nll, data_= data, par_names_ = par_names, model_name_ = model, control = list(maxit=max_iter))
-# optim_out = optim_save(par = start_vals, get_task_nll, data_= data, par_names_ = par_names, model_name_ = model)
 
 suffix = paste(format(Sys.time(), "%F-%H-%M-%S"), round(runif(1, max=1000)), sep="_")
 suffix = paste0(model ,'_', data_suffix, '_', suffix, '.csv')

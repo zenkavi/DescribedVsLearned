@@ -380,9 +380,8 @@ true_pars = true_pars %>%
   gather(key, value)
 true_pars
 ```
-For each of the 1000 iterations where did each parameter start and end? Where does the end point compare to the true parameters
 
-For delta and sigma
+For each of the 1000 iterations where did each parameter start and end? Where does the end point compare to the true parameters
 
 ```{r}
 tmp1 = out %>%
@@ -399,41 +398,57 @@ tmp2 = out %>%
   gather(key, value, -kernel, -start) %>%
   spread(start, value)
 
-p1 = tmp1 %>% ggplot(aes(start, end))+
+tmp1 %>% ggplot(aes(start, end))+
   geom_point()+
   geom_hline(data=true_pars %>% filter(key %in% c("d", "sigma")), aes(yintercept=value), color="red")+
   facet_wrap(~key, scale="free")
 
-p2 = tmp2 %>% ggplot(aes(start, end))+
+tmp2 %>% ggplot(aes(start, end))+
   geom_point()+
   geom_hline(data=true_pars %>% filter(key %in% c("delta", "gamma")), aes(yintercept=value), color="red")+
   facet_wrap(~key, scale="free")+
-  ylim(-2, 5)
-
-gridExtra::grid.arrange(p1, p2, nrow=2)
+  ylim(0, 8)
 ```
-What is the averaged converged value for each parameter
+What is the distribution of the converged parameters wrt the true parameters?
 
 ```{r}
-out %>%
+tmp1 = out %>%
   filter(Iteration != 1) %>%
-  select(d, sigma, delta, gamma) %>%
-  gather(key, value) %>%
-  group_by(key) %>%
-  summarise(median_estimate = median(value))
+  select(d, sigma) %>%
+  gather(key, value)
+
+tmp2 = out %>%
+  filter(Iteration != 1) %>%
+  select(delta, gamma) %>%
+  gather(key, value)
+
+tmp1 %>%
+  ggplot(aes(value))+
+  geom_histogram(bins = 30) +
+  facet_wrap(~key, scales="free") +
+  geom_vline(data=true_pars %>% filter(key %in% c("d", "sigma")), aes(xintercept=value), color="red")
+
+tmp2 %>%
+  ggplot(aes(value))+
+  geom_histogram(bins = 30) +
+  facet_wrap(~key, scales="free") +
+  geom_vline(data=true_pars %>% filter(key %in% c("delta", "gamma")), aes(xintercept=value), color="red")+
+  xlim(0, 8)
 ```
-
-Would you compute posterior among these different optimized values?
-
-```{r}
-
-```
-
 # Recovery for random datasets
 
+Generate above plots for all random datasets
+
 ```{r}
 
 ```
+
+Would you compute posterior among these different optimized values? Is there any point in doing that even when there is no iteration that has converged on the true values?
+
+```{r}
+
+```
+
 
 # Stop clusters
 

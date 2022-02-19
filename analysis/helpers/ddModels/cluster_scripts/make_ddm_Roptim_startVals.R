@@ -1,3 +1,13 @@
+#######################
+# Usage
+#######################
+
+# Rscript --vanilla make_ddm_Roptim_startVals.R --n_vals 1000 --n_datasets 5
+
+#######################
+# Setup
+#######################
+
 set.seed(38573)
 
 library(here)
@@ -33,18 +43,33 @@ if(length(par_names) == 1){
 }
 
 # Must end with /
-out_path = opt$out_data
+# out_path = opt$out_data
+out_path = paste0(helpers_path, opt$out_data)
 
 #######################
 # Generate start values
 #######################
-if()
-
 for(i in 1:n_datasets){
-  out = data.frame(start_d = runif(n, 0, 1),
-                   start_sigma = runif(n, 0, 1),
-                   start_delta = runif(n, 1, 5),
-                   start_gamma = runif(n, 1, 5))
+  out = data.frame(tmp = rep(NA, n_vals))
+  
+  if("d" %in% par_names){
+    out$start_d = runif(n_vals, 0, 1)
+  }
+  
+  if("sigma" %in% par_names){
+    out$start_sigma = runif(n_vals, 0, 1)
+  }
+  
+  if("delta" %in% par_names){
+    out$start_delta = runif(n_vals, 1, 8)
+  }
+  
+  if("gamma" %in% par_names){
+    out$start_gamma = runif(n_vals, 1, 8)
+  }
+  
+  
+  out = out[,-which(names(out)=="tmp")]
   
   #######################
   # Save output

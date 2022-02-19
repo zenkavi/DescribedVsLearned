@@ -345,28 +345,82 @@ They are theoretically interesting but unfortunately neither includes code and I
 
 Note: This took ~1 hour for a single subject's data running two jobs on each node for 25 compute nodes.
 
-For each of the 1000 iterations where did each parameter start and end?
-
 ```{r}
 model_name = "model1a"
 data_name = "sim_single_sub_data"
+optim_out_path = paste0(helpers_path, 'ddModels/cluster_scripts/optim_out/')
 
 # List all files for this model and dataset combination
+fns = list.files(optim_out_path)
+fns = fns[grepl(model_name, fns) & grepl(data_name, fns) & grepl("iter", fns)]
 
-# Read in all the converged values
+# Read in all starting and converged values
+out = data.frame()
+for(i in 1:length(fns)){
+  tmp = read.csv(paste0(optim_out_path, fns[i]))
+  start_row = tmp[1,]
+  end_row = tmp[nrow(tmp),]
+  tmp_row = rbind(start_row, end_row)
+  tmp_row$kernel = i
+  out = rbind.all.columns(out, tmp_row)  
+}
 
-# Match them with their starting values
-# Prob best to use the iter df
+out = out %>%
+  rename(d = Param1, sigma = Param2, delta = Param3, gamma = Param4, nll = Result)
 ```
 
-```{r}
+What are the true parameters for this dataset?
 
+```{r}
+true_pars = read.csv(paste0(helpers_path, 'ddModels/test_data/',data_name,'.csv'))
+true_pars = true_pars %>%
+  select(d, sigma, delta, gamma) %>%
+  distinct()
+true_pars = true_pars %>%
+  gather(key, value)
+true_pars
 ```
+For each of the 1000 iterations where did each parameter start and end? Where does the end point compare to the true parameters
 
-Which converged point has the highest likelihood?
+For delta and sigma
 
 ```{r}
+tmp1 = out %>%
+  select(-delta, -gamma) %>%
+  mutate(start = ifelse(Iteration == 1, "start", "end")) %>%
+  select(-Iteration, -nll) %>%
+  gather(key, value, -kernel, -start) %>%
+  spread(start, value)
 
+tmp2 = out %>%
+  select(-d, -sigma) %>%
+  mutate(start = ifelse(Iteration == 1, "start", "end")) %>%
+  select(-Iteration, -nll) %>%
+  gather(key, value, -kernel, -start) %>%
+  spread(start, value)
+
+p1 = tmp1 %>% ggplot(aes(start, end))+
+  geom_point()+
+  geom_hline(data=true_pars %>% filter(key %in% c("d", "sigma")), aes(yintercept=value), color="red")+
+  facet_wrap(~key, scale="free")
+
+p2 = tmp2 %>% ggplot(aes(start, end))+
+  geom_point()+
+  geom_hline(data=true_pars %>% filter(key %in% c("delta", "gamma")), aes(yintercept=value), color="red")+
+  facet_wrap(~key, scale="free")+
+  ylim(-2, 5)
+
+gridExtra::grid.arrange(p1, p2, nrow=2)
+```
+What is the averaged converged value for each parameter
+
+```{r}
+out %>%
+  filter(Iteration != 1) %>%
+  select(d, sigma, delta, gamma) %>%
+  gather(key, value) %>%
+  group_by(key) %>%
+  summarise(median_estimate = median(value))
 ```
 
 Would you compute posterior among these different optimized values?

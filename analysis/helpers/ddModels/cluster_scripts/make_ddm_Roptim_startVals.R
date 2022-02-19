@@ -19,9 +19,9 @@ helpers_path = here('analysis/helpers/')
 #######################
 option_list = list(
   make_option("--n_vals", type="integer", default=1000),
-  make_option("--n_datasets", type="integer", default = 5),
+  make_option("--n_datasets", type="integer", default = 20),
   make_option("--par_names", type="character", default = c("d", "sigma", "delta", "gamma")),
-  make_option("--out_path", type="character", default = '/ddModels/cluster_scripts/start_vals/')
+  make_option("--out_path", type="character", default = 'ddModels/cluster_scripts/start_vals/')
 ) 
 
 opt_parser = OptionParser(option_list=option_list)
@@ -44,7 +44,7 @@ if(length(par_names) == 1){
 
 # Must end with /
 # out_path = opt$out_data
-out_path = paste0(helpers_path, opt$out_data)
+out_path = paste0(helpers_path, opt$out_path)
 
 #######################
 # Generate start values

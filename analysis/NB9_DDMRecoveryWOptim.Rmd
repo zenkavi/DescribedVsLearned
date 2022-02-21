@@ -345,6 +345,8 @@ They are theoretically interesting but unfortunately neither includes code and I
 
 Note: This took ~1 hour for a single subject's data running two jobs on each node for 25 compute nodes.
 
+`docker run --rm -it -v ~/.aws:/root/.aws -v $(pwd):/cluster_scripts amazon/aws-cli s3 sync  s3://described-vs-experienced/ddModels/cluster_scripts/optim_out /cluster_scripts/optim_out`
+
 ```{r}
 model_name = "model1a"
 data_name = "sim_single_sub_data"
@@ -372,7 +374,7 @@ out = out %>%
 What are the true parameters for this dataset?
 
 ```{r}
-true_pars = read.csv(paste0(helpers_path, 'ddModels/test_data/',data_name,'.csv'))
+true_pars = read.csv(paste0(helpers_path, 'ddModels/cluter_scripts/test_data/',data_name,'.csv'))
 true_pars = true_pars %>%
   select(d, sigma, delta, gamma) %>%
   distinct()
@@ -440,7 +442,7 @@ tmp2 %>%
 Generate above plots for all random datasets
 
 ```{r}
-
+ddm_par_recovery_report(model_ = "model1a", data_ = "sim_single_sub_data1", optim_out_path_=optim_out_path)
 ```
 
 Would you compute posterior among these different optimized values? Is there any point in doing that even when there is no iteration that has converged on the true values?

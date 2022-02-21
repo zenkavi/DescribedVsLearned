@@ -4,6 +4,9 @@
 
 # Rscript --vanilla make_ddm_Roptim_startVals.R --n_vals 1000 --n_datasets 5
 
+# Push these back to s3
+# docker run --rm -it -v ~/.aws:/root/.aws -v $(pwd):/cluster_scripts amazon/aws-cli s3 sync /cluster_scripts s3://described-vs-experienced/ddModels/cluster_scripts 
+
 #######################
 # Setup
 #######################

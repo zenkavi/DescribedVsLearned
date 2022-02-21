@@ -28,7 +28,7 @@ opt = parse_args(opt_parser)
 # Initialize parameters from input arguments
 #######################
 data_suffix = opt$data
-data = read.csv(paste0(helpers_path, 'cluster_files/test_data/', opt$data, '.csv'))
+data = read.csv(paste0(helpers_path, 'cluster_scripts/test_data/', opt$data, '.csv'))
 
 # Convert to numeric so optim can work with it
 start_vals = as.numeric(strsplit(opt$start_vals, ",")[[1]])

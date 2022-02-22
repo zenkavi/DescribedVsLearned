@@ -247,7 +247,7 @@ Why don't delta and gamma move? Why were we able to estimate the correct d and s
 Because changing them even drastically leads to very small improvement in the objective function (nll).
 
 ```{r}
-true_nll = get_task_nll(test_data, par = c(true_d, true_sigma, true_delta, true_gamma), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1a")
+true_nll = get_task_nll(test_data, par_ = c(true_d, true_sigma, true_delta, true_gamma), par_names_ = c("d", "sigma", "delta", "gamma"), model_name_ = "model1a")
 true_nll
 ```
 
@@ -256,17 +256,17 @@ Proportional difference in NLL when using different delta and gamma values compa
 In this specific example, the absence of a big difference between setting delta and gamma to 1 (compared to the true value of 3 which leads to distortion) means that the recovery can't tell if there is prob distortion or not.
 
 ```{r}
-(get_task_nll(test_data, par = c(true_d, true_sigma, 1, 1), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1a")-true_nll)/true_nll
+(get_task_nll(test_data, par_ = c(true_d, true_sigma, 1, 1), par_names_ = c("d", "sigma", "delta", "gamma"), model_name_ = "model1a")-true_nll)/true_nll
 ```
 
 ```{r}
-(get_task_nll(test_data, par = c(true_d, true_sigma, 2, 2), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1a")-true_nll)/true_nll
+(get_task_nll(test_data, par_ = c(true_d, true_sigma, 2, 2), par_names_ = c("d", "sigma", "delta", "gamma"), model_name_ = "model1a")-true_nll)/true_nll
 ```
 
 On the other hand, a similar change in d and sigma leads to a massive difference
 
 ```{r}
-(get_task_nll(test_data, par = c(true_d/3, true_sigma/3, 1, 1), par_names = c("d", "sigma", "delta", "gamma"), model_name = "model1a")-true_nll)/true_nll
+(get_task_nll(test_data, par_ = c(true_d/3, true_sigma/3, 1, 1), par_names_ = c("d", "sigma", "delta", "gamma"), model_name_ = "model1a")-true_nll)/true_nll
 ```
 
 
@@ -334,7 +334,7 @@ I think this suggests that the objective function (the likelihood computation) i
 - Moving to joint modeling of choice and RT with Stan by expanding the previous RL models? How well did these RL only do in parameter recovery?
     - How do [Shahar et al., 2019](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1006803#sec008) do it? They model a two two-step task with a combined DDM-RL model. The addition of DDM helps recovering learning rate and model-based vs model-free allocation weight parameter to be recovered in much fewer trials. 
 
-# Perturbing the kernel
+# Perturbing the kernel **[paused]**
 
 How much to perturb in what dimension? Stopping criteria for perturbations? Two potentially relevant papers:  
 
@@ -359,13 +359,19 @@ ddm_par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=
 
 # Recovery for random datasets
 
-To get a sense of recovery success for different parameter combinations I created 20 random datasets using the following steps: 
-- Sample `d` and `sigma` from a uniform distribution between 0 and 1 and `delta` and `gamma` from a uniform distribution between 1 and 8. 
-- Simulate data for a single subject using the same conditions (QV and EV pairs) across parameter combinations.
-- Run `optim` (the built-in optimizer using the Nelder-Mead algorithm) with 1000 random starts on each of these 20 datasets.
-- The starting values were sampled from the same distributions described above.
+To get a sense of recovery success for different parameter combinations I created 20 random datasets using the following steps:   
+- Sample `d` and `sigma` from a uniform distribution between 0 and 1 and `delta` and `gamma` from a uniform distribution between 1 and 8.   
+- Simulate data for a single subject using the same conditions (QV and EV pairs) across parameter combinations.  
+- Run `optim` (the built-in optimizer using the Nelder-Mead algorithm) with 1000 random starts on each of these 20 datasets.  
+- The starting values were sampled from the same distributions described above.  
 
-The plots depicting success of recovery for these random datasets are [here](../outputs/fig/ddm_recovery_rand_datasets.pdf)
+The plots depicting success of recovery for these random datasets are [here](../outputs/fig/ddm_recovery_rand_datasets.pdf)  
+
+Take aways:  
+- Variance in recovered parameters is always higher for `delta` and `gamma` than for `d` and `sigma`  
+- There is almost invariably a correlation between start and end points for `delta` and `gamma` but not for `d` and `sigma`  
+- Median percentage off from true value  
+- Relationship between true value and recovery success?  
 
 ```{r}
 
@@ -397,6 +403,6 @@ What will we do with these parameters?
   Trial level covariate for imaging?
 Move things over to remote cluster for subject estimation?
 Combined DDM + RL modeling:
-  Wouldn't be able to take advantage of `foreach` package in `sim_task` and `fit_task`.
+  Would you be able to take advantage of `foreach` package in `sim_task` and `fit_task` while also serially updating QValues?
   Without paralellization how would you implement it in `sim_task` and `fit_task` with serial updating of QValues?
   Would it be possible to implement in Stan?

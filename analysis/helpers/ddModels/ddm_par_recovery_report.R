@@ -1,6 +1,21 @@
 library(tidyverse)
+theme_set(theme_classic())
 library(here)
 helpers_path = here('analysis/helpers/')
+
+rbind.all.columns <- function(x, y) {
+  
+  if(ncol(x) == 0 | ncol(y) == 0){
+    out = plyr::rbind.fill(x, y)
+  } else{
+    x.diff <- setdiff(colnames(x), colnames(y))
+    y.diff <- setdiff(colnames(y), colnames(x))
+    x[, c(as.character(y.diff))] <- NA
+    y[, c(as.character(x.diff))] <- NA
+    out = rbind(x, y)
+  }
+  return(out)
+}
 
 ddm_par_recovery_report = function(model_, data_, optim_out_path_){
   
@@ -10,7 +25,7 @@ ddm_par_recovery_report = function(model_, data_, optim_out_path_){
   
   # List all files for this model and dataset combination
   fns = list.files(optim_out_path)
-  fns = fns[grepl(model_name, fns) & grepl(data_name, fns) & grepl("iter", fns)]
+  fns = fns[grepl(model_name, fns) & grepl(paste0(data_name, '_'), fns) & grepl("iter", fns)]
   
   # Read in all starting and converged values
   out = data.frame()
@@ -39,7 +54,7 @@ ddm_par_recovery_report = function(model_, data_, optim_out_path_){
   true_pars = true_pars %>%
     gather(key, value)
   
-  print(true_pars)
+  # print(true_pars)
   
   ###########################
   # For random start where did each parameter end
@@ -64,7 +79,7 @@ ddm_par_recovery_report = function(model_, data_, optim_out_path_){
     geom_hline(data=true_pars %>% filter(key %in% c("d", "sigma")), aes(yintercept=value), color="red")+
     facet_wrap(~key, scale="free")
   
-  print(p1)
+  # print(p1)
   
   p2 = tmp2 %>% ggplot(aes(start, end))+
     geom_point()+
@@ -72,7 +87,7 @@ ddm_par_recovery_report = function(model_, data_, optim_out_path_){
     facet_wrap(~key, scale="free")+
     ylim(0, 8)
   
-  print(p2)
+  # print(p2)
   
   ###########################
   # Distribution of the converged parameters
@@ -94,7 +109,7 @@ ddm_par_recovery_report = function(model_, data_, optim_out_path_){
     facet_wrap(~key, scales="free") +
     geom_vline(data=true_pars %>% filter(key %in% c("d", "sigma")), aes(xintercept=value), color="red")
   
-  print(p3)
+  # print(p3)
   
   p4 = tmp2 %>%
     ggplot(aes(value))+
@@ -103,7 +118,7 @@ ddm_par_recovery_report = function(model_, data_, optim_out_path_){
     geom_vline(data=true_pars %>% filter(key %in% c("delta", "gamma")), aes(xintercept=value), color="red")+
     xlim(0, 8)
   
-  print(p4)
+  # print(p4)
   
   return(list(true_pars = true_pars_str, p1=p1, p2=p2, p3=p3, p4=p4))
 }

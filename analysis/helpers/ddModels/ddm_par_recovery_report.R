@@ -1,4 +1,6 @@
 library(tidyverse)
+library(here)
+helpers_path = here('analysis/helpers/')
 
 ddm_par_recovery_report = function(model_, data_, optim_out_path_){
   
@@ -24,10 +26,16 @@ ddm_par_recovery_report = function(model_, data_, optim_out_path_){
   out = out %>%
     rename(d = Param1, sigma = Param2, delta = Param3, gamma = Param4, nll = Result)
   
+  ###########################
+  # Get true parameters
+  ###########################
   true_pars = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/',data_name,'.csv'))
   true_pars = true_pars %>%
     select(d, sigma, delta, gamma) %>%
     distinct()
+  
+  true_pars_str = paste0("d = ", true_pars$d, ", sigma = ", true_pars$sigma, ", delta = ", true_pars$delta, ", gamma = ", true_pars$gamma)
+  
   true_pars = true_pars %>%
     gather(key, value)
   
@@ -80,20 +88,22 @@ ddm_par_recovery_report = function(model_, data_, optim_out_path_){
     select(delta, gamma) %>%
     gather(key, value)
   
-  p1 = tmp1 %>%
+  p3 = tmp1 %>%
     ggplot(aes(value))+
     geom_histogram(bins = 30) +
     facet_wrap(~key, scales="free") +
     geom_vline(data=true_pars %>% filter(key %in% c("d", "sigma")), aes(xintercept=value), color="red")
   
-  print(p1)
+  print(p3)
   
-  p2 = tmp2 %>%
+  p4 = tmp2 %>%
     ggplot(aes(value))+
     geom_histogram(bins = 30) +
     facet_wrap(~key, scales="free") +
     geom_vline(data=true_pars %>% filter(key %in% c("delta", "gamma")), aes(xintercept=value), color="red")+
     xlim(0, 8)
   
-  print(p2)
+  print(p4)
+  
+  return(list(true_pars = true_pars_str, p1=p1, p2=p2, p3=p3, p4=p4))
 }

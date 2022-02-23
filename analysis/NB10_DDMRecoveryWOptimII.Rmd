@@ -58,12 +58,12 @@ To get a sense of recovery success for different parameter combinations I create
   - Variance in recovered parameters is always higher for `delta` and `gamma` than for `d` and `sigma`  
   - There is almost invariably a correlation between start and end points for `delta` and `gamma` but not for `d` and `sigma`  
 - [Median percentage of difference for each parameter across datasets](../outputs/fig/ddm_recovery_rand_datasets_diff_pct.pdf)
-  - `Delta` and `gamma` are not always the worst recovered parameters. There are cases, albeit fewer, where `d` and `sigma` are not recovered well either (7 of 20 datasets).  
+  - `Delta` and `gamma` are not always the worst recovered parameters. There are cases, albeit fewer, where `d` and `sigma` are not recovered well either (7 of 20 datasets). A quick look suggests these are cases with very small `sigma`.  
 - Correlation between recovered parameters especially 
   - All iterations or best estimate?
 
 ```{r}
-
+get_optim_out(model_ = model_name, data_=data_name, optim_out_path_ = optim_out_path)
 ```
 
 - Relationship between true value and recovery success?  

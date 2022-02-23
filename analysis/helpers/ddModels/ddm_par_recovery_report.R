@@ -2,6 +2,8 @@ library(tidyverse)
 theme_set(theme_classic())
 library(here)
 helpers_path = here('analysis/helpers/')
+source(paste0(helpers_path, 'ddModels/get_optim_out.R'))
+
 
 rbind.all.columns <- function(x, y) {
   
@@ -22,16 +24,16 @@ wrapper <- function(x, ...)
   paste(strwrap(x, ...), collapse = "\n")
 }
 
-ddm_par_recovery_report = function(model_, data_, optim_out_path_, diff_pct_plots_ = FALSE){
+ddm_par_recovery_report = function(model_, data_, optim_out_path_= paste0(helpers_path, 'ddModels/cluster_scripts/optim_out/'), true_pars_path_ = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/'), diff_pct_plots_ = FALSE){
   
   model_name = model_
   data_name = data_
-  optim_out_path = paste0(helpers_path, 'ddModels/cluster_scripts/optim_out/')
+  optim_out_path = optim_out_path_
   
   ###########################
   # Get true parameters
   ###########################
-  true_pars = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/',data_name,'.csv'))
+  true_pars = read.csv(paste0(true_pars_path_,data_name,'.csv'))
   true_pars = true_pars %>%
     select(d, sigma, delta, gamma) %>%
     distinct()
@@ -41,23 +43,16 @@ ddm_par_recovery_report = function(model_, data_, optim_out_path_, diff_pct_plot
   true_pars = true_pars %>%
     gather(key, value)
   
-  
   ###########################
   # Percentage of difference between true and converged parameter values
   ###########################
   
   if(diff_pct_plots_){
-    # List all files for this model and dataset combination
-    fns = list.files(optim_out_path)
-    fns = fns[grepl(model_name, fns) & grepl(paste0(data_name, '_'), fns) & grepl("par", fns)]
+    # Get all files for this model and dataset combination
+    out = get_optim_out(model_ = model_name, data_ = data_name, optim_out_path_ = optim_out_path, iters_ = FALSE)
     
-    out = data.frame()
-    for(i in 1:length(fns)){
-      tmp = read.csv(paste0(optim_out_path, fns[i]))
-      tmp$key = c("d", "sigma", "delta", "gamma")
-      tmp = tmp %>% spread(key, x)
-      out = rbind.all.columns(out, tmp)  
-    }
+    out = out %>%
+      rename(d = Param1, sigma = Param2, delta = Param3, gamma = Param4)
     
     p5 = out %>%
       gather(key, est) %>%
@@ -73,20 +68,8 @@ ddm_par_recovery_report = function(model_, data_, optim_out_path_, diff_pct_plot
     return(list(true_pars = true_pars_str, p5=p5))
     
   } else {
-    # List all files for this model and dataset combination
-    fns = list.files(optim_out_path)
-    fns = fns[grepl(model_name, fns) & grepl(paste0(data_name, '_'), fns) & grepl("iter", fns)]
-    
-    # Read in all starting and converged values
-    out = data.frame()
-    for(i in 1:length(fns)){
-      tmp = read.csv(paste0(optim_out_path, fns[i]))
-      start_row = tmp[1,]
-      end_row = tmp[nrow(tmp),]
-      tmp_row = rbind(start_row, end_row)
-      tmp_row$kernel = i
-      out = rbind.all.columns(out, tmp_row)  
-    }
+    # Get all files for this model and dataset combination
+    out = get_optim_out(model_ = model_name, data_ = data_name, optim_out_path_ = optim_out_path, iters_ = TRUE)
     
     out = out %>%
       rename(d = Param1, sigma = Param2, delta = Param3, gamma = Param4, nll = Result)

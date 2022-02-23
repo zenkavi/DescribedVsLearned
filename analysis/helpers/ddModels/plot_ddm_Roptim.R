@@ -27,7 +27,8 @@ option_list = list(
   make_option("--fig_fn", type="character", default = 'ddm_recovery_rand_datasets'),
   make_option("--model", type="character", default = 'model1a'),
   make_option("--scatter", type="logical", action = 'store_true', default=FALSE),
-  make_option("--histogram", type="logical", action = 'store_true', default=FALSE)
+  make_option("--histogram", type="logical", action = 'store_true', default=FALSE),
+  make_option("--diff_pct", type="logical", action = 'store_true', default=FALSE)
 ) 
 
 opt_parser = OptionParser(option_list=option_list)
@@ -56,24 +57,46 @@ model = opt$model
 
 scatter = opt$scatter
 histogram = opt$histogram
+diff_pct = opt$diff_pct
 
 #######################
 # Loop through datasets
 #######################
 
 source(paste0(helpers_path, 'ddModels/ddm_par_recovery_report.R'))
+sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 
 n_datasets = length(data_names)
 
 scatter_rows = list()
 hist_rows = list()
+diff_pct_plots = list()
 
 for(i in 1:n_datasets){
-  tmp = ddm_par_recovery_report(model_ = model, data_ = data_names[i], optim_out_path_ = optim_out_path)
-  cur_scatter_row = arrangeGrob(tmp[['p1']], tmp[['p2']], nrow=1, top = tmp$true_pars)
-  cur_hist_row = arrangeGrob(tmp[['p3']], tmp[['p4']], nrow=1, top = tmp$true_pars)
-  scatter_rows[[i]] = cur_scatter_row
-  hist_rows[[i]] = cur_hist_row
+  
+  if(diff_pct){
+    tmp = ddm_par_recovery_report(model_ = model, data_ = data_names[i], optim_out_path_ = optim_out_path, diff_pct_plots_ = TRUE)
+    cur_diff_pct_plot = tmp[['p5']]
+    diff_pct_plots[[i]] = cur_diff_pct_plot
+  } else{
+    tmp = ddm_par_recovery_report(model_ = model, data_ = data_names[i], optim_out_path_ = optim_out_path)
+  }
+  
+  if(scatter){
+    cur_scatter_row = arrangeGrob(tmp[['p1']], tmp[['p2']], nrow=1, top = tmp$true_pars)
+    scatter_rows[[i]] = cur_scatter_row
+  }
+  
+  if(histogram){
+    cur_hist_row = arrangeGrob(tmp[['p3']], tmp[['p4']], nrow=1, top = tmp$true_pars)
+    hist_rows[[i]] = cur_hist_row
+  }
+  
+}
+
+if(diff_pct){
+  g = marrangeGrob(grobs = diff_pct_plots, nrow=4, ncol=4)
+  ggsave(file=paste0(fig_out_path, fig_fn, '_diff_pct.pdf'), g, height = 8, width=11, units="in")
 }
 
 if(scatter){

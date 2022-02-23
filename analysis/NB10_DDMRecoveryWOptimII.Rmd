@@ -25,11 +25,13 @@ source(paste0(helpers_path, 'ddModels/ddm_par_recovery_report.R'))
 set.seed(38573)
 ```
 
-# Recovery with random starts
+# Recovery with random starts on random datasets
 
 Note: This took ~1 hour for a single subject's data running two jobs on each node for 25 compute nodes.
 
 `docker run --rm -it -v ~/.aws:/root/.aws -v $(pwd):/cluster_scripts amazon/aws-cli s3 sync  s3://described-vs-experienced/ddModels/cluster_scripts/optim_out /cluster_scripts/optim_out`
+
+Sample plots summarizing the simulations
 
 ```{r}
 model_name = "model1a"
@@ -39,91 +41,49 @@ optim_out_path = paste0(helpers_path, 'ddModels/cluster_scripts/optim_out/')
 ddm_par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path)
 ```
 
-# Recovery for random datasets
+```{r}
+ddm_par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path, diff_pct_plots_ = TRUE)
+```
 
 To get a sense of recovery success for different parameter combinations I created 20 random datasets using the following steps:   
 
 - Sample `d` and `sigma` from a uniform distribution between 0 and 1 and `delta` and `gamma` from a uniform distribution between 1 and 8.   
-
 - Simulate data for a single subject using the same conditions (QV and EV pairs) across parameter combinations.  
-
 - Run `optim` (the built-in optimizer using the Nelder-Mead algorithm) with 1000 random starts on each of these 20 datasets.  
-
 - The starting values were sampled from the same distributions described above.  
 
 ## Results
 
-- [Scatter plots of start and convergend points in each iteration for all parameters](../outputs/fig/ddm_recovery_rand_datasets_scatter.pdf)
-- [Median percentage of ](../outputs/fig/ddm_recovery_rand_datasets_diff_pct.pdf)
-
-Take aways:  
-- Variance in recovered parameters is always higher for `delta` and `gamma` than for `d` and `sigma`  
-
-- There is almost invariably a correlation between start and end points for `delta` and `gamma` but not for `d` and `sigma`  
-
-- Median percentage off from true value?
+- [Scatter plots of start and convergend points in each iteration for all parameters](../outputs/fig/ddm_recovery_rand_datasets_scatter.pdf)  
+  - Variance in recovered parameters is always higher for `delta` and `gamma` than for `d` and `sigma`  
+  - There is almost invariably a correlation between start and end points for `delta` and `gamma` but not for `d` and `sigma`  
+- [Median percentage of difference for each parameter across datasets](../outputs/fig/ddm_recovery_rand_datasets_diff_pct.pdf)
+  - `Delta` and `gamma` are not always the worst recovered parameters. There are cases, albeit fewer, where `d` and `sigma` are not recovered well either (7 of 20 datasets).  
+- Correlation between recovered parameters especially 
+  - All iterations or best estimate?
 
 ```{r}
-model_name = "model1a"
-data_name = "sim_single_sub_data1"
-optim_out_path = paste0(helpers_path, 'ddModels/cluster_scripts/optim_out/')
-  
-# List all files for this model and dataset combination
-fns = list.files(optim_out_path)
-fns = fns[grepl(model_name, fns) & grepl(paste0(data_name, '_'), fns) & grepl("par", fns)]
 
-out = data.frame()
-for(i in 1:length(fns)){
-  tmp = read.csv(paste0(optim_out_path, fns[i]))
-  tmp$key = c("d", "sigma", "delta", "gamma")
-  tmp = tmp %>% spread(key, x)
-  out = rbind.all.columns(out, tmp)  
-}
-  
-true_pars = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/',data_name,'.csv'))
-true_pars = true_pars %>%
-  select(d, sigma, delta, gamma) %>%
-  distinct() 
-
-out 
-true_pars 
-
-true_pars = true_pars %>%
-  gather(key, value)
-
-out %>%
-  gather(key, est) %>%
-  left_join(true_pars %>% rename(true = value), by="key") %>%
-  mutate(abs_diff_pct = abs(est-true)/true*100) %>%
-  group_by(key) %>%
-  summarise(median_diff = median(abs_diff_pct)) %>%
-  ggplot(aes(key, median_diff))+
-  geom_bar(stat="identity")
-#   summarise(avg_diff_pct = mean(abs_diff_pct),
-#             sem_diff_pct = sem(abs_diff_pct)) %>%
-#   ggplot(aes(key, avg_diff_pct))+
-#   geom_point()+
-#   geom_errorbar(aes(ymin = avg_diff_pct - sem_diff_pct, ymax = avg_diff_pct + sem_diff_pct), width=0.2) +
-#   labs(y = "Mean % difference", x="", title=wrapper(true_pars_str, 30))+
-#   theme(plot.title = element_text(size=8))
-```
-
-```{r}
-model_name = "model1a"
-data_name = "sim_single_sub_data"
-optim_out_path = paste0(helpers_path, 'ddModels/cluster_scripts/optim_out/')
-
-ddm_par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path, diff_pct_plots_ = TRUE)
 ```
 
 - Relationship between true value and recovery success?  
+  - In the current simulations?
+  - Grid of recovery success for delta and gamma when d and sigma are fixed
+    - Fix d = 0.06, sigma = 0.08 for delta and gamma = seq(1, 8, 1) 64 datasets, 
+      - 4 heatmaps: for each combination delta and gamma what is the median percentage of difference for each parameter across the 1000 iterations (though focus is on the heatmaps of delta and gamma to see if there is a como)
+      - True versus best of 1000 (ie. lowest nll) for delta and gamma. 2 scatter plots (one for delta and another for gamma) with 64 points or boxplots with 8 levels
 
 ```{r}
 
 ```
+
+More data per optimization? (currently for single subject)
+Hierarchical estimation?
 
 Would you compute posterior among these different optimized values? Is there any point in doing that even when there is no iteration that has converged on the true values?
 
 ```{r}
 
 ```
+
+

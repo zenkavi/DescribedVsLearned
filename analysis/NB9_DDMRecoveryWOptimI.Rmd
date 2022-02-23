@@ -1,0 +1,367 @@
+---
+title: "Experience vs. description based decision-making project: DDM parameter recovery with the `optim` function"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: 'hide'
+---
+
+# Setup
+
+Set up environment and load in data
+
+```{r include=FALSE, message=FALSE}
+library(tidyverse)
+library(here)
+library(gridExtra)
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+theme_set(theme_classic())
+sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
+helpers_path = here('analysis/helpers/')
+
+set.seed(38573)
+```
+
+```{r message=FALSE}
+source(paste0(helpers_path,'ddModels/fit_task.R'))
+source(paste0(helpers_path,'ddModels/sim_task.R'))
+test_trial_conditions = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/test_trial_conditions.csv'))
+source(paste0(helpers_path, 'ddModels/ddm_par_recovery_report.R'))
+```
+
+```{r include=FALSE, message=FALSE}
+library(visualMLE)
+```
+
+Empty lists to store the trial simulators for the forthcoming models.
+
+```{r}
+sim_trial_list = list()
+fit_trial_list = list()
+```
+
+```{r}
+true_d = .06
+true_sigma = .08
+true_delta = 3
+true_gamma = 3
+```
+
+# Prob distortion detection fails
+
+## Model1b
+
+With model1b, closest model to model2b without early integration
+
+```{r}
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model1b.R'))
+
+sim_trial_list[['model1b']] = sim_trial
+fit_trial_list[['model1b']] = fit_trial
+```
+
+```{r}
+trialsPerCondition=15 
+
+# Replicate same conditions n times
+test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
+
+# Simulate choice and RT for the replicated trial conditions
+test_data = sim_task(test_data, model_name = "model1b", d = true_d, sigma = true_sigma, delta = true_delta, gamma = true_gamma) %>%drop_na()
+```
+
+Example 1: c(.01, .01, 1, 1)
+
+```{r}
+optim_out = optim_save(c(.01, .01, 1, 1), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1b", control = list(maxit=75))
+```
+
+```{r}
+optim_out$par
+```
+
+```{r}
+tmp = data.frame(key = c("d", "sigma", "delta", "gamma"), true_val = c(true_d, true_sigma, true_delta, true_gamma))
+
+optim_out$iterations_df %>%
+  gather(key, value, -Result, -Iteration) %>%
+  mutate(key =ifelse(key == "Param1", "d", ifelse(key == "Param2", "sigma", ifelse(key == "Param3", "delta", "gamma")))) %>%
+  ggplot(aes(Iteration, value))+
+  geom_point(aes(color=Result))+
+  geom_line(alpha=.5, color="gray")+
+  facet_wrap(~key, scales="free")+
+  geom_hline(data=tmp, aes(yintercept = true_val), linetype="dashed")+
+  theme(legend.position="bottom")
+```
+
+### Path plots
+
+Path plots to see how to think through the perturbations
+
+How is a particle supposed to move with the Nelder-Mead algorithm?
+[Here's a quick tutorial](http://www.brnt.eu/phd/node10.html#SECTION00622200000000000000) on how it works
+[Here's some R code that walks through the moves of the simplex](https://m-clark.github.io/models-by-example/nelder-mead.html)
+
+```{r}
+optim_out$iterations_df %>%
+  mutate(iter_block = round(Iteration/10),
+         start_point = c(1,diff(iter_block)),
+         end_point = -1*lead(c(0, diff(iter_block))),
+         end_point = ifelse(is.na(end_point), 0, end_point),
+         point_shape = as.factor(start_point+end_point),
+         iter_block = paste0("Iteration block = ", iter_block)) %>%
+  rename(d= Param1, sigma = Param2)%>%
+  ggplot(aes(d, sigma, color=Iteration))+
+  geom_point(aes(shape=point_shape, size=point_shape))+
+  geom_path(arrow = arrow(type = "closed", length = unit(0.05, "npc")))+
+  geom_point(aes(x = true_d, y = true_sigma), size=3, color="red", pch=8)+
+  facet_wrap(~iter_block, scales="free")+
+  theme(legend.position = "none")+
+  scale_shape_manual(values = c(22,20,21))+
+  scale_size_manual(values=c(2.5,2,2.5))
+```
+
+```{r}
+optim_out$iterations_df %>%
+  mutate(iter_block = round(Iteration/10),
+         start_point = c(1,diff(iter_block)),
+         end_point = -1*lead(c(0, diff(iter_block))),
+         end_point = ifelse(is.na(end_point), 0, end_point),
+         point_shape = as.factor(start_point+end_point),
+         iter_block = paste0("Iteration block = ", iter_block)) %>%
+  rename(delta= Param3, gamma = Param4)%>%
+  ggplot(aes(delta, gamma, color=Iteration))+
+  geom_point(aes(shape=point_shape, size=point_shape))+
+  geom_path(arrow = arrow(type = "closed", length = unit(0.05, "npc")))+
+  geom_point(aes(x = true_delta, y = true_gamma), size=3, color="red", pch=8)+
+  facet_wrap(~iter_block, scales="free")+
+  theme(legend.position = "none")+
+  scale_shape_manual(values = c(22,20,21))+
+  scale_size_manual(values=c(2.5,2,2.5))
+```
+
+## Model1a
+
+Alternative parameterization of probability distortion
+
+How do things look like with a differently parameterized prob distortion function?
+How does the prob distortion and the ranges of the parameters change?
+
+```{r}
+delt = 2
+gamm = 2
+
+data.frame(prob = seq(0,1,.1)) %>%
+  mutate(distorted_prob_1a = (delt * (prob)^gamm) / ( (delt * (prob)^gamm) + (1-prob)^gamm ),
+         distorted_prob_1b = exp(-delt*(-log(prob))^gamm)  ) %>%
+  gather(key, value, -prob) %>%
+  ggplot(aes(prob, value, color=key))+
+  geom_point()+
+  geom_line()+
+  geom_abline(aes(intercept=0, slope = 1), linetype="dashed")+
+  theme(legend.position = "bottom")+
+  labs(color="")
+```
+
+```{r}
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model1a.R'))
+
+sim_trial_list[['model1a']] = sim_trial
+fit_trial_list[['model1a']] = fit_trial
+```
+
+Is recovery any better for these prob distortion parameters? No.
+
+```{r}
+trialsPerCondition=15 
+
+# Replicate same conditions n times
+test_data = dplyr::bind_rows(replicate(trialsPerCondition, test_trial_conditions, simplify = FALSE))
+
+# Simulate choice and RT for the replicated trial conditions
+test_data = sim_task(test_data, model_name = "model1a", d = true_d, sigma = true_sigma, delta = true_delta, gamma = true_gamma) %>%drop_na()
+```
+
+```{r}
+optim_out = optim_save(c(.01, .01, 1, 1), get_task_nll, data=test_data, par_names = c("d", "sigma", "delta", "gamma"), model_name="model1a", control = list(maxit=75))
+```
+
+```{r}
+tmp = data.frame(key = c("d", "sigma", "delta", "gamma"), true_val = c(true_d, true_sigma, true_delta, true_gamma))
+
+optim_out$iterations_df %>%
+  gather(key, value, -Result, -Iteration) %>%
+  mutate(key =ifelse(key == "Param1", "d", ifelse(key == "Param2", "sigma", ifelse(key == "Param3", "delta", "gamma")))) %>%
+  ggplot(aes(Iteration, value))+
+  geom_point(aes(color=Result))+
+  geom_line(alpha=.5, color="gray")+
+  facet_wrap(~key, scales="free")+
+  geom_hline(data=tmp, aes(yintercept = true_val), linetype="dashed")+
+  theme(legend.position="bottom")
+```
+
+### Path plots
+
+```{r}
+optim_out$iterations_df %>%
+  mutate(iter_block = round(Iteration/10),
+         start_point = c(1,diff(iter_block)),
+         end_point = -1*lead(c(0, diff(iter_block))),
+         end_point = ifelse(is.na(end_point), 0, end_point),
+         point_shape = as.factor(start_point+end_point),
+         iter_block = paste0("Iteration block = ", iter_block)) %>%
+  rename(d= Param1, sigma = Param2)%>%
+  ggplot(aes(d, sigma, color=Iteration))+
+  geom_point(aes(shape=point_shape, size=point_shape))+
+  geom_path(arrow = arrow(type = "closed", length = unit(0.05, "npc")))+
+  geom_point(aes(x = true_d, y = true_sigma), size=3, color="red", pch=8)+
+  facet_wrap(~iter_block, scales="free")+
+  theme(legend.position = "none")+
+  scale_shape_manual(values = c(22,20,21))+
+  scale_size_manual(values=c(2.5,2,2.5))
+```
+
+```{r}
+optim_out$iterations_df %>%
+  mutate(iter_block = round(Iteration/10),
+         start_point = c(1,diff(iter_block)),
+         end_point = -1*lead(c(0, diff(iter_block))),
+         end_point = ifelse(is.na(end_point), 0, end_point),
+         point_shape = as.factor(start_point+end_point),
+         iter_block = paste0("Iteration block = ", iter_block)) %>%
+  rename(delta= Param3, gamma = Param4)%>%
+  ggplot(aes(delta, gamma, color=Iteration))+
+  geom_point(aes(shape=point_shape, size=point_shape))+
+  geom_path(arrow = arrow(type = "closed", length = unit(0.05, "npc")))+
+  geom_point(aes(x = true_delta, y = true_gamma), size=3, color="red", pch=8)+
+  facet_wrap(~iter_block, scales="free")+
+  theme(legend.position = "none")+
+  scale_shape_manual(values = c(22,20,21))+
+  scale_size_manual(values=c(2.5,2,2.5))
+```
+
+# Change in NLL as a function of change in parameters
+
+Why don't delta and gamma move? Why were we able to estimate the correct d and sigma even when delta and gamma were incorrectly fixed at 1?
+Because changing them even drastically leads to very small improvement in the objective function (nll).
+
+```{r}
+true_nll = get_task_nll(test_data, par_ = c(true_d, true_sigma, true_delta, true_gamma), par_names_ = c("d", "sigma", "delta", "gamma"), model_name_ = "model1a")
+true_nll
+```
+
+Proportional difference in NLL when using different delta and gamma values compared to the true NLL.
+
+In this specific example, the absence of a big difference between setting delta and gamma to 1 (compared to the true value of 3 which leads to distortion) means that the recovery can't tell if there is prob distortion or not.
+
+```{r}
+(get_task_nll(test_data, par_ = c(true_d, true_sigma, 1, 1), par_names_ = c("d", "sigma", "delta", "gamma"), model_name_ = "model1a")-true_nll)/true_nll
+```
+
+```{r}
+(get_task_nll(test_data, par_ = c(true_d, true_sigma, 2, 2), par_names_ = c("d", "sigma", "delta", "gamma"), model_name_ = "model1a")-true_nll)/true_nll
+```
+
+On the other hand, a similar change in d and sigma leads to a massive difference
+
+```{r}
+(get_task_nll(test_data, par_ = c(true_d/3, true_sigma/3, 1, 1), par_names_ = c("d", "sigma", "delta", "gamma"), model_name_ = "model1a")-true_nll)/true_nll
+```
+
+
+What is the effect of changing the distortion parameters (delta and gamma) on the likelihood computation compared to the change in the other parameters?
+
+The likelihood computation depends on the distribution `N(mu, sigma)` where mu is determined by the option values and the distorted probability of attribute relevance. Sigma has a direct effect on this distribution. The effect of the drift rate, delta and gamma are indirect through the following equations: 
+
+```
+distortedProbFractalDraw = (delta * (probFractalDraw)^gamma) / ( (delta * (probFractalDraw)^gamma) + (1-probFractalDraw)^gamma )  
+leftFractalAdv =  distortedProbFractalDraw * (QVLeft - QVRight)  
+leftLotteryAdv = (1-probFractalDraw) * (EVLeft - EVRight)  
+mu = d * (leftFractalAdv + leftLotteryAdv)  
+```
+
+- Increasing the drift rate has a consistent effect for all trial conditions that scales with the size of the change.
+- Increasing delta has a small and somewhat variable effect.
+- Increasing gamma has an effect larger than changing delta but smaller than changing the drift rate and it is most variable.
+
+```{r}
+delt = 2
+gamm = 2
+dR = .03
+changeFactor = seq(1.1, 2, .1)
+
+tmp = bind_rows(replicate(length(changeFactor), test_trial_conditions, simplify = FALSE)) %>%
+  cbind(bind_rows(replicate(nrow(test_trial_conditions), data.frame(changeFactor), simplify = FALSE)) %>%
+          arrange(changeFactor))  %>%
+  mutate(QVDiff = QVLeft-QVRight,
+         EVDiff = EVLeft-EVRight,
+         distortedProb = (delt * (probFractalDraw)^gamm) / ( (delt * (probFractalDraw)^gamm) + (1-probFractalDraw)^gamm ),
+         distortedProbDelt = (delt * changeFactor * (probFractalDraw)^gamm) / ( (delt* changeFactor * (probFractalDraw)^gamm) + (1-probFractalDraw)^gamm ),
+         distortedProbGamm = (delt * (probFractalDraw)^(gamm* changeFactor)) / ( (delt* changeFactor * (probFractalDraw)^(gamm* changeFactor)) + (1-probFractalDraw)^(gamm* changeFactor) ),
+         mu = dR * ( (distortedProb*QVDiff) + ((1-probFractalDraw)*EVDiff) ),
+         mu_driftRateChange =  dR *changeFactor* ( (distortedProb*QVDiff) + ((1-probFractalDraw)*EVDiff) ),
+         mu_deltaChange = dR * ( (distortedProbDelt*QVDiff) + ((1-probFractalDraw)*EVDiff) ),
+         mu_gammaChange = dR * ( (distortedProbGamm*QVDiff) + ((1-probFractalDraw)*EVDiff) ) ) %>%
+  select(mu, mu_driftRateChange, mu_deltaChange, mu_gammaChange, changeFactor) %>%
+  gather(key, value, -mu, -changeFactor) %>%
+  mutate(muAbsDiff = abs(abs(value) - abs(mu)),
+         muPropDiff = muAbsDiff / abs(mu))
+
+tmp %>%  
+  group_by(key, changeFactor) %>%
+  summarise(meanPropDiff = mean(muPropDiff),
+            semPropDiff = sem(muPropDiff), .groups="keep")
+tmp %>%
+  mutate(changeFactor = as.factor(changeFactor-1)) %>%
+  ggplot(aes(changeFactor, muPropDiff, color=key))+
+  geom_boxplot()+
+  theme(legend.position = "bottom")+
+  scale_y_continuous(breaks=c(0, .25, .5, .75, 1, 2, 3))+
+  labs(color="", y="Proportional change in mu")
+```
+
+I think this suggests that the objective function (the likelihood computation) is not sensitive to pick up changes in delta and gamma. Possible next steps:
+
+- Changing the objective function might help, but what to change it to?  
+  - Read a recent paper on probability distortion functions ([Zhang, Ren, Maloney, 2020, PNAS](https://www.pnas.org/content/117/36/22024#sec-23)) but wasn't sure how to make use of it for a different likelihood function 
+
+- Likelihood surface depending on the delta and gamma - would a (big) grid search be the answer? See previous notebook.  
+  - Change is larger for change in levels of gamma versus delta
+
+- Changing the perspective: instead of trying to recover exact model parameters, distinguish between a model with distortion versus no distortion?  
+
+- Moving to joint modeling of choice and RT with Stan by expanding the previous RL models? How well did these RL only do in parameter recovery?
+    - How do [Shahar et al., 2019](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1006803#sec008) do it? They model a two two-step task with a combined DDM-RL model. The addition of DDM helps recovering learning rate and model-based vs model-free allocation weight parameter to be recovered in much fewer trials. 
+
+# Perturbing the kernel **[paused]**
+
+How much to perturb in what dimension? Stopping criteria for perturbations? Two potentially relevant papers:  
+
+- [The Nelder–Mead simplex algorithm with perturbed centroid for high-dimensional function optimization](https://link.springer.com/article/10.1007/s11590-018-1306-2)
+- [Stochastic Nelder–Mead simplex method – A new globally convergent direct search method for simulation optimization](https://www.sciencedirect.com/science/article/pii/S0377221712001609#b0175)
+
+They are theoretically interesting but unfortunately neither includes code and I'm reluctant to implement the described algorithms myself.
+
+# Stop clusters
+
+```{r}
+parallel::stopCluster(cl = my.fit.cluster)
+parallel::stopCluster(cl = my.sim.cluster)
+```
+
+------------------------------------------------------------------------------------------------------------------------------------------
+
+What do we know so far?  
+  Slight lottery bias in pooled data  
+  Categorically faster RTs when probFractalDraw == 1 in pooled data  
+  Slower decisions the more both attributes need to be considered in pooled data  
+  Individual differences both in all of the above stylized facts and in the best fitting RL model  
+What will we do with these parameters?   
+  Individual difference analyses?  
+  Trial level covariate for imaging?  
+Move things over to remote cluster for subject estimation?  
+Combined DDM + RL modeling:  
+  Would you be able to take advantage of `foreach` package in `sim_task` and `fit_task` while also serially updating QValues?  
+  Without paralellization how would you implement it in `sim_task` and `fit_task` with serial updating of QValues?  
+  Would it be possible to implement in Stan?  

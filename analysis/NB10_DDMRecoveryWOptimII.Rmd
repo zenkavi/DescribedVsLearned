@@ -108,14 +108,40 @@ ggsave(file=paste0(fig_out_path, 'ddm_recovery_rand_datasets_delta_gamma_cor.pdf
 
 ```
 
+Correlation between delta and gamma for the best estimate (the one with the lowest negative log likelihood) across datasets
+
 ```{r}
-out_iters
+out_iters %>%
+  filter(Iteration != 1) %>%
+  group_by(dataset) %>%
+  filter(nll == min(nll)) %>%
+  ggplot(aes(delta, gamma))+
+  geom_point()+
+  xlim(1,10)+
+  ylim(1, 10)
 ```
 
-Given the correlation between delta and gamma maybe a try a parameterization with a single parameter for the distortion function?
+Given the correlation between delta and gamma maybe a try a parameterization with a single parameter for the distortion function? In fact, the logit slopes suggest that there isn't really any overweighting of probFractalDraw even for higher values at the group level (not to mention the large individual differences). So maybe what we need is not a sigmoid function but one that underweights almost all probFractalDraw values.
+
+```{r}
+delt = .1
+gamm = 3
+
+data.frame(prob = seq(0,1,.1)) %>%
+  mutate(distorted_prob_1a = (delt * (prob)^gamm) / ( (delt * (prob)^gamm) + (1-prob)^gamm ),
+         distorted_prob_1b = ((prob)^gamm) / ( ((prob)^gamm) + (1-prob)^gamm )  ,
+         distorted_prob_1c = (delt * (prob)) / ( (delt * (prob)) + (1-prob)),) %>%
+  gather(key, value, -prob) %>%
+  ggplot(aes(prob, value, color=key))+
+  geom_point()+
+  geom_line()+
+  geom_abline(aes(intercept=0, slope = 1), linetype="dashed")+
+  theme(legend.position = "bottom")+
+  labs(color="")
+```
 
 - Relationship between true value and recovery success?  
-  - In the current simulations?
+  - In the current simulations? Plot true value by median percentage of difference?
   - Grid of recovery success for delta and gamma when d and sigma are fixed
     - Fix d = 0.06, sigma = 0.08 for delta and gamma = seq(1, 8, 1) 64 datasets, 
       - 4 heatmaps: for each combination delta and gamma what is the median percentage of difference for each parameter across the 1000 iterations (though focus is on the heatmaps of delta and gamma to see if there is a como)

@@ -85,7 +85,6 @@ out_iters = out_iters %>%
 ``` 
 
 ```{r}
-# Add true parameters for each dataset and the correlation between delta and gamma to each facet of this plot
 p_df = out_iters %>%
   filter(Iteration != 1) %>%
   filter(abs(delta) < 10 & delta > 0) %>%
@@ -108,6 +107,27 @@ ggsave(file=paste0(fig_out_path, 'ddm_recovery_rand_datasets_delta_gamma_cor.pdf
 
 ```
 
+```{r}
+p_df = out_iters %>%
+  filter(Iteration != 1) %>%
+  group_by(dataset) %>%
+  mutate(ds_cor = cor(d, sigma)) %>%
+  ungroup()
+
+p_df_annot = p_df %>% 
+  select(true_pars, ds_cor) %>%
+  distinct() %>%
+  mutate(ds_cor = paste0("r = ", round(ds_cor, 3)))
+  
+p = p_df %>% ggplot(aes(d, sigma)) +
+  geom_point(color="gray", size=.5)+
+  facet_wrap(~true_pars, labeller = labeller(true_pars = label_wrap_gen(26) ), scales="free") +
+  geom_text(data = p_df_annot, aes(x= Inf, y=Inf,label = ds_cor), size=3, vjust = "top", hjust = "right")
+
+ggsave(file=paste0(fig_out_path, 'ddm_recovery_rand_datasets_d_sigma_cor.pdf'), p, height = 8, width=11, units="in")
+
+```
+
 Correlation between delta and gamma for the best estimate (the one with the lowest negative log likelihood) across datasets
 
 ```{r}
@@ -118,7 +138,8 @@ out_iters %>%
   ggplot(aes(delta, gamma))+
   geom_point()+
   xlim(1,10)+
-  ylim(1, 10)
+  ylim(1, 10)+
+  labs(title = "Correlation between delta and gamma for the best estimate across datasets")
 ```
 
 Given the correlation between delta and gamma maybe a try a parameterization with a single parameter for the distortion function? In fact, the logit slopes suggest that there isn't really any overweighting of probFractalDraw even for higher values at the group level (not to mention the large individual differences). So maybe what we need is not a sigmoid function but one that underweights almost all probFractalDraw values.
@@ -148,7 +169,42 @@ data.frame(prob = seq(0,1,.1)) %>%
       - True versus best of 1000 (ie. lowest nll) for delta and gamma. 2 scatter plots (one for delta and another for gamma) with 64 points or boxplots with 8 levels
 
 ```{r}
+model_name = "model1a"
+data_prefix = "sim_single_sub_data"
+optim_out_path = paste0(helpers_path, 'ddModels/cluster_scripts/optim_out/')
+true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
+fig_out_path = paste0(here(), '/outputs/fig/')
 
+out_pars = data.frame()
+
+for(i in 1:20){
+  cur_out = get_optim_out(model_ = model_name, data_=paste0(data_prefix, i), optim_out_path_ = optim_out_path, iters= FALSE)
+  cur_out$dataset = i
+  cur_true_pars = get_true_pars(data_=paste0(data_prefix, i), true_pars_path_ =  true_pars_path, return_str_ = FALSE)$true_pars
+  cur_true_pars = cur_true_pars %>% rename(true= value)
+  cur_out = cur_out %>%
+    rename(d = Param1, sigma = Param2, delta = Param3, gamma = Param4) %>%
+    gather(key, est, -dataset) %>%
+    left_join(cur_true_pars, by="key") %>%
+    mutate(abs_diff_pct = abs(est-true)/true*100)
+  out_pars = rbind.all.columns(out_pars, cur_out)
+}
+  
+```
+
+```{r}
+p = out_pars %>%
+  filter(true>0) %>%
+  group_by(dataset, key) %>%
+  summarise(.groups="keep",
+            median_diff_pct = median(abs_diff_pct),
+            true = unique(true)) %>%
+  ggplot(aes(true, median_diff_pct)) +
+  geom_point() +
+  facet_wrap(~key, scales="free")+
+  labs(x="True parameter value", y="Median % difference between true and recovered value")
+
+ggsave(file=paste0(fig_out_path, 'ddm_recovery_rand_datasets_pct_diff_by_true_value.pdf'), p, height = 8, width=11, units="in")
 ```
 
 More data per optimization? (currently for single subject)

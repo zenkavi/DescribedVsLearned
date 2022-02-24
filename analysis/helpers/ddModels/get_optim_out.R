@@ -1,3 +1,5 @@
+library(tidyverse)
+
 get_optim_out = function(model_, data_, optim_out_path_, iters_ = TRUE){
   
   fns = list.files(optim_out_path_)
@@ -25,6 +27,8 @@ get_optim_out = function(model_, data_, optim_out_path_, iters_ = TRUE){
     out = data.frame()
     for(i in 1:length(fns)){
       tmp = read.csv(paste0(optim_out_path_, fns[i]))
+      
+      # This makes it independent of model parameters but the "Param" columns would need to be renamed
       for(j in 1:nrow(tmp)){
         tmp$key[j] = paste0("Param",j)
       }

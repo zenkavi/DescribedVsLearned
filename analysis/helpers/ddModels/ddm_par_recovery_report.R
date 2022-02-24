@@ -3,6 +3,7 @@ theme_set(theme_classic())
 library(here)
 helpers_path = here('analysis/helpers/')
 source(paste0(helpers_path, 'ddModels/get_optim_out.R'))
+source(paste0(helpers_path, 'ddModels/get_true_pars.R'))
 
 
 rbind.all.columns <- function(x, y) {
@@ -33,12 +34,12 @@ ddm_par_recovery_report = function(model_, data_, optim_out_path_= paste0(helper
   ###########################
   # Get true parameters
   ###########################
-  true_pars = read.csv(paste0(true_pars_path_,data_name,'.csv'))
-  true_pars = true_pars %>%
-    select(d, sigma, delta, gamma) %>%
-    distinct()
   
-  true_pars_str = paste0("d = ", true_pars$d, ", sigma = ", true_pars$sigma, ", delta = ", true_pars$delta, ", gamma = ", true_pars$gamma)
+  tmp = get_true_pars(data_ = data_name, true_pars_path_ = true_pars_path_)
+  
+  true_pars = tmp$true_pars
+  
+  true_pars_str = tmp$true_pars_str
   
   true_pars = true_pars %>%
     gather(key, value)

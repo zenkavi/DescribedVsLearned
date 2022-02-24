@@ -60,11 +60,59 @@ To get a sense of recovery success for different parameter combinations I create
 - [Median percentage of difference for each parameter across datasets](../outputs/fig/ddm_recovery_rand_datasets_diff_pct.pdf)
   - `Delta` and `gamma` are not always the worst recovered parameters. There are cases, albeit fewer, where `d` and `sigma` are not recovered well either (7 of 20 datasets). A quick look suggests these are cases with very small `sigma`.  
 - Correlation between recovered parameters especially 
-  - All iterations or best estimate?
+  - Distribution of correlations for all iterations in each dataset
+  - Distribution of correlations for the best estimate across datasets
 
 ```{r}
-get_optim_out(model_ = model_name, data_=data_name, optim_out_path_ = optim_out_path)
+model_name = "model1a"
+data_prefix = "sim_single_sub_data"
+optim_out_path = paste0(helpers_path, 'ddModels/cluster_scripts/optim_out/')
+true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
+fig_out_path = paste0(here(), '/outputs/fig/')
+
+out_iters = data.frame()
+
+for(i in 1:20){
+  cur_out = get_optim_out(model_ = model_name, data_=paste0(data_prefix, i), optim_out_path_ = optim_out_path, iters= TRUE)
+  cur_out$dataset = i
+  cur_out$true_pars = get_true_pars(data_=paste0(data_prefix, i), true_pars_path_ =  true_pars_path, return_str_ = TRUE)
+  out_iters = rbind.all.columns(out_iters, cur_out)
+}
+
+
+out_iters = out_iters %>%
+  rename(d = Param1, sigma = Param2, delta = Param3, gamma = Param4, nll = Result)
+``` 
+
+```{r}
+# Add true parameters for each dataset and the correlation between delta and gamma to each facet of this plot
+p_df = out_iters %>%
+  filter(Iteration != 1) %>%
+  filter(abs(delta) < 10 & delta > 0) %>%
+  filter(abs(gamma) < 10 & gamma > 0) %>%
+  group_by(dataset) %>%
+  mutate(dg_cor = cor(delta, gamma)) %>%
+  ungroup()
+
+p_df_annot = p_df %>% 
+  select(true_pars, dg_cor) %>%
+  distinct() %>%
+  mutate(dg_cor = paste0("r = ", round(dg_cor, 3)))
+  
+p = p_df %>% ggplot(aes(delta, gamma)) +
+  geom_point(color="gray", size=.5)+
+  facet_wrap(~true_pars, labeller = labeller(true_pars = label_wrap_gen(26) ) ) +
+  geom_text(data = p_df_annot, aes(x = 2.5, y = 2.5, label = dg_cor), size=3)
+
+ggsave(file=paste0(fig_out_path, 'ddm_recovery_rand_datasets_delta_gamma_cor.pdf'), p, height = 8, width=11, units="in")
+
 ```
+
+```{r}
+out_iters
+```
+
+Given the correlation between delta and gamma maybe a try a parameterization with a single parameter for the distortion function?
 
 - Relationship between true value and recovery success?  
   - In the current simulations?

@@ -8,6 +8,9 @@
 # For histograms
 # Rscript --vanilla plot_ddm_Roptim.R --histogram --data_names sim_single_sub_data1,sim_single_sub_data2,sim_single_sub_data3,sim_single_sub_data4,sim_single_sub_data5,sim_single_sub_data6,sim_single_sub_data7,sim_single_sub_data8,sim_single_sub_data9,sim_single_sub_data10,sim_single_sub_data11,sim_single_sub_data12,sim_single_sub_data13,sim_single_sub_data14,sim_single_sub_data15,sim_single_sub_data16
 
+# For diff_pct
+# Rscript --vanilla plot_ddm_Roptim.R --diff_pct --data_names sim_single_sub_data21,sim_single_sub_data22,sim_single_sub_data23,sim_single_sub_data24,sim_single_sub_data25,sim_single_sub_data26,sim_single_sub_data27,sim_single_sub_data28,sim_single_sub_data29,sim_single_sub_data30,sim_single_sub_data31,sim_single_sub_data32,sim_single_sub_data33,sim_single_sub_data34,sim_single_sub_data35,sim_single_sub_data36,sim_single_sub_data37,sim_single_sub_data38,sim_single_sub_data39,sim_single_sub_data40,sim_single_sub_data41,sim_single_sub_data42,sim_single_sub_data43,sim_single_sub_data44,sim_single_sub_data45 --fig_fn ddm_recovery_dg_grid
+
 #######################
 # Setup
 #######################
@@ -16,13 +19,14 @@ library(here)
 library(optparse)
 library(gridExtra)
 helpers_path = here('analysis/helpers/')
+cpueaters_paths = '/Users/zeynepenkavi/CpuEaters/DescribedVsLearned_beh/analysis/helpers/'
 
 #######################
 # Parse input arguments
 #######################
 option_list = list(
   make_option("--data_names", type="character", default = c('sim_single_sub_data1', 'sim_single_sub_data2')),
-  make_option("--optim_out_path", type="character", default = 'ddModels/cluster_scripts/optim_out'),
+  make_option("--optim_out_path", type="character", default = 'ddModels/cluster_scripts/optim_out/'),
   make_option("--fig_out_path", type="character", default = '/outputs/fig/'),
   make_option("--fig_fn", type="character", default = 'ddm_recovery_rand_datasets'),
   make_option("--model", type="character", default = 'model1a'),
@@ -51,7 +55,7 @@ if(length(data_names) == 1){
 fig_out_path = paste0(here(), opt$fig_out_path)
 fig_fn = opt$fig_fn
 
-optim_out_path = paste0(helpers_path, opt$optim_out_path)
+optim_out_path = paste0(cpueaters_paths, opt$optim_out_path)
 
 model = opt$model
 
@@ -76,20 +80,30 @@ for(i in 1:n_datasets){
   
   if(diff_pct){
     tmp = ddm_par_recovery_report(model_ = model, data_ = data_names[i], optim_out_path_ = optim_out_path, diff_pct_plots_ = TRUE)
-    cur_diff_pct_plot = tmp[['p5']]
-    diff_pct_plots[[i]] = cur_diff_pct_plot
+    
+    if(length(tmp) > 0){
+      cur_diff_pct_plot = tmp[['p5']]
+      diff_pct_plots[[i]] = cur_diff_pct_plot
+    } else {
+      next
+    }
+    
   } else{
     tmp = ddm_par_recovery_report(model_ = model, data_ = data_names[i], optim_out_path_ = optim_out_path)
   }
   
-  if(scatter){
-    cur_scatter_row = arrangeGrob(tmp[['p1']], tmp[['p2']], nrow=1, top = tmp$true_pars)
-    scatter_rows[[i]] = cur_scatter_row
-  }
-  
-  if(histogram){
-    cur_hist_row = arrangeGrob(tmp[['p3']], tmp[['p4']], nrow=1, top = tmp$true_pars)
-    hist_rows[[i]] = cur_hist_row
+  if(length(tmp) > 0) {
+    if(scatter){
+      cur_scatter_row = arrangeGrob(tmp[['p1']], tmp[['p2']], nrow=1, top = tmp$true_pars)
+      scatter_rows[[i]] = cur_scatter_row
+    }
+    
+    if(histogram){
+      cur_hist_row = arrangeGrob(tmp[['p3']], tmp[['p4']], nrow=1, top = tmp$true_pars)
+      hist_rows[[i]] = cur_hist_row
+    }
+  } else {
+    next
   }
   
 }

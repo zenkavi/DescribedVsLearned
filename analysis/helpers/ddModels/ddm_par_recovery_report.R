@@ -66,7 +66,8 @@ ddm_par_recovery_report = function(model_, data_, optim_out_path_= paste0(cpueat
         ggplot(aes(key, median_diff))+
         geom_bar(stat="identity")+
         labs(y = "Median % difference", x="", title=wrapper(true_pars_str, 26))+
-        theme(plot.title = element_text(size=8))
+        theme(plot.title = element_text(size=8))+
+        geom_text(aes(label = round(median_diff, 2), x = key, y = median_diff), vjust = -.5)
       
       return(list(true_pars = true_pars_str, p5=p5))
     } else{

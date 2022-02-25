@@ -145,13 +145,13 @@ out_iters %>%
 Given the correlation between delta and gamma maybe a try a parameterization with a single parameter for the distortion function? In fact, the logit slopes suggest that there isn't really any overweighting of probFractalDraw even for higher values at the group level (not to mention the large individual differences). So maybe what we need is not a sigmoid function but one that underweights almost all probFractalDraw values.
 
 ```{r}
-delt = .1
-gamm = 3
+delt = 5
+gamm = 5
 
 data.frame(prob = seq(0,1,.1)) %>%
-  mutate(distorted_prob_1a = (delt * (prob)^gamm) / ( (delt * (prob)^gamm) + (1-prob)^gamm ),
-         distorted_prob_1b = ((prob)^gamm) / ( ((prob)^gamm) + (1-prob)^gamm )  ,
-         distorted_prob_1c = (delt * (prob)) / ( (delt * (prob)) + (1-prob)),) %>%
+  mutate(distorted_delta_gamma = (delt * (prob)^gamm) / ( (delt * (prob)^gamm) + (1-prob)^gamm ),
+         distorted_delta_1 = ((prob)^gamm) / ( ((prob)^gamm) + (1-prob)^gamm )  ,
+         distorted_gamma_1 = (delt * (prob)) / ( (delt * (prob)) + (1-prob)),) %>%
   gather(key, value, -prob) %>%
   ggplot(aes(prob, value, color=key))+
   geom_point()+
@@ -163,10 +163,6 @@ data.frame(prob = seq(0,1,.1)) %>%
 
 - Relationship between true value and recovery success?  
   - In the current simulations? Plot true value by median percentage of difference?
-  - Grid of recovery success for delta and gamma when d and sigma are fixed
-    - Fix d = 0.06, sigma = 0.08 for delta and gamma = seq(1, 8, 1) 64 datasets, 
-      - 4 heatmaps: for each combination delta and gamma what is the median percentage of difference for each parameter across the 1000 iterations (though focus is on the heatmaps of delta and gamma to see if there is a como)
-      - True versus best of 1000 (ie. lowest nll) for delta and gamma. 2 scatter plots (one for delta and another for gamma) with 64 points or boxplots with 8 levels
 
 ```{r}
 model_name = "model1a"
@@ -205,6 +201,50 @@ p = out_pars %>%
   labs(x="True parameter value", y="Median % difference between true and recovered value")
 
 ggsave(file=paste0(fig_out_path, 'ddm_recovery_rand_datasets_pct_diff_by_true_value.pdf'), p, height = 8, width=11, units="in")
+```
+
+- Grid of recovery success for delta and gamma when d and sigma are fixed
+  - Fix d = 0.1, sigma = 0.08 for delta and gamma = c(.1, .2, 1, 3, 5) 25 datasets, Note when delta == 1 you have the green and when gamma == 1 you have the blue curve
+    - 4 heatmaps: for each combination delta and gamma what is the median percentage of difference for each parameter across the 1000 iterations (though focus is on the heatmaps of delta and gamma to see if there is a como)
+    - True versus best of 1000 (ie. lowest nll) for delta and gamma. 2 scatter plots (one for delta and another for gamma) with 64 points or boxplots with 8 levels
+
+```{r eval=FALSE}
+true_d = .1
+true_sigma = 0.08
+true_deltas = c(.1, .2, 1, 3, 5)
+true_gammas = c(.1, .2, 1, 3, 5)
+
+out_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
+
+source(paste0(helpers_path,'ddModels/sim_task.R'))
+model = "model1a"
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_', model,'.R'))
+sim_trial_list = list()
+fit_trial_list = list()
+sim_trial_list[[model]] = sim_trial
+fit_trial_list[[model]] = fit_trial
+
+sub_data = read.csv(paste0(out_path, 'true_single_sub_data.csv'))
+sub_data = sub_data %>%
+    select(leftQValue, rightQValue, leftLotteryEV, rightLotteryEV, probFractalDraw) %>%
+    rename(QVLeft = leftQValue, QVRight = rightQValue, EVLeft = leftLotteryEV, EVRight = rightLotteryEV)
+  
+set.seed(38923)
+
+count = 21 # There are 20 test datasets from before. Starting these from 21.
+for(i in 1:length(true_deltas)){
+  true_delta = true_deltas[i]
+  
+  for(j in 1:length(true_gammas)){
+    true_gamma = true_gammas[j]
+    
+    sim_data = sim_task(sub_data, model_name = model, d = true_d, sigma = true_sigma, delta = true_delta, gamma = true_gamma) %>% drop_na()
+  
+    write.csv(sim_data, file = paste0(out_path, 'sim_single_sub_data', count,'.csv'), row.names = F)
+    count = count+1
+  }
+}
+
 ```
 
 More data per optimization? (currently for single subject)

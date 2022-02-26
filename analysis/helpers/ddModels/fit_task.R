@@ -23,7 +23,7 @@ doParallel::registerDoParallel(cl = my.fit.cluster)
 # foreach::getDoParWorkers()
 
 
-# Function to simulate ddm process for a given set of stimuli using a model provided as a string in the model_name argument
+# Function to fit ddm model to data using a model provided as a string in the model_name argument
 fit_task = function(data_, model_name_, pars_, fit_trial_list_ = fit_trial_list, debug=FALSE){
   
   # pars_ = list(...)
@@ -101,15 +101,12 @@ fit_task = function(data_, model_name_, pars_, fit_trial_list_ = fit_trial_list,
   if (!("stimDelay" %in% names(pars_))){
     pars_$stimDelay = 2000
   }
-  if (!("debug" %in% names(pars_))){
-    pars_$debug = FALSE
-  }
   
   # Extract the correct trial simulator for the model_name
   fit_trial = fit_trial_list_[[model_name_]]
   
   # Print arguments that will be used for simulation if in debug mode
-  if(pars_$debug){
+  if(debug){
     print(paste0("Simulating task with parameters: model_name = ", model_name_,
                  ", barrier = ", pars_$barrier,
                  ", barrierDecay = ", pars_$barrierDecay,

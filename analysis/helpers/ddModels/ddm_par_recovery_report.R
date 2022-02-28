@@ -57,19 +57,21 @@ ddm_par_recovery_report = function(model_, data_, optim_out_path_= paste0(cpueat
       out = out %>%
         rename(d = Param1, sigma = Param2, delta = Param3, gamma = Param4)
       
-      p5 = out %>%
+      diff_pct_data = out %>%
         gather(key, est) %>%
         left_join(true_pars %>% rename(true = value), by="key") %>%
         mutate(abs_diff_pct = abs(est-true)/true*100) %>%
         group_by(key) %>%
-        summarise(median_diff = median(abs_diff_pct)) %>%
+        summarise(median_diff = median(abs_diff_pct),
+                  true_val = unique(true))
+      p5 = diff_pct_data %>%
         ggplot(aes(key, median_diff))+
         geom_bar(stat="identity")+
         labs(y = "Median % difference", x="", title=wrapper(true_pars_str, 26))+
         theme(plot.title = element_text(size=8))+
         geom_text(aes(label = round(median_diff, 2), x = key, y = median_diff), vjust = -.5)
       
-      return(list(true_pars = true_pars_str, p5=p5))
+      return(list(true_pars = true_pars_str, p5=p5, diff_pct_data = diff_pct_data))
     } else{
       return(list())
     }

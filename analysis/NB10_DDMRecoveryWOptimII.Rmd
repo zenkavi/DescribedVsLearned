@@ -19,7 +19,7 @@ cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00"
 theme_set(theme_classic())
 sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 helpers_path = here('analysis/helpers/')
-
+cpueaters_paths = '/Users/zeynepenkavi/CpuEaters/DescribedVsLearned_beh/analysis/helpers/'
 source(paste0(helpers_path, 'ddModels/ddm_par_recovery_report.R'))
 
 set.seed(38573)
@@ -36,7 +36,7 @@ Sample plots summarizing the simulations
 ```{r}
 model_name = "model1a"
 data_name = "sim_single_sub_data"
-optim_out_path = paste0(helpers_path, 'ddModels/cluster_scripts/optim_out/')
+optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/')
 
 ddm_par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path)
 ```
@@ -58,15 +58,16 @@ To get a sense of recovery success for different parameter combinations I create
   - Variance in recovered parameters is always higher for `delta` and `gamma` than for `d` and `sigma`  
   - There is almost invariably a correlation between start and end points for `delta` and `gamma` but not for `d` and `sigma`  
 - [Median percentage of difference for each parameter across datasets](../outputs/fig/ddm_recovery_rand_datasets_diff_pct.pdf)
-  - `Delta` and `gamma` are not always the worst recovered parameters. There are cases, albeit fewer, where `d` and `sigma` are not recovered well either (7 of 20 datasets). A quick look suggests these are cases with very small `sigma`.  
-- Correlation between recovered parameters especially 
-  - Distribution of correlations for all iterations in each dataset
-  - Distribution of correlations for the best estimate across datasets
+  - `Delta` and `gamma` are not always the worst recovered parameters. There are cases, albeit fewer, where `d` and `sigma` are not recovered well either (7 of 20 datasets). A quick look suggests these are cases with very small `sigma`.
+  - [Percentage of difference by true value](../outputs/fig/ddm_recovery_rand_datasets_pct_diff_by_true_value.pdf): no strong relationship unless d or sigma are very small, in which case they are not recovered.
+- Correlation between recovered parameters
+  - [Delta and gamma](../outputs/fig/ddm_recovery_rand_datasets_delta_gamma_cor.pdf.pdf)
+  - [d and sigma](../outputs/fig/ddm_recovery_rand_datasets_d_sigma_cor.pdf.pdf)
 
-```{r}
+```{r eval=FALSE}
 model_name = "model1a"
 data_prefix = "sim_single_sub_data"
-optim_out_path = paste0(helpers_path, 'ddModels/cluster_scripts/optim_out/')
+optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/')
 true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
 fig_out_path = paste0(here(), '/outputs/fig/')
 
@@ -79,12 +80,11 @@ for(i in 1:20){
   out_iters = rbind.all.columns(out_iters, cur_out)
 }
 
-
 out_iters = out_iters %>%
   rename(d = Param1, sigma = Param2, delta = Param3, gamma = Param4, nll = Result)
 ``` 
 
-```{r}
+```{r eval=FALSE}
 p_df = out_iters %>%
   filter(Iteration != 1) %>%
   filter(abs(delta) < 10 & delta > 0) %>%
@@ -107,7 +107,7 @@ ggsave(file=paste0(fig_out_path, 'ddm_recovery_rand_datasets_delta_gamma_cor.pdf
 
 ```
 
-```{r}
+```{r eval=FALSE}
 p_df = out_iters %>%
   filter(Iteration != 1) %>%
   group_by(dataset) %>%
@@ -128,9 +128,9 @@ ggsave(file=paste0(fig_out_path, 'ddm_recovery_rand_datasets_d_sigma_cor.pdf'), 
 
 ```
 
-Correlation between delta and gamma for the best estimate (the one with the lowest negative log likelihood) across datasets
+```{r eval=FALSE}
+# Correlation between delta and gamma for the best estimate (the one with the lowest negative log likelihood) across datasets
 
-```{r}
 out_iters %>%
   filter(Iteration != 1) %>%
   group_by(dataset) %>%
@@ -142,32 +142,10 @@ out_iters %>%
   labs(title = "Correlation between delta and gamma for the best estimate across datasets")
 ```
 
-Given the correlation between delta and gamma maybe a try a parameterization with a single parameter for the distortion function? In fact, the logit slopes suggest that there isn't really any overweighting of probFractalDraw even for higher values at the group level (not to mention the large individual differences). So maybe what we need is not a sigmoid function but one that underweights almost all probFractalDraw values.
-
-```{r}
-delt = 5
-gamm = 5
-
-data.frame(prob = seq(0,1,.1)) %>%
-  mutate(distorted_delta_gamma = (delt * (prob)^gamm) / ( (delt * (prob)^gamm) + (1-prob)^gamm ),
-         distorted_delta_1 = ((prob)^gamm) / ( ((prob)^gamm) + (1-prob)^gamm )  ,
-         distorted_gamma_1 = (delt * (prob)) / ( (delt * (prob)) + (1-prob)),) %>%
-  gather(key, value, -prob) %>%
-  ggplot(aes(prob, value, color=key))+
-  geom_point()+
-  geom_line()+
-  geom_abline(aes(intercept=0, slope = 1), linetype="dashed")+
-  theme(legend.position = "bottom")+
-  labs(color="")
-```
-
-- Relationship between true value and recovery success?  
-  - In the current simulations? Plot true value by median percentage of difference?
-
-```{r}
+```{r eval=FALSE}
 model_name = "model1a"
 data_prefix = "sim_single_sub_data"
-optim_out_path = paste0(helpers_path, 'ddModels/cluster_scripts/optim_out/')
+optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/')
 true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
 fig_out_path = paste0(here(), '/outputs/fig/')
 
@@ -188,7 +166,7 @@ for(i in 1:20){
   
 ```
 
-```{r}
+```{r eval=FALSE}
 p = out_pars %>%
   filter(true>0) %>%
   group_by(dataset, key) %>%
@@ -203,50 +181,216 @@ p = out_pars %>%
 ggsave(file=paste0(fig_out_path, 'ddm_recovery_rand_datasets_pct_diff_by_true_value.pdf'), p, height = 8, width=11, units="in")
 ```
 
+
+Given the correlation between delta and gamma maybe a try a parameterization with a single parameter for the distortion function? In fact, the logit slopes suggest that there isn't really any overweighting of probFractalDraw even for higher values at the group level (not to mention the large individual differences). So maybe what we need is not a sigmoid function but one that underweights almost all probFractalDraw values.
+
+```{r}
+delt = .1
+gamm = 5
+
+data.frame(prob = seq(0,1,.1)) %>%
+  mutate(distorted_delta_gamma = (delt * (prob)^gamm) / ( (delt * (prob)^gamm) + (1-prob)^gamm ),
+         distorted_delta_1 = ((prob)^gamm) / ( ((prob)^gamm) + (1-prob)^gamm )  ,
+         distorted_gamma_1 = (delt * (prob)) / ( (delt * (prob)) + (1-prob)),) %>%
+  gather(key, value, -prob) %>%
+  ggplot(aes(prob, value, color=key))+
+  geom_point()+
+  geom_line()+
+  geom_abline(aes(intercept=0, slope = 1), linetype="dashed")+
+  theme(legend.position = "bottom")+
+  labs(color="")
+```
+
+# Delta-gamma grid search
+
 - Grid of recovery success for delta and gamma when d and sigma are fixed
   - Fix d = 0.1, sigma = 0.08 for delta and gamma = c(.1, .2, 1, 3, 5) 25 datasets, Note when delta == 1 you have the green and when gamma == 1 you have the blue curve
-    - 4 heatmaps: for each combination delta and gamma what is the median percentage of difference for each parameter across the 1000 iterations (though focus is on the heatmaps of delta and gamma to see if there is a como)
-    - True versus best of 1000 (ie. lowest nll) for delta and gamma. 2 scatter plots (one for delta and another for gamma) with 64 points or boxplots with 8 levels
+    - 4 heatmaps: for each combination delta and gamma what is the median percentage of difference for each parameter across the 1000 iterations 
+    - [Similar to the heatmaps below](../outputs/fig/ddm_recovery_dg_grid_pct_diff_by_true_value.pdf)
+        - Recovery of d and sigma are better when delta and gamma are > 1
+    - [Correlations between recovered d and sigma are often high](../outputs/fig/ddm_recovery_dg_grid_d_sigma_cor.pdf)
+    - [Correlations between recovered delta and gamma increase as true delta increases. For delta < 1 recovered gamma values are terrible](../outputs/fig/ddm_recovery_dg_grid_delta_gamma_cor.pdf)
+    - [](../outputs/fig/ddm_recovery_dg_grid_scatter.pdf)
+    - [](../outputs/fig/ddm_recovery_dg_grid_diff_pct.pdf)
+
+```{r}
+model_name = "model1a"
+data_prefix = "sim_single_sub_data"
+optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/')
+true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
+fig_out_path = paste0(here(), '/outputs/fig/')
+
+dg_grid_diff_pct = data.frame()
+
+for(i in 21:45){
+  cur_out = ddm_par_recovery_report(model_ = model_name, data_ = paste0(data_prefix, i), optim_out_path_=optim_out_path, diff_pct_plots_ = TRUE)$diff_pct_data
+  cur_out$dataset = i-20
+  dg_grid_diff_pct = rbind.all.columns(dg_grid_diff_pct, cur_out)
+}
+```
+
+```{r}
+dg_grid_diff_pct %>% filter(key == "delta") %>% select(-median_diff) %>%
+  left_join(dg_grid_diff_pct %>% filter(key == "gamma")%>% select(-median_diff), by="dataset") %>%
+  left_join(dg_grid_diff_pct %>% filter(key == "d")%>% select(-true_val), by="dataset") %>%
+  rename(delta = true_val.x, gamma = true_val.y) %>%
+  select(-key.x, -key.y, -key) %>%
+  mutate(delta = as.factor(delta),
+         gamma = as.factor(gamma)) %>%
+  ggplot(aes(delta, gamma, fill=median_diff))+
+  geom_tile() +
+  labs(title= "Median percentage difference between true and recovered d")+
+  theme(legend.position = "bottom")
+
+dg_grid_diff_pct %>% filter(key == "delta") %>% select(-median_diff) %>%
+  left_join(dg_grid_diff_pct %>% filter(key == "gamma")%>% select(-median_diff), by="dataset") %>%
+  left_join(dg_grid_diff_pct %>% filter(key == "sigma")%>% select(-true_val), by="dataset") %>%
+  rename(delta = true_val.x, gamma = true_val.y) %>%
+  select(-key.x, -key.y, -key) %>%
+  mutate(delta = as.factor(delta),
+         gamma = as.factor(gamma)) %>%
+  ggplot(aes(delta, gamma, fill=median_diff))+
+  geom_tile() +
+  labs(title= "Median percentage difference between true and recovered sigma")+
+  theme(legend.position = "bottom")
+
+dg_grid_diff_pct %>% filter(key == "delta") %>% select(-median_diff) %>%
+  left_join(dg_grid_diff_pct %>% filter(key == "gamma")%>% select(-median_diff), by="dataset") %>%
+  left_join(dg_grid_diff_pct %>% filter(key == "delta")%>% select(-true_val), by="dataset") %>%
+  rename(delta = true_val.x, gamma = true_val.y) %>%
+  select(-key.x, -key.y, -key) %>%
+  mutate(delta = as.factor(delta),
+         gamma = as.factor(gamma)) %>%
+  ggplot(aes(delta, gamma, fill=median_diff))+
+  geom_tile() +
+  labs(title= "Median percentage difference between true and recovered delta")+
+  theme(legend.position = "bottom")
+
+dg_grid_diff_pct %>% filter(key == "delta") %>% select(-median_diff) %>%
+  left_join(dg_grid_diff_pct %>% filter(key == "gamma")%>% select(-median_diff), by="dataset") %>%
+  left_join(dg_grid_diff_pct %>% filter(key == "gamma")%>% select(-true_val), by="dataset") %>%
+  rename(delta = true_val.x, gamma = true_val.y) %>%
+  select(-key.x, -key.y, -key) %>%
+  mutate(delta = as.factor(delta),
+         gamma = as.factor(gamma)) %>%
+  ggplot(aes(delta, gamma, fill=log(median_diff)))+
+  geom_tile() +
+  labs(title= "Median percentage difference between true and recovered gamma")+
+  theme(legend.position = "bottom")
+```
 
 ```{r eval=FALSE}
-true_d = .1
-true_sigma = 0.08
-true_deltas = c(.1, .2, 1, 3, 5)
-true_gammas = c(.1, .2, 1, 3, 5)
+model_name = "model1a"
+data_prefix = "sim_single_sub_data"
+optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/')
+true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
+fig_out_path = paste0(here(), '/outputs/fig/')
 
-out_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
+out_iters = data.frame()
 
-source(paste0(helpers_path,'ddModels/sim_task.R'))
-model = "model1a"
-source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_', model,'.R'))
-sim_trial_list = list()
-fit_trial_list = list()
-sim_trial_list[[model]] = sim_trial
-fit_trial_list[[model]] = fit_trial
-
-sub_data = read.csv(paste0(out_path, 'true_single_sub_data.csv'))
-sub_data = sub_data %>%
-    select(leftQValue, rightQValue, leftLotteryEV, rightLotteryEV, probFractalDraw) %>%
-    rename(QVLeft = leftQValue, QVRight = rightQValue, EVLeft = leftLotteryEV, EVRight = rightLotteryEV)
-  
-set.seed(38923)
-
-count = 21 # There are 20 test datasets from before. Starting these from 21.
-for(i in 1:length(true_deltas)){
-  true_delta = true_deltas[i]
-  
-  for(j in 1:length(true_gammas)){
-    true_gamma = true_gammas[j]
-    
-    sim_data = sim_task(sub_data, model_name = model, d = true_d, sigma = true_sigma, delta = true_delta, gamma = true_gamma) %>% drop_na()
-  
-    write.csv(sim_data, file = paste0(out_path, 'sim_single_sub_data', count,'.csv'), row.names = F)
-    count = count+1
-  }
+for(i in 21:45){
+  cur_out = get_optim_out(model_ = model_name, data_=paste0(data_prefix, i), optim_out_path_ = optim_out_path, iters= TRUE)
+  cur_out$dataset = i-20
+  cur_out$true_pars = get_true_pars(data_=paste0(data_prefix, i), true_pars_path_ =  true_pars_path, return_str_ = TRUE)
+  out_iters = rbind.all.columns(out_iters, cur_out)
 }
+
+out_iters = out_iters %>%
+  rename(d = Param1, sigma = Param2, delta = Param3, gamma = Param4, nll = Result)
+```
+
+```{r eval=FALSE}
+p_df = out_iters %>%
+  filter(Iteration != 1) %>%
+  filter(abs(delta) < 10 & delta > 0) %>%
+  filter(abs(gamma) < 10 & gamma > 0) %>%
+  group_by(dataset) %>%
+  mutate(dg_cor = cor(delta, gamma)) %>%
+  ungroup()
+
+p_df_annot = p_df %>% 
+  select(true_pars, dg_cor) %>%
+  distinct() %>%
+  mutate(dg_cor = paste0("r = ", round(dg_cor, 3)))
+  
+p = p_df %>% ggplot(aes(delta, gamma)) +
+  geom_point(color="gray", size=.5)+
+  facet_wrap(~true_pars, labeller = labeller(true_pars = label_wrap_gen(26) ) ) +
+  geom_text(data = p_df_annot, aes(x = 2.5, y = 2.5, label = dg_cor), size=3)
+
+ggsave(file=paste0(fig_out_path, 'ddm_recovery_dg_grid_delta_gamma_cor.pdf'), p, height = 8, width=11, units="in")
 
 ```
 
+```{r eval=FALSE}
+p_df = out_iters %>%
+  filter(Iteration != 1) %>%
+  group_by(dataset) %>%
+  mutate(ds_cor = cor(d, sigma)) %>%
+  ungroup()
+
+p_df_annot = p_df %>% 
+  select(true_pars, ds_cor) %>%
+  distinct() %>%
+  mutate(ds_cor = paste0("r = ", round(ds_cor, 3)))
+  
+p = p_df %>% ggplot(aes(d, sigma)) +
+  geom_point(color="gray", size=.5)+
+  facet_wrap(~true_pars, labeller = labeller(true_pars = label_wrap_gen(26) ), scales="free") +
+  geom_text(data = p_df_annot, aes(x= Inf, y=Inf,label = ds_cor), size=3, vjust = "top", hjust = "right")
+
+ggsave(file=paste0(fig_out_path, 'ddm_recovery_dg_grid_d_sigma_cor.pdf'), p, height = 8, width=11, units="in")
+
+```
+
+```{r eval=FALSE}
+model_name = "model1a"
+data_prefix = "sim_single_sub_data"
+optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/')
+true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
+fig_out_path = paste0(here(), '/outputs/fig/')
+
+out_pars = data.frame()
+
+for(i in 21:45){
+  cur_out = get_optim_out(model_ = model_name, data_=paste0(data_prefix, i), optim_out_path_ = optim_out_path, iters= FALSE)
+  cur_out$dataset = i-20
+  cur_true_pars = get_true_pars(data_=paste0(data_prefix, i), true_pars_path_ =  true_pars_path, return_str_ = FALSE)$true_pars
+  cur_true_pars = cur_true_pars %>% rename(true= value)
+  cur_out = cur_out %>%
+    rename(d = Param1, sigma = Param2, delta = Param3, gamma = Param4) %>%
+    gather(key, est, -dataset) %>%
+    left_join(cur_true_pars, by="key") %>%
+    mutate(abs_diff_pct = abs(est-true)/true*100)
+  out_pars = rbind.all.columns(out_pars, cur_out)
+}
+  
+```
+
+```{r eval=FALSE}
+p = out_pars %>%
+  filter(true>0) %>%
+  group_by(dataset, key) %>%
+  summarise(.groups="keep",
+            median_diff_pct = median(abs_diff_pct),
+            true = unique(true)) %>%
+  ggplot(aes(true, median_diff_pct)) +
+  geom_point() +
+  facet_wrap(~key, scales="free")+
+  labs(x="True parameter value", y="Median % difference between true and recovered value")
+
+ggsave(file=paste0(fig_out_path, 'ddm_recovery_dg_grid_pct_diff_by_true_value.pdf'), p, height = 8, width=11, units="in")
+```
+
+Fix (don't optimize over) d and sigma in recovery!
+
+Should I do this hard-coding the d and sigma values in a new model model1a_fixed or by adding the option to have fixed parameters to fit_task and get_nll functions?
+
+```{r}
+
+```
+
+------------------------------------------------------------------------------------------------
 More data per optimization? (currently for single subject)
 Hierarchical estimation?
 

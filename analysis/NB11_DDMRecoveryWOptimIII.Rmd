@@ -1,0 +1,80 @@
+---
+title: "Experience vs. description based decision-making project: DDM parameter recovery multiple round optimization"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: 'hide'
+---
+
+# Setup
+
+Set up environment and load in data
+
+```{r include=FALSE, message=FALSE}
+library(tidyverse)
+library(here)
+library(gridExtra)
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+theme_set(theme_classic())
+sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
+helpers_path = here('analysis/helpers/')
+cpueaters_paths = '/Users/zeynepenkavi/CpuEaters/DescribedVsLearned_beh/analysis/helpers/'
+
+set.seed(38573)
+```
+
+# Two round estimation
+
+Next to try:
+- Fix delta and gamma to 1. Optimize over d and sigma. Then fix d and sigma and optimize over delta and gamma.
+- Joint choice and RT modeling
+- Hierarchical estimation
+  
+```{r}
+source(paste0(helpers_path, 'ddModels/fit_task.R'))
+sim_trial_list = list()
+fit_trial_list = list()
+
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model1a.R'))
+sim_trial_list[['model1a']] = sim_trial
+fit_trial_list[['model1a']] = fit_trial
+
+data_suffix = "sim_single_sub_data23"
+data = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/', data_suffix, '.csv'))
+model = "model1a"
+
+first_start_vals = c(0.832,0.924)
+first_par_names = c("d", "sigma")
+first_fix_pars = list(delta = 1, gamma = 1)
+
+first_optim_out = optim_save(par = first_start_vals, get_task_nll, data_= data, par_names_ = first_par_names, model_name_ = model, fix_pars_ = first_fix_pars)
+
+second_start_vals = c(2.624,1.194)
+second_par_names = c("delta", "gamma")
+second_fix_pars = setNames(as.list(first_optim_out$par), first_par_names)
+
+second_optim_out = optim_save(par = second_start_vals, get_task_nll, data_= data, par_names_ = second_par_names, model_name_ = model, fix_pars_ = second_fix_pars)
+```
+
+```{r}
+first_optim_out$par
+```
+
+```{r}
+second_optim_out$par
+```
+
+```{r}
+source(paste0(helpers_path, 'ddModels/get_true_pars.R'))
+true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
+get_true_pars(data_ = data_suffix, true_pars_path_ = true_pars_path)
+```
+
+Meeting note: 
+- Make likelihood surface for one of the recovered delta-gamma correlation scatter plots
+
+------------------------------------------------------------------------------------------------
+More data per optimization? (currently for single subject)
+
+Would you compute posterior among these different optimized values? Is there any point in doing that even when there is no iteration that has converged on the true values?

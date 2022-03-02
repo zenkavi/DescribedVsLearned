@@ -382,22 +382,3 @@ p = out_pars %>%
 ggsave(file=paste0(fig_out_path, 'ddm_recovery_dg_grid_pct_diff_by_true_value.pdf'), p, height = 8, width=11, units="in")
 ```
 
-Fix (don't optimize over) d and sigma in recovery!
-
-Should I do this hard-coding the d and sigma values in a new model model1a_fixed or by adding the option to have fixed parameters to fit_task and get_nll functions?
-
-```{r}
-
-```
-
-------------------------------------------------------------------------------------------------
-More data per optimization? (currently for single subject)
-Hierarchical estimation?
-
-Would you compute posterior among these different optimized values? Is there any point in doing that even when there is no iteration that has converged on the true values?
-
-```{r}
-
-```
-
-

@@ -4,6 +4,9 @@
 
 # Simulate datasets using the same stimuli (EVs and QVs), fgrid of drift rates, sigmas and deltasfor parameter recovery exercise sim3
 
+# Push everything you need to s3 to pull into cluster
+# docker run --rm -it -v ~/.aws:/root/.aws -v $(pwd):/ddModels amazon/aws-cli s3 sync /ddModels s3://described-vs-experienced/ddModels
+
 library(tidyverse)
 library(here)
 helpers_path = here('analysis/helpers/')

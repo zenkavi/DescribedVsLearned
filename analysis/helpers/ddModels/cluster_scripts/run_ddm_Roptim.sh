@@ -1,5 +1,5 @@
 set -e
-while getopts m:d:s:p: flag
+while getopts m:d:s:p:o: flag
 do
     case "${flag}" in
         m) model=${OPTARG};;

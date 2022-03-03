@@ -153,10 +153,10 @@ For the 5 dataset in sim2 where gamma = 1 how bad is delta recovery? Pretty bad.
 Step 1: Remove gamma
 How well can you recover especially delta when it is a three parameter model (d, sigma, delta)? For delta both < 1 and > 1 (but especially <1, because that would be underweighting probFractalDraw)?
 
+## Results
+
 ```{r}
-true_ds = c(.001, .06 , .5)
-true_sigmas = c(.001, .08, .3)
-true_deltas = c(.1, .5 , 1, 3)
+
 ```
 
 # Two round optimization

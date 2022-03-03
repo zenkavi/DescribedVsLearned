@@ -4,9 +4,9 @@ library(here)
 library(optparse)
 library(visualMLE)
 
-# helpers_path = here('analysis/helpers/')
+# Note this will be run in docker container so /ddModels must be mounted
 helpers_path = here("/ddModels/")
-source(paste0(helpers_path,'/fit_task.R'))
+source(paste0(helpers_path,'fit_task.R'))
 
 
 #######################
@@ -20,7 +20,7 @@ option_list = list(
   make_option("--par_names", type="character", default = c("d", "sigma", "delta", "gamma")),
   make_option("--fix_par_names", type="character"),
   make_option("--fix_par_vals", type="character"),
-  make_option("--out_path", type="character", default = '/ddModels/cluster_scripts/optim_out/')
+  make_option("--out_path", type="character", default = 'sim0')
 ) 
 
 opt_parser = OptionParser(option_list=option_list)
@@ -71,7 +71,7 @@ if(length(opt$fix_par_names)>1){
 
 
 # Must end with /
-out_path = opt$out_path
+out_path = paste0(helpers_path, 'cluster_scripts/optim_out/',opt$out_path)
 
 #######################
 # Run optim
@@ -86,6 +86,6 @@ suffix = paste0(model ,'_', data_suffix, '_', suffix, '.csv')
 #######################
 dir.create(out_path, showWarnings = FALSE)
 
-write.csv(optim_out$iterations_df, paste0(out_path, 'optim_iter_', suffix), row.names=FALSE)
-write.csv(optim_out$par, paste0(out_path, 'optim_par_', suffix), row.names=FALSE)
+write.csv(optim_out$iterations_df, paste0(out_path, '/optim_iter_', suffix), row.names=FALSE)
+write.csv(optim_out$par, paste0(out_path, '/optim_par_', suffix), row.names=FALSE)
 

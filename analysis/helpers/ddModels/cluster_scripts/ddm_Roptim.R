@@ -19,6 +19,7 @@ option_list = list(
   make_option("--max_iter", type="integer", default = as.integer(500)),
   make_option("--par_names", type="character", default = c("d", "sigma", "delta", "gamma")),
   make_option("--fix_par_names", type="character"),
+  make_option("--fix_par_vals", type="character"),
   make_option("--out_path", type="character", default = '/ddModels/cluster_scripts/optim_out/')
 ) 
 
@@ -43,23 +44,31 @@ fit_trial_list[[model]] = fit_trial
 
 max_iter = opt$max_iter
 
-# If using string input must be separated by ", " (with trailing space)
 par_names = opt$par_names
+# If using string input convert to vector
 if(length(par_names) == 1){
   if(grepl(',', par_names)){
-    par_names = strsplit(par_names, ', ')[[1]] 
+    par_names = gsub(" ", "", par_names) #remove spaces
+    par_names = strsplit(par_names, ',')[[1]] 
   }
 }
 
 # Convert fixed parameter info to list format that get_nll > fit_task needs
-fix_par_names = opt$fix_par_names
-if(length(fix_par_names) == 1){
-  if(grepl(',', fix_par_names)){
-    fix_par_names = strsplit(fix_par_names, ', ')[[1]] 
+if(length(opt$fix_par_names)>1){
+  fix_par_names = opt$fix_par_names
+  if(length(fix_par_names) == 1){
+    if(grepl(',', fix_par_names)){
+      fix_par_names = gsub(" ", "", fix_par_names) #remove spaces
+      fix_par_names = strsplit(fix_par_names, ',')[[1]] 
+    }
   }
+  fix_par_vals = as.numeric(strsplit(opt$fix_par_vals, ",")[[1]])
+  fix_pars = setNames(as.list(fix_par_vals), fix_par_names)
+  
+} else {
+  fix_pars = list()
 }
-fix_par_vals = as.numeric(strsplit(opt$fix_par_vals, ",")[[1]])
-fix_pars = setNames(as.list(fix_par_vals), fix_par_names)
+
 
 # Must end with /
 out_path = opt$out_path

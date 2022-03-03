@@ -1,4 +1,10 @@
 #######################
+# Purpose
+#######################
+
+# Simulate datasets using the same stimuli (EVs and QVs) but randomly sampled parameters for parameter recovery exercise sim1
+
+#######################
 # Usage
 #######################
 

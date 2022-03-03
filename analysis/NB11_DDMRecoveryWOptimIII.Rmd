@@ -19,19 +19,11 @@ cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00"
 theme_set(theme_classic())
 sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 helpers_path = here('analysis/helpers/')
-cpueaters_paths = '/Users/zeynepenkavi/CpuEaters/DescribedVsLearned_beh/analysis/helpers/'
 
-set.seed(38573)
+set.seed(385736)
 ```
 
-# Two round estimation
-
-Next to try:
-- Fix delta and gamma to 1. Optimize over d and sigma. Then fix d and sigma and optimize over delta and gamma.
-- Joint choice and RT modeling
-- Hierarchical estimation
-  
-```{r}
+```{r message=FALSE}
 source(paste0(helpers_path, 'ddModels/fit_task.R'))
 sim_trial_list = list()
 fit_trial_list = list()
@@ -40,10 +32,138 @@ source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model1a.R'))
 sim_trial_list[['model1a']] = sim_trial
 fit_trial_list[['model1a']] = fit_trial
 
-data_suffix = "sim_single_sub_data23"
-data = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/', data_suffix, '.csv'))
 model = "model1a"
 
+source(paste0(helpers_path, 'ddModels/get_true_pars.R'))
+true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
+
+library(visualMLE)
+```
+
+# Single round with gamma = 1
+
+For a dataset with gamma = 1, delta < 1:
+
+```{r}
+data_suffix = "sim_single_sub_data23"
+data = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/', data_suffix, '.csv'))
+```
+
+```{r}
+get_true_pars(data_ = data_suffix, true_pars_path_ = true_pars_path)$true_pars_str
+```
+
+```{r}
+start_vals = c(0.142,0.184,0.673)
+par_names = c("d", "sigma", "delta")
+fix_pars = list(gamma = 1)
+
+optim_out = optim_save(par = start_vals, get_task_nll, data_= data, par_names_ = par_names, model_name_ = model, fix_pars_ = fix_pars)
+```
+
+```{r}
+round(optim_out$par, 3)
+```
+
+For a dataset with gamma != 1, delta < 1.
+
+```{r}
+data_suffix = "sim_single_sub_data24"
+data = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/', data_suffix, '.csv'))
+```
+
+```{r}
+get_true_pars(data_ = data_suffix, true_pars_path_ = true_pars_path)$true_pars_str
+```
+
+```{r}
+start_vals = c(0.887,0.305,1)
+par_names = c("d", "sigma", "delta")
+fix_pars = list(gamma = 1)
+
+optim_out = optim_save(par = start_vals, get_task_nll, data_= data, par_names_ = par_names, model_name_ = model, fix_pars_ = fix_pars)
+```
+
+Delta moved in the right direction from the starting value but not sufficiently.
+
+```{r}
+round(optim_out$par, 3)
+```
+
+For a dataset with gamma = 1, delta > 1.
+
+```{r}
+data_suffix = "sim_single_sub_data38"
+data = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/', data_suffix, '.csv'))
+```
+
+```{r}
+get_true_pars(data_ = data_suffix, true_pars_path_ = true_pars_path)$true_pars_str
+```
+
+```{r}
+start_vals = c(0.887,0.305,1)
+par_names = c("d", "sigma", "delta")
+fix_pars = list(gamma = 1)
+
+optim_out = optim_save(par = start_vals, get_task_nll, data_= data, par_names_ = par_names, model_name_ = model, fix_pars_ = fix_pars)
+```
+
+Delta moved in the right direction from the starting value but not sufficiently.
+
+```{r}
+round(optim_out$par, 3)
+```
+
+For a dataset with gamma != 1, delta > 1.
+
+```{r}
+data_suffix = "sim_single_sub_data39"
+data = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/', data_suffix, '.csv'))
+```
+
+```{r}
+get_true_pars(data_ = data_suffix, true_pars_path_ = true_pars_path)$true_pars_str
+```
+
+```{r}
+start_vals = c(0.148,0.454,7.620)
+par_names = c("d", "sigma", "delta")
+fix_pars = list(gamma = 1)
+
+optim_out = optim_save(par = start_vals, get_task_nll, data_= data, par_names_ = par_names, model_name_ = model, fix_pars_ = fix_pars)
+```
+
+Delta moved in the right direction but too much.
+
+```{r}
+round(optim_out$par, 3)
+```
+
+Clean up workspace
+
+```{r}
+rm(start_vals, par_names, fix_pars, optim_out)
+```
+
+Tentatively, it seems like delta moves more from the starting value when gamma is fixed (to 1), regardless of whether that is the true gamma value of not.
+
+For the 5 dataset in sim2 where gamma = 1 how bad is delta recovery? Pretty bad. Not any better than other combinations.
+
+Step 1: Remove gamma
+How well can you recover especially delta when it is a three parameter model (d, sigma, delta)? For delta both < 1 and > 1 (but especially <1, because that would be underweighting probFractalDraw)?
+
+```{r}
+true_ds = c(.001, .06 , .5)
+true_sigmas = c(.001, .08, .3)
+true_deltas = c(.1, .5 , 1, 3)
+```
+
+# Two round optimization
+
+Fix delta to 1. Optimize over d and sigma. Then fix d and sigma and optimize over delta.
+
+```{r}
 first_start_vals = c(0.832,0.924)
 first_par_names = c("d", "sigma")
 first_fix_pars = list(delta = 1, gamma = 1)
@@ -57,19 +177,33 @@ second_fix_pars = setNames(as.list(first_optim_out$par), first_par_names)
 second_optim_out = optim_save(par = second_start_vals, get_task_nll, data_= data, par_names_ = second_par_names, model_name_ = model, fix_pars_ = second_fix_pars)
 ```
 
+True parameters are:
+
+```{r}
+get_true_pars(data_ = data_suffix, true_pars_path_ = true_pars_path)
+```
+
+Two rounds converged on:  
+
+d and sigma
 ```{r}
 first_optim_out$par
 ```
 
+delta and gamma
 ```{r}
 second_optim_out$par
 ```
 
+# Multiple rounds until improvement is below a specified threshold
+
 ```{r}
-source(paste0(helpers_path, 'ddModels/get_true_pars.R'))
-true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
-get_true_pars(data_ = data_suffix, true_pars_path_ = true_pars_path)
+
 ```
+
+Next:
+- Joint choice and RT modeling
+- Hierarchical estimation
 
 Meeting note: 
 - Make likelihood surface for one of the recovered delta-gamma correlation scatter plots

@@ -1,4 +1,10 @@
+#######################
+# Purpose
+#######################
 
+# Simulate datasets using the same stimuli (EVs and QVs), fixed d and sigma and a grid of deltas and gammas for parameter recovery exercise sim2
+
+library(tidyverse)
 library(here)
 helpers_path = here('analysis/helpers/')
 

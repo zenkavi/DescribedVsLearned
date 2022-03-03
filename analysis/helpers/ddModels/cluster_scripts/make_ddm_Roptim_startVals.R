@@ -3,6 +3,7 @@
 #######################
 
 # Rscript --vanilla make_ddm_Roptim_startVals.R --n_vals 1000 --n_datasets 25 --count_start 20
+# Rscript --vanilla make_ddm_Roptim_startVals.R --n_vals 500 --n_datasets 36 --count_start 45 --par_names d,sigma,delta
 
 # Push these back to s3
 # docker run --rm -it -v ~/.aws:/root/.aws -v $(pwd):/cluster_scripts amazon/aws-cli s3 sync /cluster_scripts s3://described-vs-experienced/ddModels/cluster_scripts 
@@ -38,11 +39,12 @@ n_vals = opt$n_vals
 
 n_datasets = opt$n_datasets
 
-# If using string input must be separated by ", " (with trailing space)
+# If using string input convert to vector
 par_names = opt$par_names
 if(length(par_names) == 1){
   if(grepl(',', par_names)){
-    par_names = strsplit(par_names, ', ')[[1]] 
+    par_names = gsub(" ", "", par_names) #remove spaces
+    par_names = strsplit(par_names, ',')[[1]]
   }
 }
 
@@ -67,14 +69,14 @@ for(i in 1:n_datasets){
   }
   
   if("delta" %in% par_names){
-    out$start_delta = runif(n_vals, 0, 8)
+    out$start_delta = runif(n_vals, 0.00001, 4)
   }
   
   if("gamma" %in% par_names){
     out$start_gamma = runif(n_vals, 0, 8)
   }
   
-  
+  # Drop temporary initializing column
   out = out[,-which(names(out)=="tmp")]
   
   #######################

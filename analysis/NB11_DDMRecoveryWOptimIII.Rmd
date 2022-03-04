@@ -28,12 +28,6 @@ source(paste0(helpers_path, 'ddModels/fit_task.R'))
 sim_trial_list = list()
 fit_trial_list = list()
 
-source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model1a.R'))
-sim_trial_list[['model1a']] = sim_trial
-fit_trial_list[['model1a']] = fit_trial
-
-model = "model1a"
-
 source(paste0(helpers_path, 'ddModels/get_true_pars.R'))
 true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
 
@@ -41,6 +35,14 @@ library(visualMLE)
 ```
 
 # Sim3: Single round 3 parameter model
+
+```{r}
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model1a.R'))
+sim_trial_list[['model1a']] = sim_trial
+fit_trial_list[['model1a']] = fit_trial
+
+model = "model1a"
+```
 
 Using data from the last simulation where data was generated with a 4 parameter model checking how recovery works for a single iteration when gamma is fixed to 1, effectively optimizing over 3 parameters instead.
 
@@ -169,27 +171,39 @@ In addition to identifiability this was also motivated by the logit analyses for
 
 # Sim4: Two round optimization 
 
-For the same 36 datasets
-Fix delta to 1. Optimize over d and sigma. Then fix d and sigma and optimize over delta.
+```{r}
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model1c.R'))
+sim_trial_list[['model1c']] = sim_trial
+fit_trial_list[['model1c']] = fit_trial
+
+model = "model1c"
+```
+
+For the same 36 datasets fix delta to 1. Optimize over d and sigma. Then fix d and sigma and optimize over delta.
+
+**Example1**
+
+```{r}
+data_suffix = "sim_single_sub_data63"
+data = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/', data_suffix, '.csv'))
+```
+
+```{r}
+get_true_pars(data_ = data_suffix, true_pars_path_ = true_pars_path)$true_pars_str
+```
 
 ```{r}
 first_start_vals = c(0.832,0.924)
 first_par_names = c("d", "sigma")
-first_fix_pars = list(delta = 1, gamma = 1)
+first_fix_pars = list(delta = 1)
 
 first_optim_out = optim_save(par = first_start_vals, get_task_nll, data_= data, par_names_ = first_par_names, model_name_ = model, fix_pars_ = first_fix_pars)
 
-second_start_vals = c(2.624,1.194)
-second_par_names = c("delta", "gamma")
+second_start_vals = c(2.624)
+second_par_names = c("delta")
 second_fix_pars = setNames(as.list(first_optim_out$par), first_par_names)
 
 second_optim_out = optim_save(par = second_start_vals, get_task_nll, data_= data, par_names_ = second_par_names, model_name_ = model, fix_pars_ = second_fix_pars)
-```
-
-True parameters are:
-
-```{r}
-get_true_pars(data_ = data_suffix, true_pars_path_ = true_pars_path)
 ```
 
 Two rounds converged on:  
@@ -199,10 +213,89 @@ d and sigma
 first_optim_out$par
 ```
 
-delta and gamma
+delta 
+
 ```{r}
 second_optim_out$par
 ```
+
+**Example2**
+
+```{r}
+data_suffix = "sim_single_sub_data64"
+data = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/', data_suffix, '.csv'))
+```
+
+```{r}
+get_true_pars(data_ = data_suffix, true_pars_path_ = true_pars_path)$true_pars_str
+```
+
+```{r}
+first_start_vals = c(0.832,0.924)
+first_par_names = c("d", "sigma")
+first_fix_pars = list(delta = 1)
+
+first_optim_out = optim_save(par = first_start_vals, get_task_nll, data_= data, par_names_ = first_par_names, model_name_ = model, fix_pars_ = first_fix_pars)
+
+second_start_vals = c(2.624)
+second_par_names = c("delta")
+second_fix_pars = setNames(as.list(first_optim_out$par), first_par_names)
+
+second_optim_out = optim_save(par = second_start_vals, get_task_nll, data_= data, par_names_ = second_par_names, model_name_ = model, fix_pars_ = second_fix_pars)
+```
+
+Two rounds converged on:  
+
+d and sigma
+```{r}
+first_optim_out$par
+```
+
+delta 
+
+```{r}
+second_optim_out$par
+```
+
+**Example3**
+
+```{r}
+data_suffix = "sim_single_sub_data65"
+data = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/', data_suffix, '.csv'))
+```
+
+```{r}
+get_true_pars(data_ = data_suffix, true_pars_path_ = true_pars_path)$true_pars_str
+```
+
+```{r}
+first_start_vals = c(0.832,0.924)
+first_par_names = c("d", "sigma")
+first_fix_pars = list(delta = 1)
+
+first_optim_out = optim_save(par = first_start_vals, get_task_nll, data_= data, par_names_ = first_par_names, model_name_ = model, fix_pars_ = first_fix_pars)
+
+second_start_vals = c(2.624)
+second_par_names = c("delta")
+second_fix_pars = setNames(as.list(first_optim_out$par), first_par_names)
+
+second_optim_out = optim_save(par = second_start_vals, get_task_nll, data_= data, par_names_ = second_par_names, model_name_ = model, fix_pars_ = second_fix_pars)
+```
+
+Two rounds converged on:  
+
+d and sigma
+```{r}
+first_optim_out$par
+```
+
+delta 
+
+```{r}
+second_optim_out$par
+```
+
+## Results
 
 # Multiple rounds until improvement is below a specified threshold
 

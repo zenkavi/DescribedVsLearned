@@ -109,7 +109,18 @@ if(num_optim_rounds == 1){
   second_optim_out = optim_save(par = second_start_vals, get_task_nll, data_= data, par_names_ = second_par_names, model_name_ = model, fix_pars_ = second_fix_pars)
   
   # Reorganize both optimization outputs
-  optim_out = ...
+  
+  # This can only handle d, sigma and delta and in that order
+  comb_iterations_df = first_optim_out$iterations_df %>%
+    mutate(Param3 = fix_par_vals) %>%
+    select(Param1, Param2, Param3, Result, Iteration) %>%
+    rbind(second_optim_out$iterations_df %>%
+            rename(Param3 = Param1) %>%
+            mutate(Param1 = first_optim_out$par[1], Param2 = first_optim_out$par[2]) %>%
+            select(Param1, Param2, Param3, Result, Iteration)) %>%
+    mutate(Iteration = 1:n())
+  comb_par = c(first_optim_out$par, second_optim_out$par)
+  optim_out = list(iterations_df = comb_iterations_df, par = comb_par)
 }
 
 

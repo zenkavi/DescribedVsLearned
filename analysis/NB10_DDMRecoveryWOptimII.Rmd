@@ -25,7 +25,7 @@ source(paste0(helpers_path, 'ddModels/ddm_par_recovery_report.R'))
 set.seed(38573)
 ```
 
-# Recovery with random starts on random datasets
+# Sim1: Recovery with random starts on random datasets
 
 Note: This took ~1 hour for a single subject's data running two jobs on each node for 25 compute nodes.
 
@@ -54,15 +54,15 @@ To get a sense of recovery success for different parameter combinations I create
 
 ## Results
 
-- [Scatter plots of start and convergend points in each iteration for all parameters](../outputs/fig/ddm_recovery_rand_datasets_scatter.pdf)  
+- [Scatter plots of start and convergend points in each iteration for all parameters](../outputs/fig/ddm_recovery_sim1_scatter.pdf)  
   - Variance in recovered parameters is always higher for `delta` and `gamma` than for `d` and `sigma`  
   - There is almost invariably a correlation between start and end points for `delta` and `gamma` but not for `d` and `sigma`  
-- [Median percentage of difference for each parameter across datasets](../outputs/fig/ddm_recovery_rand_datasets_diff_pct.pdf)
+- [Median percentage of difference for each parameter across datasets](../outputs/fig/ddm_recovery_sim1_diff_pct.pdf)
   - `Delta` and `gamma` are not always the worst recovered parameters. There are cases, albeit fewer, where `d` and `sigma` are not recovered well either (7 of 20 datasets). A quick look suggests these are cases with very small `sigma`.
-  - [Percentage of difference by true value](../outputs/fig/ddm_recovery_rand_datasets_pct_diff_by_true_value.pdf): no strong relationship unless d or sigma are very small, in which case they are not recovered.
+  - [Percentage of difference by true value](../outputs/fig/ddm_recovery_sim1_pct_diff_by_true_value.pdf): no strong relationship unless d or sigma are very small, in which case they are not recovered.
 - Correlation between recovered parameters
-  - [Delta and gamma](../outputs/fig/ddm_recovery_rand_datasets_delta_gamma_cor.pdf.pdf)
-  - [d and sigma](../outputs/fig/ddm_recovery_rand_datasets_d_sigma_cor.pdf.pdf)
+  - [Delta and gamma](../outputs/fig/ddm_recovery_sim1_delta_gamma_cor.pdf.pdf)
+  - [d and sigma](../outputs/fig/ddm_recovery_sim1_d_sigma_cor.pdf.pdf)
 
 ```{r eval=FALSE}
 model_name = "model1a"
@@ -103,7 +103,7 @@ p = p_df %>% ggplot(aes(delta, gamma)) +
   facet_wrap(~true_pars, labeller = labeller(true_pars = label_wrap_gen(26) ) ) +
   geom_text(data = p_df_annot, aes(x = 2.5, y = 2.5, label = dg_cor), size=3)
 
-ggsave(file=paste0(fig_out_path, 'ddm_recovery_rand_datasets_delta_gamma_cor.pdf'), p, height = 8, width=11, units="in")
+ggsave(file=paste0(fig_out_path, 'ddm_recovery_sim1_delta_gamma_cor.pdf'), p, height = 8, width=11, units="in")
 
 ```
 
@@ -124,7 +124,7 @@ p = p_df %>% ggplot(aes(d, sigma)) +
   facet_wrap(~true_pars, labeller = labeller(true_pars = label_wrap_gen(26) ), scales="free") +
   geom_text(data = p_df_annot, aes(x= Inf, y=Inf,label = ds_cor), size=3, vjust = "top", hjust = "right")
 
-ggsave(file=paste0(fig_out_path, 'ddm_recovery_rand_datasets_d_sigma_cor.pdf'), p, height = 8, width=11, units="in")
+ggsave(file=paste0(fig_out_path, 'ddm_recovery_sim1_d_sigma_cor.pdf'), p, height = 8, width=11, units="in")
 
 ```
 
@@ -178,9 +178,8 @@ p = out_pars %>%
   facet_wrap(~key, scales="free")+
   labs(x="True parameter value", y="Median % difference between true and recovered value")
 
-ggsave(file=paste0(fig_out_path, 'ddm_recovery_rand_datasets_pct_diff_by_true_value.pdf'), p, height = 8, width=11, units="in")
+ggsave(file=paste0(fig_out_path, 'ddm_recovery_sim1_pct_diff_by_true_value.pdf'), p, height = 8, width=11, units="in")
 ```
-
 
 Given the correlation between delta and gamma maybe a try a parameterization with a single parameter for the distortion function? In fact, the logit slopes suggest that there isn't really any overweighting of probFractalDraw even for higher values at the group level (not to mention the large individual differences). So maybe what we need is not a sigmoid function but one that underweights almost all probFractalDraw values.
 
@@ -201,17 +200,17 @@ data.frame(prob = seq(0,1,.1)) %>%
   labs(color="")
 ```
 
-# Delta-gamma grid search
+# Sim2: Delta-gamma grid search
 
 - Grid of recovery success for delta and gamma when d and sigma are fixed
   - Fix d = 0.1, sigma = 0.08 for delta and gamma = c(.1, .2, 1, 3, 5) 25 datasets, Note when delta == 1 you have the green and when gamma == 1 you have the blue curve
     - 4 heatmaps: for each combination delta and gamma what is the median percentage of difference for each parameter across the 1000 iterations 
-    - [Similar to the heatmaps below](../outputs/fig/ddm_recovery_dg_grid_pct_diff_by_true_value.pdf)
+    - [Similar to the heatmaps below](../outputs/fig/ddm_recovery_sim2_pct_diff_by_true_value.pdf)
         - Recovery of d and sigma are better when delta and gamma are > 1
-    - [Correlations between recovered d and sigma are often high](../outputs/fig/ddm_recovery_dg_grid_d_sigma_cor.pdf)
-    - [Correlations between recovered delta and gamma increase as true delta increases. For delta < 1 recovered gamma values are terrible](../outputs/fig/ddm_recovery_dg_grid_delta_gamma_cor.pdf)
-    - [](../outputs/fig/ddm_recovery_dg_grid_scatter.pdf)
-    - [](../outputs/fig/ddm_recovery_dg_grid_diff_pct.pdf)
+    - [Correlations between recovered d and sigma are often high](../outputs/fig/ddm_recovery_sim2_d_sigma_cor.pdf)
+    - [Correlations between recovered delta and gamma increase as true delta increases. For delta < 1 recovered gamma values are terrible](../outputs/fig/ddm_recovery_sim2_delta_gamma_cor.pdf)
+    - [Scatter plots of start and end values for each of the 1000 optimizations for each dataset](../outputs/fig/ddm_recovery_sim2_scatter.pdf)
+    - [Bar graph of median percentage of difference compared to true value for each dataset](../outputs/fig/ddm_recovery_sim2_diff_pct.pdf)
 
 ```{r}
 model_name = "model1a"
@@ -318,7 +317,7 @@ p = p_df %>% ggplot(aes(delta, gamma)) +
   facet_wrap(~true_pars, labeller = labeller(true_pars = label_wrap_gen(26) ) ) +
   geom_text(data = p_df_annot, aes(x = 2.5, y = 2.5, label = dg_cor), size=3)
 
-ggsave(file=paste0(fig_out_path, 'ddm_recovery_dg_grid_delta_gamma_cor.pdf'), p, height = 8, width=11, units="in")
+ggsave(file=paste0(fig_out_path, 'ddm_recovery_sim2_delta_gamma_cor.pdf'), p, height = 8, width=11, units="in")
 
 ```
 
@@ -339,7 +338,7 @@ p = p_df %>% ggplot(aes(d, sigma)) +
   facet_wrap(~true_pars, labeller = labeller(true_pars = label_wrap_gen(26) ), scales="free") +
   geom_text(data = p_df_annot, aes(x= Inf, y=Inf,label = ds_cor), size=3, vjust = "top", hjust = "right")
 
-ggsave(file=paste0(fig_out_path, 'ddm_recovery_dg_grid_d_sigma_cor.pdf'), p, height = 8, width=11, units="in")
+ggsave(file=paste0(fig_out_path, 'ddm_recovery_sim2_d_sigma_cor.pdf'), p, height = 8, width=11, units="in")
 
 ```
 
@@ -379,6 +378,6 @@ p = out_pars %>%
   facet_wrap(~key, scales="free")+
   labs(x="True parameter value", y="Median % difference between true and recovered value")
 
-ggsave(file=paste0(fig_out_path, 'ddm_recovery_dg_grid_pct_diff_by_true_value.pdf'), p, height = 8, width=11, units="in")
+ggsave(file=paste0(fig_out_path, 'ddm_recovery_sim2_pct_diff_by_true_value.pdf'), p, height = 8, width=11, units="in")
 ```
 

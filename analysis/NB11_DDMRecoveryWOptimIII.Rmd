@@ -40,8 +40,11 @@ true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
 library(visualMLE)
 ```
 
-# Single round with gamma = 1
+# Sim3: Single round 3 parameter model
 
+Using data from the last simulation where data was generated with a 4 parameter model checking how recovery works for a single iteration when gamma is fixed to 1, effectively optimizing over 3 parameters instead.
+
+**Example 1**
 For a dataset with gamma = 1, delta < 1:
 
 ```{r}
@@ -65,6 +68,7 @@ optim_out = optim_save(par = start_vals, get_task_nll, data_= data, par_names_ =
 round(optim_out$par, 3)
 ```
 
+**Example 2**
 For a dataset with gamma != 1, delta < 1.
 
 ```{r}
@@ -90,6 +94,7 @@ Delta moved in the right direction from the starting value but not sufficiently.
 round(optim_out$par, 3)
 ```
 
+**Example 3**
 For a dataset with gamma = 1, delta > 1.
 
 ```{r}
@@ -115,6 +120,7 @@ Delta moved in the right direction from the starting value but not sufficiently.
 round(optim_out$par, 3)
 ```
 
+**Example 4**
 For a dataset with gamma != 1, delta > 1.
 
 ```{r}
@@ -146,12 +152,14 @@ Clean up workspace
 rm(start_vals, par_names, fix_pars, optim_out)
 ```
 
-Tentatively, it seems like delta moves more from the starting value when gamma is fixed (to 1), regardless of whether that is the true gamma value of not.
+**Conclusion**
+Tentatively, it seems like delta moves more from the starting value when gamma is fixed to 1 (i.e. when the fit optimizes over only 3 parameters), regardless of whether that is the true gamma value of not.  
 
-For the 5 dataset in sim2 where gamma = 1 how bad is delta recovery? Pretty bad. Not any better than other combinations.
+Still, for the 5 dataset in sim2 where gamma = 1 delta recovery was pretty bad. It was not noticeably better than other combinations.  
 
-Step 1: Remove gamma
-How well can you recover especially delta when it is a three parameter model (d, sigma, delta)? For delta both < 1 and > 1 (but especially <1, because that would be underweighting probFractalDraw)?
+To understand how well recovery works (especially for delta) using a three parameter model (d, sigma, delta) I systematically varied each parameter and generated 36 datasets to optimize over. The datasets were generated using the combination of the true values `true_ds = c(.001, .06 , .5)`, `true_sigmas = c(.001, .08, .3)`, `true_deltas = c(.1, .5 , 1, 3)`.
+
+In addition to identifiability this was also motivated by the logit analyses for the whole sample, which showed that while the weight of EVs decreased monotonically, weight of QVs followed more a step function/was possibly consistently underweighted.
 
 ## Results
 
@@ -159,8 +167,9 @@ How well can you recover especially delta when it is a three parameter model (d,
 
 ```
 
-# Two round optimization
+# Sim4: Two round optimization 
 
+For the same 36 datasets
 Fix delta to 1. Optimize over d and sigma. Then fix d and sigma and optimize over delta.
 
 ```{r}

@@ -20,7 +20,8 @@ option_list = list(
   make_option("--par_names", type="character", default = c("d", "sigma", "delta", "gamma")),
   make_option("--fix_par_names", type="character"),
   make_option("--fix_par_vals", type="character"),
-  make_option("--out_path", type="character", default = 'sim0')
+  make_option("--out_path", type="character", default = 'sim0'),
+  make_option("--num_optim_rounds", type="integer", default = 1)
 ) 
 
 opt_parser = OptionParser(option_list=option_list)
@@ -34,6 +35,8 @@ data = read.csv(paste0(helpers_path, 'cluster_scripts/test_data/', opt$data, '.c
 
 # Convert to numeric so optim can work with it
 start_vals = as.numeric(strsplit(opt$start_vals, ",")[[1]])
+
+# Split
 
 model = opt$model
 source(paste0(helpers_path, 'r_ddm_models/ddm_', model,'.R'))
@@ -53,14 +56,17 @@ if(length(par_names) == 1){
   }
 }
 
-# Convert fixed parameter info to list format that get_nll > fit_task needs
-if(length(opt$fix_par_names)>1){
-  fix_par_names = opt$fix_par_names
-  if(length(fix_par_names) == 1){
-    if(grepl(',', fix_par_names)){
-      fix_par_names = gsub(" ", "", fix_par_names) #remove spaces
-      fix_par_names = strsplit(fix_par_names, ',')[[1]] 
-    }
+# Reprocess bash script default
+fix_par_names = opt$fix_par_names
+if(fix_par_names == "none"){
+  fix_par_names = NULL
+}
+
+# If other than "none" convert fixed parameter info to list format that get_nll > fit_task needs
+if(length(fix_par_names)>0){
+  if(grepl(',', fix_par_names)){
+    fix_par_names = gsub(" ", "", fix_par_names) #remove spaces
+    fix_par_names = strsplit(fix_par_names, ',')[[1]] 
   }
   fix_par_vals = as.numeric(strsplit(opt$fix_par_vals, ",")[[1]])
   fix_pars = setNames(as.list(fix_par_vals), fix_par_names)
@@ -73,17 +79,46 @@ if(length(opt$fix_par_names)>1){
 # Must end with /
 out_path = paste0(helpers_path, 'cluster_scripts/optim_out/',opt$out_path)
 
+num_optim_rounds = as.numeric(opt$num_optim_rounds)
+# Warn that things would get weird if
+if(num_optim_rounds>1){
+  if(length(fix_par_names) == 0){
+    print("Multiple optimization rounds requested but no fixed parameter information is provided.")
+  }
+}
+
 #######################
 # Run optim
 #######################
-optim_out = optim_save(par = start_vals, get_task_nll, data_= data, par_names_ = par_names, model_name_ = model, fix_pars_ = fix_pars, control = list(maxit=max_iter))
 
-suffix = paste(format(Sys.time(), "%F-%H-%M-%S"), round(runif(1, max=1000)), sep="_")
-suffix = paste0(model ,'_', data_suffix, '_', suffix, '.csv')
+if(num_optim_rounds == 1){
+  optim_out = optim_save(par = start_vals, get_task_nll, data_= data, par_names_ = par_names, model_name_ = model, fix_pars_ = fix_pars, control = list(maxit=max_iter))
+  
+  # This is too specific for two round only and fixing d and sigma together. Should extend to make more general.
+} else if (num_optim_rounds == 2){ 
+  first_start_vals = start_vals[1:length(par_names)]
+  first_par_names = par_names
+  first_fix_pars = fix_pars
+  
+  first_optim_out = optim_save(par = first_start_vals, get_task_nll, data_= data, par_names_ = first_par_names, model_name_ = model, fix_pars_ = first_fix_pars)
+  
+  second_start_vals = start_vals[length(par_names)+1:length(start_vals)]
+  second_par_names = fix_par_names
+  second_fix_pars = setNames(as.list(first_optim_out$par), first_par_names)
+  
+  second_optim_out = optim_save(par = second_start_vals, get_task_nll, data_= data, par_names_ = second_par_names, model_name_ = model, fix_pars_ = second_fix_pars)
+  
+  # Reorganize both optimization outputs
+  optim_out = ...
+}
+
 
 #######################
 # Save output
 #######################
+suffix = paste(format(Sys.time(), "%F-%H-%M-%S"), round(runif(1, max=1000)), sep="_")
+suffix = paste0(model ,'_', data_suffix, '_', suffix, '.csv')
+
 dir.create(out_path, showWarnings = FALSE)
 
 write.csv(optim_out$iterations_df, paste0(out_path, '/optim_iter_', suffix), row.names=FALSE)

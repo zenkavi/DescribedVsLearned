@@ -165,6 +165,8 @@ In addition to identifiability this was also motivated by the logit analyses for
 
 ## Results
 
+`docker run --rm -it -v ~/.aws:/root/.aws -v $(pwd):/sim3 amazon/aws-cli s3 sync  s3://described-vs-experienced/ddModels/cluster_scripts/optim_out/sim3 /sim3`
+
 ```{r}
 
 ```
@@ -290,12 +292,29 @@ first_optim_out$par
 ```
 
 delta 
-
 ```{r}
 second_optim_out$par
 ```
 
+How to combine and save the results in ddm_Roptim.R?
+
+```{r}
+first_optim_out$iterations_df
+```
+
+```{r}
+second_optim_out$iterations_df
+```
+
+How to parse the start vals/provide input?
+
 ## Results
+
+`docker run --rm -it -v ~/.aws:/root/.aws -v $(pwd):/sim3 amazon/aws-cli s3 sync  s3://described-vs-experienced/ddModels/cluster_scripts/optim_out/sim3 /sim3`
+
+```{r}
+
+```
 
 # Multiple rounds until improvement is below a specified threshold
 

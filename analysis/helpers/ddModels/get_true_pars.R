@@ -1,15 +1,22 @@
 library(tidyverse)
 
-get_true_pars = function(data_, true_pars_path_, return_str_ = FALSE){
+get_true_pars = function(data_, true_pars_path_, return_str_ = FALSE, ex_cols_ = c("EVLeft", "EVRight", "QVLeft", "QVRight", "probFractalDraw", "choice", "reactionTime", "timeOut", "barrierDecay", "barrier", "nonDecisionTime", "bias", "timeStep", "maxIter", "epsilon", "model")){
   
   ########## This part depends on the parameters in the model. Either needs a smarter solution or many conditionals to extend to models with other parameters
   ########## Also note that the model name is not in the data file name but is in the data file
   true_pars = read.csv(paste0(true_pars_path_,data_,'.csv'))
+  true_pars = true_pars[,!names(true_pars) %in% ex_cols_]
+  
   true_pars = true_pars %>%
-    select(d, sigma, delta, gamma) %>%
     distinct()
   
-  true_pars_str = paste0("d = ", true_pars$d, ", sigma = ", true_pars$sigma, ", delta = ", true_pars$delta, ", gamma = ", true_pars$gamma)
+  par_names = names(true_pars)
+
+  true_pars_str = ""
+  for(i in 1:length(par_names)){
+    cur_par = par_names[i]
+    true_pars_str = paste0(true_pars_str, cur_par,  " = ", true_pars[i][1], " ")
+  }
   
   true_pars = true_pars %>%
     gather(key, value)

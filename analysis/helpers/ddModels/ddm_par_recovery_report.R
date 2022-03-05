@@ -26,11 +26,26 @@ wrapper <- function(x, ...)
   paste(strwrap(x, ...), collapse = "\n")
 }
 
-ddm_par_recovery_report = function(model_, data_, optim_out_path_= paste0(cpueaters_path, 'ddModels/cluster_scripts/optim_out/'), true_pars_path_ = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/'), diff_pct_plots_ = FALSE){
+rename_cols = function(rename_dict, rename_df){
+  
+  for(i in 1:length(names(rename_df))){
+    cur_col_name = names(rename_df)[i]
+    if (cur_col_name %in% names(rename_dict)){
+      names(rename_df)[i] = rename_dict[cur_col_name]
+    }
+  }
+  
+  return(rename_df)
+}
+
+ddm_par_recovery_report = function(model_, data_, optim_out_path_= paste0(cpueaters_path, 'ddModels/cluster_scripts/optim_out/'), true_pars_path_ = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/'), diff_pct_plots_ = TRUE, start_end_scatter = FALSE, par_hist = FALSE){
   
   model_name = model_
   data_name = data_
   optim_out_path = optim_out_path_
+  
+  # Temporary solution to renaming parameters for outputs of models with different number of parameters
+  param_dict = data.frame(Param1="d", Param2="sigma", Param3="delta", Param4="gamma", Result="nll")
   
   ###########################
   # Get true parameters
@@ -54,8 +69,8 @@ ddm_par_recovery_report = function(model_, data_, optim_out_path_= paste0(cpueat
     out = get_optim_out(model_ = model_name, data_ = data_name, optim_out_path_ = optim_out_path, iters_ = FALSE)
     
     if(nrow(out) > 0){
-      out = out %>%
-        rename(d = Param1, sigma = Param2, delta = Param3, gamma = Param4)
+      
+      out = rename_cols(param_dict, out)
       
       diff_pct_data = out %>%
         gather(key, est) %>%
@@ -81,40 +96,60 @@ ddm_par_recovery_report = function(model_, data_, optim_out_path_= paste0(cpueat
     out = get_optim_out(model_ = model_name, data_ = data_name, optim_out_path_ = optim_out_path, iters_ = TRUE)
     
     if(nrow(out)> 0){
-      out = out %>%
-        rename(d = Param1, sigma = Param2, delta = Param3, gamma = Param4, nll = Result)
+      
+      out = rename_cols(param_dict, out)
+      plots = list()
       
       ###########################
       # For random start where did each parameter end
       ###########################
       
-      tmp1 = out %>%
-        select(-delta, -gamma) %>%
-        mutate(start = ifelse(Iteration == 1, "start", "end")) %>%
-        select(-Iteration, -nll) %>%
-        gather(key, value, -kernel, -start) %>%
-        spread(start, value)
+      for(i in 1:names(out)){
+        
+        cur_par = names(out)[i]
+        cur_par_out = out[,c(cur_par, "kernel", "Iteration")]
+        
+        p = cur_par_out %>% 
+          mutate(start = ifelse(Iteration == 1, "start", "end")) %>%
+          select(-Iteration) %>%
+          gather(key, value, -kernel, -start) %>%
+          spread(start, value) %>%
+          ggplot(aes(start, end))+
+          geom_point()+
+          geom_hline(data=true_pars %>% filter(key == cur_par), aes(yintercept=value), color="red")+
+          facet_wrap(~key, scale="free")
+        
+        plots[[i]] = p
+        
+      }
       
-      tmp2 = out %>%
-        select(-d, -sigma) %>%
-        mutate(start = ifelse(Iteration == 1, "start", "end")) %>%
-        select(-Iteration, -nll) %>%
-        gather(key, value, -kernel, -start) %>%
-        spread(start, value)
-      
-      p1 = tmp1 %>% ggplot(aes(start, end))+
-        geom_point()+
-        geom_hline(data=true_pars %>% filter(key %in% c("d", "sigma")), aes(yintercept=value), color="red")+
-        facet_wrap(~key, scale="free")
-      
-      p2 = tmp2 %>% ggplot(aes(start, end))+
-        geom_point()+
-        geom_hline(data=true_pars %>% filter(key %in% c("delta", "gamma")), aes(yintercept=value), color="red")+
-        facet_wrap(~key, scale="free")+
-        ylim(0, 8)
+      # tmp1 = out %>%
+      #   select(-delta, -gamma) %>%
+      #   mutate(start = ifelse(Iteration == 1, "start", "end")) %>%
+      #   select(-Iteration, -nll) %>%
+      #   gather(key, value, -kernel, -start) %>%
+      #   spread(start, value)
+      # 
+      # tmp2 = out %>%
+      #   select(-d, -sigma) %>%
+      #   mutate(start = ifelse(Iteration == 1, "start", "end")) %>%
+      #   select(-Iteration, -nll) %>%
+      #   gather(key, value, -kernel, -start) %>%
+      #   spread(start, value)
+      # 
+      # p1 = tmp1 %>% ggplot(aes(start, end))+
+      #   geom_point()+
+      #   geom_hline(data=true_pars %>% filter(key %in% c("d", "sigma")), aes(yintercept=value), color="red")+
+      #   facet_wrap(~key, scale="free")
+      # 
+      # p2 = tmp2 %>% ggplot(aes(start, end))+
+      #   geom_point()+
+      #   geom_hline(data=true_pars %>% filter(key %in% c("delta", "gamma")), aes(yintercept=value), color="red")+
+      #   facet_wrap(~key, scale="free")+
+      #   ylim(0, 8)
       
       ###########################
-      # Distribution of the converged parameters
+      # Histograms of the converged parameters
       ###########################
       
       tmp1 = out %>%
@@ -140,7 +175,7 @@ ddm_par_recovery_report = function(model_, data_, optim_out_path_= paste0(cpueat
         geom_vline(data=true_pars %>% filter(key %in% c("delta", "gamma")), aes(xintercept=value), color="red")+
         xlim(0, 8)
       
-      return(list(true_pars = true_pars_str, p1=p1, p2=p2, p3=p3, p4=p4))
+      return(list(true_pars = true_pars_str, plots = plots))
     } else{
       return(list())
     }

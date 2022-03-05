@@ -36,7 +36,7 @@ Sample plots summarizing the simulations
 ```{r}
 model_name = "model1a"
 data_name = "sim_single_sub_data"
-optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/')
+optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/sim0')
 
 ddm_par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path)
 ```
@@ -67,7 +67,7 @@ To get a sense of recovery success for different parameter combinations I create
 ```{r eval=FALSE}
 model_name = "model1a"
 data_prefix = "sim_single_sub_data"
-optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/')
+optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/sim1')
 true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
 fig_out_path = paste0(here(), '/outputs/fig/')
 
@@ -145,7 +145,7 @@ out_iters %>%
 ```{r eval=FALSE}
 model_name = "model1a"
 data_prefix = "sim_single_sub_data"
-optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/')
+optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/sim1')
 true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
 fig_out_path = paste0(here(), '/outputs/fig/')
 
@@ -215,7 +215,7 @@ data.frame(prob = seq(0,1,.1)) %>%
 ```{r}
 model_name = "model1a"
 data_prefix = "sim_single_sub_data"
-optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/')
+optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/sim2')
 true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
 fig_out_path = paste0(here(), '/outputs/fig/')
 
@@ -281,7 +281,7 @@ dg_grid_diff_pct %>% filter(key == "delta") %>% select(-median_diff) %>%
 ```{r eval=FALSE}
 model_name = "model1a"
 data_prefix = "sim_single_sub_data"
-optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/')
+optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/sim2')
 true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
 fig_out_path = paste0(here(), '/outputs/fig/')
 
@@ -345,7 +345,7 @@ ggsave(file=paste0(fig_out_path, 'ddm_recovery_sim2_d_sigma_cor.pdf'), p, height
 ```{r eval=FALSE}
 model_name = "model1a"
 data_prefix = "sim_single_sub_data"
-optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/')
+optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/sim2')
 true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
 fig_out_path = paste0(here(), '/outputs/fig/')
 

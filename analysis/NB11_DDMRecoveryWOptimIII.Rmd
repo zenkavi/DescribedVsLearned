@@ -19,6 +19,8 @@ cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00"
 theme_set(theme_classic())
 sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 helpers_path = here('analysis/helpers/')
+cpueaters_paths = '/Users/zeynepenkavi/CpuEaters/DescribedVsLearned_beh/analysis/helpers/'
+source(paste0(helpers_path, 'ddModels/ddm_par_recovery_report.R'))
 
 set.seed(385736)
 ```
@@ -165,13 +167,60 @@ In addition to identifiability this was also motivated by the logit analyses for
 
 ## Results
 
+To download sim output
 `docker run --rm -it -v ~/.aws:/root/.aws -v $(pwd):/sim3 amazon/aws-cli s3 sync  s3://described-vs-experienced/ddModels/cluster_scripts/optim_out/sim3 /sim3`
 
 ```{r}
-
+data_suffix = "sim_single_sub_data46"
+data = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/', data_suffix, '.csv'))
 ```
 
-# Sim4: Two round optimization 
+```{r}
+get_true_pars(data_ = data_suffix, true_pars_path_ = true_pars_path)$true_pars_str
+```
+
+```{r}
+model_name = "model1c"
+data_name = "sim_single_sub_data66"
+optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/sim3/')
+
+tmp = ddm_par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path, diff_pct_plots_ = TRUE)
+
+tmp = get_true_pars(data_ = data_name, true_pars_path_ = true_pars_path)
+  
+true_pars = tmp$true_pars
+
+true_pars_str = tmp$true_pars_str
+
+true_pars = true_pars %>%
+  gather(key, value)
+
+out = get_optim_out(model_ = model_name, data_ = data_name, optim_out_path_ = optim_out_path, iters_ = TRUE)
+
+out = rename_cols(param_dict, out)
+
+cur_par = "d"
+cur_par_out = out[,c(cur_par, "kernel", "Iteration")]
+
+cur_par_out %>% 
+  mutate(start = ifelse(Iteration == 1, "start", "end")) %>%
+  select(-Iteration) %>%
+  gather(key, value, -kernel, -start) %>%
+  spread(start, value) %>%
+  ggplot(aes(start, end))+
+  geom_point()+
+  geom_hline(data=true_pars %>% filter(key == cur_par), aes(yintercept=value), color="red")+
+  facet_wrap(~key, scale="free")
+
+out %>%
+  select(-delta,) %>%
+  mutate(start = ifelse(Iteration == 1, "start", "end")) %>%
+  select(-Iteration, -nll) %>%
+  gather(key, value, -kernel, -start) %>%
+  spread(start, value)
+```
+
+# Sim3b: Two round optimization 
 
 ```{r}
 source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model1c.R'))

@@ -9,7 +9,7 @@
 # Rscript --vanilla plot_ddm_Roptim.R --histogram --data_names sim_single_sub_data1,sim_single_sub_data2,sim_single_sub_data3,sim_single_sub_data4,sim_single_sub_data5,sim_single_sub_data6,sim_single_sub_data7,sim_single_sub_data8,sim_single_sub_data9,sim_single_sub_data10,sim_single_sub_data11,sim_single_sub_data12,sim_single_sub_data13,sim_single_sub_data14,sim_single_sub_data15,sim_single_sub_data16,sim_single_sub_data17,sim_single_sub_data18,sim_single_sub_data19,sim_single_sub_data20
 
 # For diff_pct
-# Rscript --vanilla plot_ddm_Roptim.R --diff_pct --data_names sim_single_sub_data21,sim_single_sub_data22,sim_single_sub_data23,sim_single_sub_data24,sim_single_sub_data25,sim_single_sub_data26,sim_single_sub_data27,sim_single_sub_data28,sim_single_sub_data29,sim_single_sub_data30,sim_single_sub_data31,sim_single_sub_data32,sim_single_sub_data33,sim_single_sub_data34,sim_single_sub_data35,sim_single_sub_data36,sim_single_sub_data37,sim_single_sub_data38,sim_single_sub_data39,sim_single_sub_data40,sim_single_sub_data41,sim_single_sub_data42,sim_single_sub_data43,sim_single_sub_data44,sim_single_sub_data45 --fig_fn ddm_recovery_dg_grid
+# Rscript --vanilla plot_ddm_Roptim.R --diff_pct --data_names sim_single_sub_data46,sim_single_sub_data47,sim_single_sub_data48 --fig_fn ddm_recovery_sim3 --optim_out_path="ddModels/cluster_scripts/optim_out/sim3/" --model model1c
 
 #######################
 # Setup
@@ -28,7 +28,7 @@ option_list = list(
   make_option("--data_names", type="character", default = c('sim_single_sub_data1', 'sim_single_sub_data2')),
   make_option("--optim_out_path", type="character", default = 'ddModels/cluster_scripts/optim_out/'),
   make_option("--fig_out_path", type="character", default = '/outputs/fig/'),
-  make_option("--fig_fn", type="character", default = 'ddm_recovery_rand_datasets'),
+  make_option("--fig_fn", type="character", default = 'ddm_recovery_sim0'),
   make_option("--model", type="character", default = 'model1a'),
   make_option("--scatter", type="logical", action = 'store_true', default=FALSE),
   make_option("--histogram", type="logical", action = 'store_true', default=FALSE),
@@ -88,22 +88,25 @@ for(i in 1:n_datasets){
       next
     }
     
-  } else{
-    tmp = ddm_par_recovery_report(model_ = model, data_ = data_names[i], optim_out_path_ = optim_out_path)
-  }
-  
-  if(length(tmp) > 0) {
-    if(scatter){
-      cur_scatter_row = arrangeGrob(tmp[['p1']], tmp[['p2']], nrow=1, top = tmp$true_pars)
+  } else if (scatter){
+    tmp = ddm_par_recovery_report(model_ = model, data_ = data_names[i], optim_out_path_ = optim_out_path, diff_pct_plots_ = FALSE, start_end_scatter_ = TRUE)
+    
+    if(length(tmp) > 0){
+      cur_scatter_row = arrangeGrob(tmp$plots, nrow=1, top = tmp$true_pars)
       scatter_rows[[i]] = cur_scatter_row
+    } else {
+      next
     }
     
-    if(histogram){
-      cur_hist_row = arrangeGrob(tmp[['p3']], tmp[['p4']], nrow=1, top = tmp$true_pars)
-      hist_rows[[i]] = cur_hist_row
+  } else if (histogram){
+    tmp = ddm_par_recovery_report(model_ = model, data_ = data_names[i], optim_out_path_ = optim_out_path,  diff_pct_plots_ = FALSE, par_hist_ = TRUE)
+    
+    if(length(tmp) > 0){
+      cur_scatter_row = arrangeGrob(tmp$plots, nrow=1, top = tmp$true_pars)
+      scatter_rows[[i]] = cur_scatter_row
+    } else {
+      next
     }
-  } else {
-    next
   }
   
 }
@@ -114,11 +117,15 @@ if(diff_pct){
 }
 
 if(scatter){
-  g = marrangeGrob(grobs = scatter_rows, nrow=4, ncol=1)
+  tmp = ddm_par_recovery_report(model_ = model, data_ = data_names[i], optim_out_path_ = optim_out_path, diff_pct_plots_ = FALSE, start_end_scatter_ = TRUE)
+  num_pars = length(tmp$plots)
+  g = marrangeGrob(grobs = scatter_rows, nrow=4, ncol=num_pars)
   ggsave(file=paste0(fig_out_path, fig_fn, '_scatter.pdf'), g, height = 8, width=11, units="in")
 }
 
 if(histogram){
-  g = marrangeGrob(grobs = hist_rows, nrow=4, ncol=1)
+  tmp = ddm_par_recovery_report(model_ = model, data_ = data_names[i], optim_out_path_ = optim_out_path, diff_pct_plots_ = FALSE, start_end_scatter_ = TRUE)
+  num_pars = length(tmp$plots)
+  g = marrangeGrob(grobs = hist_rows, nrow=4, ncol=num_pars)
   ggsave(file=paste0(fig_out_path, fig_fn, '_hist.pdf'), g, height = 8, width=11, units="in")
 }

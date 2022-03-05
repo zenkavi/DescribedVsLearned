@@ -2,6 +2,7 @@
 
 library(here)
 library(optparse)
+library(tidyverse)
 library(visualMLE)
 
 # Note this will be run in docker container so /ddModels must be mounted
@@ -35,8 +36,6 @@ data = read.csv(paste0(helpers_path, 'cluster_scripts/test_data/', opt$data, '.c
 
 # Convert to numeric so optim can work with it
 start_vals = as.numeric(strsplit(opt$start_vals, ",")[[1]])
-
-# Split
 
 model = opt$model
 source(paste0(helpers_path, 'r_ddm_models/ddm_', model,'.R'))
@@ -100,13 +99,16 @@ if(num_optim_rounds == 1){
   first_par_names = par_names
   first_fix_pars = fix_pars
   
-  first_optim_out = optim_save(par = first_start_vals, get_task_nll, data_= data, par_names_ = first_par_names, model_name_ = model, fix_pars_ = first_fix_pars)
+  print("Beginning first round of optim...")
   
-  second_start_vals = start_vals[length(par_names)+1:length(start_vals)]
+  first_optim_out = optim_save(par = first_start_vals, get_task_nll, data_= data, par_names_ = first_par_names, model_name_ = model, fix_pars_ = first_fix_pars, control = list(maxit=max_iter))
+  
+  second_start_vals = start_vals[(length(par_names)+1):length(start_vals)]
   second_par_names = fix_par_names
   second_fix_pars = setNames(as.list(first_optim_out$par), first_par_names)
   
-  second_optim_out = optim_save(par = second_start_vals, get_task_nll, data_= data, par_names_ = second_par_names, model_name_ = model, fix_pars_ = second_fix_pars)
+  print("Beginning second round of optim...")
+  second_optim_out = optim_save(par = second_start_vals, get_task_nll, data_= data, par_names_ = second_par_names, model_name_ = model, fix_pars_ = second_fix_pars, control = list(maxit=max_iter))
   
   # Reorganize both optimization outputs
   

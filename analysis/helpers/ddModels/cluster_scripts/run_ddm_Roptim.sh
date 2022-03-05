@@ -26,4 +26,4 @@ done < ./start_vals/$starts
 
 # Usage: ./run_ddm_Roptim.sh -m model1a -d sim_single_sub_data1 -s ddm_Roptim_start_vals1.csv
 # ./run_ddm_Roptim.sh -m model1c -d sim_single_sub_data46 -s ddm_Roptim_start_vals46.csv -p d,sigma,delta -o sim3
-# ./run_ddm_Roptim.sh -m model1c -d sim_single_sub_data46 -s test.csv -p d,sigma,delta -o sim3b -r 2 -f delta -v 1
+# ./run_ddm_Roptim.sh -m model1c -d sim_single_sub_data46 -s test.csv -p d,sigma -o sim3b -r 2 -f delta -v 1

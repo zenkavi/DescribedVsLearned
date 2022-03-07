@@ -9,7 +9,7 @@
 # Rscript --vanilla plot_ddm_Roptim.R --histogram --data_names sim_single_sub_data1,sim_single_sub_data2,sim_single_sub_data3,sim_single_sub_data4,sim_single_sub_data5,sim_single_sub_data6,sim_single_sub_data7,sim_single_sub_data8,sim_single_sub_data9,sim_single_sub_data10,sim_single_sub_data11,sim_single_sub_data12,sim_single_sub_data13,sim_single_sub_data14,sim_single_sub_data15,sim_single_sub_data16,sim_single_sub_data17,sim_single_sub_data18,sim_single_sub_data19,sim_single_sub_data20
 
 # For diff_pct
-# Rscript --vanilla plot_ddm_Roptim.R --diff_pct --data_names sim_single_sub_data46,sim_single_sub_data47,sim_single_sub_data48 --fig_fn ddm_recovery_sim3 --optim_out_path="ddModels/cluster_scripts/optim_out/sim3/" --model model1c
+# Rscript --vanilla plot_ddm_Roptim.R --diff_pct --data_names sim_single_sub_data46,sim_single_sub_data47,sim_single_sub_data48,sim_single_sub_data49,sim_single_sub_data50,sim_single_sub_data51,sim_single_sub_data52,sim_single_sub_data53,sim_single_sub_data54,sim_single_sub_data55,sim_single_sub_data56,sim_single_sub_data57,sim_single_sub_data58,sim_single_sub_data59,sim_single_sub_data60,sim_single_sub_data61,sim_single_sub_data62,sim_single_sub_data63,sim_single_sub_data64,sim_single_sub_data65,sim_single_sub_data66,sim_single_sub_data67,sim_single_sub_data68,sim_single_sub_data69,sim_single_sub_data70,sim_single_sub_data71,sim_single_sub_data72,sim_single_sub_data73,sim_single_sub_data74,sim_single_sub_data75,sim_single_sub_data76,sim_single_sub_data77,sim_single_sub_data78,sim_single_sub_data79,sim_single_sub_data80,sim_single_sub_data81 --fig_fn ddm_recovery_sim3 --optim_out_path="ddModels/cluster_scripts/optim_out/sim3/" --model model1c
 
 #######################
 # Setup

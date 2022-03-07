@@ -36,341 +36,65 @@ true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
 library(visualMLE)
 ```
 
-# Sim3: Single round 3 parameter model
+# 3 parameter model
 
-```{r}
-source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model1a.R'))
-sim_trial_list[['model1a']] = sim_trial
-fit_trial_list[['model1a']] = fit_trial
+Recovery exercises both on random datasets, as well as, on a grid of delta and gamma showed a correlation between these parameters and therefore issues in identifiability. 
 
-model = "model1a"
-```
+Motivated also by the logit analyses for the whole sample, which showed that while the weight of EVs decreased monotonically, weight of QVs followed more a step function/was possibly consistently underweighted I decided to switch the probability distortion function to a single parameter one.
 
-Using data from the last simulation where data was generated with a 4 parameter model checking how recovery works for a single iteration when gamma is fixed to 1, effectively optimizing over 3 parameters instead.
-
-**Example 1**
-For a dataset with gamma = 1, delta < 1:
-
-```{r}
-data_suffix = "sim_single_sub_data23"
-data = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/', data_suffix, '.csv'))
-```
-
-```{r}
-get_true_pars(data_ = data_suffix, true_pars_path_ = true_pars_path)$true_pars_str
-```
-
-```{r}
-start_vals = c(0.142,0.184,0.673)
-par_names = c("d", "sigma", "delta")
-fix_pars = list(gamma = 1)
-
-optim_out = optim_save(par = start_vals, get_task_nll, data_= data, par_names_ = par_names, model_name_ = model, fix_pars_ = fix_pars)
-```
-
-```{r}
-round(optim_out$par, 3)
-```
-
-**Example 2**
-For a dataset with gamma != 1, delta < 1.
-
-```{r}
-data_suffix = "sim_single_sub_data24"
-data = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/', data_suffix, '.csv'))
-```
-
-```{r}
-get_true_pars(data_ = data_suffix, true_pars_path_ = true_pars_path)$true_pars_str
-```
-
-```{r}
-start_vals = c(0.887,0.305,1)
-par_names = c("d", "sigma", "delta")
-fix_pars = list(gamma = 1)
-
-optim_out = optim_save(par = start_vals, get_task_nll, data_= data, par_names_ = par_names, model_name_ = model, fix_pars_ = fix_pars)
-```
-
-Delta moved in the right direction from the starting value but not sufficiently.
-
-```{r}
-round(optim_out$par, 3)
-```
-
-**Example 3**
-For a dataset with gamma = 1, delta > 1.
-
-```{r}
-data_suffix = "sim_single_sub_data38"
-data = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/', data_suffix, '.csv'))
-```
-
-```{r}
-get_true_pars(data_ = data_suffix, true_pars_path_ = true_pars_path)$true_pars_str
-```
-
-```{r}
-start_vals = c(0.887,0.305,1)
-par_names = c("d", "sigma", "delta")
-fix_pars = list(gamma = 1)
-
-optim_out = optim_save(par = start_vals, get_task_nll, data_= data, par_names_ = par_names, model_name_ = model, fix_pars_ = fix_pars)
-```
-
-Delta moved in the right direction from the starting value but not sufficiently.
-
-```{r}
-round(optim_out$par, 3)
-```
-
-**Example 4**
-For a dataset with gamma != 1, delta > 1.
-
-```{r}
-data_suffix = "sim_single_sub_data39"
-data = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/', data_suffix, '.csv'))
-```
-
-```{r}
-get_true_pars(data_ = data_suffix, true_pars_path_ = true_pars_path)$true_pars_str
-```
-
-```{r}
-start_vals = c(0.148,0.454,7.620)
-par_names = c("d", "sigma", "delta")
-fix_pars = list(gamma = 1)
-
-optim_out = optim_save(par = start_vals, get_task_nll, data_= data, par_names_ = par_names, model_name_ = model, fix_pars_ = fix_pars)
-```
-
-Delta moved in the right direction but too much.
-
-```{r}
-round(optim_out$par, 3)
-```
-
-Clean up workspace
-
-```{r}
-rm(start_vals, par_names, fix_pars, optim_out)
-```
-
-**Conclusion**
-Tentatively, it seems like delta moves more from the starting value when gamma is fixed to 1 (i.e. when the fit optimizes over only 3 parameters), regardless of whether that is the true gamma value of not.  
-
-Still, for the 5 dataset in sim2 where gamma = 1 delta recovery was pretty bad. It was not noticeably better than other combinations.  
+In this notebook I look at how well the parameters of a now three parameter model (d, sigma, delta) are recovered using two different optimization methods.
 
 To understand how well recovery works (especially for delta) using a three parameter model (d, sigma, delta) I systematically varied each parameter and generated 36 datasets to optimize over. The datasets were generated using the combination of the true values `true_ds = c(.001, .06 , .5)`, `true_sigmas = c(.001, .08, .3)`, `true_deltas = c(.1, .5 , 1, 3)`.
 
-In addition to identifiability this was also motivated by the logit analyses for the whole sample, which showed that while the weight of EVs decreased monotonically, weight of QVs followed more a step function/was possibly consistently underweighted.
 
-## Results
+## Sim3: Single round optimization
 
-To download sim output
-`docker run --rm -it -v ~/.aws:/root/.aws -v $(pwd):/sim3 amazon/aws-cli s3 sync  s3://described-vs-experienced/ddModels/cluster_scripts/optim_out/sim3 /sim3`
-
-```{r}
-data_suffix = "sim_single_sub_data46"
-data = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/', data_suffix, '.csv'))
-```
-
-```{r}
-get_true_pars(data_ = data_suffix, true_pars_path_ = true_pars_path)$true_pars_str
-```
-
-```{r}
-model_name = "model1c"
-data_name = "sim_single_sub_data66"
-optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/sim3/')
-
-tmp = ddm_par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path, diff_pct_plots_ = TRUE)
-
-tmp = get_true_pars(data_ = data_name, true_pars_path_ = true_pars_path)
-  
-true_pars = tmp$true_pars
-
-true_pars_str = tmp$true_pars_str
-
-true_pars = true_pars %>%
-  gather(key, value)
-
-out = get_optim_out(model_ = model_name, data_ = data_name, optim_out_path_ = optim_out_path, iters_ = TRUE)
-
-out = rename_cols(param_dict, out)
-
-cur_par = "d"
-cur_par_out = out[,c(cur_par, "kernel", "Iteration")]
-
-cur_par_out %>% 
-  mutate(start = ifelse(Iteration == 1, "start", "end")) %>%
-  select(-Iteration) %>%
-  gather(key, value, -kernel, -start) %>%
-  spread(start, value) %>%
-  ggplot(aes(start, end))+
-  geom_point()+
-  geom_hline(data=true_pars %>% filter(key == cur_par), aes(yintercept=value), color="red")+
-  facet_wrap(~key, scale="free")
-
-out %>%
-  select(-delta,) %>%
-  mutate(start = ifelse(Iteration == 1, "start", "end")) %>%
-  select(-Iteration, -nll) %>%
-  gather(key, value, -kernel, -start) %>%
-  spread(start, value)
-```
-
-# Sim3b: Two round optimization 
-
-```{r}
-source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model1c.R'))
-sim_trial_list[['model1c']] = sim_trial
-fit_trial_list[['model1c']] = fit_trial
-
-model = "model1c"
-```
-
-For the same 36 datasets fix delta to 1. Optimize over d and sigma. Then fix d and sigma and optimize over delta.
-
-**Example1**
-
-```{r}
-data_suffix = "sim_single_sub_data63"
-data = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/', data_suffix, '.csv'))
-```
-
-```{r}
-get_true_pars(data_ = data_suffix, true_pars_path_ = true_pars_path)$true_pars_str
-```
-
-```{r}
-first_start_vals = c(0.832,0.924)
-first_par_names = c("d", "sigma")
-first_fix_pars = list(delta = 1)
-
-first_optim_out = optim_save(par = first_start_vals, get_task_nll, data_= data, par_names_ = first_par_names, model_name_ = model, fix_pars_ = first_fix_pars)
-
-second_start_vals = c(2.624)
-second_par_names = c("delta")
-second_fix_pars = setNames(as.list(first_optim_out$par), first_par_names)
-
-second_optim_out = optim_save(par = second_start_vals, get_task_nll, data_= data, par_names_ = second_par_names, model_name_ = model, fix_pars_ = second_fix_pars)
-```
-
-Two rounds converged on:  
-
-d and sigma
-```{r}
-first_optim_out$par
-```
-
-delta 
-
-```{r}
-second_optim_out$par
-```
-
-**Example2**
-
-```{r}
-data_suffix = "sim_single_sub_data64"
-data = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/', data_suffix, '.csv'))
-```
-
-```{r}
-get_true_pars(data_ = data_suffix, true_pars_path_ = true_pars_path)$true_pars_str
-```
-
-```{r}
-first_start_vals = c(0.832,0.924)
-first_par_names = c("d", "sigma")
-first_fix_pars = list(delta = 1)
-
-first_optim_out = optim_save(par = first_start_vals, get_task_nll, data_= data, par_names_ = first_par_names, model_name_ = model, fix_pars_ = first_fix_pars)
-
-second_start_vals = c(2.624)
-second_par_names = c("delta")
-second_fix_pars = setNames(as.list(first_optim_out$par), first_par_names)
-
-second_optim_out = optim_save(par = second_start_vals, get_task_nll, data_= data, par_names_ = second_par_names, model_name_ = model, fix_pars_ = second_fix_pars)
-```
-
-Two rounds converged on:  
-
-d and sigma
-```{r}
-first_optim_out$par
-```
-
-delta 
-
-```{r}
-second_optim_out$par
-```
-
-**Example3**
-
-```{r}
-data_suffix = "sim_single_sub_data65"
-data = read.csv(paste0(helpers_path, 'ddModels/cluster_scripts/test_data/', data_suffix, '.csv'))
-```
-
-```{r}
-get_true_pars(data_ = data_suffix, true_pars_path_ = true_pars_path)$true_pars_str
-```
-
-```{r}
-first_start_vals = c(0.832,0.924)
-first_par_names = c("d", "sigma")
-first_fix_pars = list(delta = 1)
-
-first_optim_out = optim_save(par = first_start_vals, get_task_nll, data_= data, par_names_ = first_par_names, model_name_ = model, fix_pars_ = first_fix_pars)
-
-second_start_vals = c(2.624)
-second_par_names = c("delta")
-second_fix_pars = setNames(as.list(first_optim_out$par), first_par_names)
-
-second_optim_out = optim_save(par = second_start_vals, get_task_nll, data_= data, par_names_ = second_par_names, model_name_ = model, fix_pars_ = second_fix_pars)
-```
-
-Two rounds converged on:  
-
-d and sigma
-```{r}
-first_optim_out$par
-```
-
-delta 
-```{r}
-second_optim_out$par
-```
-
-How to combine and save the results in ddm_Roptim.R?
-
-```{r}
-first_optim_out$iterations_df %>%
-  mutate(Param3 = 1) %>%
-  select(Param1, Param2, Param3, Result, Iteration) %>%
-  rbind(second_optim_out$iterations_df %>%
-          rename(Param3 = Param1) %>%
-          mutate(Param1 = first_optim_out$par[1], Param2 = first_optim_out$par[2]) %>%
-          select(Param1, Param2, Param3, Result, Iteration)) %>%
-  mutate(Iteration = 1:n())
-```
-
-## Results
-
-`docker run --rm -it -v ~/.aws:/root/.aws -v $(pwd):/sim3 amazon/aws-cli s3 sync  s3://described-vs-experienced/ddModels/cluster_scripts/optim_out/sim3 /sim3`
+How bad was delta recovery for each combination of d and sigma (3 by 3 heatmap) panels for each value of delta (4 panels)
 
 ```{r}
 
 ```
 
-# Multiple rounds until improvement is below a specified threshold
+How bad was d recovery for each combination of delta and sigma (3 by 4 heatmap) panels for each value of d (3 panels)
 
 ```{r}
 
 ```
+
+How bad was sigma recovery for each combination of d and delta (3 by 4 heatmap) panels for each value of sigma (3 panels)
+
+```{r}
+
+```
+
+## Sim3b: Two round optimization 
+
+How bad was delta recovery for each combination of d and sigma (3 by 3 heatmap) panels for each value of delta (4 panels)
+
+```{r}
+
+```
+
+How bad was d recovery for each combination of delta and sigma (3 by 4 heatmap) panels for each value of d (3 panels)
+
+```{r}
+
+```
+
+How bad was sigma recovery for each combination of d and delta (3 by 4 heatmap) panels for each value of sigma (3 panels)
+
+```{r}
+
+```
+
+## Comparison
+
+Scatter plot of median percentage difference from true value for single round (x-axis) vs two round (y-axis) for each parameter
+
+```{r}
+
+```
+
 
 Next:
 - Joint choice and RT modeling

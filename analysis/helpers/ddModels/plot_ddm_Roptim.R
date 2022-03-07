@@ -82,7 +82,7 @@ for(i in 1:n_datasets){
     tmp = ddm_par_recovery_report(model_ = model, data_ = data_names[i], optim_out_path_ = optim_out_path, diff_pct_plots_ = TRUE)
     
     if(length(tmp) > 0){
-      cur_diff_pct_plot = tmp[['p5']]
+      cur_diff_pct_plot = tmp$plots[[1]]
       diff_pct_plots[[i]] = cur_diff_pct_plot
     } else {
       next
@@ -92,7 +92,7 @@ for(i in 1:n_datasets){
     tmp = ddm_par_recovery_report(model_ = model, data_ = data_names[i], optim_out_path_ = optim_out_path, diff_pct_plots_ = FALSE, start_end_scatter_ = TRUE)
     
     if(length(tmp) > 0){
-      cur_scatter_row = arrangeGrob(tmp$plots, nrow=1, top = tmp$true_pars)
+      cur_scatter_row = arrangeGrob(grobs=tmp$plots, nrow=1, top = tmp$true_pars)
       scatter_rows[[i]] = cur_scatter_row
     } else {
       next
@@ -102,8 +102,8 @@ for(i in 1:n_datasets){
     tmp = ddm_par_recovery_report(model_ = model, data_ = data_names[i], optim_out_path_ = optim_out_path,  diff_pct_plots_ = FALSE, par_hist_ = TRUE)
     
     if(length(tmp) > 0){
-      cur_scatter_row = arrangeGrob(tmp$plots, nrow=1, top = tmp$true_pars)
-      scatter_rows[[i]] = cur_scatter_row
+      cur_hist_row = arrangeGrob(grobs=tmp$plots, nrow=1, top = tmp$true_pars)
+      hist_rows[[i]] = cur_hist_row
     } else {
       next
     }
@@ -117,15 +117,11 @@ if(diff_pct){
 }
 
 if(scatter){
-  tmp = ddm_par_recovery_report(model_ = model, data_ = data_names[i], optim_out_path_ = optim_out_path, diff_pct_plots_ = FALSE, start_end_scatter_ = TRUE)
-  num_pars = length(tmp$plots)
-  g = marrangeGrob(grobs = scatter_rows, nrow=4, ncol=num_pars)
+  g = marrangeGrob(grobs = scatter_rows, nrow=4, ncol=1)
   ggsave(file=paste0(fig_out_path, fig_fn, '_scatter.pdf'), g, height = 8, width=11, units="in")
 }
 
 if(histogram){
-  tmp = ddm_par_recovery_report(model_ = model, data_ = data_names[i], optim_out_path_ = optim_out_path, diff_pct_plots_ = FALSE, start_end_scatter_ = TRUE)
-  num_pars = length(tmp$plots)
-  g = marrangeGrob(grobs = hist_rows, nrow=4, ncol=num_pars)
+  g = marrangeGrob(grobs = hist_rows, nrow=4, ncol=1)
   ggsave(file=paste0(fig_out_path, fig_fn, '_hist.pdf'), g, height = 8, width=11, units="in")
 }

@@ -12,46 +12,46 @@ output:
 Set up environment and load in data
 
 ```{r include=FALSE, message=FALSE}
-library(tidyverse)
 library(here)
+helpers_path = here('analysis/helpers/')
+cpueaters_path = '/Users/zeynepenkavi/CpuEaters/DescribedVsLearned_beh/analysis/helpers/'
+fig_out_path = paste0(here(),'/outputs/fig/')
+true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
+```
+
+```{r include=FALSE, message=FALSE, eval=FALSE}
+library(tidyverse)
 library(gridExtra)
 cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 theme_set(theme_classic())
 sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
-helpers_path = here('analysis/helpers/')
-cpueaters_path = '/Users/zeynepenkavi/CpuEaters/DescribedVsLearned_beh/analysis/helpers/'
+
 source(paste0(helpers_path, 'ddModels/ddm_par_recovery_report.R'))
 
-set.seed(385736)
-```
-
-```{r message=FALSE}
 source(paste0(helpers_path, 'ddModels/fit_task.R'))
 sim_trial_list = list()
 fit_trial_list = list()
 
-source(paste0(helpers_path, 'ddModels/get_true_pars.R'))
-true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
-
 library(visualMLE)
+
+set.seed(385736)
 ```
 
 # 3 parameter model
 
-Recovery exercises both on random datasets, as well as, on a grid of delta and gamma showed a correlation between these parameters and therefore issues in identifiability. 
+Recovery exercises both on random datasets, as well as, on a grid of delta and gamma showed a correlation between these parameters and therefore issues in identifiability.   
 
-Motivated also by the logit analyses for the whole sample, which showed that while the weight of EVs decreased monotonically, weight of QVs followed more a step function/was possibly consistently underweighted I decided to switch the probability distortion function to a single parameter one.
+Motivated also by the logit analyses for the whole sample, which showed that while the weight of EVs decreased monotonically, weight of QVs followed more a step function/was possibly consistently underweighted I decided to switch the probability distortion function to a single parameter one.  
 
-In this notebook I look at how well the parameters of a now three parameter model (d, sigma, delta) are recovered using two different optimization methods.
+In this notebook I look at how well the parameters of a now three parameter model (d, sigma, delta) are recovered using two different optimization methods.  
 
-To understand how well recovery works (especially for delta) using a three parameter model (d, sigma, delta) I systematically varied each parameter and generated 36 datasets to optimize over. The datasets were generated using the combination of the true values `true_ds = c(.001, .06 , .5)`, `true_sigmas = c(.001, .08, .3)`, `true_deltas = c(.1, .5 , 1, 3)`.
+To understand how well recovery works (especially for delta) using a three parameter model (d, sigma, delta) I systematically varied each parameter and generated 36 datasets to optimize over. The datasets were generated using the combination of the true values `true_ds = c(.001, .06 , .5)`, `true_sigmas = c(.001, .08, .3)`, `true_deltas = c(.1, .5 , 1, 3)`.  
 
 ## Data and helper functions
 
-```{r}
+```{r eval=FALSE}
 optim_out_path = paste0(cpueaters_path, 'ddModels/cluster_scripts/optim_out/')
 true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
-fig_out_path = paste0(here(),'/outputs/fig/')
 
 model = "model1c"
 data_suffix = "sim_single_sub_data"
@@ -74,7 +74,7 @@ for(i in 1:length(data_nums)){
 }
 ```
 
-```{r}
+```{r eval=FALSE}
 plot_heatmaps = function(x_par = "d", y_par = "sigma", fill_par = "delta", plt_sim_type = "sim3"){
   
   comp_data = comp_data %>%
@@ -117,10 +117,9 @@ plot_heatmaps = function(x_par = "d", y_par = "sigma", fill_par = "delta", plt_s
 }
 ```
 
-
 ## Sim3: Single round optimization
 
-```{r}
+```{r eval=FALSE}
 fig_fn = 'ddm_recovery_sim3'
 ```
 
@@ -128,7 +127,7 @@ How bad was delta recovery for each combination of d and sigma (3 by 3 heatmap) 
 How bad was d recovery for each combination of delta and sigma (3 by 4 heatmap) panels for each value of d (3 panels)  
 How bad was sigma recovery for each combination of d and delta (3 by 4 heatmap) panels for each value of sigma (3 panels)  
 
-```{r}
+```{r eval=FALSE}
 p1 = plot_heatmaps(x_par = "d", y_par = "sigma", fill_par = "delta") +
   theme(legend.margin=margin(0,0,0,0), legend.box.margin=margin(-10,-10,0,-10))
 p2 = plot_heatmaps(fill_par = "d", y_par = "sigma", x_par = "delta") +
@@ -137,18 +136,28 @@ p3 = plot_heatmaps(y_par = "d", fill_par = "sigma", x_par = "delta") +
   theme(legend.margin=margin(0,0,0,0), legend.box.margin=margin(-10,-10,0,-10))
 ```
 
-
-```{r}
+```{r eval=FALSE}
 g = arrangeGrob(grobs=list(p1, p2, p3), nrow=3)
-
+# ggsave(file=paste0(fig_out_path, fig_fn, '_diff_pct_heatmaps.jpg'), g, height = 8, width=11, units="in")
 ggsave(file=paste0(fig_out_path, fig_fn, '_diff_pct_heatmaps.pdf'), g, height = 8, width=11, units="in")
 ```
 
-**Conclusion:**
+```{r echo=FALSE, out.width='100%'}
+fig_name = 'ddm_recovery_sim3_diff_pct_heatmaps.jpg'
+knitr::include_graphics(paste0(fig_out_path, fig_name))
+```
+
+**Conclusion:**  
+- When d is very small (.001) delta < 1 can't be recovered.  
+- Delta can recovered with some success for medium and high values of d and medium and low values of sigma.  
+- For the sample parameters I tried initially (d=.06, sigma=.08, delta=3) delta recovery is particularly poor compared to other cases when delta=3.  
+- When d and sigma are very small (0.001) they can't be recovered.  
+- d can be successfully recovered for other cases with lower difference from true value as the true value of d increases.  
+- sigma can be successfull recovered when not very small.  
 
 ## Sim3b: Two round optimization 
 
-```{r}
+```{r eval=FALSE}
 fig_fn = 'ddm_recovery_sim3b'
 ```
 
@@ -156,7 +165,7 @@ How bad was delta recovery for each combination of d and sigma (3 by 3 heatmap) 
 How bad was d recovery for each combination of delta and sigma (3 by 4 heatmap) panels for each value of d (3 panels)  
 How bad was sigma recovery for each combination of d and delta (3 by 4 heatmap) panels for each value of sigma (3 panels)  
 
-```{r}
+```{r eval=FALSE}
 p1 = plot_heatmaps(x_par = "d", y_par = "sigma", fill_par = "delta", plt_sim_type = "sim3b") +
   theme(legend.margin=margin(0,0,0,0), legend.box.margin=margin(-10,-10,0,-10))
 p2 = plot_heatmaps(fill_par = "d", y_par = "sigma", x_par = "delta", plt_sim_type = "sim3b") +
@@ -165,22 +174,30 @@ p3 = plot_heatmaps(y_par = "d", fill_par = "sigma", x_par = "delta", plt_sim_typ
   theme(legend.margin=margin(0,0,0,0), legend.box.margin=margin(-10,-10,0,-10))
 ```
 
-```{r}
+```{r eval=FALSE}
 g = arrangeGrob(grobs=list(p1, p2, p3), nrow=3)
 ggsave(file=paste0(fig_out_path, fig_fn, '_diff_pct_heatmaps.pdf'), g, height = 8, width=11, units="in")
 ```
 
-**Conclusion:**
+```{r echo=FALSE, out.width='100%'}
+fig_name = 'ddm_recovery_sim3b_diff_pct_heatmaps.jpg'
+knitr::include_graphics(paste0(fig_out_path, fig_name))
+```
+
+**Conclusion:**  
+- d and sigma recovery conclusions are largely the same for two round and single round optimization.  
+- delta recovery for delta < 1 is slightly worse than single round optimization (remember for the first round it is fixed at 1 so it seems it does not move sufficiently for the second round).  
+- delta recovery for delta > 1 is also worse than single round optimization.  
 
 ## Comparison of sim3 and sim3b   
 
 Scatter plot of median percentage difference from true value for single round (x-axis) vs two round (y-axis) for each parameter
 
-```{r}
+```{r eval=FALSE}
 fig_fn = 'ddm_recovery_sim3_sim3b'
 ```
 
-```{r}
+```{r eval=FALSE}
 p = comp_data %>%
   mutate(median_diff_clipped = ifelse(median_diff > 100, 101, median_diff)) %>%
   select(-median_diff) %>%
@@ -199,14 +216,31 @@ p = comp_data %>%
 ggsave(file=paste0(fig_out_path, fig_fn, '_diff_pct_comparison.pdf'), p, height = 8, width=11, units="in")
 ```
 
-**Conclusion:**
+```{r echo=FALSE, out.width='100%'}
+fig_name = 'ddm_recovery_sim3_sim3b_diff_pct_comparison.jpg'
+knitr::include_graphics(paste0(fig_out_path, fig_name))
+```
 
-Next:
-- Joint choice and RT modeling
-- Hierarchical estimation
+**Conclusion:**  
+- For small d both methods are bad.  
+- For medium d single round is worse if sigma is too small. Otherwise two round is worse.  
+- For large d two round is always worse.  
+- For small sigma both are bod.  
+- For medium sigma two round is either comparable or worse.  
+- For large sigma both are good.  
+- For delta < 1 two rounds is slightly to severely worse.  
+- For delta = 1 both methods are comparable.  
+- For delta > 1 two rounds is worse.  
+- Overall, two round optimization doesn't improve recovery.  
 
-Meeting note: 
-- Make likelihood surface for one of the recovered delta-gamma correlation scatter plots
+Next:  
+- If I fit this model to subject's data, what are the parameter distributions and how good is the fit (fit model using 2/3 and predict left out 1/3)  
+- (Kill roptim cluster)  
+- Joint choice and RT modeling  
+- Hierarchical estimation  
+
+Meeting note:   
+- Make likelihood surface for one of the recovered delta-gamma correlation scatter plots  
 
 ------------------------------------------------------------------------------------------------
 More data per optimization? (currently for single subject)

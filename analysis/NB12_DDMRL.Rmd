@@ -1,0 +1,21 @@
+---
+title: "Experience vs. description based decision-making project: DDM RL joint modeling"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: 'hide'
+---
+
+Note: This only takes fractal rewards into account. The overall trial reward is not included anywhere.
+
+Before building a model including trial reward first check whether this has any behavioral effect.
+What behavioral effect could/should it have? 
+It shouldn't affect learning, fractal rewards only depend on their own probabilities. 
+It shouldn't affect choice separate from all the other components of EV, QV and their weighted sum based on probFractalDraw because it is a direct functon of those components.
+
+It might affect perseverance, ie choosing the same side if a reward was received for the previous trial.
+
+```{r}
+
+```

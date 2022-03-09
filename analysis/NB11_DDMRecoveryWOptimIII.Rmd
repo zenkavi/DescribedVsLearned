@@ -236,7 +236,7 @@ knitr::include_graphics(paste0(fig_out_path, fig_name))
 Next:  
 - If I fit this model to subject's data, what are the parameter distributions and how good is the fit (fit model using 2/3 and predict left out 1/3)  
 - (Kill roptim cluster)  
-- Joint choice and RT modeling  
+- Joint DDM and RL modeling  
 - Hierarchical estimation  
 
 Meeting note:   

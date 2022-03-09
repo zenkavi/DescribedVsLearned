@@ -149,7 +149,7 @@ sim_task_sequential = function(stimuli, model_name, sim_trial_list_ = sim_trial_
                         barrier = kwargs$barrier, nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
                         bias = kwargs$bias, timeStep = kwargs$timeStep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,
                         stimDelay = kwargs$stimDelay,
-                        EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], probFractalDraw=stimuli$probFractalDraw,
+                        EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], probFractalDraw=stimuli$probFractalDraw[i],
                         leftFractalReward=stimuli$leftFractalReward[i],rightFractalReward=stimuli$rightFractalReward[i],
                         QVLeft = QVLeft , QVRight = QVRight) # Note QVs are not from stimuli anymore
     

@@ -12,10 +12,58 @@ Note: This only takes fractal rewards into account. The overall trial reward is 
 Before building a model including trial reward first check whether this has any behavioral effect.
 What behavioral effect could/should it have? 
 It shouldn't affect learning, fractal rewards only depend on their own probabilities. 
-It shouldn't affect choice separate from all the other components of EV, QV and their weighted sum based on probFractalDraw because it is a direct functon of those components.
+It shouldn't affect choice separate from all the other components of EV, QV and their weighted sum based on probFractalDraw because it is a direct function of those components.
 
 It might affect perseverance, ie choosing the same side if a reward was received for the previous trial.
 
-```{r}
+```{r include=FALSE, message=FALSE}
+library(tidyverse)
+library(here)
+theme_set(theme_classic())
+sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
+helpers_path = here('analysis/helpers/')
+library(visualMLE)
+set.seed(38573)
+```
 
+```{r message=FALSE}
+source(paste0(helpers_path,'ddrlModels/sim_task_sequential.R'))
+test_trial_conditions = read.csv(paste0(helpers_path, 'ddrlModels/cluster_scripts/test_data/test_trial_conditions.csv'))
+```
+
+Empty lists to store the trial simulators for the forthcoming models.
+
+```{r}
+sim_trial_list = list()
+```
+
+```{r}
+source(paste0(helpers_path, 'ddrlModels/r_dd_rl_models/ddrl_model1c.R'))
+
+sim_trial_list[['model1c']] = sim_trial
+```
+
+```{r}
+tru_d = .06
+tru_sigma = .08
+tru_alpha = .3
+tru_delta = .5
+```
+
+Test single trial simulation function
+
+```{r}
+QVLeft = 0.4
+QVRight = 0.2
+sim_trial(d = tru_d, sigma = tru_sigma, alpha = tru_alpha, delta = tru_delta, 
+         EVLeft = test_trial_conditions$EVLeft[1], EVRight = test_trial_conditions$EVRight[1],
+         leftFractalReward = test_trial_conditions$leftFractalReward[1], rightFractalReward = test_trial_conditions$rightFractalReward[1],
+         probFractalDraw = test_trial_conditions$probFractalDraw[1],
+         QVLeft = QVLeft, QVRight = QVRight)
+```
+Test multiple trial simulation function
+
+```{r}
+# Simulate choice and RT for the replicated trial conditions
+sim_task_sequential(test_trial_conditions, model_name = "model1c", d = tru_d, sigma = tru_sigma, delta = tru_delta, alpha = tru_alpha)
 ```

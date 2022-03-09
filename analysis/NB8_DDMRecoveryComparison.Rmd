@@ -26,7 +26,7 @@ set.seed(38573)
 source(paste0(helpers_path,'ddModels/fit_task.R'))
 source(paste0(helpers_path,'ddModels/sim_task.R'))
 source(paste0(helpers_path,'ddModels/fit_ddm_pta.R'))
-test_trial_conditions = read.csv(paste0(helpers_path, 'ddModels/test_data/test_trial_conditions.csv'))
+test_trial_conditions = read.csv(paste0(helpers_path, 'ddModels/cluter_scripts/test_data/test_trial_conditions.csv'))
 ```
 
 ```{r include=FALSE, message=FALSE}

@@ -1,4 +1,4 @@
-sim_trial = function(d, sigma, delta, alpha, barrierDecay, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=400, epsilon = 0, debug=FALSE,...){
+sim_trial = function(d, sigma, delta, alpha, barrierDecay=0, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, maxIter=400, epsilon = 0, debug=FALSE,...){
   
   # d : drift rate
   # sigma: sd of the normal distribution 

@@ -20,12 +20,16 @@ sim_task_sequential = function(stimuli, model_name, sim_trial_list_ = sim_trial_
   kwargs = list(...)
   # 
   # Initialize any missing arguments. Some are useless defaults to make sure different sim_trial functions from different models can run without errors even if they don't make use of that argument
+  if (!("alpha" %in% names(kwargs))){
+    kwargs$alpha = 0
+  }
   if (!("d" %in% names(kwargs))){
     kwargs$d = 0
   }
   if (!("sigma" %in% names(kwargs))){
     kwargs$sigma = 1e-9
   }
+  # Arbitrator drift rate for three integrator models
   if (!("dArb" %in% names(kwargs))){
     kwargs$dArb = 0
   }
@@ -81,7 +85,7 @@ sim_task_sequential = function(stimuli, model_name, sim_trial_list_ = sim_trial_
     kwargs$maxIter = 400
   }
   if (!("epsilon" %in% names(kwargs))){
-    kwargs$epsilon = 0.0002
+    kwargs$epsilon = 0
   }
   if (!("stimDelay" %in% names(kwargs))){
     kwargs$stimDelay = 2000
@@ -96,62 +100,70 @@ sim_task_sequential = function(stimuli, model_name, sim_trial_list_ = sim_trial_
   # Extract the correct trial simulator for the model_name
   sim_trial = sim_trial_list_[[model_name]]
   
-  # Create placeholder output df
-  out = data.frame()
-  
   # Print arguments that will be used for simulation if in debug mode
   if(kwargs$debug){
-    print(paste0("Simulating task with parameters: model_name = ", model_name,
-                 ", non-decision time = ", kwargs$nonDecisionTime,
+    print(paste0("Simulating task with parameters: model_name = ", model_name_,
+                 ", alpha = ", kwargs$alpha,
                  ", barrier = ", kwargs$barrier,
                  ", barrierDecay = ", kwargs$barrierDecay,
                  ", bias = ", kwargs$bias,
-                 ", lotteryBias = ", kwargs$lotteryBias,
-                 ", timeStep = ", kwargs$timeStep,
-                 ", maxIter = ", kwargs$maxIter,
+                 ", d = ", kwargs$d,
+                 ", dArb = ", kwargs$dArb,
+                 ", dAttr = ", kwargs$dAttr,
+                 ", dFrac = ", kwargs$dFrac,
+                 ", dLott = ", kwargs$dLott,
+                 ", delta = ", kwargs$delta,
                  ", epsilon = ", kwargs$epsilon,
-                 ", stimDelay = ", kwargs$stimDelay
+                 ", gamma = ", kwargs$gamma,
+                 ", lotteryBias = ", kwargs$lotteryBias,
+                 ", maxIter = ", kwargs$maxIter,
+                 ", non-decision time = ", kwargs$nonDecisionTime,
+                 ", sigma = ", kwargs$sigma,
+                 ", sigmaArb = ", kwargs$sigmaArb,
+                 ", sigmaAttr = ", kwargs$sigmaAttr,
+                 ", sigmaFrac = ", kwargs$sigmaFrac,
+                 ", sigmaLott = ", kwargs$sigmaLott,
+                 ", stimDelay = ", kwargs$stimDelay,
+                 ", timeStep = ", kwargs$timeStep,
+                 
     ))
   }
   
   # Sequential
   # Loop through  all the rows of the input
+  out = data.frame()
   for(i in 1:nrow(stimuli)) {
-    print(i)
+    
+    # Initialize QValues that will be updated
+    if(i == 1){
+      QVLeft = 0
+      QVRight = 0
+    }
+    
     # Simulate RT and choice for a single trial with given DDM parameters and trial stimulus values
     cur_out = sim_trial(d=kwargs$d, sigma = kwargs$sigma, 
-              dArb=kwargs$dArb, dAttr=kwargs$dAttr, sigmaArb = kwargs$sigmaArb, sigmaAttr = kwargs$sigmaAttr,
-              dLott=kwargs$dLott, dFrac=kwargs$dFrac, sigmaLott = kwargs$sigmaLott, sigmaFrac = kwargs$sigmaFrac,
-              theta = kwargs$theta, delta = kwargs$delta, gamma = kwargs$gamma,
-              barrier = kwargs$barrier, nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
-              bias = kwargs$bias, timeStep = kwargs$timeStep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,
-              stimDelay = kwargs$stimDelay,
-              EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], QVLeft = stimuli$QVLeft[i] , QVRight = stimuli$QVRight[i], probFractalDraw=stimuli$probFractalDraw)
-
+                        dArb=kwargs$dArb, dAttr=kwargs$dAttr, sigmaArb = kwargs$sigmaArb, sigmaAttr = kwargs$sigmaAttr,
+                        dLott=kwargs$dLott, dFrac=kwargs$dFrac, sigmaLott = kwargs$sigmaLott, sigmaFrac = kwargs$sigmaFrac,
+                        theta = kwargs$theta, delta = kwargs$delta, gamma = kwargs$gamma,
+                        alpha = kwargs$alpha,
+                        barrier = kwargs$barrier, nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
+                        bias = kwargs$bias, timeStep = kwargs$timeStep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,
+                        stimDelay = kwargs$stimDelay,
+                        EVLeft=stimuli$EVLeft[i], EVRight = stimuli$EVRight[i], probFractalDraw=stimuli$probFractalDraw,
+                        leftFractalReward=stimuli$leftFractalReward[i],rightFractalReward=stimuli$rightFractalReward[i],
+                        QVLeft = QVLeft , QVRight = QVRight) # Note QVs are not from stimuli anymore
+    
     # Append the trial to the rest of the output
     out = rbind.all.columns(out, cur_out)
-
+    
+    # Update the QValues that will be fed into the next sim_trial execution
+    QVLeft = cur_out$QVLeft
+    QVRight = cur_out$QVRight
+    
   }
   
   # Add details of the parameters used for the simulation
   out$model = model_name
-  if(model_name %in% c("model4", "model5", "model6","model7")){
-    out$dArb = kwargs$dArb
-    out$dAttr = kwargs$dAttr
-    out$sigmaArb = kwargs$sigmaArb
-    out$sigmaAttr = kwargs$sigmaAttr
-  } else if(model_name %in% c("model4a", "model5a", "model6a", "model7a")){
-    out$dArb = kwargs$dArb
-    out$dLott = kwargs$dLott
-    out$dFrac = kwargs$dFrac
-    out$sigmaArb = kwargs$sigmaArb
-    out$sigmaFrac = kwargs$sigmaFrac
-  } else {
-    out$d = kwargs$d
-    out$sigma = kwargs$sigma
-  }
-  out$nonDecisionTime = kwargs$nonDecisionTime
-  out$barrierDecay = kwargs$barrierDecay
   
   return(out)
 }

@@ -24,9 +24,9 @@ set.seed(38573)
 
 Adding in parameters from the two systems model for all subjects (i.e. not choosing the best fitting one per subject)
 
-```{r}
-source(paste0(helpers_path,'ddModels/r_ddm_models/sim_task.R')) # do this first not to mess with cluster setup?
-source(paste0(helpers_path,'ddModels/r_ddm_models/sim_sanity_checks.R'))
+```{r message=FALSE}
+source(paste0(helpers_path,'ddModels/sim_task.R')) # do this first not to mess with cluster setup?
+source(paste0(helpers_path,'ddModels/sim_sanity_checks.R'))
 source(paste0(helpers_path,'rlModels/fit_rl_hierarchical.R'))
 source(paste0(helpers_path,'add_inferred_pars.R'))
 clean_beh_data = add_inferred_pars(clean_beh_data, par_ests, model_name="original")
@@ -64,7 +64,7 @@ sim_sanity_checks(sub_data %>%
 
 For the above stylized RT and choice plots
 
-```{r eval=FALSE}
+```{r}
 sub_data %>%
   # select(-subnum) %>%
   mutate(choice = ifelse(choiceLeft == 1, "left", "right"))%>%
@@ -80,7 +80,7 @@ sub_data %>%
   facet_wrap(~subnum, scales = 'free')
 ```
 
-```{r eval=FALSE}
+```{r message=FALSE, warning=FALSE}
 sub_data %>%
   mutate(choice = ifelse(choiceLeft == 1, "left", "right"))%>%
   select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, subnum) %>%
@@ -129,11 +129,11 @@ m1 = sim_task(sub_data, model_name="model1", d=0.04, sigma = 0.02)
 sim_sanity_checks(m1)
 ```
 
-```{r}
+```{r eval=FALSE}
 m1_2 = sim_task(sub_data, model_name="model1", d=0.04, sigma = 0.02, epsilon = 0.03)
 ```
 
-```{r}
+```{r eval=FALSE}
 sim_sanity_checks(m1_2)
 ```
 

@@ -12,16 +12,16 @@ Set up environment and load in data
 ```{r include=FALSE}
 library(tidyverse)
 library(gridExtra)
-library(brms)
+# library(brms)
 library(here)
-cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+cbbPalette = c("#E69F00","#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 # theme_set(theme_bw())
 theme_set(theme_classic())
 sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 helpers_path = here('analysis/helpers/')
 ```
 
-```{r}
+```{r message=FALSE}
 source(paste0(helpers_path, 'fmriSaves/save_imaging_events_wBestRpe.R'))
 ```
 
@@ -54,6 +54,7 @@ clean_beh_data %>%
   annotate(geom = "text", label = "Larger difference\nbetween fractals", x=-8, y=1000)+
   annotate(geom = "text", label = "Larger difference\nbetween lotteries", x=8, y=1000)
 ```
+
 How does weighting by the relevance for the reward change the absolute value difference ratio? Amplifies the difference for the more relevant attribute.
 
 ```{r}
@@ -66,6 +67,7 @@ clean_beh_data %>%
   guides(color=guide_legend(nrow=2,byrow=TRUE))+
   scale_color_manual(values=c('#40004b','#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'))
 ```
+
 What do the distributions of the weighted differences look like for each attribute? For Q-values it is mostly continuous whereas for the EV's there only three values for each level of relevance.
 
 ```{r}
@@ -81,6 +83,7 @@ clean_beh_data %>%
   scale_fill_manual(values=c('#40004b','#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'))+
   labs(x="Weighted absolute Attribute Value Difference")
 ```
+
 ```{r}
 with(clean_beh_data, table(probFractalDraw, weightedAbsEVDiff))
 ```
@@ -158,11 +161,12 @@ clean_beh_data %>%
   scale_color_manual(values=c('#40004b','#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'))+
   labs(x="Absolute Attribute Value Difference")
 ```
+
 - For pFrac = 1 the slope is <0 for the QV difference and 0 for the EV difference.
 - For pFrac != 1 the slopes for the QV difference are 0.
 - For pFrac != 1 the slope for the EV difference are <0 but decreasingly so as pFractalDraw increases (i.e. the EV difference becomes less relevant).
 
-```{r}
+```{r eval=FALSE}
 tmp = clean_beh_data %>% mutate(pFracOne = as.factor(ifelse(probFractalDraw == 1, 1, 0)))
 
 m = brm(log_rt ~ probFractalDraw + pFracOne +
@@ -171,9 +175,7 @@ m = brm(log_rt ~ probFractalDraw + pFracOne +
           pFracOne:absEVDiff+ pFracOne:absQVDiff + 
           (1|subnum), 
         data=tmp, silent=2, refresh=0)
-```
 
-```{r}
 summary(m)
 ```
 
@@ -196,15 +198,13 @@ clean_beh_data %>%
   annotate(geom="text", label="Bigger lottery difference",x=8, y=-0.2)
 ```
 
-```{r}
+```{r eval=FALSE}
 tmp = clean_beh_data %>% filter(probFractalDraw != 1 & probFractalDraw != 0)
 
 m = brm(log_rt ~ probFractalDraw * logWeightedAbsValDiffRatio +
           (1|subnum), 
         data=tmp, silent=2, refresh=0)
-```
 
-```{r}
 summary(m)
 ```
 
@@ -224,11 +224,12 @@ clean_beh_data %>%
   scale_color_manual(values=c('#40004b','#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'))+
   labs(x="Weighted absolute Attribute Value Difference")
 ```
+
 - The slope of the weightedAbsQVDiff for probFractalDraw = 0 is not different than the other levels of probFractalDraw.
 - The average slope of weightedAbsQVDiff for all levels of probFractalDraw is significantly >0 (odd) but becomes significantly <0 as probFractalDraw increases. Decisions become faster the larger the weighted value difference between the fractals as fractals become more relevant.
 - The average slope of weightedAbsEVDiff is significantly <0 (i.e. the larger the value difference the faster the choice) but it also significantly flattens out (i.e. depends less on the lottery value difference) as probFractalDraw increases and the lotteries become less relevant for the reward.
 
-```{r}
+```{r eval=FALSE}
 tmp = clean_beh_data %>% mutate(pFracOne = as.factor(ifelse(probFractalDraw == 1, 1, 0)))
 
 m = brm(log_rt ~ probFractalDraw + pFracOne +
@@ -237,9 +238,7 @@ m = brm(log_rt ~ probFractalDraw + pFracOne +
          pFracOne:weightedAbsQVDiff + 
           (1|subnum), 
         data=tmp, silent=2, refresh=0)
-```
 
-```{r}
 summary(m)
 ```
 
@@ -250,19 +249,18 @@ clean_beh_data %>%
   mutate(choiceLeft = as.factor(choiceLeft)) %>%
   ggplot(aes(reactionTime, color=choiceLeft))+
   geom_histogram(bins=100, position="identity", fill=NA, aes(y=..density..))+
-  geom_density()
+  geom_density()+
+  scale_color_manual(values=cbbPalette[1:2])
 ```
 
 ## Choice
 
 Logit by relative strength of preference
 
-```{r}
+```{r eval=FALSE}
 m = brm(choseBetterLottery ~ probFractalDraw * logWeightedAbsValDiffRatio + (1|subnum),
             data=clean_beh_data, family=bernoulli(link="logit"), silent=2, refresh=0)
-```
 
-```{r}
 summary(m)
 ```
 

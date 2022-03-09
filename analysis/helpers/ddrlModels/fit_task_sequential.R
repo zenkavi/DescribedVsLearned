@@ -1,22 +1,25 @@
-library(foreach)
-
-# Parallelization setup based on this post
-# https://www.blasbenito.com/post/02_parallelizing_loops_with_r/
-n.cores <- parallel::detectCores() - 1
-
-#create the cluster
-my.fit.cluster <- parallel::makeCluster(
-  n.cores, 
-  type = "FORK"
-)
-
-#register it to be used by %dopar%
-doParallel::registerDoParallel(cl = my.fit.cluster)
+# Helper function to combine outputs with different column names
+rbind.all.columns <- function(x, y) {
+  
+  if(ncol(x) == 0 | ncol(y) == 0){
+    out = plyr::rbind.fill(x, y)
+  } else{
+    x.diff <- setdiff(colnames(x), colnames(y))
+    y.diff <- setdiff(colnames(y), colnames(x))
+    x[, c(as.character(y.diff))] <- NA
+    y[, c(as.character(x.diff))] <- NA
+    out = rbind(x, y)
+  }
+  return(out)
+}
 
 # Function to fit ddm model to data using a model provided as a string in the model_name argument
-fit_task = function(data_, model_name_, pars_, fix_pars_ = list(), fit_trial_list_ = fit_trial_list, debug=FALSE){
+fit_task_sequential = function(data_, model_name_, pars_, fix_pars_ = list(), fit_trial_list_ = fit_trial_list, debug=FALSE){
   
   # Initialize any missing arguments. Some are useless defaults to make sure different fit_trial functions from different models can run without errors even if they don't make use of that argument
+  if (!("alpha" %in% names(pars_))){
+    pars_$alpha = 0
+  }
   if (!("d" %in% names(pars_))){
     pars_$d = 0
   }
@@ -98,6 +101,7 @@ fit_task = function(data_, model_name_, pars_, fix_pars_ = list(), fit_trial_lis
   # Print arguments that will be used for simulation if in debug mode
   if(debug){
     print(paste0("Simulating task with parameters: model_name = ", model_name_,
+                 ", alpha = ", pars_$alpha,
                  ", barrier = ", pars_$barrier,
                  ", barrierDecay = ", pars_$barrierDecay,
                  ", bias = ", pars_$bias,
@@ -123,26 +127,37 @@ fit_task = function(data_, model_name_, pars_, fix_pars_ = list(), fit_trial_lis
     ))
   }
   
-  # Parallel loop
-  out <- foreach(
-    EVLeft=data_$EVLeft, 
-    EVRight = data_$EVRight, 
-    QVLeft = data_$QVLeft, 
-    QVRight= data_$QVRight , 
-    probFractalDraw = data_$probFractalDraw,
-    choice = data_$choice,
-    reactionTime = data_$reactionTime,
-    .combine = 'rbind'
-  ) %dopar% {
+  # Sequential
+  # Loop through  all the rows of the input
+  out = data.frame()
+  for(i in 1:nrow(data_)) {
+    
+    # Initialize QValues that will be updated
+    if(i == 1){
+      QVLeft = 0
+      QVRight = 0
+    }
+    
     # Simulate RT and choice for a single trial with given DDM parameters and trial stimulus values
-    fit_trial(d=pars_$d, sigma = pars_$sigma, 
-              dArb=pars_$dArb, dAttr=pars_$dAttr, sigmaArb = pars_$sigmaArb, sigmaAttr = pars_$sigmaAttr,
-              dLott=pars_$dLott, dFrac=pars_$dFrac, sigmaLott = pars_$sigmaLott, sigmaFrac = pars_$sigmaFrac,
-              theta = pars_$theta, delta = pars_$delta, gamma = pars_$gamma,
-              barrier = pars_$barrier, nonDecisionTime = pars_$nonDecisionTime, barrierDecay = pars_$barrierDecay,
-              bias = pars_$bias, timeStep = pars_$timeStep, maxIter = pars_$maxIter, epsilon = pars_$epsilon,
-              stimDelay = pars_$stimDelay,
-              EVLeft=EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight= QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = reactionTime)
+    cur_out = fit_trial(d=pars_$d, sigma = pars_$sigma, 
+                        dArb=pars_$dArb, dAttr=pars_$dAttr, sigmaArb = pars_$sigmaArb, sigmaAttr = pars_$sigmaAttr,
+                        dLott=pars_$dLott, dFrac=pars_$dFrac, sigmaLott = pars_$sigmaLott, sigmaFrac = pars_$sigmaFrac,
+                        theta = pars_$theta, delta = pars_$delta, gamma = pars_$gamma,
+                        alpha = pars_$alpha,
+                        barrier = pars_$barrier, nonDecisionTime = pars_$nonDecisionTime, barrierDecay = pars_$barrierDecay,
+                        bias = pars_$bias, timeStep = pars_$timeStep, maxIter = pars_$maxIter, epsilon = pars_$epsilon,
+                        stimDelay = pars_$stimDelay,
+                        EVLeft=data_$EVLeft[i], EVRight = data_$EVRight[i], probFractalDraw=data_$probFractalDraw[i],
+                        leftFractalReward=data_$leftFractalReward[i],rightFractalReward=data_$rightFractalReward[i],
+                        choice=data_$choice[i], reactionTime = data_$reactionTime[i],
+                        QVLeft = QVLeft , QVRight = QVRight) # Note QVs are not from data_ anymore
+    
+    # Append the trial to the rest of the output
+    out = rbind.all.columns(out, cur_out)
+    
+    # Update the QValues that will be fed into the next sim_trial execution
+    QVLeft = cur_out$QVLeft
+    QVRight = cur_out$QVRight
     
   }
   
@@ -154,15 +169,14 @@ fit_task = function(data_, model_name_, pars_, fix_pars_ = list(), fit_trial_lis
 
 # Usage in optim
 # optim(par, get_task_nll, data_, par_names, model_name)
-get_task_nll = function(data_, par_, par_names_, model_name_, fix_pars_){
+get_task_nll = function(data_, par_, par_names_, model_name_, fix_pars_=list()){
   
   # Initialize parameters
   # Different models will have different sets of parameters. Optim will optimize over all the parameters it is passed in
-  
   pars = setNames(as.list(par_), par_names_)
   
   # Get trial likelihoods for the stimuli using the initialized parameters
-  out = fit_task(data_ = data_, model_name_ = model_name_, pars_ = pars, fix_pars_ = fix_pars_)
+  out = fit_task_sequential(data_ = data_, model_name_ = model_name_, pars_ = pars, fix_pars_ = fix_pars_)
   
   nll = -sum(log(out$likelihood+1e-200))
   

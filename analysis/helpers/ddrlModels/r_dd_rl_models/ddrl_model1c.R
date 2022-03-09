@@ -101,7 +101,7 @@ sim_trial = function(d, sigma, delta, alpha, barrierDecay=0, barrier=1, nonDecis
   QVRight = QVRight + alpha*(leftFractalReward - QVRight)
   
   #Organize output 
-  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, d = d, sigma = sigma, alpha = alpha, delta=delta, barrierDecay = barrierDecay, barrier=barrier[time], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, maxIter=maxIter, epsilon = epsilon)
+  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, leftFractalReward = leftFractalReward, rightFractalReward=rightFractalReward, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, d = d, sigma = sigma, alpha = alpha, delta=delta, barrierDecay = barrierDecay, barrier=barrier[time], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, maxIter=maxIter, epsilon = epsilon)
   
   if(debug){
     return(list(out=out, debug_df = debug_df[-1,]))
@@ -110,7 +110,7 @@ sim_trial = function(d, sigma, delta, alpha, barrierDecay=0, barrier=1, nonDecis
   }
 }
 
-fit_trial = function(d, sigma,  alpha, delta, barrierDecay, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, epsilon = 0, approxStateStep = 0.1, ...){
+fit_trial = function(d, sigma,  alpha, delta, barrierDecay = 0, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, epsilon = 0, approxStateStep = 0.1, ...){
   
   # RDV = bias
   
@@ -253,7 +253,7 @@ fit_trial = function(d, sigma,  alpha, delta, barrierDecay, barrier=1, nonDecisi
   QVLeft = QVLeft + alpha*(leftFractalReward - QVLeft)
   QVRight = QVRight + alpha*(leftFractalReward - QVRight)
   
-  out = data.frame(likelihood = likelihood, EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = reactionTime, d = d, sigma = sigma, alpha = alpha, delta=delta, barrierDecay = barrierDecay, barrier=barrier[numTimeSteps], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, epsilon = epsilon)
+  out = data.frame(likelihood = likelihood, EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, leftFractalReward = leftFractalReward, rightFractalReward=rightFractalReward, probFractalDraw = probFractalDraw, choice=choice, reactionTime = reactionTime, d = d, sigma = sigma, alpha = alpha, delta=delta, barrierDecay = barrierDecay, barrier=barrier[numTimeSteps], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, epsilon = epsilon)
   
   
   return(out)

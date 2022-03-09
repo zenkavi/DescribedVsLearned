@@ -28,6 +28,7 @@ set.seed(38573)
 
 ```{r message=FALSE}
 source(paste0(helpers_path,'ddrlModels/sim_task_sequential.R'))
+source(paste0(helpers_path,'ddrlModels/fit_task_sequential.R'))
 test_trial_conditions = read.csv(paste0(helpers_path, 'ddrlModels/cluster_scripts/test_data/test_trial_conditions.csv'))
 ```
 
@@ -35,12 +36,14 @@ Empty lists to store the trial simulators for the forthcoming models.
 
 ```{r}
 sim_trial_list = list()
+fit_trial_list = list()
 ```
 
 ```{r}
 source(paste0(helpers_path, 'ddrlModels/r_dd_rl_models/ddrl_model1c.R'))
 
 sim_trial_list[['model1c']] = sim_trial
+fit_trial_list[['model1c']] = fit_trial
 ```
 
 ```{r}
@@ -65,5 +68,34 @@ Test multiple trial simulation function
 
 ```{r}
 # Simulate choice and RT for the replicated trial conditions
-sim_task_sequential(test_trial_conditions, model_name = "model1c", d = tru_d, sigma = tru_sigma, delta = tru_delta, alpha = tru_alpha)
+sim_data = sim_task_sequential(test_trial_conditions, model_name = "model1c", d = tru_d, sigma = tru_sigma, delta = tru_delta, alpha = tru_alpha)
+sim_data
+```
+
+Test single trial fit function
+
+```{r}
+QVLeft = 0.4
+QVRight = 0.2
+fit_trial(d = tru_d, sigma = tru_sigma, alpha = tru_alpha, delta = tru_delta, 
+         EVLeft = test_trial_conditions$EVLeft[1], EVRight = test_trial_conditions$EVRight[1],
+         leftFractalReward = test_trial_conditions$leftFractalReward[1], rightFractalReward = test_trial_conditions$rightFractalReward[1],
+         probFractalDraw = test_trial_conditions$probFractalDraw[1],
+         QVLeft = QVLeft, QVRight = QVRight, choice = "left", reactionTime = 1.8)
+```
+Test multiple trial fit function
+
+```{r}
+fit_task_sequential(data_=sim_data, model_name_="model1c", pars_=list(d=tru_d, sigma=tru_sigma, alpha = tru_alpha, delta=tru_delta))
+```
+Test optim
+
+```{r}
+optim_out = optim_save(c(.01, .01, .01, .01), get_task_nll, data=sim_data, par_names = c("d", "sigma", "alpha", "delta"), model_name="model1c")
+```
+
+```{r}
+optim_out$par
+```
+
 ```

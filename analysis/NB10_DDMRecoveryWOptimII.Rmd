@@ -15,7 +15,6 @@ Set up environment and load in data
 library(tidyverse)
 library(here)
 library(gridExtra)
-cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 theme_set(theme_classic())
 sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 helpers_path = here('analysis/helpers/')
@@ -36,13 +35,17 @@ Sample plots summarizing the simulations
 ```{r}
 model_name = "model1a"
 data_name = "sim_single_sub_data"
-optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/sim0')
+optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/sim0/')
 
 ddm_par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path)
 ```
 
 ```{r}
-ddm_par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path, diff_pct_plots_ = TRUE)
+ddm_par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path, diff_pct_plots_ = FALSE, start_end_scatter_ = TRUE)
+```
+
+```{r}
+ddm_par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path, diff_pct_plots_ = FALSE, par_hist_= TRUE)
 ```
 
 To get a sense of recovery success for different parameter combinations I created 20 random datasets using the following steps:   
@@ -61,8 +64,8 @@ To get a sense of recovery success for different parameter combinations I create
   - `Delta` and `gamma` are not always the worst recovered parameters. There are cases, albeit fewer, where `d` and `sigma` are not recovered well either (7 of 20 datasets). A quick look suggests these are cases with very small `sigma`.
   - [Percentage of difference by true value](../outputs/fig/ddm_recovery_sim1_pct_diff_by_true_value.pdf): no strong relationship unless d or sigma are very small, in which case they are not recovered.
 - Correlation between recovered parameters
-  - [Delta and gamma](../outputs/fig/ddm_recovery_sim1_delta_gamma_cor.pdf.pdf)
-  - [d and sigma](../outputs/fig/ddm_recovery_sim1_d_sigma_cor.pdf.pdf)
+  - [Delta and gamma](../outputs/fig/ddm_recovery_sim1_delta_gamma_cor.pdf)
+  - [d and sigma](../outputs/fig/ddm_recovery_sim1_d_sigma_cor.pdf)
 
 ```{r eval=FALSE}
 model_name = "model1a"
@@ -215,7 +218,7 @@ data.frame(prob = seq(0,1,.1)) %>%
 ```{r}
 model_name = "model1a"
 data_prefix = "sim_single_sub_data"
-optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/sim2')
+optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/sim2/')
 true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
 fig_out_path = paste0(here(), '/outputs/fig/')
 

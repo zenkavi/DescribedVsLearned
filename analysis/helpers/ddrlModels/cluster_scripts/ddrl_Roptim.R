@@ -38,7 +38,7 @@ data = read.csv(paste0(helpers_path, 'cluster_scripts/', opt$data, '.csv'))
 start_vals = as.numeric(strsplit(opt$start_vals, ",")[[1]])
 
 model = opt$model
-source(paste0(helpers_path, 'r_dd_rl_models/ddm_', model,'.R'))
+source(paste0(helpers_path, 'r_dd_rl_models/ddrl_', model,'.R'))
 sim_trial_list = list()
 fit_trial_list = list()
 sim_trial_list[[model]] = sim_trial

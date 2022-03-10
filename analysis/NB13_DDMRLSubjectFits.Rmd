@@ -1,0 +1,51 @@
+---
+title: "Experience vs. description based decision-making project: DDM parameter recovery multiple round optimization"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: 'hide'
+---
+
+# Setup
+
+Set up environment and load in data
+
+```{r include=FALSE, message=FALSE}
+library(here)
+helpers_path = here('analysis/helpers/')
+cpueaters_path = '/Users/zeynepenkavi/CpuEaters/DescribedVsLearned_beh/analysis/helpers/'
+fig_out_path = paste0(here(),'/outputs/fig/')
+true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
+```
+
+# Fit to subject data: First RL then DDM
+
+## Parameter distributions
+
+Distribution of converged values for each subject (25 histograms per parameter)
+
+```{r}
+
+```
+
+Distribution of best fitting parameter across subjects (one histogram per parameter with 25 values)
+
+```{r}
+
+```
+
+# Fit to subject data: RL+DDM
+
+## Parameter distributions
+
+```{r}
+
+```
+
+# Comparison of ddrl alpha's to hierarchical rl alpha's
+
+```{r}
+
+```
+

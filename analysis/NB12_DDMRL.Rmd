@@ -98,4 +98,13 @@ optim_out = optim_save(c(.01, .01, .01, .01), get_task_nll, data=sim_data, par_n
 optim_out$par
 ```
 
+# Grid search
+
+true_ds = c(.06 , .5), true_sigmas = c(.08, .3), true_alphas = c(.1, .5), true_deltas = c(.1, 1, 3)
+
+## Results    
+
+```{r}
+
 ```
+

@@ -6,8 +6,8 @@ library(tidyverse)
 library(visualMLE)
 
 # Note this will be run in docker container so /ddModels must be mounted
-helpers_path = here("/ddModels/")
-source(paste0(helpers_path,'fit_task.R'))
+helpers_path = here("/ddrlModels/")
+source(paste0(helpers_path,'fit_task_sequential.R'))
 
 
 #######################
@@ -38,7 +38,7 @@ data = read.csv(paste0(helpers_path, 'cluster_scripts/', opt$data, '.csv'))
 start_vals = as.numeric(strsplit(opt$start_vals, ",")[[1]])
 
 model = opt$model
-source(paste0(helpers_path, 'r_ddm_models/ddm_', model,'.R'))
+source(paste0(helpers_path, 'r_dd_rl_models/ddm_', model,'.R'))
 sim_trial_list = list()
 fit_trial_list = list()
 sim_trial_list[[model]] = sim_trial
@@ -69,7 +69,7 @@ if(length(fix_par_names)>0){
   }
   fix_par_vals = as.numeric(strsplit(opt$fix_par_vals, ",")[[1]])
   fix_pars = setNames(as.list(fix_par_vals), fix_par_names)
-
+  
 } else {
   fix_pars = list()
 }
@@ -92,26 +92,26 @@ if(num_optim_rounds>1){
 
 if(num_optim_rounds == 1){
   optim_out = optim_save(par = start_vals, get_task_nll, data_= data, par_names_ = par_names, model_name_ = model, fix_pars_ = fix_pars, control = list(maxit=max_iter))
-
+  
   # This is too specific for two round only and fixing d and sigma together. Should extend to make more general.
 } else if (num_optim_rounds == 2){
   first_start_vals = start_vals[1:length(par_names)]
   first_par_names = par_names
   first_fix_pars = fix_pars
-
+  
   print("Beginning first round of optim...")
-
+  
   first_optim_out = optim_save(par = first_start_vals, get_task_nll, data_= data, par_names_ = first_par_names, model_name_ = model, fix_pars_ = first_fix_pars, control = list(maxit=max_iter))
-
+  
   second_start_vals = start_vals[(length(par_names)+1):length(start_vals)]
   second_par_names = fix_par_names
   second_fix_pars = setNames(as.list(first_optim_out$par), first_par_names)
-
+  
   print("Beginning second round of optim...")
   second_optim_out = optim_save(par = second_start_vals, get_task_nll, data_= data, par_names_ = second_par_names, model_name_ = model, fix_pars_ = second_fix_pars, control = list(maxit=max_iter))
-
+  
   # Reorganize both optimization outputs
-
+  
   # This can only handle d, sigma and delta and in that order
   comb_iterations_df = first_optim_out$iterations_df %>%
     mutate(Param3 = fix_par_vals) %>%

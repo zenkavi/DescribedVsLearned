@@ -126,9 +126,30 @@ true_ds = c(.06 , .5), true_sigmas = c(.08, .3), true_alphas = c(.1, .5), true_d
 
 ## Results    
 
+```{r}
+source(paste0(helpers_path,'optimPostProcess/par_recovery_report.R'))
+cpueaters_paths = '/Users/zeynepenkavi/CpuEaters/DescribedVsLearned_beh/analysis/helpers/'
+```
+
 How many iterations?
 
 ```{r}
+model_name = "model1c"
+data_prefix = "sim_single_sub_data"
+optim_out_path = paste0(cpueaters_paths, 'ddrlModels/cluster_scripts/optim_out/sim1/')
+true_pars_path = paste0(helpers_path, 'ddrlModels/cluster_scripts/test_data/')
+param_dict = data.frame(Param1="d", Param2="sigma", Param3="alpha", Param4="delta", Result="nll")
 
+out_iters = data.frame()
+
+for(i in 1:24){
+  cur_out = get_optim_out(model_ = model_name, data_=paste0(data_prefix, i), optim_out_path_ = optim_out_path, iters= TRUE)
+  cur_out$dataset = i
+  cur_out$true_pars = get_true_pars(data_=paste0(data_prefix, i), true_pars_path_ =  true_pars_path, return_str_ = TRUE)
+  out_iters = rbind.all.columns(out_iters, cur_out)
+}
+
+out_iters = out_iters %>%
+  rename(d = Param1, sigma = Param2, alpha = Param3, delta = Param4, nll = Result)
 ```
 

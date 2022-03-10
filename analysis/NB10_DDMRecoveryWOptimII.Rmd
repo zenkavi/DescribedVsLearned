@@ -19,7 +19,7 @@ theme_set(theme_classic())
 sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 helpers_path = here('analysis/helpers/')
 cpueaters_paths = '/Users/zeynepenkavi/CpuEaters/DescribedVsLearned_beh/analysis/helpers/'
-source(paste0(helpers_path, 'ddModels/ddm_par_recovery_report.R'))
+source(paste0(helpers_path, 'optimPostProcess/par_recovery_report.R'))
 
 set.seed(38573)
 ```
@@ -36,16 +36,18 @@ Sample plots summarizing the simulations
 model_name = "model1a"
 data_name = "sim_single_sub_data"
 optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/sim0/')
+true_pars_path = paste0(helpers_paths, 'ddModels/cluster_scripts/test_data/')
+param_dict = data.frame(Param1="d", Param2="sigma", Param3="delta", Param4="gamma", Result="nll")
 
-ddm_par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path)
+par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path, true_pars_path=true_pars_path, param_dict_=param_dict)
 ```
 
 ```{r}
-ddm_par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path, diff_pct_plots_ = FALSE, start_end_scatter_ = TRUE)
+par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path, diff_pct_plots_ = FALSE, start_end_scatter_ = TRUE, true_pars_path=true_pars_path, param_dict_=param_dict)
 ```
 
 ```{r}
-ddm_par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path, diff_pct_plots_ = FALSE, par_hist_= TRUE)
+par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path, diff_pct_plots_ = FALSE, par_hist_= TRUE, true_pars_path=true_pars_path, param_dict_=param_dict)
 ```
 
 To get a sense of recovery success for different parameter combinations I created 20 random datasets using the following steps:   
@@ -225,7 +227,7 @@ fig_out_path = paste0(here(), '/outputs/fig/')
 dg_grid_diff_pct = data.frame()
 
 for(i in 21:45){
-  cur_out = ddm_par_recovery_report(model_ = model_name, data_ = paste0(data_prefix, i), optim_out_path_=optim_out_path, diff_pct_plots_ = TRUE)$diff_pct_data
+  cur_out = par_recovery_report(model_ = model_name, data_ = paste0(data_prefix, i), optim_out_path_=optim_out_path, diff_pct_plots_ = TRUE, true_pars_path=true_pars_path, param_dict_=param_dict)$diff_pct_data
   cur_out$dataset = i-20
   dg_grid_diff_pct = rbind.all.columns(dg_grid_diff_pct, cur_out)
 }

@@ -26,7 +26,7 @@ cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00"
 theme_set(theme_classic())
 sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 
-source(paste0(helpers_path, 'ddModels/ddm_par_recovery_report.R'))
+source(paste0(helpers_path, 'optimPostProcess/par_recovery_report.R'))
 
 source(paste0(helpers_path, 'ddModels/fit_task.R'))
 sim_trial_list = list()
@@ -66,7 +66,7 @@ for(i in 1:length(data_nums)){
   cur_data_num = data_nums[i]
   for(j in 1:length(sim_types)){
     cur_sim_type = sim_types[j]
-    cur_out = ddm_par_recovery_report(model_ = model, data_ = paste0(data_suffix,cur_data_num), optim_out_path_= paste0(optim_out_path, cur_sim_type, '/'), true_pars_path_ = true_pars_path, diff_pct_plots_ = TRUE)$diff_pct_data
+    cur_out = par_recovery_report(model_ = model, data_ = paste0(data_suffix,cur_data_num), optim_out_path_= paste0(optim_out_path, cur_sim_type, '/'), true_pars_path_ = true_pars_path, diff_pct_plots_ = TRUE)$diff_pct_data
     cur_out$sim_type = cur_sim_type
     cur_out$data_num = as.character(cur_data_num)
     comp_data = rbind.all.columns(comp_data, cur_out)

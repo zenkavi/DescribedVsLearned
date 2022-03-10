@@ -2,9 +2,8 @@ library(tidyverse)
 theme_set(theme_classic())
 library(here)
 helpers_path = here('analysis/helpers/')
-cpueaters_path = '/Users/zeynepenkavi/CpuEaters/DescribedVsLearned_beh/analysis/helpers/'
-source(paste0(helpers_path, 'ddModels/get_optim_out.R'))
-source(paste0(helpers_path, 'ddModels/get_true_pars.R'))
+source(paste0(helpers_path, 'optimPostProcess/get_optim_out.R'))
+source(paste0(helpers_path, 'optimPostProcess/get_true_pars.R'))
 
 
 rbind.all.columns <- function(x, y) {
@@ -38,14 +37,11 @@ rename_cols = function(rename_dict, rename_df){
   return(rename_df)
 }
 
-ddm_par_recovery_report = function(model_, data_, optim_out_path_= paste0(cpueaters_path, 'ddModels/cluster_scripts/optim_out/'), true_pars_path_ = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/'), diff_pct_plots_ = TRUE, start_end_scatter_ = FALSE, par_hist_ = FALSE){
+par_recovery_report = function(model_, data_, optim_out_path_, true_pars_path_, diff_pct_plots_ = TRUE, start_end_scatter_ = FALSE, par_hist_ = FALSE, param_dict_ = data.frame(Param1="d", Param2="sigma", Param3="delta", Param4="gamma", Result="nll")){
   
   model_name = model_
   data_name = data_
   optim_out_path = optim_out_path_
-  
-  # Temporary solution to renaming parameters for outputs of models with different number of parameters
-  param_dict = data.frame(Param1="d", Param2="sigma", Param3="delta", Param4="gamma", Result="nll")
   
   ###########################
   # Get true parameters
@@ -72,7 +68,7 @@ ddm_par_recovery_report = function(model_, data_, optim_out_path_= paste0(cpueat
     
     if(nrow(out) > 0){
       
-      out = rename_cols(param_dict, out)
+      out = rename_cols(param_dict_, out)
       
       diff_pct_data = out %>%
         gather(key, est) %>%
@@ -100,7 +96,7 @@ ddm_par_recovery_report = function(model_, data_, optim_out_path_= paste0(cpueat
     
     if(nrow(out)> 0){
       
-      out = rename_cols(param_dict, out)
+      out = rename_cols(param_dict_, out)
       par_names = names(out)[!names(out) %in% c("nll","Iteration","kernel")]  
       
       for(i in 1:length(par_names)){

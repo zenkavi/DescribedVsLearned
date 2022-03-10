@@ -18,7 +18,7 @@ option_list = list(
   make_option("--start_vals", type="character"),
   make_option("--model", type="character"),
   make_option("--max_iter", type="integer", default = as.integer(500)),
-  make_option("--par_names", type="character", default = c("d", "sigma", "delta", "gamma")),
+  make_option("--par_names", type="character", default = c("d", "sigma", "alpha", "delta")),
   make_option("--fix_par_names", type="character"),
   make_option("--fix_par_vals", type="character"),
   make_option("--out_path", type="character", default = 'sim0'),

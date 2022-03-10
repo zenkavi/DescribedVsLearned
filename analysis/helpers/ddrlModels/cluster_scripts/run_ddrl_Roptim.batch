@@ -1,0 +1,15 @@
+#!/bin/bash
+
+#SBATCH -J ddrl-Roptim-{MODEL}_%j
+#SBATCH -c 4
+
+# Outputs ----------------------------------
+#SBATCH -o /shared/.out/ddrl-Roptim-{MODEL}_%j.out
+#SBATCH -e /shared/.err/ddrl-Roptim-{MODEL}_%j.err
+# ------------------------------------------
+
+export DATA_PATH=/shared/ddrlModels
+
+docker run --rm -v $DATA_PATH:/ddrlModels \
+zenkavi/roptim:0.0.4 Rscript --vanilla /ddrlModels/cluster_scripts/ddrl_Roptim.R --model {MODEL} --start_vals {START_VALS} --data {DATA} --par_names={PAR_NAMES} --out_path={OUT_PATH} \
+--num_optim_rounds {NUM_OPTIM_ROUNDS} --fix_par_names={FIX_PAR_NAMES} --fix_par_vals {FIX_PAR_VALS}

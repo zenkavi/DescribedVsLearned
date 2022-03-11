@@ -4,6 +4,7 @@
 
 # Rscript --vanilla make_ddm_Roptim_startVals.R --n_vals 1000 --n_datasets 25 --count_start 20
 # Rscript --vanilla make_ddm_Roptim_startVals.R --n_vals 500 --n_datasets 36 --count_start 45 --par_names d,sigma,delta
+# Rscript --vanilla make_ddm_Roptim_startVals.R --n_vals 250 --n_datasets 25 --count_start 0 --par_names d,sigma,delta --fn_prefix sub_start_vals
 
 # Push these back to s3
 # docker run --rm -it -v ~/.aws:/root/.aws -v $(pwd):/cluster_scripts amazon/aws-cli s3 sync /cluster_scripts s3://described-vs-experienced/ddModels/cluster_scripts 
@@ -26,7 +27,8 @@ option_list = list(
   make_option("--n_datasets", type="integer", default = 20),
   make_option("--par_names", type="character", default = c("d", "sigma", "delta", "gamma")),
   make_option("--out_path", type="character", default = 'ddModels/cluster_scripts/start_vals/'),
-  make_option("--count_start", type="integer", default = 0)
+  make_option("--count_start", type="integer", default = 0),
+  make_option("--fn_prefix", type="character", default='ddm_Roptim_start_vals')
 ) 
 
 opt_parser = OptionParser(option_list=option_list)
@@ -53,6 +55,8 @@ if(length(par_names) == 1){
 out_path = paste0(helpers_path, opt$out_path)
 
 count_start = opt$count_start
+
+fn_prefix = opt$fn_prefix
 
 #######################
 # Generate start values
@@ -82,6 +86,6 @@ for(i in 1:n_datasets){
   #######################
   # Save output
   #######################
-  write.table(out, file = paste0(out_path, 'ddm_Roptim_start_vals', i+count_start,'.csv'), row.names = F, col.names = F, sep=',')
+  write.table(out, file = paste0(out_path, fn_prefix, i+count_start,'.csv'), row.names = F, col.names = F, sep=',')
 }
 

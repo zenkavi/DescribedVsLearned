@@ -44,7 +44,7 @@ for(i in 1:length(true_ds)){
         
         true_delta = true_deltas[l]
         
-        sim_data = sim_task_sequential(sub_data, model_name = model, d = true_d, sigma = true_sigma, alpga = true_alpha, delta = true_delta) %>% drop_na()
+        sim_data = sim_task_sequential(sub_data, model_name = model, d = true_d, sigma = true_sigma, alpha = true_alpha, delta = true_delta) %>% drop_na()
         
         write.csv(sim_data, file = paste0(out_path, 'sim_single_sub_data', count,'.csv'), row.names = F)
         count = count+1

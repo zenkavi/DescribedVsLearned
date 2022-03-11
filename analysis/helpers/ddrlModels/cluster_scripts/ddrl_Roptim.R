@@ -14,7 +14,7 @@ source(paste0(helpers_path,'fit_task_sequential.R'))
 # Parse input arguments
 #######################
 option_list = list(
-  make_option("--data", type="character", default='test_data/test_trial_conditions'),
+  make_option("--data", type="character"),
   make_option("--start_vals", type="character"),
   make_option("--model", type="character"),
   make_option("--max_iter", type="integer", default = as.integer(500)),
@@ -57,6 +57,7 @@ if(length(par_names) == 1){
     par_names = strsplit(par_names, ',')[[1]]
   }
 }
+print(par_names)
 
 # Reprocess bash script default
 fix_par_names = opt$fix_par_names
@@ -72,7 +73,7 @@ if(length(fix_par_names)>0){
   }
   fix_par_vals = as.numeric(strsplit(opt$fix_par_vals, ",")[[1]])
   fix_pars = setNames(as.list(fix_par_vals), fix_par_names)
-  
+
 } else {
   fix_pars = list()
 }
@@ -94,27 +95,32 @@ if(num_optim_rounds>1){
 #######################
 
 if(num_optim_rounds == 1){
+
+  print(paste0("Beginning single round optim for ", data_suffix))
+
   optim_out = optim_save(par = start_vals, get_task_nll, data_= data, par_names_ = par_names, model_name_ = model, fix_pars_ = fix_pars, control = list(maxit=max_iter))
-  
+
+  print(paste0(nrow(optim_out$iterations_df), " iterations to convergence"))
+
   # This is too specific for two round only and fixing d and sigma together. Should extend to make more general.
 } else if (num_optim_rounds == 2){
   first_start_vals = start_vals[1:length(par_names)]
   first_par_names = par_names
   first_fix_pars = fix_pars
-  
+
   print("Beginning first round of optim...")
-  
+
   first_optim_out = optim_save(par = first_start_vals, get_task_nll, data_= data, par_names_ = first_par_names, model_name_ = model, fix_pars_ = first_fix_pars, control = list(maxit=max_iter))
-  
+
   second_start_vals = start_vals[(length(par_names)+1):length(start_vals)]
   second_par_names = fix_par_names
   second_fix_pars = setNames(as.list(first_optim_out$par), first_par_names)
-  
+
   print("Beginning second round of optim...")
   second_optim_out = optim_save(par = second_start_vals, get_task_nll, data_= data, par_names_ = second_par_names, model_name_ = model, fix_pars_ = second_fix_pars, control = list(maxit=max_iter))
-  
+
   # Reorganize both optimization outputs
-  
+
   # This can only handle d, sigma and delta and in that order
   comb_iterations_df = first_optim_out$iterations_df %>%
     mutate(Param3 = fix_par_vals) %>%

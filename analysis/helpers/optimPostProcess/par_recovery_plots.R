@@ -3,13 +3,13 @@
 #######################
 
 # For scatter plots
-# Rscript --vanilla plot_ddm_Roptim.R --data_names sim_single_sub_data1,sim_single_sub_data2,sim_single_sub_data3,sim_single_sub_data4,sim_single_sub_data5,sim_single_sub_data6,sim_single_sub_data7,sim_single_sub_data8,sim_single_sub_data9,sim_single_sub_data10,sim_single_sub_data11,sim_single_sub_data12,sim_single_sub_data13,sim_single_sub_data14,sim_single_sub_data15,sim_single_sub_data16 --scatter
+# Rscript --vanilla par_recovery_plots.R --data_names sim_single_sub_data1,sim_single_sub_data2,sim_single_sub_data3,sim_single_sub_data4,sim_single_sub_data5,sim_single_sub_data6,sim_single_sub_data7,sim_single_sub_data8,sim_single_sub_data9,sim_single_sub_data10,sim_single_sub_data11,sim_single_sub_data12,sim_single_sub_data13,sim_single_sub_data14,sim_single_sub_data15,sim_single_sub_data16 --scatter
 
 # For histograms
-# Rscript --vanilla plot_ddm_Roptim.R --histogram --data_names sim_single_sub_data1,sim_single_sub_data2,sim_single_sub_data3,sim_single_sub_data4,sim_single_sub_data5,sim_single_sub_data6,sim_single_sub_data7,sim_single_sub_data8,sim_single_sub_data9,sim_single_sub_data10,sim_single_sub_data11,sim_single_sub_data12,sim_single_sub_data13,sim_single_sub_data14,sim_single_sub_data15,sim_single_sub_data16,sim_single_sub_data17,sim_single_sub_data18,sim_single_sub_data19,sim_single_sub_data20
+# Rscript --vanilla par_recovery_plots.R --histogram --data_names sim_single_sub_data1,sim_single_sub_data2,sim_single_sub_data3,sim_single_sub_data4,sim_single_sub_data5,sim_single_sub_data6,sim_single_sub_data7,sim_single_sub_data8,sim_single_sub_data9,sim_single_sub_data10,sim_single_sub_data11,sim_single_sub_data12,sim_single_sub_data13,sim_single_sub_data14,sim_single_sub_data15,sim_single_sub_data16,sim_single_sub_data17,sim_single_sub_data18,sim_single_sub_data19,sim_single_sub_data20
 
 # For diff_pct
-# Rscript --vanilla plot_ddm_Roptim.R --diff_pct --data_names sim_single_sub_data46,sim_single_sub_data47,sim_single_sub_data48,sim_single_sub_data49,sim_single_sub_data50,sim_single_sub_data51,sim_single_sub_data52,sim_single_sub_data53,sim_single_sub_data54,sim_single_sub_data55,sim_single_sub_data56,sim_single_sub_data57,sim_single_sub_data58,sim_single_sub_data59,sim_single_sub_data60,sim_single_sub_data61,sim_single_sub_data62,sim_single_sub_data63,sim_single_sub_data64,sim_single_sub_data65,sim_single_sub_data66,sim_single_sub_data67,sim_single_sub_data68,sim_single_sub_data69,sim_single_sub_data70,sim_single_sub_data71,sim_single_sub_data72,sim_single_sub_data73,sim_single_sub_data74,sim_single_sub_data75,sim_single_sub_data76,sim_single_sub_data77,sim_single_sub_data78,sim_single_sub_data79,sim_single_sub_data80,sim_single_sub_data81 --fig_fn ddm_recovery_sim3 --optim_out_path="ddModels/cluster_scripts/optim_out/sim3/" --model model1c
+# Rscript --vanilla par_recovery_plots.R --diff_pct --data_names sim_single_sub_data1,sim_single_sub_data2,sim_single_sub_data3,sim_single_sub_data4,sim_single_sub_data5,sim_single_sub_data6,sim_single_sub_data7,sim_single_sub_data8,sim_single_sub_data9,sim_single_sub_data10,sim_single_sub_data11,sim_single_sub_data12,sim_single_sub_data13,sim_single_sub_data14,sim_single_sub_data15,sim_single_sub_data16,sim_single_sub_data17,sim_single_sub_data18,sim_single_sub_data19,sim_single_sub_data20,sim_single_sub_data21,sim_single_sub_data22,sim_single_sub_data23,sim_single_sub_data24 --fig_fn ddrl_recovery_sim1 --optim_out_path="ddrlModels/cluster_scripts/optim_out/sim1/" --true_pars_path="ddrlModels/cluster_scripts/test_data/" --model model1c
 
 #######################
 # Setup
@@ -27,6 +27,8 @@ cpueaters_paths = '/Users/zeynepenkavi/CpuEaters/DescribedVsLearned_beh/analysis
 option_list = list(
   make_option("--data_names", type="character", default = c('sim_single_sub_data1', 'sim_single_sub_data2')),
   make_option("--optim_out_path", type="character", default = 'ddModels/cluster_scripts/optim_out/'),
+  make_option("--true_pars_path", type="character", default = 'ddModels/cluster_scripts/test_data/'),
+  make_option("--par_names", type="character", default = c("d", "sigma", "alpha", "delta")),
   make_option("--fig_out_path", type="character", default = '/outputs/fig/'),
   make_option("--fig_fn", type="character", default = 'ddm_recovery_sim0'),
   make_option("--model", type="character", default = 'model1a'),
@@ -50,12 +52,23 @@ if(length(data_names) == 1){
   }
 }
 
+optim_out_path = paste0(cpueaters_paths, opt$optim_out_path)
+true_pars_path = paste0(helpers_path, opt$true_pars_path)
+
+par_names = opt$par_names
+# If using string input convert to vector
+if(length(par_names) == 1){
+  if(grepl(',', par_names)){
+    par_names = gsub(" ", "", par_names) #remove spaces
+    par_names = strsplit(par_names, ',')[[1]]
+  }
+}
+param_dict = data.frame(Param1=par_names[1], Param2=par_names[2], Param3=par_names[3], Param4=par_names[4], Result="nll")
+
 # Must end with /
 # out_path = opt$out_data
 fig_out_path = paste0(here(), opt$fig_out_path)
 fig_fn = opt$fig_fn
-
-optim_out_path = paste0(cpueaters_paths, opt$optim_out_path)
 
 model = opt$model
 
@@ -67,8 +80,8 @@ diff_pct = opt$diff_pct
 # Loop through datasets
 #######################
 
-source(paste0(helpers_path, 'ddModels/ddm_par_recovery_report.R'))
-sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
+source(paste0(helpers_path, 'optimPostProcess/par_recovery_report.R'))
+# sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 
 n_datasets = length(data_names)
 
@@ -79,7 +92,7 @@ diff_pct_plots = list()
 for(i in 1:n_datasets){
   
   if(diff_pct){
-    tmp = ddm_par_recovery_report(model_ = model, data_ = data_names[i], optim_out_path_ = optim_out_path, diff_pct_plots_ = TRUE)
+    tmp = par_recovery_report(model_ = model, data_ = data_names[i], optim_out_path_ = optim_out_path, diff_pct_plots_ = TRUE, true_pars_path_=true_pars_path, param_dict_=param_dict)
     
     if(length(tmp) > 0){
       cur_diff_pct_plot = tmp$plots[[1]]
@@ -89,7 +102,7 @@ for(i in 1:n_datasets){
     }
     
   } else if (scatter){
-    tmp = ddm_par_recovery_report(model_ = model, data_ = data_names[i], optim_out_path_ = optim_out_path, diff_pct_plots_ = FALSE, start_end_scatter_ = TRUE)
+    tmp = par_recovery_report(model_ = model, data_ = data_names[i], optim_out_path_ = optim_out_path, diff_pct_plots_ = FALSE, start_end_scatter_ = TRUE, true_pars_path_=true_pars_path, param_dict_=param_dict)
     
     if(length(tmp) > 0){
       cur_scatter_row = arrangeGrob(grobs=tmp$plots, nrow=1, top = tmp$true_pars)
@@ -99,7 +112,7 @@ for(i in 1:n_datasets){
     }
     
   } else if (histogram){
-    tmp = ddm_par_recovery_report(model_ = model, data_ = data_names[i], optim_out_path_ = optim_out_path,  diff_pct_plots_ = FALSE, par_hist_ = TRUE)
+    tmp = par_recovery_report(model_ = model, data_ = data_names[i], optim_out_path_ = optim_out_path,  diff_pct_plots_ = FALSE, par_hist_ = TRUE, true_pars_path_=true_pars_path, param_dict_=param_dict)
     
     if(length(tmp) > 0){
       cur_hist_row = arrangeGrob(grobs=tmp$plots, nrow=1, top = tmp$true_pars)

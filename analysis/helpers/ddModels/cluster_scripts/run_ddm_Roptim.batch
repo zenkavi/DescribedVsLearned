@@ -11,7 +11,7 @@
 export DATA_PATH=/shared/ddModels
 
 docker run --rm -v $DATA_PATH:/ddModels \
-zenkavi/roptim:0.0.4 Rscript --vanilla /ddModels/cluster_scripts/ddm_Roptim.R --model {MODEL} --start_vals {START_VALS} --data {DATA} --par_names={PAR_NAMES} --out_path={OUT_PATH} \
+zenkavi/roptim:0.0.4 Rscript --vanilla /ddModels/cluster_scripts/ddm_Roptim.R --model {MODEL} --start_vals={START_VALS} --data={DATA} --par_names={PAR_NAMES} --out_path={OUT_PATH} \
 --num_optim_rounds {NUM_OPTIM_ROUNDS} --fix_par_names={FIX_PAR_NAMES} --fix_par_vals {FIX_PAR_VALS}
 
 # upload to s3

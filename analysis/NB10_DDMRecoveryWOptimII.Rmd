@@ -39,15 +39,15 @@ optim_out_path = paste0(cpueaters_paths, 'ddModels/cluster_scripts/optim_out/sim
 true_pars_path = paste0(helpers_paths, 'ddModels/cluster_scripts/test_data/')
 param_dict = data.frame(Param1="d", Param2="sigma", Param3="delta", Param4="gamma", Result="nll")
 
-par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path, true_pars_path=true_pars_path, param_dict_=param_dict)
+par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path, true_pars_path_=true_pars_path, param_dict_=param_dict)
 ```
 
 ```{r}
-par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path, diff_pct_plots_ = FALSE, start_end_scatter_ = TRUE, true_pars_path=true_pars_path, param_dict_=param_dict)
+par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path, diff_pct_plots_ = FALSE, start_end_scatter_ = TRUE, true_pars_path_=true_pars_path, param_dict_=param_dict)
 ```
 
 ```{r}
-par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path, diff_pct_plots_ = FALSE, par_hist_= TRUE, true_pars_path=true_pars_path, param_dict_=param_dict)
+par_recovery_report(model_ = model_name, data_ = data_name, optim_out_path_=optim_out_path, diff_pct_plots_ = FALSE, par_hist_= TRUE, true_pars_path_=true_pars_path, param_dict_=param_dict)
 ```
 
 To get a sense of recovery success for different parameter combinations I created 20 random datasets using the following steps:   

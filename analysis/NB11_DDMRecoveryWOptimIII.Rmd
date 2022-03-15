@@ -111,7 +111,7 @@ plot_heatmaps = function(x_par = "d", y_par = "sigma", fill_par = "delta", plt_s
     ggplot(aes_string(x=x_par, y=y_par))+
     geom_tile(aes(fill=median_diff_clipped))+
     facet_grid(.~true_val)+
-    theme(legend.position = "bottom")+
+    theme(legend.position = "bottom", legend.margin=margin(0,0,0,0), legend.box.margin=margin(-10,-10,0,-10))+
     labs(x=x_par, y=y_par, fill=paste0("Median % difference between true and estimated ", fill_par))
   return(p)
 }
@@ -128,12 +128,9 @@ How bad was d recovery for each combination of delta and sigma (3 by 4 heatmap) 
 How bad was sigma recovery for each combination of d and delta (3 by 4 heatmap) panels for each value of sigma (3 panels)  
 
 ```{r eval=FALSE}
-p1 = plot_heatmaps(x_par = "d", y_par = "sigma", fill_par = "delta") +
-  theme(legend.margin=margin(0,0,0,0), legend.box.margin=margin(-10,-10,0,-10))
-p2 = plot_heatmaps(fill_par = "d", y_par = "sigma", x_par = "delta") +
-  theme(legend.margin=margin(0,0,0,0), legend.box.margin=margin(-10,-10,0,-10))
-p3 = plot_heatmaps(y_par = "d", fill_par = "sigma", x_par = "delta") +
-  theme(legend.margin=margin(0,0,0,0), legend.box.margin=margin(-10,-10,0,-10))
+p1 = plot_heatmaps(x_par = "d", y_par = "sigma", fill_par = "delta")
+p2 = plot_heatmaps(fill_par = "d", y_par = "sigma", x_par = "delta")
+p3 = plot_heatmaps(y_par = "d", fill_par = "sigma", x_par = "delta")
 ```
 
 ```{r eval=FALSE}
@@ -166,12 +163,9 @@ How bad was d recovery for each combination of delta and sigma (3 by 4 heatmap) 
 How bad was sigma recovery for each combination of d and delta (3 by 4 heatmap) panels for each value of sigma (3 panels)  
 
 ```{r eval=FALSE}
-p1 = plot_heatmaps(x_par = "d", y_par = "sigma", fill_par = "delta", plt_sim_type = "sim3b") +
-  theme(legend.margin=margin(0,0,0,0), legend.box.margin=margin(-10,-10,0,-10))
-p2 = plot_heatmaps(fill_par = "d", y_par = "sigma", x_par = "delta", plt_sim_type = "sim3b") +
-  theme(legend.margin=margin(0,0,0,0), legend.box.margin=margin(-10,-10,0,-10))
-p3 = plot_heatmaps(y_par = "d", fill_par = "sigma", x_par = "delta", plt_sim_type = "sim3b") +
-  theme(legend.margin=margin(0,0,0,0), legend.box.margin=margin(-10,-10,0,-10))
+p1 = plot_heatmaps(x_par = "d", y_par = "sigma", fill_par = "delta", plt_sim_type = "sim3b") 
+p2 = plot_heatmaps(fill_par = "d", y_par = "sigma", x_par = "delta", plt_sim_type = "sim3b") 
+p3 = plot_heatmaps(y_par = "d", fill_par = "sigma", x_par = "delta", plt_sim_type = "sim3b")
 ```
 
 ```{r eval=FALSE}

@@ -7,158 +7,145 @@ output:
     code_folding: 'hide'
 ---
 
-Note: This only takes fractal rewards into account. The overall trial reward is not included anywhere.
+# Important note
 
-Before building a model including trial reward first check whether this has any behavioral effect.
-What behavioral effect could/should it have? 
-It shouldn't affect learning, fractal rewards only depend on their own probabilities. 
-It shouldn't affect choice separate from all the other components of EV, QV and their weighted sum based on probFractalDraw because it is a direct function of those components.
+This RL model only takes fractal rewards into account and it does so for both fractals with the same weight. The overall trial reward is not included anywhere. THere is also no bias about learning e.g. faster for chosen fractal compared to unchosen fractal.  
 
-It might affect perseverance, ie choosing the same side if a reward was received for the previous trial.
+Pre-checks to determine whether either of these factors warrant their own RL model:  
+
+**Overall trial reward**:  
+What behavioral effect could/should it have?   
+It shouldn't affect learning, fractal rewards only depend on their own probabilities.   
+It shouldn't affect choice separate from all the other components of EV, QV and their weighted sum based on probFractalDraw because it is a direct function of those components.  
+It might affect perseverance, ie choosing the same side if a reward was received for the previous trial.  
+
+**Bias in learning**
+What sort of behavioral effect might this have?  
+
+# DDRL model 1c
+
+Parameters: d, sigma, alpha, delta    
+Single drift rate for bundle value  
+Single learning rate for both fractals  
+Single probability distortion parameter distorting true relevance of fractals  
 
 ```{r include=FALSE, message=FALSE}
 library(tidyverse)
 library(here)
 theme_set(theme_classic())
-sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 helpers_path = here('analysis/helpers/')
-library(visualMLE)
-set.seed(38573)
+fig_out_path = paste0(here(),'/outputs/fig/')
+library(gridExtra)
+
 ```
 
-```{r message=FALSE}
-source(paste0(helpers_path,'ddrlModels/sim_task_sequential.R'))
-source(paste0(helpers_path,'ddrlModels/fit_task_sequential.R'))
-test_trial_conditions = read.csv(paste0(helpers_path, 'ddrlModels/cluster_scripts/test_data/test_trial_conditions.csv'))
-```
+## Parameter recovery
 
-Empty lists to store the trial simulators for the forthcoming models.
+True datasets created with combinations of `true_ds = c(.06 , .5)`, `true_sigmas = c(.08, .3)`, `true_alphas = c(.1, .5)`, `true_deltas = c(.1, 1, 3)`
 
-```{r}
-sim_trial_list = list()
-fit_trial_list = list()
-```
-
-```{r}
-source(paste0(helpers_path, 'ddrlModels/r_dd_rl_models/ddrl_model1c.R'))
-
-sim_trial_list[['model1c']] = sim_trial
-fit_trial_list[['model1c']] = fit_trial
-```
-
-```{r}
-tru_d = .06
-tru_sigma = .08
-tru_alpha = .3
-tru_delta = .5
-```
-
-Test single trial simulation function
-
-```{r}
-QVLeft = 0.4
-QVRight = 0.2
-sim_trial(d = tru_d, sigma = tru_sigma, alpha = tru_alpha, delta = tru_delta, 
-         EVLeft = test_trial_conditions$EVLeft[1], EVRight = test_trial_conditions$EVRight[1],
-         leftFractalReward = test_trial_conditions$leftFractalReward[1], rightFractalReward = test_trial_conditions$rightFractalReward[1],
-         probFractalDraw = test_trial_conditions$probFractalDraw[1],
-         QVLeft = QVLeft, QVRight = QVRight)
-```
-
-Test multiple trial simulation function
-
-```{r}
-# Simulate choice and RT for the replicated trial conditions
-sim_data = sim_task_sequential(test_trial_conditions, model_name = "model1c", d = tru_d, sigma = tru_sigma, delta = tru_delta, alpha = tru_alpha)
-sim_data
-```
-
-Test single trial fit function
-
-```{r}
-QVLeft = 0.4
-QVRight = 0.2
-fit_trial(d = tru_d, sigma = tru_sigma, alpha = tru_alpha, delta = tru_delta, 
-         EVLeft = test_trial_conditions$EVLeft[1], EVRight = test_trial_conditions$EVRight[1],
-         leftFractalReward = test_trial_conditions$leftFractalReward[1], rightFractalReward = test_trial_conditions$rightFractalReward[1],
-         probFractalDraw = test_trial_conditions$probFractalDraw[1],
-         QVLeft = QVLeft, QVRight = QVRight, choice = "left", reactionTime = 1.8)
-```
-
-Test multiple trial fit function
-
-```{r}
-fit_task_sequential(data_=sim_data, model_name_="model1c", pars_=list(d=tru_d, sigma=tru_sigma, alpha = tru_alpha, delta=tru_delta))
-```
-
-Test optim
-
-```{r}
-optim_out = optim_save(c(.01, .01, .01, .01), get_task_nll, data=sim_data, par_names = c("d", "sigma", "alpha", "delta"), model_name="model1c")
-```
-
-```{r}
-optim_out$par
-```
-
-Test optim on simulated single sub data
-
-```{r}
-true_pars_path = paste0(helpers_path, 'ddrlModels/cluster_scripts/test_data/')
-
-model = "model1c"
-data_suffix = "sim_single_sub_data1"
-
-sub_data = read.csv(paste0(true_pars_path, data_suffix, '.csv'))
-
-optim_out = optim_save(c(0.984,0.133,0.387,0.314), get_task_nll, data=sub_data, par_names = c("d", "sigma", "alpha", "delta"), model_name="model1c", control = list(maxit=25))
-```
-
-How many iterations before convergence?
-
-```{r}
-optim_out$iterations_df
-```
-
-# Grid search
-
-`true_ds = c(.06 , .5)`, `true_sigmas = c(.08, .3)`, `true_alphas = c(.1, .5)`, `true_deltas = c(.1, 1, 3)`
-
-## Results    
+### Results
 
 ```{r}
 source(paste0(helpers_path,'optimPostProcess/par_recovery_report.R'))
-cpueaters_paths = '/Users/zeynepenkavi/CpuEaters/DescribedVsLearned_beh/analysis/helpers/'
+cpueaters_path = '/Users/zeynepenkavi/CpuEaters/DescribedVsLearned_beh/analysis/helpers/'
 ```
 
-How many iterations?
-
 ```{r}
-model_name = "model1c"
-data_prefix = "sim_single_sub_data"
-optim_out_path = paste0(cpueaters_paths, 'ddrlModels/cluster_scripts/optim_out/sim1/')
+optim_out_path = paste0(cpueaters_path, 'ddrlModels/cluster_scripts/optim_out/')
 true_pars_path = paste0(helpers_path, 'ddrlModels/cluster_scripts/test_data/')
 param_dict = data.frame(Param1="d", Param2="sigma", Param3="alpha", Param4="delta", Result="nll")
 
-out_iters = data.frame()
+model = "model1c"
+data_suffix = "sim_single_sub_data"
 
-for(i in 1:24){
-  cur_out = get_optim_out(model_ = model_name, data_=paste0(data_prefix, i), optim_out_path_ = optim_out_path, iters= TRUE)
-  cur_out$dataset = i
-  cur_out$true_pars = get_true_pars(data_=paste0(data_prefix, i), true_pars_path_ =  true_pars_path, return_str_ = TRUE)
-  out_iters = rbind.all.columns(out_iters, cur_out)
+data_nums = c(1:24)
+
+# Note this takes a little bit
+diff_pct_data = data.frame()
+
+for(i in 1:length(data_nums)){
+  cur_data_num = data_nums[i]
+  cur_sim_type = "sim1"
+  cur_out = par_recovery_report(model_ = model, data_ = paste0(data_suffix,cur_data_num), optim_out_path_= paste0(optim_out_path, cur_sim_type, '/'), true_pars_path_ = true_pars_path, diff_pct_plots_ = TRUE, param_dict_ = param_dict)$diff_pct_data
+  cur_out$sim_type = cur_sim_type
+  cur_out$data_num = as.character(cur_data_num)
+  diff_pct_data = rbind.all.columns(diff_pct_data, cur_out)
 }
 
-out_iters = out_iters %>%
-  rename(d = Param1, sigma = Param2, alpha = Param3, delta = Param4, nll = Result)
 ```
 
-Why are there only five iterations for each kernel?
 
-```{r}
-table(out_iters$Iteration)
+```{r eval=FALSE}
+plot_heatmaps = function(x_par = "d", y_par = "sigma", fill_par = "alpha", row_par = "delta"){
+  
+  diff_pct_data = diff_pct_data %>%
+    mutate(true_val = as.factor(true_val))
+  
+  tmp1 = diff_pct_data %>%
+    filter(key == x_par) %>%
+    select(key, true_val, data_num) %>%
+    spread(key, true_val)
+  
+  tmp2 = diff_pct_data %>%
+    filter(key == y_par) %>%
+    select(key, true_val, data_num) %>%
+    spread(key, true_val)
+  
+  tmp3 = diff_pct_data %>%
+    filter(key == row_par) %>%
+    select(key, true_val, data_num) %>%
+    mutate(row_par = paste0(key, "=", true_val)) %>%
+    select(data_num, row_par)
+  
+  tmp4 = diff_pct_data %>%
+    filter(key == fill_par) %>%
+    select(key, true_val, data_num) %>%
+    mutate(true_val = paste0(key, "=", true_val)) %>%
+    select(-key)
+  
+  tmp5 = diff_pct_data %>%
+    filter(key == fill_par) %>%
+    select(key, median_diff, data_num) %>%
+    spread(key, median_diff) %>%
+    rename(median_diff = fill_par)
+
+  p = tmp1 %>%
+    left_join(tmp2, by="data_num") %>%
+    left_join(tmp3, by="data_num") %>%
+    left_join(tmp4, by="data_num") %>% 
+    left_join(tmp5, by="data_num") %>%
+    mutate(median_diff_clipped = ifelse(median_diff>100, 101, median_diff)) %>%
+    ggplot(aes_string(x=x_par, y=y_par))+
+    geom_tile(aes(fill=median_diff_clipped))+
+    facet_grid(row_par~true_val)+
+    theme(legend.position = "bottom", legend.margin=margin(0,0,0,0), legend.box.margin=margin(-10,-10,0,-10))+
+    labs(x=x_par, y=y_par, fill=paste0("Median % difference between true and estimated ", fill_par))
+
+  return(p)
+}
 ```
 
-```{r}
-par_recovery_report(model_ = model_name, data_ = paste0(data_prefix, 1), optim_out_path_ = optim_out_path, diff_pct_plots_ = TRUE, true_pars_path_=true_pars_path, param_dict_=param_dict)
+```{r eval=FALSE}
+fig_fn = 'ddmrl_recovery_sim1'
+```
+
+How bad is recovery for each parameter as a function of the other parameters?
+
+```{r eval=FALSE}
+p1 = plot_heatmaps(x_par = "d", y_par = "sigma", fill_par = "alpha", row_par = "delta")
+p2 = plot_heatmaps(x_par = "d", y_par = "sigma", row_par = "alpha", fill_par = "delta")
+p3 = plot_heatmaps(fill_par = "d", y_par = "sigma", row_par = "alpha", x_par = "delta")
+p4 = plot_heatmaps(x_par = "d", fill_par = "sigma", row_par = "alpha", y_par = "delta")
+
+```
+
+```{r eval=FALSE}
+g = arrangeGrob(grobs=list(p1, p2, p3, p4), nrow=4)
+ggsave(file=paste0(fig_out_path, fig_fn, '_diff_pct_heatmaps.jpg'), g, height = 11, width=8, units="in")
+ggsave(file=paste0(fig_out_path, fig_fn, '_diff_pct_heatmaps.pdf'), g, height = 11, width=8, units="in")
+```
+
+```{r echo=FALSE, out.width='100%'}
+fig_name = 'ddmrl_recovery_sim1_diff_pct_heatmaps.jpg'
+knitr::include_graphics(paste0(fig_out_path, fig_name))
 ```

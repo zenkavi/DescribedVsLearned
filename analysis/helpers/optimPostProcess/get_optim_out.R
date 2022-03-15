@@ -1,5 +1,19 @@
 library(tidyverse)
 
+rbind.all.columns <- function(x, y) {
+  
+  if(ncol(x) == 0 | ncol(y) == 0){
+    out = plyr::rbind.fill(x, y)
+  } else{
+    x.diff <- setdiff(colnames(x), colnames(y))
+    y.diff <- setdiff(colnames(y), colnames(x))
+    x[, c(as.character(y.diff))] <- NA
+    y[, c(as.character(x.diff))] <- NA
+    out = rbind(x, y)
+  }
+  return(out)
+}
+
 get_optim_out = function(model_, data_, optim_out_path_, iters_ = TRUE){
   
   fns = list.files(optim_out_path_)

@@ -12,27 +12,76 @@ output:
 Set up environment and load in data
 
 ```{r include=FALSE, message=FALSE}
+library(tidyverse)
+theme_set(theme_classic())
 library(here)
 helpers_path = here('analysis/helpers/')
 cpueaters_path = '/Users/zeynepenkavi/CpuEaters/DescribedVsLearned_beh/analysis/helpers/'
 fig_out_path = paste0(here(),'/outputs/fig/')
-true_pars_path = paste0(helpers_path, 'ddModels/cluster_scripts/test_data/')
+source(paste0(helpers_path, 'optimPostProcess/get_optim_out.R'))
 ```
 
 # Fit to subject data: First RL then DDM
 
 ## Parameter distributions
 
-Distribution of converged values for each subject (25 histograms per parameter)
+Distribution of converged values for each subject (25 histograms per parameter for each of the three parameters)
 
 ```{r}
+optim_out_path = paste0(cpueaters_path, 'ddModels/cluster_scripts/optim_out/fit1/')
+subnums = c("01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "22", "23", "24", "25", "27")
+data_prefix ="sub_data"
+model = "model1c"  
 
+fit_iters = data.frame()
+
+for(i in 1:length(subnums)){
+  cur_subnum = subnums[i]
+  tmp = get_optim_out(model_=model, data_=paste0(data_prefix, cur_subnum), optim_out_path_=optim_out_path, iters_ = TRUE)
+  tmp$subnum = cur_subnum
+  fit_iters = rbind.all.columns(tmp, fit_iters)
+}
+
+fit_iters = fit_iters %>%
+  rename(d = Param1, sigma = Param2, delta = Param3)
+```
+
+```{r}
+best_sub_ests = fit_iters %>% 
+  filter(Iteration != 1) %>%
+  group_by(subnum) %>%
+  mutate(best_sub_est = ifelse(Result == min(Result), 1, 0)) %>%
+  filter(best_sub_est == 1) %>%
+  select(-Result,-Iteration,-kernel,-best_sub_est) %>%
+  gather(key, value, -subnum)
+```
+
+```{r}
+p = fit_iters %>%
+  filter(Iteration != 1) %>%
+  select(-Result,-Iteration,-kernel) %>%
+  gather(key, value, -subnum) %>%
+  ggplot(aes(value))+
+  geom_histogram(bins=50)+
+  geom_vline(data=best_sub_ests, aes(xintercept=value), color="red")+
+  facet_grid(subnum~key, scales="free")
+
+fig_fn = 'ddm_model1c_fit1'
+ggsave(file=paste0(fig_out_path, fig_fn, '_par_hists.jpg'), p, height = 11, width=8, units="in")
+```
+
+```{r echo=FALSE, out.width='100%'}
+fig_name = 'ddm_model1c_fit1_par_hists.jpg'
+knitr::include_graphics(paste0(fig_out_path, fig_name))
 ```
 
 Distribution of best fitting parameter across subjects (one histogram per parameter with 25 values)
 
 ```{r}
-
+best_sub_ests %>%
+  ggplot(aes(value))+
+  geom_histogram(bins=30) +
+  facet_wrap(~key, scales="free")
 ```
 
 # Fit to subject data: RL+DDM
@@ -40,7 +89,60 @@ Distribution of best fitting parameter across subjects (one histogram per parame
 ## Parameter distributions
 
 ```{r}
+optim_out_path = paste0(cpueaters_path, 'ddrlModels/cluster_scripts/optim_out/fit1/')
+subnums = c("01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "22", "23", "24", "25", "27")
+data_prefix ="sub_data"
+model = "model1c"  
 
+fit_iters = data.frame()
+
+for(i in 1:length(subnums)){
+  cur_subnum = subnums[i]
+  tmp = get_optim_out(model_=model, data_=paste0(data_prefix, cur_subnum), optim_out_path_=optim_out_path, iters_ = TRUE)
+  tmp$subnum = cur_subnum
+  fit_iters = rbind.all.columns(tmp, fit_iters)
+}
+
+fit_iters = fit_iters %>%
+  rename(d = Param1, sigma = Param2, alpha = Param3, delta = Param4)
+```
+
+```{r}
+best_sub_ests = fit_iters %>% 
+  filter(Iteration != 1) %>%
+  group_by(subnum) %>%
+  mutate(best_sub_est = ifelse(Result == min(Result), 1, 0)) %>%
+  filter(best_sub_est == 1) %>%
+  select(-Result,-Iteration,-kernel,-best_sub_est) %>%
+  gather(key, value, -subnum)
+```
+
+```{r}
+p = fit_iters %>%
+  filter(Iteration != 1) %>%
+  select(-Result,-Iteration,-kernel) %>%
+  gather(key, value, -subnum) %>%
+  ggplot(aes(value))+
+  geom_histogram(bins=50)+
+  geom_vline(data=best_sub_ests, aes(xintercept=value), color="red")+
+  facet_grid(subnum~key, scales="free")
+
+fig_fn = 'ddrl_model1c_fit1'
+ggsave(file=paste0(fig_out_path, fig_fn, '_par_hists.jpg'), p, height = 11, width=8, units="in")
+```
+
+```{r echo=FALSE, out.width='100%'}
+fig_name = 'ddrl_model1c_fit1_par_hists.jpg'
+knitr::include_graphics(paste0(fig_out_path, fig_name))
+```
+
+Distribution of best fitting parameter across subjects (one histogram per parameter with 25 values)
+
+```{r}
+best_sub_ests %>%
+  ggplot(aes(value))+
+  geom_histogram(bins=30) +
+  facet_wrap(~key, scales="free")
 ```
 
 # Comparison of ddrl alpha's to hierarchical rl alpha's

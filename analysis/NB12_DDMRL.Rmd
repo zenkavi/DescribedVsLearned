@@ -129,7 +129,11 @@ plot_heatmaps = function(x_par = "d", y_par = "sigma", fill_par = "alpha", row_p
 fig_fn = 'ddmrl_recovery_sim1'
 ```
 
-How bad is recovery for each parameter as a function of the other parameters?
+How bad is recovery for each parameter as a function of the other parameters?  
+
+- Small alpha is not recovered at all. Large alpha is better but still pretty bad in general.
+- Adding alpha to the model affected the recoverability of delta. Before delta was more recoverable for medium and large d and sigmas but now delta <= 1 is not recovered.
+- d and especially sigma are still relatively robust.
 
 ```{r eval=FALSE}
 p1 = plot_heatmaps(x_par = "d", y_par = "sigma", fill_par = "alpha", row_par = "delta")

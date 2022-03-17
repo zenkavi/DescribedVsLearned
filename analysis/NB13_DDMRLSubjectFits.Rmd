@@ -239,8 +239,52 @@ all_trials_data %>%
 
 ## RL -> DDM
 
-```{r}
+Simulate data using the best fitting parameters for each subject
 
+Note: This model might not be capturing all features of the data well since (at least at the group level) we know there are effects, such as the faster choices at probFractalDraw == 1, that this model is not designed to capture.
+
+```{r}
+ddm_best_sub_ests = ddm_best_sub_ests %>%
+  spread(key, value)
+```
+
+```{r}
+source(paste0(helpers_path, 'ddModels/sim_task.R'))
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model1c.R'))
+sim_trial_list = list()
+sim_trial_list[['model1c']] = sim_trial
+```
+
+
+```{r}
+all_trials_data = all_trials_data %>%
+  select(subnum, probFractalDraw, leftQValue, rightQValue, rightLotteryEV, leftLotteryEV) %>%
+  rename(QVLeft = leftQValue, QVRight = rightQValue, EVLeft = leftLotteryEV, EVRight = rightLotteryEV) %>%
+  drop_na()
+```
+
+```{r}
+model = "model1c"
+
+ddm_pred_data = data.frame()
+
+for(i in 1:length(subnums)){
+  cur_sub = subnums[i]
+  cur_stim = all_trials_data %>% filter(subnum == as.numeric(cur_sub))
+  cur_pars = ddm_best_sub_ests %>% filter(subnum == cur_sub)
+  tmp = sim_task(stimuli = cur_stim, model_name = model, d = cur_pars$d, delta = cur_pars$delta, sigma = cur_pars$sigma)
+  tmp$subnum = cur_sub
+  ddm_pred_data = rbind.all.columns(ddm_pred_data, tmp)
+}
+```
+
+What behavioral effect to compare?
+Psychometric curve
+Logit curves
+RT distributions for each pFractalDraw level
+
+```{r}
+ddm_pred_data
 ```
 
 ## RL + DDM

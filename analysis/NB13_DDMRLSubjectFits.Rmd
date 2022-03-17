@@ -285,7 +285,36 @@ RT distributions for each pFractalDraw level
 `sim_sanity_checks`?
 
 ```{r}
-ddm_pred_data
+ddm_pred_data %>%
+  drop_na()%>%
+  select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
+  filter(probFractalDraw == 0 | probFractalDraw == 1) %>%
+  mutate(choiceLeft =ifelse(choice == "left", 1, ifelse(choice == "right", 0, NA))) %>%
+  mutate(EVLeftMinRight = EVLeft - EVRight,
+         QVLeftMinRight = QVLeft - QVRight) %>%
+  select(-choice, -EVLeft, -EVRight, -QVLeft, -QVRight) %>%
+  gather(key, value, -probFractalDraw, -reactionTime, -choiceLeft) %>%
+  ggplot(aes(value, choiceLeft))+
+  geom_jitter(height = .1)+
+  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, alpha=.1)+
+  facet_grid(key ~ probFractalDraw)
+
+true_data = read.csv('/Users/zeynepenkavi/Downloads/GTavares_2017_arbitration/behavioral_data/all_trials.csv')
+
+  
+ddm_pred_data %>%
+  select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
+  mutate(data_type = "sim") %>%
+  rbind(true_data %>%
+          mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
+                 data_type = "true") %>%
+          select(-subnum, -choiceLeft)) %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
+  ggplot(aes(reactionTime, fill=data_type)) +
+  geom_histogram(position="identity", bins=30, alpha=.5) +
+  labs(title="RT long tail?", fill="")+
+  facet_wrap(~probFractalDraw)+
+  theme(legend.position = "bottom")
 ```
 
 ## RL + DDM

@@ -282,6 +282,7 @@ What behavioral effect to compare?
 Psychometric curve
 Logit curves
 RT distributions for each pFractalDraw level
+`sim_sanity_checks`?
 
 ```{r}
 ddm_pred_data

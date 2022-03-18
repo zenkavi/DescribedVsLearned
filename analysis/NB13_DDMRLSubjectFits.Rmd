@@ -20,7 +20,7 @@ cpueaters_path = '/Users/zeynepenkavi/CpuEaters/DescribedVsLearned_beh/analysis/
 fig_out_path = paste0(here(),'/outputs/fig/')
 source(paste0(helpers_path, 'optimPostProcess/get_optim_out.R'))
 sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
-
+cbbPalette = c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 ```
 
 # Fit to subject data: First RL then DDM
@@ -77,7 +77,9 @@ fig_name = 'ddm_model1c_fit1_par_hists.jpg'
 knitr::include_graphics(paste0(fig_out_path, fig_name))
 ```
 
-Distribution of best fitting parameter across subjects (one histogram per parameter with 25 values)
+Distribution of best fitting parameter across subjects (one histogram per parameter with 25 values).  
+
+d and sigmas look in the recoverable space. When combined with these distributions for d and sigmas, delta also are in a more recoverable space. Still, this isn't a full proof test. Ideal would be to estimate a full posterior to quantify the uncertainty around each estimate.
 
 ```{r}
 ddm_best_sub_ests %>%
@@ -138,7 +140,7 @@ fig_name = 'ddrl_model1c_fit1_par_hists.jpg'
 knitr::include_graphics(paste0(fig_out_path, fig_name))
 ```
 
-Distribution of best fitting parameter across subjects (one histogram per parameter with 25 values)
+Distribution of best fitting parameter across subjects (one histogram per parameter with 25 values). Compared to results above the deltas look very different and more often >1, which suggests an overweighting of fractal values, instead of the underweigting we observe in the data.
 
 ```{r}
 ddrl_best_sub_ests %>%
@@ -151,7 +153,7 @@ ddrl_best_sub_ests %>%
 
 ## Likelihoods
 
-Negative log likelihoods lower (better) for ddm compared to ddrl for almost all subjects.
+Negative log likelihoods lower (better) for ddm compared to ddrl for almost all subjects.  
 
 ```{r}
 ddrl_fit_iters %>%
@@ -220,6 +222,8 @@ knitr::include_graphics(paste0(fig_out_path, fig_name))
 
 # Comparison of ddrl alpha's to hierarchical rl alpha's
 
+When estimating learning rates at the same time as the other ddm parameters they are consistently higher than those estimated from the the hierarchical fit. **Note, however, that the hierarchical model used to estimate these alphas also included a two parameter (delta and gamma) probability distortion function that affected both the lottery and fractal values.**
+
 ```{r}
 all_trials_data = read.csv('/Users/zeynepenkavi/Downloads/GTavares_2017_arbitration/behavioral_data/all_trials.csv')
 all_trials_data %>%
@@ -282,20 +286,201 @@ for(i in 1:length(subnums)){
 }
 ```
 
-What behavioral effect to compare?
-`sim_sanity_checks` for group level plots
-Loop through simulated and true data to save subject level plots
+### Group level checks
 
 ```{r}
-source(paste0(helpers_path, 'ddModels/sim_sanity_checks.R'))
+source(paste0(helpers_path, 'optimPostProcess/sim_sanity_checks.R'))
 ```
 
 ```{r}
 sim_sanity_checks(ddm_pred_data, checks = c(2,3,4,5), compare_rts = TRUE, compare_logits = TRUE, true_data = all_trials_data, yrange_lim = 25)
 ```
 
+### Subject level checks
+
+```{r}
+ddm_pred_data %>%
+  select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, subnum) %>%
+  mutate(data_type = "sim") %>%
+  rbind(all_trials_data %>% 
+          mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
+                                   data_type = "true") %>%
+          rename(QVLeft = leftQValue, QVRight = rightQValue, EVLeft = leftLotteryEV, EVRight = rightLotteryEV) %>%
+          select(subnum, EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, data_type)) %>%
+  drop_na()%>%
+  mutate(probFractalDraw = as.factor(probFractalDraw), 
+         log_rt = log(reactionTime),
+         subnum = as.factor(as.numeric(subnum))) %>%
+  filter(is.finite(log_rt)) %>%
+  group_by(subnum, probFractalDraw, data_type) %>%
+  summarise(mean_log_rt = mean(log_rt),
+            sem_log_rt = sem(log_rt), .groups="keep") %>%
+  ggplot(aes(probFractalDraw, mean_log_rt, color=data_type))+
+  geom_point()+
+  geom_errorbar(aes(ymin = mean_log_rt - sem_log_rt, ymax = mean_log_rt + sem_log_rt), width=.2)+
+  labs(title="Inverse U and faster when pFrac ==1?", color="")+
+  theme(legend.position = "bottom")+
+  facet_wrap(~subnum, scales="free_y")
+```
+
+```{r warning=FALSE, message=FALSE}
+tmp = ddm_pred_data %>%
+  select(subnum, EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
+  mutate(subnum = as.factor(as.numeric(subnum)),
+         probFractalDraw = as.factor(probFractalDraw),
+         choiceLeft = ifelse(choice == "left", 1, ifelse(choice=="right", 0, NA)),
+         EVDiff = EVLeft - EVRight, 
+         QVDiff = QVLeft - QVRight) %>%
+  nest(data = -c(probFractalDraw, subnum)) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ scale(EVDiff) + scale(QVDiff), data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(subnum, probFractalDraw, term, estimate, std.error) %>%
+  mutate(data_type = "sim")
+
+tmp_true = all_trials_data %>% 
+  mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
+         data_type = "true") %>%
+  rename(QVLeft = leftQValue, QVRight = rightQValue, EVLeft = leftLotteryEV, EVRight = rightLotteryEV) %>%
+  select(subnum, EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, data_type) %>%
+  mutate(subnum = as.factor(as.numeric(subnum)),
+         probFractalDraw = as.factor(probFractalDraw),
+         choiceLeft = ifelse(choice == "left", 1, ifelse(choice=="right", 0, NA)),
+         EVDiff = EVLeft - EVRight, 
+         QVDiff = QVLeft - QVRight) %>%
+  nest(data = -c(probFractalDraw, subnum)) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ scale(EVDiff) + scale(QVDiff), data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(subnum, probFractalDraw, term, estimate, std.error)%>%
+  mutate(data_type = "true")
+
+p = tmp %>%
+  rbind(tmp_true) %>%
+  filter(subnum %in% c("1", "2", "3", "4")) %>%
+  ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
+  geom_point()+
+  geom_line()+
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  facet_grid(subnum~data_type, scales="free_y")+
+  scale_color_manual(values = cbbPalette[2:1])+
+  theme(legend.position = "bottom")+
+  labs(color="", title="Relevant attribute effect on choice")+
+  ylim(-5, 5)
+
+p
+```
+
 ## RL + DDM
 
 ```{r}
+ddrl_best_sub_ests = ddrl_best_sub_ests %>%
+  spread(key, value)
+```
 
+```{r message=FALSE}
+source(paste0(helpers_path, 'ddrlModels/sim_task_sequential.R'))
+source(paste0(helpers_path, 'ddrlModels/r_dd_rl_models/ddrl_model1c.R'))
+sim_trial_list = list()
+sim_trial_list[['model1c']] = sim_trial
+```
+
+```{r}
+all_trials_stim_data = all_trials_data %>%
+  select(subnum, probFractalDraw, rightLotteryEV, leftLotteryEV, leftFractalReward, rightFractalReward) %>%
+  rename(EVLeft = leftLotteryEV, EVRight = rightLotteryEV) %>%
+  drop_na()
+```
+
+Simulate data for all subjects using the actual stimuli they saw in the experiment
+
+```{r}
+model = "model1c"
+
+ddrl_pred_data = data.frame()
+
+for(i in 1:length(subnums)){
+  cur_sub = subnums[i]
+  cur_stim = all_trials_stim_data %>% filter(subnum == as.numeric(cur_sub))
+  cur_pars = ddrl_best_sub_ests %>% filter(subnum == cur_sub)
+  tmp = sim_task_sequential(stimuli = cur_stim, model_name = model, d = cur_pars$d, alpha = cur_pars$alpha, delta = cur_pars$delta, sigma = cur_pars$sigma)
+  tmp$subnum = cur_sub
+  ddrl_pred_data = rbind.all.columns(ddrl_pred_data, tmp)
+}
+```
+
+### Group level checks
+
+```{r}
+sim_sanity_checks(ddrl_pred_data, checks = c(2,3,4,5), compare_rts = TRUE, compare_logits = TRUE, true_data = all_trials_data, yrange_lim = 25)
+```
+
+### Subject level checks
+
+```{r}
+ddrl_pred_data %>%
+  select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, subnum) %>%
+  mutate(data_type = "sim") %>%
+  rbind(all_trials_data %>% 
+          mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
+                                   data_type = "true") %>%
+          rename(QVLeft = leftQValue, QVRight = rightQValue, EVLeft = leftLotteryEV, EVRight = rightLotteryEV) %>%
+          select(subnum, EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, data_type)) %>%
+  drop_na()%>%
+  mutate(probFractalDraw = as.factor(probFractalDraw), 
+         log_rt = log(reactionTime),
+         subnum = as.factor(as.numeric(subnum))) %>%
+  filter(is.finite(log_rt)) %>%
+  group_by(subnum, probFractalDraw, data_type) %>%
+  summarise(mean_log_rt = mean(log_rt),
+            sem_log_rt = sem(log_rt), .groups="keep") %>%
+  ggplot(aes(probFractalDraw, mean_log_rt, color=data_type))+
+  geom_point()+
+  geom_errorbar(aes(ymin = mean_log_rt - sem_log_rt, ymax = mean_log_rt + sem_log_rt), width=.2)+
+  labs(title="Inverse U and faster when pFrac ==1?", color="")+
+  theme(legend.position = "bottom")+
+  facet_wrap(~subnum, scales="free_y")
+```
+
+
+```{r warning=FALSE, message=FALSE}
+tmp = ddm_pred_data %>%
+  select(subnum, EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
+  mutate(subnum = as.factor(as.numeric(subnum)),
+         probFractalDraw = as.factor(probFractalDraw),
+         choiceLeft = ifelse(choice == "left", 1, ifelse(choice=="right", 0, NA)),
+         EVDiff = EVLeft - EVRight, 
+         QVDiff = QVLeft - QVRight) %>%
+  nest(data = -c(probFractalDraw, subnum)) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ scale(EVDiff) + scale(QVDiff), data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(subnum, probFractalDraw, term, estimate, std.error) %>%
+  mutate(data_type = "sim")
+
+p = tmp %>%
+  rbind(tmp_true) %>%
+  filter(subnum %in% c("1", "2", "3", "4")) %>%
+  ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
+  geom_point()+
+  geom_line()+
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  facet_grid(subnum~data_type, scales="free_y")+
+  scale_color_manual(values = cbbPalette[2:1])+
+  theme(legend.position = "bottom")+
+  labs(color="", title="Relevant attribute effect on choice")+
+  ylim(-5, 5)
+
+p
 ```

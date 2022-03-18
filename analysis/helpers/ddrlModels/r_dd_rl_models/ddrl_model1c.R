@@ -98,7 +98,7 @@ sim_trial = function(d, sigma, delta, alpha, barrierDecay=0, barrier=1, nonDecis
   # Update QValues using learning rate
   # In this case update both regardless of chosen side/bundle
   QVLeft = QVLeft + alpha*(leftFractalReward - QVLeft)
-  QVRight = QVRight + alpha*(leftFractalReward - QVRight)
+  QVRight = QVRight + alpha*(rightFractalReward - QVRight)
   
   #Organize output 
   out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, leftFractalReward = leftFractalReward, rightFractalReward=rightFractalReward, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, d = d, sigma = sigma, alpha = alpha, delta=delta, barrierDecay = barrierDecay, barrier=barrier[time], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, maxIter=maxIter, epsilon = epsilon)

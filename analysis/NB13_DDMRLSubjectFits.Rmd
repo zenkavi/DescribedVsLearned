@@ -19,6 +19,8 @@ helpers_path = here('analysis/helpers/')
 cpueaters_path = '/Users/zeynepenkavi/CpuEaters/DescribedVsLearned_beh/analysis/helpers/'
 fig_out_path = paste0(here(),'/outputs/fig/')
 source(paste0(helpers_path, 'optimPostProcess/get_optim_out.R'))
+sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
+
 ```
 
 # Fit to subject data: First RL then DDM
@@ -70,7 +72,7 @@ fig_fn = 'ddm_model1c_fit1'
 ggsave(file=paste0(fig_out_path, fig_fn, '_par_hists.jpg'), p, height = 11, width=8, units="in")
 ```
 
-```{r echo=FALSE, out.width='100%'}
+```{r eval=FALSE, echo=FALSE, out.width='100%'}
 fig_name = 'ddm_model1c_fit1_par_hists.jpg'
 knitr::include_graphics(paste0(fig_out_path, fig_name))
 ```
@@ -131,7 +133,7 @@ fig_fn = 'ddrl_model1c_fit1'
 ggsave(file=paste0(fig_out_path, fig_fn, '_par_hists.jpg'), p, height = 11, width=8, units="in")
 ```
 
-```{r echo=FALSE, out.width='100%'}
+```{r eval=FALSE, echo=FALSE, out.width='100%'}
 fig_name = 'ddrl_model1c_fit1_par_hists.jpg'
 knitr::include_graphics(paste0(fig_out_path, fig_name))
 ```
@@ -167,6 +169,7 @@ ddrl_fit_iters %>%
   scale_fill_manual(values=cbbPalette[1:2])+
   labs(fill="")
 ```
+
 ## Parameter estimates
 
 ### MLE scatter plots
@@ -211,7 +214,7 @@ ggsave(file=paste0(fig_out_path, fig_fn, '_par_hist_comparison.jpg'), p, height 
 ```
 
 ```{r echo=FALSE, out.width='100%'}
-fig_name = 'ddrl_model1c_fit1_par_hists.jpg'
+fig_name = 'ddm_ddrl_model1c_par_hist_comparison.jpg'
 knitr::include_graphics(paste0(fig_out_path, fig_name))
 ```
 
@@ -248,20 +251,21 @@ ddm_best_sub_ests = ddm_best_sub_ests %>%
   spread(key, value)
 ```
 
-```{r}
+```{r message=FALSE}
 source(paste0(helpers_path, 'ddModels/sim_task.R'))
 source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model1c.R'))
 sim_trial_list = list()
 sim_trial_list[['model1c']] = sim_trial
 ```
 
-
 ```{r}
-all_trials_data = all_trials_data %>%
+all_trials_stim_data = all_trials_data %>%
   select(subnum, probFractalDraw, leftQValue, rightQValue, rightLotteryEV, leftLotteryEV) %>%
   rename(QVLeft = leftQValue, QVRight = rightQValue, EVLeft = leftLotteryEV, EVRight = rightLotteryEV) %>%
   drop_na()
 ```
+
+Simulate data for all subjects using the actual stimuli they saw in the experiment
 
 ```{r}
 model = "model1c"
@@ -270,7 +274,7 @@ ddm_pred_data = data.frame()
 
 for(i in 1:length(subnums)){
   cur_sub = subnums[i]
-  cur_stim = all_trials_data %>% filter(subnum == as.numeric(cur_sub))
+  cur_stim = all_trials_stim_data %>% filter(subnum == as.numeric(cur_sub))
   cur_pars = ddm_best_sub_ests %>% filter(subnum == cur_sub)
   tmp = sim_task(stimuli = cur_stim, model_name = model, d = cur_pars$d, delta = cur_pars$delta, sigma = cur_pars$sigma)
   tmp$subnum = cur_sub
@@ -279,42 +283,15 @@ for(i in 1:length(subnums)){
 ```
 
 What behavioral effect to compare?
-Psychometric curve
-Logit curves
-RT distributions for each pFractalDraw level
-`sim_sanity_checks`?
+`sim_sanity_checks` for group level plots
+Loop through simulated and true data to save subject level plots
 
 ```{r}
-ddm_pred_data %>%
-  drop_na()%>%
-  select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
-  filter(probFractalDraw == 0 | probFractalDraw == 1) %>%
-  mutate(choiceLeft =ifelse(choice == "left", 1, ifelse(choice == "right", 0, NA))) %>%
-  mutate(EVLeftMinRight = EVLeft - EVRight,
-         QVLeftMinRight = QVLeft - QVRight) %>%
-  select(-choice, -EVLeft, -EVRight, -QVLeft, -QVRight) %>%
-  gather(key, value, -probFractalDraw, -reactionTime, -choiceLeft) %>%
-  ggplot(aes(value, choiceLeft))+
-  geom_jitter(height = .1)+
-  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, alpha=.1)+
-  facet_grid(key ~ probFractalDraw)
+source(paste0(helpers_path, 'ddModels/sim_sanity_checks.R'))
+```
 
-true_data = read.csv('/Users/zeynepenkavi/Downloads/GTavares_2017_arbitration/behavioral_data/all_trials.csv')
-
-  
-ddm_pred_data %>%
-  select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
-  mutate(data_type = "sim") %>%
-  rbind(true_data %>%
-          mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
-                 data_type = "true") %>%
-          select(-subnum, -choiceLeft)) %>%
-  mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
-  ggplot(aes(reactionTime, fill=data_type)) +
-  geom_histogram(position="identity", bins=30, alpha=.5) +
-  labs(title="RT long tail?", fill="")+
-  facet_wrap(~probFractalDraw)+
-  theme(legend.position = "bottom")
+```{r}
+sim_sanity_checks(ddm_pred_data, checks = c(2,3,4,5), compare_rts = TRUE, compare_logits = TRUE, true_data = all_trials_data, yrange_lim = 25)
 ```
 
 ## RL + DDM

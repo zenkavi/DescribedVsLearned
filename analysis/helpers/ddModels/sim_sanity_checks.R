@@ -1,6 +1,21 @@
 library(broom)
+sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 
 sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE, compare_logits = FALSE, true_data = sub_data, yrange_lim = 25){
+  
+  if("choiceLeft" %in% names(true_data)){
+    true_data = true_data %>%
+      mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
+             data_type = "true")
+  }
+  if("leftQValue" %in% names(true_data)){
+    true_data = true_data %>%
+      rename(QVLeft = leftQValue, QVRight = rightQValue, EVLeft = leftLotteryEV, EVRight = rightLotteryEV) %>%
+      select(subnum, EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, data_type)
+  }
+    
+  
+  
   #Check 1
   if (1 %in% checks){
     print(paste0("Proportion of time out trials if no decision made: ", round(sum(is.na(sim_data$reactionTime))/nrow(sim_data), 3)))
@@ -16,7 +31,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
   }
   
   
-  # Check 2
+  # Check 2: choice by value difference for extreme cases of probfractaldraw
   if(2 %in% checks){
     p = sim_data %>%
       drop_na()%>%
@@ -35,16 +50,13 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
   }
   
   
-  # Check 3
+  # Check 3: RT distributions
   if(3 %in% checks){
     if(compare_rts){
       p = sim_data %>%
         select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
         mutate(data_type = "sim") %>%
-        rbind(true_data %>%
-                mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
-                       data_type = "true") %>%
-                select(-subnum, -choiceLeft)) %>%
+        rbind(true_data %>% select(-subnum)) %>%
         mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
         ggplot(aes(reactionTime, fill=data_type)) +
         geom_histogram(position="identity", bins=30, alpha=.5) +
@@ -65,16 +77,13 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
   }
   
   
-  # Check 4
+  # Check 4: Average rt by probfractaldraw
   if(4 %in% checks){
     if(compare_rts){
       p = sim_data %>%
         select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
         mutate(data_type = "sim") %>%
-        rbind(true_data %>%
-                mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
-                       data_type = "true") %>%
-                select(-subnum, -choiceLeft)) %>%
+        rbind(true_data %>% select(-subnum)) %>%
         drop_na()%>%
         mutate(probFractalDraw = as.factor(probFractalDraw), 
                log_rt = log(reactionTime)) %>%
@@ -103,7 +112,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
     print(p)
   }
   
-  # Check 5
+  # Check 5: Logit slopes
   if(5 %in% checks){
     tmp = sim_data %>%
       select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
@@ -133,9 +142,9 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
     
     if(compare_logits){
       tmp_true = true_data %>%
-        select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choiceLeft, reactionTime) %>%
+        select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
         mutate(probFractalDraw = as.factor(probFractalDraw),
-               # choiceLeft = ifelse(choice == "left", 1, ifelse(choice=="right", 0, NA)),
+               choiceLeft = ifelse(choice == "left", 1, ifelse(choice=="right", 0, NA)),
                EVDiff = EVLeft - EVRight, 
                QVDiff = QVLeft - QVRight) %>%
         nest(data = -probFractalDraw) %>% 

@@ -251,7 +251,7 @@ fit_trial = function(d, sigma,  alpha, delta, barrierDecay = 0, barrier=1, nonDe
   # Update QValues using learning rate
   # In this case update both regardless of chosen side/bundle
   QVLeft = QVLeft + alpha*(leftFractalReward - QVLeft)
-  QVRight = QVRight + alpha*(leftFractalReward - QVRight)
+  QVRight = QVRight + alpha*(rightFractalReward - QVRight)
   
   out = data.frame(likelihood = likelihood, EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, leftFractalReward = leftFractalReward, rightFractalReward=rightFractalReward, probFractalDraw = probFractalDraw, choice=choice, reactionTime = reactionTime, d = d, sigma = sigma, alpha = alpha, delta=delta, barrierDecay = barrierDecay, barrier=barrier[numTimeSteps], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, epsilon = epsilon)
   

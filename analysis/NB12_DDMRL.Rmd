@@ -45,12 +45,12 @@ True datasets created with combinations of `true_ds = c(.06 , .5)`, `true_sigmas
 
 ### Results
 
-```{r}
+```{r eval=FALSE}
 source(paste0(helpers_path,'optimPostProcess/par_recovery_report.R'))
 cpueaters_path = '/Users/zeynepenkavi/CpuEaters/DescribedVsLearned_beh/analysis/helpers/'
 ```
 
-```{r}
+```{r eval=FALSE}
 optim_out_path = paste0(cpueaters_path, 'ddrlModels/cluster_scripts/optim_out/')
 true_pars_path = paste0(helpers_path, 'ddrlModels/cluster_scripts/test_data/')
 param_dict = data.frame(Param1="d", Param2="sigma", Param3="alpha", Param4="delta", Result="nll")

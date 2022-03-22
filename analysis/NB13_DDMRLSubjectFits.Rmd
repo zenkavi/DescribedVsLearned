@@ -153,8 +153,6 @@ ddrl_best_sub_ests %>%
 
 ## Likelihoods
 
-Negative log likelihoods lower (better) for ddm compared to ddrl for almost all subjects.  
-
 ```{r}
 ddrl_fit_iters %>%
   filter(Iteration != 1) %>%

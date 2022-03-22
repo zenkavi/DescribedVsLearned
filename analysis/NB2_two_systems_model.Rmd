@@ -261,7 +261,7 @@ truePars = data.frame(alpha=truncnorm::rtruncnorm(numSims, mean=trueGroupPars$g_
                       gamma=truncnorm::rtruncnorm(numSims, mean=trueGroupPars$g_gamma, a=0),  
                       delta=truncnorm::rtruncnorm(numSims, mean=trueGroupPars$g_delta, a=0))
 
-modelName = 'fit_twoValSystemsWithRL_hierarchical'
+modelName = 'fit_rl_hierarchical'
 
 group_par_names=c("g_alpha","g_gamma", "g_delta", "g_beta")
 id_par_ests = identifiability_analysis(truePars, modelName, group_par_names = group_par_names)
@@ -328,7 +328,7 @@ Do the subject parameters capture the behavioral patterns in the data?
 Sample from each subject's posterior distributions 100 times and simulate data using these sampled parameters. Plot predicted versus actual choice as a function of the probability of a fractal draw.
 
 ```{r}
-modelName = 'fit_twoValSystemsWithRL_hierarchical'
+modelName = 'fit_rl_hierarchical'
 
 if(file.exists(paste0(helpers_path, 'pp_data_', modelName, '.RDS'))){
   pp_data = readRDS(paste0(helpers_path, 'pp_data_', modelName, '.RDS'))

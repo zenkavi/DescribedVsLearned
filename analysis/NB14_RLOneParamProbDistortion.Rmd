@@ -26,8 +26,9 @@ helpers_path = here('analysis/helpers/')
 ```{r include=FALSE}
 source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 source(paste0(helpers_path, 'facet_wrap_equal.R'))
+source(paste0(helpers_path, 'rlModels/make_posterior_predictive_data.R'))
 # source(paste0(helpers_path, 'identifiability_analysis.R'))
-# source(paste0(helpers_path, 'make_posterior_predictive_data.R'))
+
 ```
 
 Set theme for plots
@@ -53,6 +54,8 @@ Based on the behavioral analyses showing [a linear decrease on the effect of lot
 $$w(pFrac) = \frac{\delta*pFrac}{\delta*pFrac+(1- pFrac)}$$
 such that $\delta < 1$ suggest an underweighting and $\delta >1$ suggest an overweighting of the relevance of the learned attribute. 
 
+Note also that a model that included an additional parameter $\gamma$ for the probability distortion function suggested that [this parameter was close to 1.](https://zenkavi.github.io/DescribedVsLearned_beh/outputs/NB2_two_systems_model.html#Model_fit)
+
 The expected value of each lottery is computed by multiplying the probability of winning with the reward amount.
 
 $$EV_{i, t} = p_{i, t} V{i_t}$$
@@ -62,19 +65,19 @@ $$QV_{i,t} = QV_{i, t-1} + \alpha(R_{i, t-1}- QV_{i, t-1})$$
 
 # Model fit
 
-```{r}
+```{r message=FALSE}
 source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamProbDistortion.R'))
 # Rename objects 
 g_par_ests_sym = g_par_ests
 par_ests_sym = par_ests
-fit_sym = fit
 rm(g_par_ests, par_ests, fit)
 source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_AsymmProbDistortion.R'))
+rm(fit)
 ```
 
 ## Log likelihood distributions
 
-Distribution of likelihood across iterations for each subject. Hierarchical fits have higher likelihoods and are more peakier, which would help with distinguishing an MLE estimate if desired.
+Distribution of likelihood across iterations for each subject. Asymmetric and symmetric distortion of probability models are often indistinguishable. When they differ symmetric tends to have higher likelihoods.
 
 ```{r}
 par_ests %>%
@@ -99,6 +102,8 @@ par_ests %>%
 ## Parameter point estimates
 
 ### Group parameters
+
+For both asymmetric and symmetric distortion group delta posterior means are < 1 in line with the logistic regression weights.
 
 ```{r}
 g_par_ests %>%
@@ -132,100 +137,74 @@ g_par_ests %>%
 
 ### Individual parameters
 
-How do the ML and posterior medians differ? 
-
-Most pronounced differences are on $\beta$.
+Comparison of MLE and mean a posteriori estimates. 
 
 **Note: posterior median estimates are from different iterations/samples whereas the estimates that have the highest likelihood are from the same sample.**
 
 ```{r}
-tmp1 = par_ests %>%
+tmp1 = par_ests_sym %>%
   group_by(subnum, par) %>%
-  filter(logLik == max(logLik))
+  filter(logLik == max(logLik)) %>%
+  mutate(distortion = "Symmetric") %>%
+  rbind(par_ests %>%
+  group_by(subnum, par) %>%
+  filter(logLik == max(logLik)) %>%
+  mutate(distortion = "Asymmetric"))
 
-tmp2 = par_ests %>%
+tmp2 = par_ests_sym %>%
   group_by(subnum, par) %>%
-  summarise(est = mean(value), .groups='keep')
+  summarise(est = mean(value), .groups='keep') %>%
+  mutate(distortion = "Symmetric") %>%
+  rbind(par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = mean(value), .groups='keep') %>%
+  mutate(distortion = "Asymmetric"))
 
 tmp = tmp2 %>%
-  left_join(tmp1, by=c("subnum", "par")) 
+  left_join(tmp1, by=c("subnum", "par", "distortion")) 
 
 tmp %>%
-  ggplot(aes(est, value))+
+  ggplot(aes(est, value))+ #est is posterior mean, value is MLE
   geom_point()+
   geom_abline(slope=1, intercept = 0, linetype="dashed")+
-  facet_wrap_equal(~par, scales='free')+
+  facet_wrap_equal(distortion~par, scales='free')+
   xlab("Posterior mean")+
   ylab("Maximum likelihood")
 ```
 
-Where does the MLE fall on the posteriors of each parameter? 
+Comparison of the each subjects' MLE and mean a posteriori estimates between the two models.
 
-```{r fig.height=8, fig.width=8}
-par_ests %>%
-  ggplot(aes(value))+
-  geom_histogram(alpha=.5, bins = 30)+
-  facet_grid(subnum~par, scale="free")+
-  geom_vline(aes(xintercept = value), tmp1, color=cbbPalette[5])+
-  theme(axis.text.y=element_blank(),
-        axis.ticks.y=element_blank(),
-        panel.grid = element_blank(),
-        strip.text.x = element_text(size=14),
-        axis.text.x = element_text(size=14))+
-  xlab("")+
-  ylab("")
+```{r}
+tmp %>%
+  rename(post=est, mle=value) %>%
+  select(-logLik) %>%
+  gather(key, value, -subnum, -par, -distortion) %>%
+  spread(distortion, value) %>%
+  ggplot(aes(Symmetric, Asymmetric))+
+  geom_point()+
+  geom_abline(slope=1, intercept = 0, linetype="dashed")+
+  facet_wrap_equal(key~par, scales='free')
 ```
-How far are the likelihoods of the median estimates from the maximum likelihood?
-
-```{r fig.height=5, fig.width=8}
-tmp3 = par_ests %>%
-  group_by(subnum, par) %>%
-  mutate(est = median(value), 
-         diff_from_med = abs(value - est)) %>%
-  filter(diff_from_med == min(diff_from_med)) %>%
-  filter(logLik == max(logLik)) %>%
-  select(subnum, par, logLik) %>%
-  spread(par, logLik)
-
-par_ests %>%
-  filter(par == "alpha") %>%
-  ggplot(aes(logLik)) +
-  geom_histogram(alpha=.5, bins=30)+
-  facet_wrap(~subnum, scales="free_x")+
-  xlab("Log Likelihood")+
-  ylab("")+
-  ggtitle("Distribution of log likelihoods across the samples for each subject \noverlaid with likelihoods of posterior mean parameter estimates")+
-  theme(axis.text.y=element_blank(),
-        axis.ticks.y=element_blank(),
-        panel.grid = element_blank(),
-        legend.position="bottom")+
-  geom_vline(aes(xintercept = alpha, color="alpha"), tmp3)+
-  geom_vline(aes(xintercept = beta, color="beta"), tmp3)+
-  geom_vline(aes(xintercept = delta, color="delta"), tmp3)+
-  geom_vline(aes(xintercept = gamma, color="gamma"), tmp3)+
-    scale_color_manual(name="",values = c(alpha = cbbPalette[1], beta=cbbPalette[2], delta=cbbPalette[3], gamma=cbbPalette[4]))
-
-```
-
-```{r echo=FALSE}
-rm(tmp, tmp1, tmp2, tmp3)
-```
-
-**MLE**  
-- Point estimates from the same sampling iteration  
-- MLE estimates differ most from point estimates for beta and gamma so choosing these as point estimates doesn't yield different data for all parameters.  
-
-**Mean of posterior**  
-- Point estimates from the different sampling iteration  
-- Mean estimates have likelihoods that fall in the middle (instead of the max) of the likelihood distributions.
-
-When would we need point estimates?  
-- Individual difference analyses  
-- Prediction error estimates for imaging  
 
 ## Covariance between parameters
 
 Are there any dependencies between the parameters? Looking at correlations between samples from the **same** iteration.
+
+Symmetric distortion model
+
+```{r}
+tmp = g_par_ests_sym %>%
+  group_by(key) %>%
+  mutate(iter = 1:n()) %>%
+  group_by(iter) %>%
+  spread(key, value) %>%
+  ungroup() %>%
+  select(-iter)
+
+round(cor(tmp), 3)  
+```
+
+Asymmetric distortion model
 
 ```{r}
 tmp = g_par_ests %>%
@@ -240,7 +219,53 @@ round(cor(tmp), 3)
 ```
 
 ```{r echo=FALSE}
-rm(tmp)
+rm(tmp, tmp1, tmp2)
+```
+
+# Posterior predictive checks
+
+Do the subject parameters capture the behavioral patterns in the data?
+
+Sample from each subject's posterior distributions 100 times and simulate data using these sampled parameters. Plot predicted versus actual choice as a function of the probability of a fractal draw.
+
+```{r}
+modelName = 'fit_rl_hierarchical_oneParamProbDistortion'
+
+if(file.exists(paste0(helpers_path, 'pp_data_', modelName, '.RDS'))){
+  pp_data = readRDS(paste0(helpers_path, 'pp_data_', modelName, '.RDS'))
+} else{
+  pp_data = make_posterior_predictive_data(numDraws = 100, modelName = modelName) 
+}
+```
+
+```{r  fig.height=8, fig.width=8}
+tmp = clean_beh_data %>%
+  group_by(subnum, probFractalDraw) %>%
+  summarise(propLeft = mean(choiceLeft), .groups='keep') %>%
+  mutate(data_type = "actual")
+
+pp_data %>%
+  group_by(subnum, sampleNum, probFractalDraw) %>%
+  summarise(propLeft = mean(choiceLeft), .groups='keep') %>%
+  mutate(data_type = "predicted") %>%
+  rbind(tmp) %>%
+  ggplot(aes(factor(probFractalDraw), propLeft, color=data_type, alpha=data_type, shape=data_type, size=data_type))+
+  # geom_boxplot(position=position_dodge(width = 0))+
+  geom_point()+
+  facet_wrap(~subnum) + 
+  theme(panel.grid = element_blank(), legend.position = "bottom", legend.title = element_blank())+
+  xlab("Probability of a Fractal Draw")+
+  ylab("Proportion of left choices")+
+  ggtitle("Actuals versus predicted choice generated using parameters sampled from the posterior")+
+  scale_color_manual(values=c(cbbPalette[2], "gray"))+
+  scale_alpha_manual(values=c(1, .5))+
+  scale_shape_manual(values=c(19, 1))+
+  scale_size_manual(values=c(2, 1))
+  
+```
+
+```{r echo=FALSE}
+rm(modelName, tmp)
 ```
 
 # Identifiability analysis
@@ -322,48 +347,3 @@ id_par_ests$par_ests %>%
 rm(id_par_ests, trueGroupPars, truePars)
 ```
 
-# Posterior predictive checks
-
-Do the subject parameters capture the behavioral patterns in the data?
-
-Sample from each subject's posterior distributions 100 times and simulate data using these sampled parameters. Plot predicted versus actual choice as a function of the probability of a fractal draw.
-
-```{r}
-modelName = 'fit_twoValSystemsWithRL_hierarchical'
-
-if(file.exists(paste0(helpers_path, 'pp_data_', modelName, '.RDS'))){
-  pp_data = readRDS(paste0(helpers_path, 'pp_data_', modelName, '.RDS'))
-} else{
-  pp_data = make_posterior_predictive_data(numDraws = 100, modelName = modelName) 
-}
-```
-
-```{r  fig.height=8, fig.width=8}
-tmp = clean_beh_data %>%
-  group_by(subnum, probFractalDraw) %>%
-  summarise(propLeft = mean(choiceLeft), .groups='keep') %>%
-  mutate(data_type = "actual")
-
-pp_data %>%
-  group_by(subnum, sampleNum, probFractalDraw) %>%
-  summarise(propLeft = mean(choiceLeft), .groups='keep') %>%
-  mutate(data_type = "predicted") %>%
-  rbind(tmp) %>%
-  ggplot(aes(factor(probFractalDraw), propLeft, color=data_type, alpha=data_type, shape=data_type, size=data_type))+
-  # geom_boxplot(position=position_dodge(width = 0))+
-  geom_point()+
-  facet_wrap(~subnum) + 
-  theme(panel.grid = element_blank(), legend.position = "bottom", legend.title = element_blank())+
-  xlab("Probability of a Fractal Draw")+
-  ylab("Proportion of left choices")+
-  ggtitle("Actuals versus predicted choice generated using parameters sampled from the posterior")+
-  scale_color_manual(values=c(cbbPalette[2], "gray"))+
-  scale_alpha_manual(values=c(1, .5))+
-  scale_shape_manual(values=c(19, 1))+
-  scale_size_manual(values=c(2, 1))
-  
-```
-
-```{r echo=FALSE}
-rm(modelName, tmp)
-```

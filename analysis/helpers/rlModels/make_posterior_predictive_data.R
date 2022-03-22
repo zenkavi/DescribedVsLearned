@@ -2,7 +2,7 @@ set.seed(2394579)
 
 library(here)
 library(tidyverse)
-library(rstan)
+
 helpers_path = here('analysis/helpers/')
 
 source(paste0(helpers_path, 'rlModels/sim_choice_data.R'))
@@ -13,12 +13,22 @@ sample_from_posterior = function(parEsts, subId){
     filter(subnum == subId) %>%
     spread(par, value)
   
-  sampled_rows = sample(1:nrow(subParEsts), 4)
+  if("gamma" %in% names(subParEsts)){
+    sampled_rows = sample(1:nrow(subParEsts), 4)
+    
+    sampled_pars = data.frame(alpha = subParEsts$alpha[sampled_rows[1]], 
+                              beta = subParEsts$beta[sampled_rows[2]], 
+                              gamma = subParEsts$gamma[sampled_rows[3]], 
+                              delta = subParEsts$delta[sampled_rows[4]])
+  } else {
+    sampled_rows = sample(1:nrow(subParEsts), 3)
+    
+    sampled_pars = data.frame(alpha = subParEsts$alpha[sampled_rows[1]], 
+                              beta = subParEsts$beta[sampled_rows[2]], 
+                              delta = subParEsts$delta[sampled_rows[3]])
+  }
   
-  sampled_pars = data.frame(alpha = subParEsts$alpha[sampled_rows[1]], 
-                            beta = subParEsts$beta[sampled_rows[2]], 
-                            gamma = subParEsts$gamma[sampled_rows[3]], 
-                            delta = subParEsts$delta[sampled_rows[4]])
+  
   return(sampled_pars)
 }
 
@@ -41,6 +51,7 @@ make_posterior_predictive_data = function(numDraws,
       filter(subnum == cur_sub) %>% 
       rename(rightLotteryValue=referenceValue, rightLotteryProb=referenceProb, 
              leftLotteryValue=lotteryValue, leftLotteryProb=lotteryProb)
+    print(paste0("Simulating data for ", cur_sub, "..."))
     for(j in 1:numDraws){
       sampled_pars = sample_from_posterior(par_ests, cur_sub)
       

@@ -1,13 +1,21 @@
-sim_choice_data = function(trials, pars, logLik=F, data=NA){
+sim_choice_data = function(trials, pars, logLik=F, data=NA, asymm_prob_distortion=FALSE){
   
   if(is.na(data)[1]){
     data = trials
   }
   
   a = pars$alpha
-  b = pars$beta
-  g = pars$gamma
   d = pars$delta
+  if("beta" %in% names(pars)){
+    b = pars$beta
+  }
+  if("gamma" %in% names(pars)){
+    g = pars$gamma
+  } else {
+    g = 1
+  }
+  
+  
   
   # Initialize Q Values
   leftQV = 0
@@ -26,11 +34,16 @@ sim_choice_data = function(trials, pars, logLik=F, data=NA){
   rightEV = data$rightLotteryValue * data$rightLotteryProb
   data$leftEV = leftEV
   data$rightEV = rightEV
-
+  
   wProbFrac = (d * (data$probFractalDraw^g) ) / ( (d * (data$probFractalDraw^g)) + (1-data$probFractalDraw)^g )
 
-  optValLeft = (1-wProbFrac)*leftEV + wProbFrac*leftQV
-  optValRight = (1-wProbFrac)*rightEV + wProbFrac*rightQV
+  if(asymm_prob_distortion){
+    optValLeft = (1-probFractalDraw)*leftEV + wProbFrac*leftQV
+    optValRight = (1-probFractalDraw)*rightEV + wProbFrac*rightQV 
+  } else {
+    optValLeft = (1-wProbFrac)*leftEV + wProbFrac*leftQV
+    optValRight = (1-wProbFrac)*rightEV + wProbFrac*rightQV
+  }
 
   # Inverse logit of value difference weighted by beta
   x = b * (optValLeft - optValRight)

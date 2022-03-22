@@ -18,8 +18,8 @@ if(!exists('organize_stan_output')){
 }
 
 ## If there is a fit object read it in
-if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_rl.RDS'))){
-  fit = readRDS(paste0(helpers_path, 'rlModels/stanModels/fit_rl.RDS'))
+if(file.exists(paste0(helpers_path, 'ddrlModels/stanModels/fit_model1c.RDS'))){
+  fit = readRDS(paste0(helpers_path, 'ddrlModels/stanModels/fit_model1c.RDS'))
 } else {## Otherwise fit the model
   
   ## Reshape data
@@ -35,7 +35,8 @@ if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_rl.RDS'))){
   
   clean_beh_data = clean_beh_data %>%
     mutate(leftLotteryEV = lotteryValue*lotteryProb,
-           rightLotteryEV = referenceValue*referenceProb)
+           rightLotteryEV = referenceValue*referenceProb,
+           numTimeSteps = reactionTime * 1000 /10)
   
   ev_left = extract_var_for_stan(clean_beh_data, leftLotteryEV)
   
@@ -47,6 +48,8 @@ if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_rl.RDS'))){
   
   trial_pFrac = extract_var_for_stan(clean_beh_data, probFractalDraw)
   
+  num_time_steps = extract_var_for_stan(clean_beh_data, numTimeSteps)
+  
   m_data=list(num_subjs = num_subjs,
               num_trials = num_trials,
               choices = choices,
@@ -56,15 +59,19 @@ if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_rl.RDS'))){
               fractal_outcomes_right = fractal_outcomes_right,
               trial_pFrac = trial_pFrac)
   
-  rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac)
+  rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac, num_time_steps)
   
   ## Fit model for all subjects
-  m = stan_model(paste0(helpers_path,'rlModels/stanModels/fit_rl.stan'))
+  m = stan_model(paste0(helpers_path,'ddrlModels/stanModels/fit_model1c.stan'))
   
   fit = sampling(m, data=m_data)
-  saveRDS(fit, paste0(helpers_path, 'rlModels/stanModels/fit_rl.RDS'))
+  saveRDS(fit, paste0(helpers_path, 'ddrlModels/stanModels/fit_model1c.RDS'))
 }
 
-out = organize_stan_output(fit, subj_par_names = c("alpha","gamma", "delta", "beta"))
+## Organize output
+out = organize_stan_output(fit, 
+                           subj_par_names=c("d","sigma", "alpha", "delta"),
+                           group_par_names=c("g_d","g_sigma", "g_alpha", "g_delta"))
 par_ests = out$par_ests
+g_par_ests = out$g_par_ests
 rm(out)

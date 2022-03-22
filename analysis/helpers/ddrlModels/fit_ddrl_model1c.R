@@ -36,7 +36,7 @@ if(file.exists(paste0(helpers_path, 'ddrlModels/stanModels/fit_model1c.RDS'))){
   clean_beh_data = clean_beh_data %>%
     mutate(leftLotteryEV = lotteryValue*lotteryProb,
            rightLotteryEV = referenceValue*referenceProb,
-           numTimeSteps = reactionTime * 1000 /10)
+           numTimeSteps = round(reactionTime * 1000 /10))
   
   ev_left = extract_var_for_stan(clean_beh_data, leftLotteryEV)
   
@@ -49,6 +49,7 @@ if(file.exists(paste0(helpers_path, 'ddrlModels/stanModels/fit_model1c.RDS'))){
   trial_pFrac = extract_var_for_stan(clean_beh_data, probFractalDraw)
   
   num_time_steps = extract_var_for_stan(clean_beh_data, numTimeSteps)
+  num_time_steps = ifelse(num_time_steps < 0, 1, num_time_steps)
   
   m_data=list(num_subjs = num_subjs,
               num_trials = num_trials,
@@ -57,7 +58,8 @@ if(file.exists(paste0(helpers_path, 'ddrlModels/stanModels/fit_model1c.RDS'))){
               ev_right = ev_right,
               fractal_outcomes_left = fractal_outcomes_left,
               fractal_outcomes_right = fractal_outcomes_right,
-              trial_pFrac = trial_pFrac)
+              trial_pFrac = trial_pFrac,
+              num_time_steps = num_time_steps)
   
   rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac, num_time_steps)
   

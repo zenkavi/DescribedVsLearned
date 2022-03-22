@@ -57,8 +57,8 @@ functions {
       prStatesNew = stateStep * prStatesNew;
       
       for(i in 1:21){
-        changeUpProb[i] = 1 - normal_cdf(changeUp[i, nextTime] | mu, aSigma);
-        changeDownProb[i] = normal_cdf(changeDown[i, nextTime] | mu, aSigma);
+        changeUpProb[i] = 1 - normal_cdf(changeUp[i, nextTime], mu, aSigma);
+        changeDownProb[i] = normal_cdf(changeDown[i, nextTime], mu, aSigma);
       }
       
       tempUpCross = dot_product(to_row_vector(prStates[:,curTime]), changeUpProb);
@@ -67,7 +67,7 @@ functions {
       
       // Renormalize to cope with numerical approximations.
       sumIn = sum(prStates[:,curTime]);
-      sumCurrent = sum(prStatesNew) + tempUpCross + tempDownCross;
+      sumCurrent = sum(prStatesNew[:]) + tempUpCross + tempDownCross;
       prStatesNew = prStatesNew * sumIn / sumCurrent;
       tempUpCross = tempUpCross * sumIn / sumCurrent;
       tempDownCross = tempDownCross * sumIn / sumCurrent;
@@ -81,17 +81,17 @@ functions {
       }
       
       // Update the probabilities 
-      prStates[, nextTime] = prStatesNew;
+      prStates[:, nextTime] = prStatesNew;
       probUpCrossing[nextTime] = tempUpCross;
       probDownCrossing[nextTime] = tempDownCross;
     }
     
-    likelihood = 0
-    if (choice == 1){ // Choice was left.
+    likelihood = 0;
+    if (aChoice == 1){ // Choice was left.
     if (probUpCrossing[aNumTimeSteps] > 0){
       likelihood = probUpCrossing[aNumTimeSteps];
     }
-    } else if (choice == -1){
+    } else if (aChoice == -1){
       if(probDownCrossing[aNumTimeSteps] > 0){
         likelihood = probDownCrossing[aNumTimeSteps];
       } 
@@ -163,7 +163,7 @@ model {
       val_diff = opt_val[1] - opt_val[2];
       
       // increment target with the following likelihood function:
-      choices[i, t] ~ ddm(num_time_steps[i, t], d, sigma, val_diff);
+      choices[i, t] ~ ddm(num_time_steps[i, t], d[i], sigma[i], val_diff);
       
       PE[1] = fractal_outcomes_left[i, t] - qv[1];
       PE[2] = fractal_outcomes_right[i, t] - qv[2];

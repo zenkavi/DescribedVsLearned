@@ -99,6 +99,8 @@ par_ests %>%
         legend.title = element_blank())+
   scale_fill_manual(values=c(cbbPalette[1], cbbPalette[2]))
 ```
+
+
 ## Parameter point estimates
 
 ### Group parameters
@@ -233,8 +235,8 @@ Using the symmetric distortion model.
 ```{r}
 modelName = 'fit_rl_hierarchical_oneParamProbDistortion'
 
-if(file.exists(paste0(helpers_path, 'pp_data_', modelName, '.RDS'))){
-  pp_data = readRDS(paste0(helpers_path, 'pp_data_', modelName, '.RDS'))
+if(file.exists(paste0(helpers_path, 'rlModels/pp_data_', modelName, '.RDS'))){
+  pp_data = readRDS(paste0(helpers_path, 'rlModels/pp_data_', modelName, '.RDS'))
 } else{
   pp_data = make_posterior_predictive_data(numDraws = 100, modelName = modelName) 
 }
@@ -294,10 +296,10 @@ all_trials = clean_beh_data %>%
   select(-numRewardedTrials, -reactionTime, -responded, -choiceLeft, -reward, -totalReward) %>%
   rename(rightLotteryValue = referenceValue, rightLotteryProb = referenceProb, leftLotteryValue = lotteryValue, leftLotteryProb = lotteryProb) %>%
   mutate(subnum = ifelse(subnum == "27", "21", subnum))
+```
 
+```{r warning=FALSE}
 id_par_ests = identifiability_analysis(truePars, modelName, all_trials = all_trials, subj_par_names = c("alpha", "beta", "delta"),group_par_names = c("g_alpha","g_delta", "g_beta"))
-
-rm(modelName)
 ```
 
 ```{r}
@@ -349,6 +351,6 @@ id_par_ests$par_ests %>%
 ```
 
 ```{r echo=FALSE}
-rm(id_par_ests, trueGroupPars, truePars)
+rm(id_par_ests, trueGroupPars, truePars, modelName, all_trials)
 ```
 

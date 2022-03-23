@@ -2,12 +2,12 @@ set.seed(2394239)
 library(here)
 library(tidyverse)
 library(rstan)
-helpers_path = here('analysis/helpers/rlModels/')
+helpers_path = here('analysis/helpers/')
 
-source(paste0(helpers_path, 'sim_trials.R'))
-source(paste0(helpers_path, 'sim_choice_data.R'))
-source(paste0(helpers_path, 'extract_var_for_stan.R'))
-source(paste0(helpers_path, 'organize_stan_output.R'))
+source(paste0(helpers_path, 'rlModels/sim_trials.R'))
+source(paste0(helpers_path, 'rlModels/sim_choice_data.R'))
+source(paste0(helpers_path, 'rlModels/extract_var_for_stan.R'))
+source(paste0(helpers_path, 'rlModels/organize_stan_output.R'))
 
 identifiability_analysis = function(truePars,
                                     modelName,
@@ -86,13 +86,13 @@ identifiability_analysis = function(truePars,
   
   rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac)
   
-  if(file.exists(paste0(helpers_path, 'stanModels/ida_', modelName,'.RDS'))){
-    fit = readRDS(paste0(helpers_path, 'stanModels/ida_', modelName, '.RDS'))
+  if(file.exists(paste0(helpers_path, 'rlModels/stanModels/ida_', modelName,'.RDS'))){
+    fit = readRDS(paste0(helpers_path, 'rlModels/stanModels/ida_', modelName, '.RDS'))
     rm(m_data)
   } else {
-    m = stan_model(paste0(helpers_path, 'stanModels/', modelName, '.stan'))
+    m = stan_model(paste0(helpers_path, 'rlModels/stanModels/', modelName, '.stan'))
     fit = sampling(m, data=m_data)
-    saveRDS(fit, paste0(helpers_path, 'stanModels/ida_', modelName, '.RDS'))
+    saveRDS(fit, paste0(helpers_path, 'rlModels/stanModels/ida_', modelName, '.RDS'))
     rm(m, m_data)}
   
   if(is.na(group_par_names[1])){

@@ -2,7 +2,7 @@ set.seed(2394239)
 library(here)
 library(tidyverse)
 library(rstan)
-helpers_path = here('analysis/helpers/rlModels')
+helpers_path = here('analysis/helpers/rlModels/')
 
 source(paste0(helpers_path, 'sim_trials.R'))
 source(paste0(helpers_path, 'sim_choice_data.R'))
@@ -11,6 +11,7 @@ source(paste0(helpers_path, 'organize_stan_output.R'))
 
 identifiability_analysis = function(truePars,
                                     modelName,
+                                    all_trials = NA,
                                     numSims = 10,
                                     numTrials = 60, 
                                     numRuns = 5,
@@ -28,11 +29,17 @@ identifiability_analysis = function(truePars,
   }
   
   for(i in 1:numSims){
-    trials = sim_trials(numTrials, 
-                        numRuns,
-                        randomWalkSigma,
-                        randomWalkLowBound,
-                        randomWalkUpBound)
+    
+    if(is.na(all_trials[1])){
+      trials = sim_trials(numTrials, 
+                          numRuns,
+                          randomWalkSigma,
+                          randomWalkLowBound,
+                          randomWalkUpBound)
+    } else {
+      trials = all_trials %>% mutate(subnum = as.numeric(subnum)) %>% filter(subnum == i) 
+    }
+    
     
     if(i == 1){
       data = sim_choice_data(trials, truePars[i,])
@@ -47,7 +54,13 @@ identifiability_analysis = function(truePars,
   
   num_subjs = numSims
   
-  num_trials = rep(numTrials * numRuns, numSims)
+  if(is.na(all_trials[1])){
+    num_trials = rep(numTrials * numRuns, numSims)
+  } else {
+    tmp = all_trials %>% group_by(subnum) %>% tally()
+    num_trials = tmp$n
+  }
+  
   
   #subjects in rows, trials in columns
   choices = extract_var_for_stan(data, choiceLeft)
@@ -73,13 +86,13 @@ identifiability_analysis = function(truePars,
   
   rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac)
   
-  if(file.exists(paste0(helpers_path, 'rlModels/stanModels/ida_', modelName,'.RDS'))){
-    fit = readRDS(paste0(helpers_path, 'rlModels/stanModels/ida_', modelName, '.RDS'))
+  if(file.exists(paste0(helpers_path, 'stanModels/ida_', modelName,'.RDS'))){
+    fit = readRDS(paste0(helpers_path, 'stanModels/ida_', modelName, '.RDS'))
     rm(m_data)
   } else {
-    m = stan_model(paste0(helpers_path, 'rlModels/stanModels/', modelName, '.stan'))
+    m = stan_model(paste0(helpers_path, 'stanModels/', modelName, '.stan'))
     fit = sampling(m, data=m_data)
-    saveRDS(fit, paste0(helpers_path, 'rlModels/stanModels/ida_', modelName, '.RDS'))
+    saveRDS(fit, paste0(helpers_path, 'stanModels/ida_', modelName, '.RDS'))
     rm(m, m_data)}
   
   if(is.na(group_par_names[1])){

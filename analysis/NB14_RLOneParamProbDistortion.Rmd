@@ -27,7 +27,7 @@ helpers_path = here('analysis/helpers/')
 source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 source(paste0(helpers_path, 'facet_wrap_equal.R'))
 source(paste0(helpers_path, 'rlModels/make_posterior_predictive_data.R'))
-# source(paste0(helpers_path, 'identifiability_analysis.R'))
+source(paste0(helpers_path, 'rlModels/identifiability_analysis.R'))
 
 ```
 
@@ -228,6 +228,8 @@ Do the subject parameters capture the behavioral patterns in the data?
 
 Sample from each subject's posterior distributions 100 times and simulate data using these sampled parameters. Plot predicted versus actual choice as a function of the probability of a fractal draw.
 
+Using the symmetric distortion model.
+
 ```{r}
 modelName = 'fit_rl_hierarchical_oneParamProbDistortion'
 
@@ -284,13 +286,16 @@ set.seed(2349813)
 
 truePars = data.frame(alpha=truncnorm::rtruncnorm(numSims, mean=trueGroupPars$g_alpha, a=0, b=1), 
                       beta=truncnorm::rtruncnorm(numSims, mean=trueGroupPars$g_beta, a=0, b=5), 
-                      gamma=truncnorm::rtruncnorm(numSims, mean=trueGroupPars$g_gamma, a=0),  
                       delta=truncnorm::rtruncnorm(numSims, mean=trueGroupPars$g_delta, a=0))
 
-modelName = 'fit_twoValSystemsWithRL_hierarchical'
+modelName = 'fit_rl_hierarchical_oneParamProbDistortion'
 
-group_par_names=c("g_alpha","g_gamma", "g_delta", "g_beta")
-id_par_ests = identifiability_analysis(truePars, modelName, group_par_names = group_par_names)
+all_trials = clean_beh_data %>%
+  select(-numRewardedTrials, -reactionTime, -responded, -choiceLeft, -reward, -totalReward) %>%
+  rename(rightLotteryValue = referenceValue, rightLotteryProb = referenceProb, leftLotteryValue = lotteryValue, leftLotteryProb = lotteryProb) %>%
+  mutate(subnum = ifelse(subnum == "27", "21", subnum))
+
+id_par_ests = identifiability_analysis(truePars, modelName, all_trials = all_trials, subj_par_names = c("alpha", "beta", "delta"),group_par_names = c("g_alpha","g_delta", "g_beta"))
 
 rm(modelName)
 ```

@@ -31,7 +31,8 @@ if(file.exists(paste0(helpers_path, 'ddrlModels/stanModels/fit_model1c.RDS'))){
   num_trials = num_trials$n
   
   #subjects in rows, trials in columns
-  choices = extract_var_for_stan(clean_beh_data, choiceLeft)
+  clean_beh_data = clean_beh_data %>% mutate(choices = ifelse(choiceLeft == 1, 1, -1))
+  choices = extract_var_for_stan(clean_beh_data, choices)
   
   clean_beh_data = clean_beh_data %>%
     mutate(leftLotteryEV = lotteryValue*lotteryProb,

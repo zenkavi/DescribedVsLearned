@@ -49,9 +49,12 @@ if(file.exists(paste0(helpers_path, 'ddrlModels/stanModels/fit_model1c.RDS'))){
   
   trial_pFrac = extract_var_for_stan(clean_beh_data, probFractalDraw)
   
-  num_time_steps = extract_var_for_stan(clean_beh_data, numTimeSteps)
-  num_time_steps = ifelse(num_time_steps < 0, 1, num_time_steps)
+  # num_time_steps = extract_var_for_stan(clean_beh_data, numTimeSteps)
+  # num_time_steps = ifelse(num_time_steps < 0, 1, num_time_steps)
   
+  response_times = extract_var_for_stan(clean_beh_data, reactionTime)
+  response_times = ifelse(response_times < 0, 0.11, response_times)
+    
   m_data=list(num_subjs = num_subjs,
               num_trials = num_trials,
               choices = choices,
@@ -60,9 +63,11 @@ if(file.exists(paste0(helpers_path, 'ddrlModels/stanModels/fit_model1c.RDS'))){
               fractal_outcomes_left = fractal_outcomes_left,
               fractal_outcomes_right = fractal_outcomes_right,
               trial_pFrac = trial_pFrac,
-              num_time_steps = num_time_steps)
+              response_times = response_times)
+              # num_time_steps = num_time_steps)
   
-  rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac, num_time_steps)
+  # rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac, num_time_steps)
+  rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac, response_times)
   
   ## Fit model for all subjects
   m = stan_model(paste0(helpers_path,'ddrlModels/stanModels/fit_model1c.stan'))

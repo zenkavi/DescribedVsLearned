@@ -53,7 +53,7 @@ if(file.exists(paste0(helpers_path, 'ddrlModels/stanModels/fit_model1c.RDS'))){
   # num_time_steps = ifelse(num_time_steps < 0, 1, num_time_steps)
   
   response_times = extract_var_for_stan(clean_beh_data, reactionTime)
-  response_times = ifelse(response_times < 0, 0.11, response_times)
+  response_times = ifelse(response_times < 0.11, 0.11, response_times) # artificial lower bound to avoid issues with the nondecision time fixed at .1
     
   m_data=list(num_subjs = num_subjs,
               num_trials = num_trials,

@@ -1,0 +1,138 @@
+---
+title: 'Experience vs. description based decision-making project: DDRL with Stan (probabilistic estimation)'
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    code_folding: 'hide'
+  pdf_document:
+    toc: yes
+---
+
+# Set up
+
+```{r include=FALSE}
+library(tidyverse)
+library(here)
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+library(RWiener)
+```
+
+```{r}
+helpers_path = here('analysis/helpers/')
+```
+
+```{r include=FALSE}
+source(paste0(helpers_path, 'facet_wrap_equal.R'))
+source(paste0(helpers_path, 'rlModels/make_posterior_predictive_data.R'))
+source(paste0(helpers_path, 'rlModels/identifiability_analysis.R'))
+```
+
+Set theme for plots
+
+```{r}
+theme_set(theme_bw())
+```
+
+# Pure dd
+
+- Not hierarchical  
+- Estimating individual threshold, bias, drift rate and NDT  
+- Not including value difference between options  
+- No learning  
+
+```{r}
+source(paste0(helpers_path,'ddrl_Models/fit_pure_dd_stan.R'))
+```
+
+## Log likelihood distributions
+
+```{r}
+par_ests %>%
+  filter(par == "alpha") %>% #filtering one parameter bc likelihood for combinations of parameters is the same. nothing special abt alpha here
+  ggplot(aes(logLik)) +
+  geom_histogram(alpha=.5, bins=30, position="identity")+
+  facet_wrap(~subnum, scales="free_x")+
+  xlab("Log Likelihood")+
+  ylab("")+
+  ggtitle("Distribution of log likelihoods across the samples for each subject")+
+  theme(axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid = element_blank())
+```
+## Parameter estimates
+
+Drift rates for most subjects are very peaky but for five subjects they are much more variable.
+
+```{r}
+par_ests %>%
+  ggplot(aes(value)) +
+  geom_histogram(bins=30)+
+  facet_grid(subnum ~ par, scales="free")+
+  theme(axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid = element_blank())
+```
+
+## Covariance between parameters
+
+```{r}
+tmp = par_ests %>%
+  group_by(par) %>%
+  mutate(iter = 1:n()) %>%
+  group_by(iter) %>%
+  spread(par, value) %>%
+  ungroup() %>%
+  select(-iter, -logLik, -subnum)
+
+round(cor(tmp), 3)  
+```
+
+## Posterior predictive checks
+
+Using mean posterior estimates
+
+Predicted vs actual RT distributions conditioned on choice
+
+```{r}
+sub_par_ests = par_ests %>%
+  group_by(subnum , par) %>%
+  summarise(mean_val = mean(value), .groups="keep") %>%
+  spread(par, mean_val)
+```
+
+```{r}
+sim_data = data.frame()
+for(i in 1:nrow(sub_par_ests)){
+  
+  sim_sub_data = rwiener(n = 300, alpha = sub_par_ests$alpha[i], tau = sub_par_ests$tau[i], beta = sub_par_ests$beta[i], delta = sub_par_ests$delta[i])
+  sim_sub_data$subnum = sub_par_ests$subnum[i]
+  if(i == 1){
+    sim_data = sim_sub_data
+  } else{
+    sim_data = rbind(sim_data, sim_sub_data)
+  }
+}
+```
+
+```{r}
+sim_data %>%
+  mutate(resp = ifelse(resp == "upper", "left", "right"),
+         data_type = "true") %>%
+  rbind(clean_beh_data %>%
+          select(subnum, choiceLeft,reactionTime) %>%
+          rename(q=reactionTime, resp=choiceLeft) %>%
+          mutate(resp = ifelse(resp == 1, "left", "right"),
+                 data_type = "sim")) %>%
+  ggplot(aes(q, fill=data_type))+
+  geom_density(alpha=.5, color=NA)+
+  facet_grid(subnum~resp, scales="free")+
+  theme(axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid = element_blank(),
+        legend.position = "bottom",
+        legend.title = element_blank())
+```
+# Pure dd with fixed pars
+
+

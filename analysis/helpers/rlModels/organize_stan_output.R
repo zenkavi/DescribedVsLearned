@@ -6,7 +6,7 @@ if(!exists("clean_beh_data")){
   source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 }
 
-organize_stan_output = function(fit, subj_par_names, subnums=unique(clean_beh_data$subnum), group_par_names=NA){
+organize_stan_output = function(fit, subj_par_names, subnums=unique(clean_beh_data$subnum), group_par_names=NA, log_lik_var_name = c("logLikelihood")){
   
   # Extract parameters from fit object
   par_ests = data.frame(extract(fit, subj_par_names))  %>%
@@ -23,7 +23,7 @@ organize_stan_output = function(fit, subj_par_names, subnums=unique(clean_beh_da
     ungroup()
   
   # Extract loglikelihoods from fit object
-  log_liks = data.frame(extract(fit, c("logLikelihood")))  %>%
+  log_liks = data.frame(extract(fit, log_lik_var_name))  %>%
     gather(key, value) %>%
     separate(key, c('par', 'subj'), sep='\\.')
   

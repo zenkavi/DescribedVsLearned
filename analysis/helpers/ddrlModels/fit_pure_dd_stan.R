@@ -10,6 +10,10 @@ if (!exists('clean_beh_data')){
   source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 }
 
+if(!exists('organize_stan_output')){
+  source(paste0(helpers_path, 'rlModels/organize_stan_output.R'))
+}
+
 if(file.exists(paste0(helpers_path, 'ddrlModels/stanModels/pure_dd.RDS'))){
   fit = readRDS(paste0(helpers_path, 'ddrlModels/stanModels/pure_dd.RDS'))
 } else {
@@ -75,6 +79,13 @@ if(file.exists(paste0(helpers_path, 'ddrlModels/stanModels/pure_dd.RDS'))){
   fit = sampling(m, data=m_data)
   saveRDS(fit, paste0(helpers_path, 'ddrlModels/stanModels/pure_dd.RDS')) 
 }
+
+out = organize_stan_output(fit, 
+                           subj_par_names=c("alpha","beta", "delta", "tau"),
+                           log_lik_var_name = c("log_lik"))
+
+par_ests = out$par_ests
+rm(out)
 
 # Simplest
 # Add value difference to drift

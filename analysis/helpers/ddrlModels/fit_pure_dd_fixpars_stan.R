@@ -10,8 +10,8 @@ if (!exists('clean_beh_data')){
   source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 }
 
-if(file.exists(paste0(helpers_path, 'ddrlModels/stanModels/pure_dd.RDS'))){
-  fit = readRDS(paste0(helpers_path, 'ddrlModels/stanModels/pure_dd.RDS'))
+if(file.exists(paste0(helpers_path, 'ddrlModels/stanModels/pure_dd_fixpars.RDS'))){
+  fit = readRDS(paste0(helpers_path, 'ddrlModels/stanModels/pure_dd_fixpars.RDS'))
 } else {
   
   N = length(unique(clean_beh_data$subnum))
@@ -69,11 +69,13 @@ if(file.exists(paste0(helpers_path, 'ddrlModels/stanModels/pure_dd.RDS'))){
   rm(N, Nu_max, Nl_max, Nu, Nl, RTu, RTl, minRT, RTbound)
   
   ## Fit model for all subjects
-  # For all subjects individually (non-hierarchical) estimates thresholds, NDTs, bias and drift rate
-  m = stan_model(paste0(helpers_path,'ddrlModels/stanModels/pure_dd.stan'))
+  # For all subjects individually (non-hierarchical) fix thresholds at 1, NDTs at .1, bias at 0 and estimate drift rate only
+  
+  # Extend this for value if it works
+  m = stan_model(paste0(helpers_path,'ddrlModels/stanModels/pure_dd_fixpars.stan'))
   
   fit = sampling(m, data=m_data)
-  saveRDS(fit, paste0(helpers_path, 'ddrlModels/stanModels/pure_dd.RDS')) 
+  saveRDS(fit, paste0(helpers_path, 'ddrlModels/stanModels/pure_dd_fixpars.RDS')) 
 }
 
 # Simplest

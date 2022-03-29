@@ -8,6 +8,8 @@ if(!exists('get_qvals')){
 }
 
 add_inferred_pars = function(clean_beh_data, par_ests, model_name="original"){
+  
+  # Add mean posterior estimates to clean_beh_data
   clean_beh_data = par_ests %>%
     group_by(subnum, par) %>%
     summarise(est = mean(value), .groups='keep') %>%
@@ -37,10 +39,17 @@ add_inferred_pars = function(clean_beh_data, par_ests, model_name="original"){
   
   ## Add bundle values depending on the model parameters 
   if("delta" %in% names(clean_beh_data)){
-    clean_beh_data = clean_beh_data %>%
-      mutate(wpFrac = (delta*probFractalDraw^gamma)/(delta*probFractalDraw^gamma + (1-probFractalDraw)^gamma),
-             valLeftBundle = (1-wpFrac)*leftLotteryEV + wpFrac*leftQValue,
-             valRightBundle = (1-wpFrac)*rightLotteryEV + wpFrac*rightQValue) 
+    if("gamma" %in% names(clean_beh_data)){
+      clean_beh_data = clean_beh_data %>%
+        mutate(wpFrac = (delta*probFractalDraw^gamma)/(delta*probFractalDraw^gamma + (1-probFractalDraw)^gamma),
+               valLeftBundle = (1-wpFrac)*leftLotteryEV + wpFrac*leftQValue,
+               valRightBundle = (1-wpFrac)*rightLotteryEV + wpFrac*rightQValue)
+    } else{
+      clean_beh_data = clean_beh_data %>%
+        mutate(wpFrac = (delta*probFractalDraw)/(delta*probFractalDraw + (1-probFractalDraw)),
+               valLeftBundle = (1-wpFrac)*leftLotteryEV + wpFrac*leftQValue,
+               valRightBundle = (1-wpFrac)*rightLotteryEV + wpFrac*rightQValue)
+    }
     
   } else if("w_int" %in% names(clean_beh_data)){
     clean_beh_data = clean_beh_data %>%

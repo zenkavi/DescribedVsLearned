@@ -41,14 +41,15 @@ theme_set(theme_bw())
 - Not including value difference between options  
 - No learning  
 
-```{r}
-source(paste0(helpers_path,'ddrl_Models/fit_pure_dd_stan.R'))
+```{r message=FALSE}
+source(paste0(helpers_path,'ddrlModels/fit_pure_dd_stan.R'))
+par_ests_var = par_ests
 ```
 
 ## Log likelihood distributions
 
 ```{r}
-par_ests %>%
+par_ests_var %>%
   filter(par == "alpha") %>% #filtering one parameter bc likelihood for combinations of parameters is the same. nothing special abt alpha here
   ggplot(aes(logLik)) +
   geom_histogram(alpha=.5, bins=30, position="identity")+
@@ -60,12 +61,13 @@ par_ests %>%
         axis.ticks.y=element_blank(),
         panel.grid = element_blank())
 ```
+
 ## Parameter estimates
 
 Drift rates for most subjects are very peaky but for five subjects they are much more variable.
 
 ```{r}
-par_ests %>%
+par_ests_var %>%
   ggplot(aes(value)) +
   geom_histogram(bins=30)+
   facet_grid(subnum ~ par, scales="free")+
@@ -77,7 +79,7 @@ par_ests %>%
 ## Covariance between parameters
 
 ```{r}
-tmp = par_ests %>%
+tmp = par_ests_var %>%
   group_by(par) %>%
   mutate(iter = 1:n()) %>%
   group_by(iter) %>%
@@ -95,35 +97,35 @@ Using mean posterior estimates
 Predicted vs actual RT distributions conditioned on choice
 
 ```{r}
-sub_par_ests = par_ests %>%
+sub_par_ests_var = par_ests_var %>%
   group_by(subnum , par) %>%
   summarise(mean_val = mean(value), .groups="keep") %>%
   spread(par, mean_val)
 ```
 
 ```{r}
-sim_data = data.frame()
-for(i in 1:nrow(sub_par_ests)){
+sim_data_var = data.frame()
+for(i in 1:nrow(sub_par_ests_var)){
   
-  sim_sub_data = rwiener(n = 300, alpha = sub_par_ests$alpha[i], tau = sub_par_ests$tau[i], beta = sub_par_ests$beta[i], delta = sub_par_ests$delta[i])
-  sim_sub_data$subnum = sub_par_ests$subnum[i]
+  sim_sub_data = rwiener(n = 300, alpha = sub_par_ests_var$alpha[i], tau = sub_par_ests_var$tau[i], beta = sub_par_ests_var$beta[i], delta = sub_par_ests_var$delta[i])
+  sim_sub_data$subnum = sub_par_ests_var$subnum[i]
   if(i == 1){
-    sim_data = sim_sub_data
+    sim_data_var = sim_sub_data
   } else{
-    sim_data = rbind(sim_data, sim_sub_data)
+    sim_data_var = rbind(sim_data_var, sim_sub_data)
   }
 }
 ```
 
-```{r}
-sim_data %>%
+```{r fig.height=10}
+sim_data_var %>%
   mutate(resp = ifelse(resp == "upper", "left", "right"),
-         data_type = "true") %>%
+         data_type = "sim") %>%
   rbind(clean_beh_data %>%
           select(subnum, choiceLeft,reactionTime) %>%
           rename(q=reactionTime, resp=choiceLeft) %>%
           mutate(resp = ifelse(resp == 1, "left", "right"),
-                 data_type = "sim")) %>%
+                 data_type = "true")) %>%
   ggplot(aes(q, fill=data_type))+
   geom_density(alpha=.5, color=NA)+
   facet_grid(subnum~resp, scales="free")+
@@ -133,6 +135,104 @@ sim_data %>%
         legend.position = "bottom",
         legend.title = element_blank())
 ```
+
 # Pure dd with fixed pars
 
+```{r}
+source(paste0(helpers_path,'ddrlModels/fit_pure_dd_fixpars_stan.R'))
+par_ests_fix = par_ests
+```
 
+## Log likelihood distributions
+
+Compare log likelihoods to previous model where three other parameters were estimated instead of fixed.  
+
+Model with fixed parameters is consistently a worse fit.
+
+```{r}
+par_ests_fix %>%
+  filter(par == "delta") %>% #filtering one parameter bc likelihood for combinations of parameters is the same. nothing special abt alpha here
+  mutate(data_type="sim_fix") %>%
+  rbind(par_ests_var %>%
+          filter(par == "delta") %>% #filtering one parameter bc likelihood for combinations of parameters is the same. nothing special abt alpha here
+          mutate(data_type="sim_var")) %>%
+  ggplot(aes(logLik, fill=data_type)) +
+  geom_histogram(alpha=.5, bins=30, position="identity")+
+  facet_wrap(~subnum, scales="free_x")+
+  xlab("Log Likelihood")+
+  ylab("")+
+  ggtitle("Distribution of log likelihoods across the samples for each subject")+
+  theme(axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid = element_blank(),
+        legend.position = "bottom",
+        legend.title = element_blank())
+```
+
+## Parameter estimates
+
+Compare drift rates to previous model where three other parameters were estimated instead of fixed.
+
+```{r}
+par_ests_fix %>%
+  mutate(data_type="sim_fix") %>%
+  rbind(par_ests_var %>%
+          filter(par == "delta") %>%
+          mutate(data_type = "sim_var")) %>%
+  ggplot(aes(value, fill=data_type)) +
+  geom_histogram(bins=30, position="identity", alpha=.5)+
+  facet_wrap(~subnum, scales="free")+
+  theme(axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid = element_blank(),
+        legend.position = "bottom",
+        legend.title = element_blank())
+```
+## Posterior predictive checks
+
+Using mean posterior estimates
+
+Predicted vs actual RT distributions conditioned on choice
+
+```{r}
+sub_par_ests_fix= par_ests_fix %>%
+  group_by(subnum , par) %>%
+  summarise(mean_val = mean(value), .groups="keep") %>%
+  spread(par, mean_val)
+```
+
+```{r}
+sim_data_fix = data.frame()
+for(i in 1:nrow(sub_par_ests_fix)){
+  
+  sim_sub_data = rwiener(n = 300, alpha = 2, tau = .1, beta = .5, delta = sub_par_ests_fix$delta[i])
+  sim_sub_data$subnum = sub_par_ests_fix$subnum[i]
+  if(i == 1){
+    sim_data_fix = sim_sub_data
+  } else{
+    sim_data_fix = rbind(sim_data_fix, sim_sub_data)
+  }
+}
+```
+
+```{r fig.height=10}
+sim_data_var %>%
+  mutate(resp = ifelse(resp == "upper", "left", "right"),
+         data_type = "sim_var") %>%
+  rbind(sim_data_fix %>%
+  mutate(resp = ifelse(resp == "upper", "left", "right"),
+         data_type = "sim_fix")) %>%
+  rbind(clean_beh_data %>%
+          select(subnum, choiceLeft,reactionTime) %>%
+          rename(q=reactionTime, resp=choiceLeft) %>%
+          mutate(resp = ifelse(resp == 1, "left", "right"),
+                 data_type = "true")) %>%
+  ggplot(aes(q, fill=data_type))+
+  geom_density(alpha=.5, color=NA)+
+  facet_grid(subnum~resp, scales="free")+
+  theme(axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid = element_blank(),
+        legend.position = "bottom",
+        legend.title = element_blank())
+```

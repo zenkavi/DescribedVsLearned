@@ -38,8 +38,8 @@ model {
   // Begin subject loop
   for (i in 1:N) {
     // Response time distributed along wiener first passage time distribution
-    RTu[i, :Nu[i]] ~ wiener(1, .1, 0, delta[i]);
-    RTl[i, :Nl[i]] ~ wiener(1, .1, 1, -delta[i]);
+    RTu[i, :Nu[i]] ~ wiener(2, .1, .5, delta[i]);
+    RTl[i, :Nl[i]] ~ wiener(2, .1, .5, -delta[i]);
     
   } // end of subject loop
 }
@@ -53,8 +53,8 @@ generated quantities {
   { // local section, this saves time and space
   // Begin subject loop
   for (i in 1:N) {
-    log_lik[i] = wiener_lpdf(RTu[i, :Nu[i]] | , .1, 0, delta[i]);
-    log_lik[i] = log_lik[i] + wiener_lpdf(RTl[i, :Nl[i]] | 1, .1, 1, -delta[i]);
+    log_lik[i] = wiener_lpdf(RTu[i, :Nu[i]] | 2, .1, 0.5, delta[i]);
+    log_lik[i] = log_lik[i] + wiener_lpdf(RTl[i, :Nl[i]] | 2, .1, .5, -delta[i]);
   }
   }
 }

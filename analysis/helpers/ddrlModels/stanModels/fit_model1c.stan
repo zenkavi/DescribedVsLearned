@@ -75,11 +75,11 @@ model {
       
       // increment target with the following likelihood function:
       if(choices[i, t] == 1){
-        response_times[i, t] ~ wiener(1, 0.1, 0, d[i]*val_diff);
+        response_times[i, t] ~ wiener(2, 0.1, .5, d[i]*val_diff);
       }
       
       if(choices[i, t] == -1){
-        response_times[i, t] ~ wiener(1, 0.1, (1-0), (-1)*(d[i]*val_diff));
+        response_times[i, t] ~ wiener(2, 0.1, .5, (-1)*(d[i]*val_diff));
       }
       
       PE[1] = fractal_outcomes_left[i, t] - qv[1];

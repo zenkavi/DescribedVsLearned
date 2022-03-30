@@ -22,26 +22,28 @@ organize_stan_output = function(fit, subj_par_names, subnums=unique(clean_beh_da
     mutate(iter = 1:n()) %>%
     ungroup()
   
-  # Extract loglikelihoods from fit object
-  log_liks = data.frame(extract(fit, log_lik_var_name))  %>%
-    gather(key, value) %>%
-    separate(key, c('par', 'subj'), sep='\\.')
-  
-  # Add correct subject identifiers
-  log_liks = data.frame(subnum = subnums) %>%
-    mutate(subj = as.character(1:n())) %>%
-    right_join(log_liks, by='subj') %>%
-    select(-subj) %>%
-    group_by(subnum, par) %>%
-    mutate(iter = 1:n()) %>%
-    ungroup() %>%
-    select(-par) %>%
-    rename(logLik=value)
-  
-  # Add log likelihoods to subject par estimates
-  par_ests = par_ests %>%
-    left_join(log_liks, by=c("subnum", "iter")) %>%
-    select(-iter)
+  if(!is.na(log_lik_var_name)[1]){
+    # Extract loglikelihoods from fit object
+    log_liks = data.frame(extract(fit, log_lik_var_name))  %>%
+      gather(key, value) %>%
+      separate(key, c('par', 'subj'), sep='\\.')
+    
+    # Add correct subject identifiers
+    log_liks = data.frame(subnum = subnums) %>%
+      mutate(subj = as.character(1:n())) %>%
+      right_join(log_liks, by='subj') %>%
+      select(-subj) %>%
+      group_by(subnum, par) %>%
+      mutate(iter = 1:n()) %>%
+      ungroup() %>%
+      select(-par) %>%
+      rename(logLik=value)
+    
+    # Add log likelihoods to subject par estimates
+    par_ests = par_ests %>%
+      left_join(log_liks, by=c("subnum", "iter")) %>%
+      select(-iter)
+  }
   
   # Extract group parameters if any
   if (!is.na(group_par_names[1])){

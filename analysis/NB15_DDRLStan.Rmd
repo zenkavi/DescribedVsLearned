@@ -138,6 +138,10 @@ sim_data_var %>%
 
 # Pure dd with fixed pars
 
+- Boundary separation alpha fixed at 2  
+- Bias beta fixed at .5 (no bias)
+- NDT tau fixed at .1
+
 ```{r}
 source(paste0(helpers_path,'ddrlModels/fit_pure_dd_fixpars_stan.R'))
 par_ests_fix = par_ests
@@ -236,3 +240,76 @@ sim_data_var %>%
         legend.position = "bottom",
         legend.title = element_blank())
 ```
+
+# Model 1c: DDRL
+
+- Boundary separation alpha fixed at 2  
+- Bias beta fixed at .5 (no bias)
+- NDT tau fixed at .1
+
+```{r}
+source(paste0(helpers_path,'ddrlModels/fit_ddrl_model1c.R'))
+```
+
+## Parameter estimates
+
+```{r}
+g_par_ests %>%
+  ggplot(aes(value)) +
+  geom_histogram(bins=30)+
+  facet_wrap(~key, scales="free")+
+  theme(axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid = element_blank())
+```
+
+```{r}
+par_ests %>%
+  ggplot(aes(value)) +
+  geom_histogram(bins=30)+
+  facet_grid(subnum ~ par, scales="free")+
+  theme(axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid = element_blank())
+```
+
+How do the learning rates and deltas from this model compare to the hierarchical rl with softmax as the choice rule?
+
+```{r}
+
+```
+
+
+## Posterior predictive checks
+
+```{r}
+sub_par_ests = par_ests %>%
+  group_by(subnum , par) %>%
+  summarise(mean_val = mean(value), .groups="keep") %>%
+  spread(par, mean_val)
+```
+
+```{r}
+sim_data = data.frame()
+for(i in 1:nrow(sub_par_ests)){
+  
+  # This will have to be for each trial bc the delta depends on the val difference in that trial
+  # First generate the Q Values for all trials using the mean a posterior alpha for each subject
+  
+  # sim_sub_data = rwiener(n = 300, alpha = 2, tau = .1, beta = .5, delta = )
+  # 
+  # sim_sub_data$subnum = sub_par_ests_var$subnum[i]
+  # if(i == 1){
+  #   sim_data_var = sim_sub_data
+  # } else{
+  #   sim_data_var = rbind(sim_data_var, sim_sub_data)
+  # }
+}
+```
+
+Compare both choices and RTs
+
+```{r fig.height=10}
+
+```
+

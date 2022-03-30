@@ -78,8 +78,9 @@ if(file.exists(paste0(helpers_path, 'ddrlModels/stanModels/fit_model1c.RDS'))){
 
 ## Organize output
 out = organize_stan_output(fit, 
-                           subj_par_names=c("d","sigma", "alpha", "delta"),
-                           group_par_names=c("g_d","g_sigma", "g_alpha", "g_delta"))
+                           subj_par_names=c("alpha", "d", "delta"),
+                           group_par_names=c("g_alpha", "g_d", "g_delta"),
+                           log_lik_var_name = NA)
 par_ests = out$par_ests
 g_par_ests = out$g_par_ests
 rm(out)

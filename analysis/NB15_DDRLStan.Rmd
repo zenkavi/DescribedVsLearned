@@ -249,12 +249,14 @@ sim_data_var %>%
 
 ```{r}
 source(paste0(helpers_path,'ddrlModels/fit_ddrl_model1c.R'))
+g_par_ests_ddrl = g_par_ests
+par_ests_ddrl = par_ests
 ```
 
 ## Parameter estimates
 
 ```{r}
-g_par_ests %>%
+g_par_ests_ddrl %>%
   ggplot(aes(value)) +
   geom_histogram(bins=30)+
   facet_wrap(~key, scales="free")+
@@ -264,7 +266,7 @@ g_par_ests %>%
 ```
 
 ```{r}
-par_ests %>%
+par_ests_ddrl %>%
   ggplot(aes(value)) +
   geom_histogram(bins=30)+
   facet_grid(subnum ~ par, scales="free")+
@@ -273,43 +275,121 @@ par_ests %>%
         panel.grid = element_blank())
 ```
 
-How do the learning rates and deltas from this model compare to the hierarchical rl with softmax as the choice rule?
+How do the learning rate alphas and probability distortion deltas from this model compare to the hierarchical rl with softmax as the choice rule?
 
 ```{r}
-
+source(paste0(helpers_path,'rlModels/fit_rl_hierarchical.R'))
 ```
 
+DDRL overestimates all learning rates. It also overestimates most probability distortion deltas and these estimates are often >1 (unlike the RL estimates) which suggest overestimation of fractal relevance. This is not the pattern we observe in empirical data.
+
+```{r}
+par_ests %>%
+  group_by(subnum , par) %>%
+  summarise(mean_val = mean(value), .groups="keep") %>%
+  spread(par, mean_val) %>%
+  mutate(model = "H_RL") %>%
+  rbind(par_ests_ddrl %>%
+          group_by(subnum , par) %>%
+          summarise(mean_val = mean(value), .groups="keep") %>%
+          spread(par, mean_val) %>%
+          mutate(model="H_DDRL")) %>%
+  select(subnum, alpha, delta, model) %>%
+  gather(key, value, -model, -subnum) %>%
+  spread(model, value) %>%
+  ggplot(aes(H_RL, H_DDRL))+
+  geom_point()+
+  geom_abline(aes(slope=1, intercept = 0))+
+  facet_wrap_equal(~key, scales="free")
+```
 
 ## Posterior predictive checks
 
 ```{r}
-sub_par_ests = par_ests %>%
+sub_par_ests_ddrl = par_ests_ddrl %>%
   group_by(subnum , par) %>%
   summarise(mean_val = mean(value), .groups="keep") %>%
   spread(par, mean_val)
 ```
 
+Add inferred pars necessary for to simulate posterior predictive data
+
+```{r}
+# Add mean posterior estimates to clean_beh_data
+clean_beh_data = sub_par_ests_ddrl %>%
+  left_join(clean_beh_data, by='subnum')
+
+source(paste0(helpers_path, 'get_qvals.R'))
+## Add Q values of fractals to each trial
+clean_beh_data = clean_beh_data %>%
+  group_by(subnum) %>%
+  do(get_qvals(., model_name="original")) %>%
+  ungroup()
+
+clean_beh_data = clean_beh_data %>%
+  mutate(wpFrac = (delta*probFractalDraw)/(delta*probFractalDraw + (1-probFractalDraw)),
+         leftLotteryEV = lotteryValue*lotteryProb,
+         rightLotteryEV = referenceValue*referenceProb,
+         valLeftBundle = (1-probFractalDraw)*leftLotteryEV + wpFrac*leftQValue,
+         valRightBundle = (1-probFractalDraw)*rightLotteryEV + wpFrac*rightQValue,
+         trial_drift = d * (valLeftBundle - valRightBundle))
+```
+
 ```{r}
 sim_data = data.frame()
-for(i in 1:nrow(sub_par_ests)){
+for(i in 1:nrow(clean_beh_data)){
   
   # This will have to be for each trial bc the delta depends on the val difference in that trial
-  # First generate the Q Values for all trials using the mean a posterior alpha for each subject
+  # First generated the Q Values for all trials using the mean a posterior alpha for each subject
   
-  # sim_sub_data = rwiener(n = 300, alpha = 2, tau = .1, beta = .5, delta = )
-  # 
-  # sim_sub_data$subnum = sub_par_ests_var$subnum[i]
-  # if(i == 1){
-  #   sim_data_var = sim_sub_data
-  # } else{
-  #   sim_data_var = rbind(sim_data_var, sim_sub_data)
-  # }
+  sim_trial = rwiener(n =1, alpha = 2, tau = .1, beta = .5, delta = clean_beh_data$trial_drift[i])
+
+  sim_trial$subnum = clean_beh_data$subnum[i]
+
+  if(i == 1){
+    sim_data = sim_trial
+  } else{
+    sim_data = rbind(sim_data, sim_trial)
+  }
 }
 ```
 
 Compare both choices and RTs
 
 ```{r fig.height=10}
+sim_data %>%
+  mutate(resp = ifelse(resp == "upper", "left", "right"),
+         data_type = "sim_ddrl") %>%
+  rbind(sim_data_var %>%
+  mutate(resp = ifelse(resp == "upper", "left", "right"),
+         data_type = "sim_pure_dd")) %>%
+  rbind(clean_beh_data %>%
+          select(subnum, choiceLeft,reactionTime) %>%
+          rename(q=reactionTime, resp=choiceLeft) %>%
+          mutate(resp = ifelse(resp == 1, "left", "right"),
+                 data_type = "true")) %>%
+  ggplot(aes(q, fill=data_type))+
+  geom_density(alpha=.5, color=NA)+
+  facet_grid(subnum~resp, scales="free")+
+  theme(axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid = element_blank(),
+        legend.position = "bottom",
+        legend.title = element_blank())
+```
+
+Improvements for this model: 
+- Figure out how to incorporate sigma for the drift process
+- Constrain delta to be < 1?
+
+```{r}
 
 ```
+
+Recovery of this model?
+
+```{r}
+
+```
+
 

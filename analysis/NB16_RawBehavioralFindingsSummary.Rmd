@@ -1,0 +1,101 @@
+---
+title: 'Experience vs. description based decision-making project: Raw behavioral findings'
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    code_folding: 'hide'
+  pdf_document:
+    toc: yes
+---
+
+# Set up
+
+```{r include=FALSE}
+library(tidyverse)
+theme_set(theme_bw())
+library(here)
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+helpers_path = here('analysis/helpers/')
+source(paste0(helpers_path,'01_clean_behavioral_data.R'))
+```
+
+```{r}
+source(paste0(helpers_path,'01_clean_behavioral_data.R'))
+```
+
+Choice
+- Side bias: There should be none. Prop left by probFractalDraw for all subjects
+
+```{r}
+clean_beh_data %>%
+  group_by(subnum, probFractalDraw) %>%
+  summarise(.groups = "keep",
+            propLeft = sum(choiceLeft)/n()) %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
+  ggplot(aes(probFractalDraw, propLeft))+
+  geom_boxplot()+
+  geom_jitter(height=0, width=.1, alpha=.5, aes(color=as.numeric(subnum)))+
+  geom_hline(yintercept=.5, color="gray")+
+  theme(legend.position = "none")
+```
+
+Reaction Time
+- Distribution for each attribute relevance level
+
+```{r}
+clean_beh_data %>%
+  ggplot(aes(reactionTime))+
+  geom_density(aes(fill=subnum), position = "identity", alpha=.5, color=NA)+
+  geom_density(color="black")+
+  facet_wrap(~probFractalDraw, ncol=6)+
+  theme(legend.position = "none")
+
+```
+
+```{r}
+clean_beh_data %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
+  ggplot(aes(reactionTime))+
+  geom_density(aes(fill=probFractalDraw), position = "identity", alpha=.5, color=NA)+
+  scale_fill_brewer(palette="PRGn")
+```
+
+```{r}
+clean_beh_data %>%
+  mutate(logRt = log(reactionTime),
+         probFractalDraw = as.factor(probFractalDraw)) %>%
+  group_by(probFractalDraw) %>%
+  summarise(meanLogRt = mean(logRt),
+            semLogRt = sd(logRt)/sqrt(n())) %>%
+  ggplot(aes(probFractalDraw, meanLogRt))+
+  geom_point()+
+  geom_errorbar(aes(ymin=meanLogRt - semLogRt, ymax=meanLogRt + semLogRt), width=.2)
+```
+
+Evidence for learning
+
+Do people tend to choose the objectively better fractal more frequently later in the task?
+Plot x=trialNum, y=choseBundleWBetterFractal, facet=probFractalDraw
+
+```{r warning=FALSE, message=FALSE}
+clean_beh_data %>%
+  group_by(subnum) %>%
+  mutate(trialNum = 1:n(),
+         choseBundleWBetterFractal = ifelse(fractalRightProb>fractalLeftProb & choiceLeft == 0, 1, ifelse(fractalLeftProb>fractalRightProb & choiceLeft == 1, 1, 0)),
+         EVLeft = referenceProb * referenceValue,
+         EVRight = lotteryValue * lotteryProb,
+         conflictTrial = ifelse(EVLeft>EVRight & fractalLeftProb>fractalRightProb, 0, ifelse(EVLeft<EVRight & fractalLeftProb<fractalRightProb, 0, 1))) %>%
+  ggplot(aes(trialNum, choseBundleWBetterFractal))+
+  geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, se=FALSE, alpha=.1, size=1, color=cbbPalette[5])+
+  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[3])+
+  facet_grid(conflictTrial~probFractalDraw)
+```
+
+- Evidence of differential learning, more learning for rewarded side or chosen bundle fractal?
+- Evidence for perseverance of choice (choosing the rewarded side)
+
+Evidence of correct weighting of relevant attribute
+
+
+Things to model based on these:

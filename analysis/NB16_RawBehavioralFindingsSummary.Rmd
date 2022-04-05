@@ -24,23 +24,8 @@ source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 ```
 
-Choice
-- Side bias: There should be none. Prop left by probFractalDraw for all subjects
+# Reaction Time
 
-```{r}
-clean_beh_data %>%
-  group_by(subnum, probFractalDraw) %>%
-  summarise(.groups = "keep",
-            propLeft = sum(choiceLeft)/n()) %>%
-  mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
-  ggplot(aes(probFractalDraw, propLeft))+
-  geom_boxplot()+
-  geom_jitter(height=0, width=.1, alpha=.5, aes(color=as.numeric(subnum)))+
-  geom_hline(yintercept=.5, color="gray")+
-  theme(legend.position = "none")
-```
-
-Reaction Time
 - Distribution for each attribute relevance level
 
 ```{r}
@@ -73,10 +58,84 @@ clean_beh_data %>%
   geom_errorbar(aes(ymin=meanLogRt - semLogRt, ymax=meanLogRt + semLogRt), width=.2)
 ```
 
-Evidence for learning
+Does RT depend on any other experimental manipulation?
+Does it depend on the objective fractal values? Not on average but there are individual differences.
+
+```{r}
+clean_beh_data %>%
+  select(subnum, reactionTime, fractalLeftProb, fractalRightProb) %>%
+  gather(key, value, -subnum, -reactionTime) %>%
+  ggplot(aes(value, reactionTime))+
+  geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "lm",se=FALSE, alpha=.1, size=1)+
+  geom_smooth(formula = 'y~x', method = "lm")+
+  facet_wrap(~key)
+```
+Does it depend on the amount or probability of the varying lottery? No. Not for anyone.
+
+```{r}
+clean_beh_data %>%
+  select(subnum, reactionTime, lotteryValue, lotteryProb) %>%
+  gather(key, value, -subnum, -reactionTime) %>%
+  ggplot(aes(value, reactionTime))+
+  geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "lm",se=FALSE, alpha=.1, size=1)+
+  geom_smooth(formula = 'y~x', method = "lm")+
+  facet_wrap(~key, scales="free_x")
+```
+
+Does it depend on the relationship between the fractals and lotteries?
+Conflict vs no conflict? No.
+
+
+```{r}
+clean_beh_data %>%
+  mutate(logRt=log(reactionTime),
+         EVLeft = referenceProb * referenceValue,
+         EVRight = lotteryValue * lotteryProb,
+         conflictTrial = ifelse(EVLeft>EVRight & fractalLeftProb>fractalRightProb, "no conflict", ifelse(EVLeft<EVRight & fractalLeftProb<fractalRightProb, "no conflict", "conflict"))) %>%
+  group_by(subnum, conflictTrial) %>%
+  summarise(meanLogRt = mean(logRt), .groups="keep") %>%
+  ggplot(aes(conflictTrial, meanLogRt))+
+  geom_boxplot()+
+  geom_jitter(height=0)
+```
+Relative preference?
+Value difference?
+
+```{r}
+
+```
+
+Does it depend on choice?
+```{r}
+
+```
+
+
+# Choice
+
+- Side bias: There should be none. Prop left by probFractalDraw for all subjects
+
+```{r}
+clean_beh_data %>%
+  group_by(subnum, probFractalDraw) %>%
+  summarise(.groups = "keep",
+            propLeft = sum(choiceLeft)/n()) %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
+  ggplot(aes(probFractalDraw, propLeft))+
+  geom_boxplot()+
+  geom_jitter(height=0, width=.1, alpha=.5, aes(color=as.numeric(subnum)))+
+  geom_hline(yintercept=.5, color="gray")+
+  theme(legend.position = "none")
+```
+
+## Evidence for learning
 
 Do people tend to choose the objectively better fractal more frequently later in the task?
-Plot x=trialNum, y=choseBundleWBetterFractal, facet=probFractalDraw
+
+When there is a conflict (the lotteries and fractals point to different bundles as the better option; 60% of the trials) the average probability of choosing the better fractal is higher at all levels of fractal relevance compared to the average of no conflict trials. This suggests that when there is a conflict subjects choose more based on fractals than they do based on lotteries.
+
+When there isn't a conflict between the lotteries and the fractal about the better bundle (top row), the bundle with the better fractal is chosen more frequently as it becomes more relevant for the choice. The slopes are on average at best weakly positive suggesting little evidence for learning. Even when reward depends only on fractals average prob of choosing the better fractal is not much higher than chance.
+
 
 ```{r warning=FALSE, message=FALSE}
 clean_beh_data %>%
@@ -85,11 +144,34 @@ clean_beh_data %>%
          choseBundleWBetterFractal = ifelse(fractalRightProb>fractalLeftProb & choiceLeft == 0, 1, ifelse(fractalLeftProb>fractalRightProb & choiceLeft == 1, 1, 0)),
          EVLeft = referenceProb * referenceValue,
          EVRight = lotteryValue * lotteryProb,
-         conflictTrial = ifelse(EVLeft>EVRight & fractalLeftProb>fractalRightProb, 0, ifelse(EVLeft<EVRight & fractalLeftProb<fractalRightProb, 0, 1))) %>%
+         conflictTrial = ifelse(EVLeft>EVRight & fractalLeftProb>fractalRightProb, "no conflict", ifelse(EVLeft<EVRight & fractalLeftProb<fractalRightProb, "no conflict", "conflict"))) %>%
   ggplot(aes(trialNum, choseBundleWBetterFractal))+
   geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, se=FALSE, alpha=.1, size=1, color=cbbPalette[5])+
   geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[3])+
   facet_grid(conflictTrial~probFractalDraw)
+```
+
+learning doesn't look strong.
+what do the drifting reward probabilities look like
+is there a good signal to learn?
+
+```{r}
+clean_beh_data %>%
+  group_by(subnum) %>%
+  mutate(trialNum = 1:n()) %>%
+  select(fractalLeftProb, fractalRightProb, trialNum, subnum) %>%
+  gather(key, value, -trialNum, -subnum) %>%
+  ggplot(aes(trialNum, value, color=key))+
+  geom_line()+
+  geom_vline(xintercept=60, color="gray")+
+  geom_vline(xintercept=120, color="gray")+
+  geom_vline(xintercept=180, color="gray")+
+  geom_vline(xintercept=240, color="gray")+
+  facet_wrap(~subnum)+
+  theme(legend.position = "bottom",
+        legend.title=element_blank())
+
+
 ```
 
 - Evidence of differential learning, more learning for rewarded side or chosen bundle fractal?

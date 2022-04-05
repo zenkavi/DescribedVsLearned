@@ -26,17 +26,9 @@ source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 
 # Reaction Time
 
-- Distribution for each attribute relevance level
+## Attribute relevance
 
-```{r}
-clean_beh_data %>%
-  ggplot(aes(reactionTime))+
-  geom_density(aes(fill=subnum), position = "identity", alpha=.5, color=NA)+
-  geom_density(color="black")+
-  facet_wrap(~probFractalDraw, ncol=6)+
-  theme(legend.position = "none")
-
-```
+Distribution for each attribute relevance level. There is a difference in choice speed depending on attribute relevance.
 
 ```{r}
 clean_beh_data %>%
@@ -45,6 +37,8 @@ clean_beh_data %>%
   geom_density(aes(fill=probFractalDraw), position = "identity", alpha=.5, color=NA)+
   scale_fill_brewer(palette="PRGn")
 ```
+
+Decisions are slowest when both attributes are equally relevant. They are also categorically faster when only fractals matter for reward.
 
 ```{r}
 clean_beh_data %>%
@@ -58,7 +52,25 @@ clean_beh_data %>%
   geom_errorbar(aes(ymin=meanLogRt - semLogRt, ymax=meanLogRt + semLogRt), width=.2)
 ```
 
-Does RT depend on any other experimental manipulation?
+Do we see this pattern for all subjects? Most but not all. Subjects 9 nd 10 look particularly weird.
+
+```{r}
+clean_beh_data %>%
+  mutate(logRt = log(reactionTime),
+         probFractalDraw = as.factor(probFractalDraw)) %>%
+  group_by(subnum, probFractalDraw) %>%
+  summarise(.groups="keep",
+            meanLogRt = mean(logRt),
+            semLogRt = sd(logRt)/sqrt(n())) %>%
+  ggplot(aes(probFractalDraw, meanLogRt))+
+  geom_point()+
+  geom_errorbar(aes(ymin=meanLogRt - semLogRt, ymax=meanLogRt + semLogRt), width=.2)+
+  facet_wrap(~subnum, scales="free_y")
+```
+
+## True fractal values
+
+Does RT depend on any other experimental manipulation?  
 Does it depend on the objective fractal values? Not on average but there are individual differences.
 
 ```{r}
@@ -70,6 +82,9 @@ clean_beh_data %>%
   geom_smooth(formula = 'y~x', method = "lm")+
   facet_wrap(~key)
 ```
+
+## EV of varying lottery
+
 Does it depend on the amount or probability of the varying lottery? No. Not for anyone.
 
 ```{r}
@@ -82,9 +97,9 @@ clean_beh_data %>%
   facet_wrap(~key, scales="free_x")
 ```
 
-Does it depend on the relationship between the fractals and lotteries?
-Conflict vs no conflict? No.
+## Conflict trials
 
+Does it depend on whether the objective values for each attribute agree or disagree on which is the better bundle? No.
 
 ```{r}
 clean_beh_data %>%
@@ -98,18 +113,78 @@ clean_beh_data %>%
   geom_boxplot()+
   geom_jitter(height=0)
 ```
-Relative preference?
-Value difference?
+
+## Value difference
+
+Choice is faster for larger differences between the lotteries *when* lotteries are more relevant for reward. Otherwise the effect disappears.
 
 ```{r}
+clean_beh_data %>%
+  mutate(fractal_diff = abs(fractalLeftProb - fractalRightProb),
+         lottery_ev_diff = round(abs((referenceProb*referenceValue) - (lotteryProb*lotteryValue)),3),
+         lottery_ev_diff = ifelse(lottery_ev_diff ==0, "no EV diff", ifelse(lottery_ev_diff == .2, "small EV diff", ifelse(lottery_ev_diff == .4, "large EV diff", NA))),
+         lottery_ev_diff = factor(lottery_ev_diff, levels=c("no EV diff", "small EV diff", "large EV diff"), labels = c("no", "small", "large")),
+         logRt = log(reactionTime)) %>% 
+  group_by(probFractalDraw, lottery_ev_diff) %>%
+  summarise(.groups = "keep",
+            mean_logRt = mean(logRt),
+            sem_logRt = sd(logRt)/sqrt(n())) %>%
+  ggplot(aes(lottery_ev_diff, mean_logRt))+
+  geom_point()+
+  geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2)+
+  facet_wrap(~probFractalDraw)+
+  xlab("Lottery EV difference")
+```
 
+Larger fractal value differences *does not* translate to faster choice. There are large individual differences but the average effects are either 0 or in the opposite direction.
+
+```{r}
+clean_beh_data %>%
+  mutate(fractal_diff = abs(fractalLeftProb - fractalRightProb),
+         logRt = log(reactionTime)) %>%  
+  ggplot(aes(fractal_diff, logRt)) + 
+  geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "lm",se=FALSE, alpha=.1, size=1)+
+  geom_smooth(formula = 'y~x', method = "lm")+
+  facet_grid(.~probFractalDraw)
+```
+
+On average there is no effect of the relative value differences on RT.
+
+```{r}
+clean_beh_data %>%
+  mutate(fractal_diff = abs(fractalLeftProb - fractalRightProb),
+         lottery_ev_diff = round(abs((referenceProb*referenceValue) - (lotteryProb*lotteryValue)),3),
+         lottery_ev_diff = ifelse(lottery_ev_diff ==0, "no EV diff", ifelse(lottery_ev_diff == .2, "small EV diff", ifelse(lottery_ev_diff == .4, "large EV diff", NA))),
+         lottery_ev_diff = factor(lottery_ev_diff, levels=c("no EV diff", "small EV diff", "large EV diff")),
+         logRt = log(reactionTime)) %>%  
+  ggplot(aes(fractal_diff, logRt)) + 
+  geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "lm",se=FALSE, alpha=.1, size=1)+
+  geom_smooth(formula = 'y~x', method = "lm")+
+  facet_grid(lottery_ev_diff~probFractalDraw)
+```
+
+Does it depend on trial number/learning how to do the task? Yes. Subjects get faster in later runs on average. In the first run they also get faster with each trial.
+
+```{r}
+clean_beh_data %>%
+  mutate(log_Rt = log(reactionTime)) %>%
+  ggplot(aes(trialNum, log_Rt))+
+  geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "lm",se=FALSE, alpha=.1, size=1)+
+  geom_smooth(formula = 'y~x', method = "lm")+
+  facet_grid(.~session)
 ```
 
 Does it depend on choice?
+
 ```{r}
 
 ```
 
+
+**Notable RT patterns:**   
+**The more similar each attribute is in its relevance for reward the slower the choice.**   
+**When only the fractals matter choice is categorically faster.**  
+**Individual differences in all patterns but nothing systematic on average**
 
 # Choice
 

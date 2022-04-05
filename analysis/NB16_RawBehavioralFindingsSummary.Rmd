@@ -163,6 +163,8 @@ clean_beh_data %>%
   facet_grid(lottery_ev_diff~probFractalDraw)
 ```
 
+## Learning
+
 Does it depend on trial number/learning how to do the task? Yes. Subjects get faster in later runs on average. In the first run they also get faster with each trial.
 
 ```{r}
@@ -174,17 +176,137 @@ clean_beh_data %>%
   facet_grid(.~session)
 ```
 
-Does it depend on choice?
+## Choice
+
+Are they faster when they choose left vs right (bundle with fixed vs varying lottery)? When lotteries matter more for the reward they are slightly slower when choosing the bundle with the varying lottery. This suggests some computing time for the EV of the varying lottery.  
+
+When fractal matters more for the reward the side effect switches. Does this suggest a side bias for when reward depends more on fractals?
 
 ```{r}
+clean_beh_data %>%
+  mutate(log_Rt = log(reactionTime)) %>%
+  group_by(choiceLeft, probFractalDraw) %>%
+  summarise(.groups="keep",
+            mean_logRt = mean(log_Rt),
+            sem_logRt = sd(log_Rt)/sqrt(n())) %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw),
+         choiceLeft = ifelse(choiceLeft == 0, "right (varying Lottery)", "left (reference Lottery)")) %>%
+  ggplot(aes(probFractalDraw, mean_logRt, color=choiceLeft))+
+  geom_point(position=position_dodge(width=.25))+
+  geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2, position=position_dodge(width=.25))+
+  theme(legend.position = "bottom",
+        legend.title = element_blank())
+```
+The differences between left and right choice speeds at different probFractalDraw levels are driven differently by conflict and no conflict trials.
+
+```{r}
+clean_beh_data %>%
+  mutate(log_Rt = log(reactionTime),
+         EVLeft = referenceProb * referenceValue,
+         EVRight = lotteryValue * lotteryProb,
+         conflictTrial = ifelse(EVLeft>EVRight & fractalLeftProb>fractalRightProb, "no conflict", ifelse(EVLeft<EVRight & fractalLeftProb<fractalRightProb, "no conflict", "conflict"))) %>%
+  group_by(choiceLeft, probFractalDraw, conflictTrial) %>%
+  summarise(.groups="keep",
+            mean_logRt = mean(log_Rt),
+            sem_logRt = sd(log_Rt)/sqrt(n())) %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw),
+         choiceLeft = ifelse(choiceLeft == 0, "right (varying Lottery)", "left (reference Lottery)")) %>%
+  ggplot(aes(probFractalDraw, mean_logRt, color=choiceLeft))+
+  geom_point(position=position_dodge(width=.25))+
+  geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2, position=position_dodge(width=.25))+
+  theme(legend.position = "bottom",
+        legend.title = element_blank())+
+  facet_grid(conflictTrial~.)
+
 
 ```
 
+Are they faster when they choose the bundle with the better lottery? Yes, when the lottery matters more for the reward. Suggesting less/no integration of additional attribute (fractals) when correctly choosing based on the relevant attribute. Trials where the lotteries mattered more for the reward but the better lottery bundle was not selected are "errors".
+
+
+```{r}
+clean_beh_data %>%
+  mutate(leftLotteryBetter = (lotteryProb*lotteryValue)-(referenceProb*referenceValue)>0,
+         choseBetterLotteryBundle = ifelse(leftLotteryBetter & choiceLeft == 1, 1, 0),
+         log_Rt = log(reactionTime)) %>%
+  group_by(probFractalDraw, choseBetterLotteryBundle) %>%
+  summarise(.groups="keep",
+            mean_logRt = mean(log_Rt),
+            sem_logRt = sd(log_Rt)/sqrt(n())) %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw),
+         choseBetterLotteryBundle = as.factor(choseBetterLotteryBundle)) %>%
+  ggplot(aes(probFractalDraw, mean_logRt, color=choseBetterLotteryBundle))+
+  geom_point(position=position_dodge(width=.25))+
+  geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2, position=position_dodge(width=.25))+
+  theme(legend.position = "bottom")
+```
+
+```{r}
+clean_beh_data %>%
+  mutate(leftLotteryBetter = (lotteryProb*lotteryValue)-(referenceProb*referenceValue)>0,
+         choseBetterLotteryBundle = ifelse(leftLotteryBetter & choiceLeft == 1, 1, 0),
+         log_Rt = log(reactionTime),
+         EVLeft = referenceProb * referenceValue,
+         EVRight = lotteryValue * lotteryProb,
+         conflictTrial = ifelse(EVLeft>EVRight & fractalLeftProb>fractalRightProb, "no conflict", ifelse(EVLeft<EVRight & fractalLeftProb<fractalRightProb, "no conflict", "conflict"))) %>%
+  group_by(probFractalDraw, choseBetterLotteryBundle, conflictTrial) %>%
+  summarise(.groups="keep",
+            mean_logRt = mean(log_Rt),
+            sem_logRt = sd(log_Rt)/sqrt(n())) %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw),
+         choseBetterLotteryBundle = as.factor(choseBetterLotteryBundle)) %>%
+  ggplot(aes(probFractalDraw, mean_logRt, color=choseBetterLotteryBundle))+
+  geom_point(position=position_dodge(width=.25))+
+  geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2, position=position_dodge(width=.25))+
+  theme(legend.position = "bottom")+
+  facet_grid(conflictTrial~.)
+```
+
+Are they faster when they choose the bundle with the better fractal
+
+```{r}
+clean_beh_data %>%
+  mutate(leftFractalBetter = (fractalLeftProb)-(fractalRightProb)>0,
+         choseBetterFractalBundle = ifelse(leftFractalBetter & choiceLeft == 1, 1, 0),
+         log_Rt = log(reactionTime)) %>%
+  group_by(probFractalDraw, choseBetterFractalBundle) %>%
+  summarise(.groups="keep",
+            mean_logRt = mean(log_Rt),
+            sem_logRt = sd(log_Rt)/sqrt(n())) %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw),
+         choseBetterFractalBundle = as.factor(choseBetterFractalBundle)) %>%
+  ggplot(aes(probFractalDraw, mean_logRt, color=choseBetterFractalBundle))+
+  geom_point(position=position_dodge(width=.25))+
+  geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2, position=position_dodge(width=.25))+
+  theme(legend.position = "bottom")
+```
+
+```{r}
+clean_beh_data %>%
+  mutate(leftFractalBetter = (fractalLeftProb)-(fractalRightProb)>0,
+         choseBetterFractalBundle = ifelse(leftFractalBetter & choiceLeft == 1, 1, 0),
+         log_Rt = log(reactionTime),
+         EVLeft = referenceProb * referenceValue,
+         EVRight = lotteryValue * lotteryProb,
+         conflictTrial = ifelse(EVLeft>EVRight & fractalLeftProb>fractalRightProb, "no conflict", ifelse(EVLeft<EVRight & fractalLeftProb<fractalRightProb, "no conflict", "conflict"))) %>%
+  group_by(probFractalDraw, choseBetterFractalBundle, conflictTrial) %>%
+  summarise(.groups="keep",
+            mean_logRt = mean(log_Rt),
+            sem_logRt = sd(log_Rt)/sqrt(n())) %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw),
+         choseBetterFractalBundle = as.factor(choseBetterFractalBundle)) %>%
+  ggplot(aes(probFractalDraw, mean_logRt, color=choseBetterFractalBundle))+
+  geom_point(position=position_dodge(width=.25))+
+  geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2, position=position_dodge(width=.25))+
+  theme(legend.position = "bottom")+
+  facet_grid(conflictTrial~.)
+```
 
 **Notable RT patterns:**   
 **The more similar each attribute is in its relevance for reward the slower the choice.**   
 **When only the fractals matter choice is categorically faster.**  
-**Individual differences in all patterns but nothing systematic on average**
+**Choice is faster for larger EV difference when lotteries matter more for reward.**  
+**RT does NOT depend on fractal value difference, implying that when modeling RT this might not have to be taken into account**
 
 # Choice
 

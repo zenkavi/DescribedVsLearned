@@ -242,12 +242,13 @@ clean_beh_data %>%
 
 ## Choice based on lottery
 
-Are they faster when they choose the bundle with the better lottery? Yes, when the lottery matters more for the reward. This suggests less/no integration of additional attribute (fractals) when correctly choosing based on the relevant attribute. Trials where the lotteries mattered more for the reward but the better lottery bundle was not selected are "errors".
+When the lotteries don't have the same EV (80% of the trials are subjects faster when they choose the bundle with the better lottery? Yes, when the lottery matters more for the reward. This suggests less/no integration of additional attribute (fractals) when correctly choosing based on the relevant attribute. Trials where the lotteries mattered more for the reward but the better lottery bundle was not selected could be considered "errors".
 
 ```{r}
 clean_beh_data %>%
+  filter((lotteryProb*lotteryValue)-(referenceProb*referenceValue) != 0 ) %>%
   mutate(leftLotteryBetter = (lotteryProb*lotteryValue)-(referenceProb*referenceValue)>0,
-         choseBetterLotteryBundle = ifelse(leftLotteryBetter & choiceLeft == 1, 1, 0),
+         choseBetterLotteryBundle = ifelse(leftLotteryBetter & choiceLeft == 1, 1, ifelse(!leftLotteryBetter & choiceLeft == 0, 1, 0)),
          log_Rt = log(reactionTime)) %>%
   group_by(probFractalDraw, choseBetterLotteryBundle) %>%
   summarise(.groups="keep",
@@ -265,8 +266,9 @@ This effect is driven more by no conflict trials.
 
 ```{r}
 clean_beh_data %>%
+    filter((lotteryProb*lotteryValue)-(referenceProb*referenceValue) != 0 ) %>%
   mutate(leftLotteryBetter = (lotteryProb*lotteryValue)-(referenceProb*referenceValue)>0,
-         choseBetterLotteryBundle = ifelse(leftLotteryBetter & choiceLeft == 1, 1, 0),
+         choseBetterLotteryBundle = ifelse(leftLotteryBetter & choiceLeft == 1, 1, ifelse(!leftLotteryBetter & choiceLeft == 0, 1, 0)),
          log_Rt = log(reactionTime),
          EVLeft = referenceProb * referenceValue,
          EVRight = lotteryValue * lotteryProb,
@@ -285,12 +287,12 @@ clean_beh_data %>%
 ```
 ## Choice based on fractal
 
-Are they faster when they choose the bundle with the better fractal
+Are they faster when they choose the bundle with the better fractal? No systematic difference.  
 
 ```{r}
 clean_beh_data %>%
   mutate(leftFractalBetter = (fractalLeftProb)-(fractalRightProb)>0,
-         choseBetterFractalBundle = ifelse(leftFractalBetter & choiceLeft == 1, 1, 0),
+         choseBetterFractalBundle = ifelse(leftFractalBetter & choiceLeft == 1, 1, ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0)),
          log_Rt = log(reactionTime)) %>%
   group_by(probFractalDraw, choseBetterFractalBundle) %>%
   summarise(.groups="keep",
@@ -303,17 +305,17 @@ clean_beh_data %>%
   geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2)+
   theme(legend.position = "bottom")
 ```
-
-This is not the exact opposite of the plot based on choosing the better lottery because while in each trial there is a better fractal in some trials the lottery EVs are the same. These trials fall into choceBetterLotteryBundle == 0 bin in the above analyses but can fall into either choseBetterFractalBundle in these analyses.
+Note: This is not the exact opposite of the plot based on choosing the better lottery because while in each trial there is a better fractal in some trials the lottery EVs are the same. If there isn't any distortion of EVs and equal EVs lead to indifference subjects can still choose based on the fractal value difference. Then choosing the bundle with the better fractal even in trials where the fractals are less relevant for the reward would still be reasonable.
 
 ```{r}
 clean_beh_data %>%
   mutate(leftFractalBetter = (fractalLeftProb)-(fractalRightProb)>0,
-         choseBetterFractalBundle = ifelse(leftFractalBetter & choiceLeft == 1, 1, 0),
+         choseBetterFractalBundle = ifelse(leftFractalBetter & choiceLeft == 1, 1, ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0)),
          log_Rt = log(reactionTime),
          EVLeft = referenceProb * referenceValue,
          EVRight = lotteryValue * lotteryProb,
          conflictTrial = ifelse(EVLeft<EVRight & fractalLeftProb>fractalRightProb, "conflict", ifelse(EVLeft>EVRight & fractalLeftProb<fractalRightProb, "conflict", "no conflict"))) %>%
+  # filter(EVRight != EVLeft) %>% #excluding these makes it the same as the plot in the previous section
   group_by(probFractalDraw, choseBetterFractalBundle, conflictTrial) %>%
   summarise(.groups="keep",
             mean_logRt = mean(log_Rt),
@@ -341,12 +343,16 @@ clean_beh_data %>%
 - Subjects are on average faster the more trials they have done especially going from the first to the second run.  
 
 **Choice effects**
-- Subjects are faster when they choose the bundle with the better lottery when the lottery matters more for the reward. This suggests less/no integration of additional attribute (fractals) when correctly choosing based on the relevant attribute. Trials where the lotteries mattered more for the reward but the better lottery bundle was not selected can be thought of as errors or choices in which the deliberation process was contaminated by the an irrelevant attribute (*opposite of a speed-accuracy tradeoff*).This effect is driven by no conflict trials. There is no difference in RT for conflict trials depending on whether the bundle with the better lottery was chosen. Maybe the detection as a conflict draws attention/highlights the relevance of an attribute for a reward.  
+- Subjects are slightly faster when they choose the bundle with the better lottery when the lottery matters more for the reward. This suggests less/no integration of additional attribute (fractals) when correctly choosing based on the relevant attribute. Trials where the lotteries mattered more for the reward but the better lottery bundle was not selected can be thought of as errors or choices in which the deliberation process was contaminated by the an irrelevant attribute (*opposite of a speed-accuracy tradeoff*).This effect is driven more by no conflict trials. There is no difference in RT for conflict trials depending on whether the bundle with the better lottery was chosen. Maybe the detection as a conflict draws attention/highlights the relevance of an attribute for a reward.  
 - A similar effect does not exist for choosing the bundle with the better fractal when fractals are more relevant for reward. This might support the idea that processing of fractals happens before the stimuli are presented (/before we begin measuring RT).  
 
 # Choice
 
-- Side bias: There should be none. Prop left by probFractalDraw for all subjects
+**How can you parse choice without using any model-based measures?**
+
+## Side
+
+Proportion of left choice by probFractalDraw for all subjects. No systematic idiosyncratic side bias.
 
 ```{r}
 clean_beh_data %>%
@@ -361,30 +367,116 @@ clean_beh_data %>%
   theme(legend.position = "none")
 ```
 
-## Learning of fractal values
+## Choice based on lottery
 
-Do people tend to choose the objectively better fractal more frequently later in the task?
+When the lotteries don't have the same EV do subjects choose the bundle with the better lottery? No. This suggests terrible performance.
 
-When there is a conflict (the lotteries and fractals point to different bundles as the better option; 60% of the trials) the average probability of choosing the better fractal is higher at all levels of fractal relevance compared to the average of no conflict trials. This suggests that when there is a conflict subjects choose more based on fractals than they do based on lotteries.
-
-When there isn't a conflict between the lotteries and the fractal about the better bundle (top row), the bundle with the better fractal is chosen more frequently as it becomes more relevant for the choice. The slopes are on average at best weakly positive suggesting little evidence for learning. Even when reward depends only on fractals average prob of choosing the better fractal is not much higher than chance.
-
-
-```{r warning=FALSE, message=FALSE}
+```{r}
 clean_beh_data %>%
-  group_by(subnum) %>%
-  mutate(trialNum = 1:n(),
-         choseBundleWBetterFractal = ifelse(fractalRightProb>fractalLeftProb & choiceLeft == 0, 1, ifelse(fractalLeftProb>fractalRightProb & choiceLeft == 1, 1, 0)),
-         EVLeft = referenceProb * referenceValue,
+  mutate(EVLeft = referenceProb * referenceValue,
          EVRight = lotteryValue * lotteryProb,
-         conflictTrial = ifelse(EVLeft>EVRight & fractalLeftProb>fractalRightProb, "no conflict", ifelse(EVLeft<EVRight & fractalLeftProb<fractalRightProb, "no conflict", "conflict"))) %>%
-  ggplot(aes(trialNum, choseBundleWBetterFractal))+
-  geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, se=FALSE, alpha=.1, size=1, color=cbbPalette[5])+
-  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[3])+
-  facet_grid(conflictTrial~probFractalDraw)
+         conflictTrial = ifelse(EVLeft<EVRight & fractalLeftProb>fractalRightProb, "conflict", ifelse(EVLeft>EVRight & fractalLeftProb<fractalRightProb, "conflict", "no conflict"))) %>%
+  filter(EVLeft != EVRight) %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw),
+         leftLotteryBetter = EVLeft > EVRight,
+         choseBetterLotteryBundle = ifelse(leftLotteryBetter & choiceLeft == 1, 1, ifelse(!leftLotteryBetter & choiceLeft == 0, 1, 0))) %>%
+  group_by(probFractalDraw, subnum) %>%
+  summarise(.groups="keep",
+            prop_choseBetterLotteryBundle = mean(choseBetterLotteryBundle)) %>%
+  ggplot(aes(probFractalDraw, prop_choseBetterLotteryBundle))+
+  geom_boxplot()+
+  geom_hline(aes(yintercept=.5), color="grey")
+  
 ```
 
-learning doesn't look strong.
+```{r}
+clean_beh_data %>%
+  mutate(EVLeft = referenceProb * referenceValue,
+         EVRight = lotteryValue * lotteryProb,
+         conflictTrial = ifelse(EVLeft<EVRight & fractalLeftProb>fractalRightProb, "conflict", ifelse(EVLeft>EVRight & fractalLeftProb<fractalRightProb, "conflict", "no conflict"))) %>%
+  filter(EVLeft != EVRight) %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw),
+         leftLotteryBetter = EVLeft > EVRight,
+                  choseBetterLotteryBundle = ifelse(leftLotteryBetter & choiceLeft == 1, 1, ifelse(!leftLotteryBetter & choiceLeft == 0, 1, 0))) %>%
+  group_by(probFractalDraw, subnum, conflictTrial) %>%
+  summarise(.groups="keep",
+            prop_choseBetterLotteryBundle = mean(choseBetterLotteryBundle)) %>%
+  ggplot(aes(probFractalDraw, prop_choseBetterLotteryBundle))+
+  geom_boxplot()+
+  geom_hline(aes(yintercept=.5), color="grey")+
+  facet_grid(conflictTrial~.)
+  
+```
+
+## Choice based on fractal
+
+When the lotteries don't have the same EV do subjects choose the bundle with the better lottery? No. This suggests terrible performance.
+
+```{r}
+clean_beh_data %>%
+  mutate(EVLeft = referenceProb * referenceValue,
+         EVRight = lotteryValue * lotteryProb,
+         conflictTrial = ifelse(EVLeft<EVRight & fractalLeftProb>fractalRightProb, "conflict", ifelse(EVLeft>EVRight & fractalLeftProb<fractalRightProb, "conflict", "no conflict"))) %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw),
+         leftFractalBetter = fractalLeftProb > fractalRightProb,
+         choseBetterFractalBundle = ifelse(leftFractalBetter & choiceLeft == 1, 1, ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0))) %>%
+  group_by(probFractalDraw, subnum) %>%
+  summarise(.groups="keep",
+            prop_choseBetterFractalBundle = mean(choseBetterFractalBundle)) %>%
+  ggplot(aes(probFractalDraw, prop_choseBetterFractalBundle))+
+  geom_boxplot()+
+  geom_hline(aes(yintercept=.5), color="grey")
+  
+```
+
+```{r}
+clean_beh_data %>%
+  mutate(EVLeft = referenceProb * referenceValue,
+         EVRight = lotteryValue * lotteryProb,
+         conflictTrial = ifelse(EVLeft<EVRight & fractalLeftProb>fractalRightProb, "conflict", ifelse(EVLeft>EVRight & fractalLeftProb<fractalRightProb, "conflict", "no conflict"))) %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw),
+         leftFractalBetter = fractalLeftProb > fractalRightProb,
+         choseBetterFractalBundle = ifelse(leftFractalBetter & choiceLeft == 1, 1, ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0))) %>%
+  group_by(probFractalDraw, subnum, conflictTrial) %>%
+  summarise(.groups="keep",
+            prop_choseBetterFractalBundle = mean(choseBetterFractalBundle)) %>%
+  ggplot(aes(probFractalDraw, prop_choseBetterFractalBundle))+
+  geom_boxplot()+
+  geom_hline(aes(yintercept=.5), color="grey")+
+  facet_grid(conflictTrial~.)
+  
+```
+
+Why are both of them low? If you choose the bundle with the better lottery isn't choice of bundle with better fractal 0? Yes for conflict trials, no for no conflict.
+
+Do they get better with time?
+
+```{r}
+
+  
+```
+
+## Choice based on bundle value
+
+## Correct vs incorrect 
+
+based on 
+1. objective lottery, 
+2.fractal and 
+3.weighted bundle values
+
+## Perseverance of choice 
+
+(choosing the rewarded side)
+
+## Correct weighting of relevant attribute
+
+## Logit analysis with true values 
+
+instead of q values
+
+## Learning of fractal values
+
 what do the drifting reward probabilities look like
 is there a good signal to learn?
 
@@ -407,14 +499,29 @@ clean_beh_data %>%
 
 ```
 
-- Evidence of differential learning, more learning for rewarded side or chosen bundle fractal?
-- Evidence for perseverance of choice (choosing the rewarded side)
+Do people tend to choose the objectively better fractal more frequently later in the task?
 
-Evidence of correct weighting of relevant attribute
+When there is a conflict (the lotteries and fractals point to different bundles as the better option; 60% of the trials) the average probability of choosing the better fractal is higher at all levels of fractal relevance compared to the average of no conflict trials. This suggests that when there is a conflict subjects choose more based on fractals than they do based on lotteries.
 
-Logit analysis with true values instead of q values
+When there isn't a conflict between the lotteries and the fractal about the better bundle (top row), the bundle with the better fractal is chosen more frequently as it becomes more relevant for the choice. The slopes are on average at best weakly positive suggesting little evidence for learning. Even when reward depends only on fractals average prob of choosing the better fractal is not much higher than chance.
 
-correct vs incorrect choice (based on true ev and true fractal reward prob) depending on conflict vs no conflict choice
+learning doesn't look strong looking at the slopes of these curves.
 
+```{r warning=FALSE, message=FALSE}
+clean_beh_data %>%
+  group_by(subnum) %>%
+  mutate(trialNum = 1:n()) %>%
+  ungroup() %>%
+  mutate(choseBundleWBetterFractal = ifelse(fractalRightProb>fractalLeftProb & choiceLeft == 0, 1, ifelse(fractalLeftProb>fractalRightProb & choiceLeft == 1, 1, 0)),
+         EVLeft = referenceProb * referenceValue,
+         EVRight = lotteryValue * lotteryProb,
+         conflictTrial = ifelse(EVLeft<EVRight & fractalLeftProb>fractalRightProb, "conflict", ifelse(EVLeft>EVRight & fractalLeftProb<fractalRightProb, "conflict", "no conflict"))) %>%
+  ggplot(aes(trialNum, choseBundleWBetterFractal))+
+  # geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, se=FALSE, alpha=.1, size=1, color=cbbPalette[5])+
+  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[3])+
+  facet_grid(conflictTrial~probFractalDraw)
+```
 
-Things to model based on these:
+Evidence of differential learning, more learning for rewarded side or chosen bundle fractal?
+
+## Choice patterns to model

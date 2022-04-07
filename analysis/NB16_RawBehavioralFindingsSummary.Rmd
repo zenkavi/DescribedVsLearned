@@ -196,7 +196,7 @@ clean_beh_data %>%
 
 ## Choice side
 
-Are they faster when they choose left vs right? Since the learned attribute options are both fractals the stimulus difference lies in the lotteries. The bundle on the left has the fixed and the one on the right has the varying lottery. So right choices might be slower since they require more processing.
+Are they faster when they choose left vs right? Since the learned attribute options are both fractals the stimulus difference lies in the lotteries. The bundle on the **right** has the fixed and the one on the right has the varying lottery. So right choices might be slower since they require more processing.
 
 This doesn't seem to be the case overall.
 
@@ -348,28 +348,35 @@ clean_beh_data %>%
 
 # Choice
 
-**How can you parse choice without using any model-based measures?**
+**Analyzing choice without using any model-based measures**
 
 ## Side
 
 Proportion of left choice by probFractalDraw for all subjects. No systematic idiosyncratic side bias.
 
+
 ```{r}
 clean_beh_data %>%
-  group_by(subnum, probFractalDraw) %>%
+  mutate(EVLeft = referenceProb * referenceValue,
+         EVRight = lotteryValue * lotteryProb,
+         conflictTrial = ifelse(EVLeft<EVRight & fractalLeftProb>fractalRightProb, "conflict", ifelse(EVLeft>EVRight & fractalLeftProb<fractalRightProb, "conflict", "no conflict"))) %>%
+  group_by(subnum, probFractalDraw, conflictTrial) %>%
   summarise(.groups = "keep",
             propLeft = sum(choiceLeft)/n()) %>%
   mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
   ggplot(aes(probFractalDraw, propLeft))+
   geom_boxplot()+
-  geom_jitter(height=0, width=.1, alpha=.5, aes(color=as.numeric(subnum)))+
+  # geom_jitter(height=0, width=.1, alpha=.5, aes(color=as.numeric(subnum)))+
   geom_hline(yintercept=.5, color="gray")+
-  theme(legend.position = "none")
+  theme(legend.position = "none")+
+  facet_grid(conflictTrial~.)
 ```
 
 ## Choice based on lottery
 
-When the lotteries don't have the same EV do subjects choose the bundle with the better lottery? No. This suggests terrible performance.
+When the lotteries don't have the same EV do subjects choose the bundle with the better lottery? 
+
+No. Proportions especially for probFractalDraw <= .5 suggests terrible performance for both conflict and no conflict trials. If performance was good we should see a flip from high to low in conflict trials as probFractalDraw changes and a constant above chance level for no conflict trials.
 
 ```{r}
 clean_beh_data %>%
@@ -380,14 +387,17 @@ clean_beh_data %>%
   mutate(probFractalDraw = as.factor(probFractalDraw),
          leftLotteryBetter = EVLeft > EVRight,
          choseBetterLotteryBundle = ifelse(leftLotteryBetter & choiceLeft == 1, 1, ifelse(!leftLotteryBetter & choiceLeft == 0, 1, 0))) %>%
-  group_by(probFractalDraw, subnum) %>%
+  group_by(probFractalDraw, subnum, conflictTrial) %>%
   summarise(.groups="keep",
             prop_choseBetterLotteryBundle = mean(choseBetterLotteryBundle)) %>%
   ggplot(aes(probFractalDraw, prop_choseBetterLotteryBundle))+
   geom_boxplot()+
-  geom_hline(aes(yintercept=.5), color="grey")
+  geom_hline(aes(yintercept=.5), color="grey")+
+  facet_grid(conflictTrial~.)
   
 ```
+
+Do they get better with time? Not really.
 
 ```{r}
 clean_beh_data %>%
@@ -397,63 +407,232 @@ clean_beh_data %>%
   filter(EVLeft != EVRight) %>%
   mutate(probFractalDraw = as.factor(probFractalDraw),
          leftLotteryBetter = EVLeft > EVRight,
-                  choseBetterLotteryBundle = ifelse(leftLotteryBetter & choiceLeft == 1, 1, ifelse(!leftLotteryBetter & choiceLeft == 0, 1, 0))) %>%
+         choseBetterLotteryBundle = ifelse(leftLotteryBetter & choiceLeft == 1, 1, ifelse(!leftLotteryBetter & choiceLeft == 0, 1, 0)),
+         session = paste0("run ", session)) %>%
+  group_by(probFractalDraw, conflictTrial, session) %>%
+  summarise(.groups="keep",
+            prop_choseBetterLotteryBundle = mean(choseBetterLotteryBundle),
+            sem_choseBetterLotteryBundle = sd(choseBetterLotteryBundle)/sqrt(n())) %>%
+  ggplot(aes(probFractalDraw, prop_choseBetterLotteryBundle))+
+  geom_point()+
+  geom_errorbar(aes(ymin = prop_choseBetterLotteryBundle-sem_choseBetterLotteryBundle,
+                    ymax = prop_choseBetterLotteryBundle+sem_choseBetterLotteryBundle), width=.2)+
+  geom_hline(aes(yintercept=.5), color="grey")+
+  facet_grid(conflictTrial~session)+
+  theme(legend.position = "none")
+```
+
+## Choice based on fractal
+
+In conflict trials subjects choose the bundle with the better fractal (as opposed to the one with the better lottery) too frequently when the reward depends more on the lotteries.  
+
+prbFractalDraw =< .5 for no conflict trials also suggests bad performance. Subjects should choose the bundle with the better fractal, which is also the bundle with the better lottery more often than chance.  
+
+```{r}
+clean_beh_data %>%
+  mutate(EVLeft = referenceProb * referenceValue,
+         EVRight = lotteryValue * lotteryProb,
+         conflictTrial = ifelse(EVLeft<EVRight & fractalLeftProb>fractalRightProb, "conflict", ifelse(EVLeft>EVRight & fractalLeftProb<fractalRightProb, "conflict", "no conflict"))) %>%
+  # filter(EVLeft != EVRight) %>% #including these trials makes it the reciprocal of the above plot
+  mutate(probFractalDraw = as.factor(probFractalDraw),
+         leftFractalBetter = fractalLeftProb > fractalRightProb,
+         choseBetterFractalBundle = ifelse(leftFractalBetter & choiceLeft == 1, 1, ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0))) %>%
   group_by(probFractalDraw, subnum, conflictTrial) %>%
   summarise(.groups="keep",
-            prop_choseBetterLotteryBundle = mean(choseBetterLotteryBundle)) %>%
+            prop_choseBetterFractalBundle = mean(choseBetterFractalBundle)) %>%
+  ggplot(aes(probFractalDraw, prop_choseBetterFractalBundle))+
+  geom_boxplot()+
+  geom_hline(aes(yintercept=.5), color="grey")+
+  facet_grid(conflictTrial~.)
+  
+```
+
+```{r}
+clean_beh_data %>%
+  mutate(EVLeft = referenceProb * referenceValue,
+         EVRight = lotteryValue * lotteryProb,
+         conflictTrial = ifelse(EVLeft<EVRight & fractalLeftProb>fractalRightProb, "conflict", ifelse(EVLeft>EVRight & fractalLeftProb<fractalRightProb, "conflict", "no conflict"))) %>%
+  # filter(EVLeft != EVRight) %>% 
+  mutate(probFractalDraw = as.factor(probFractalDraw),
+         leftFractalBetter = fractalLeftProb > fractalRightProb,
+         choseBetterFractalBundle = ifelse(leftFractalBetter & choiceLeft == 1, 1, ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0)),
+         session = paste0("run ", session)) %>%
+  group_by(probFractalDraw, conflictTrial) %>%
+  summarise(.groups="keep",
+            prop_choseBetterFractalBundle = mean(choseBetterFractalBundle),
+            sem_choseBetterFractalBundle = sd(choseBetterFractalBundle)/sqrt(n())) %>%
+  ggplot(aes(probFractalDraw, prop_choseBetterFractalBundle))+
+  geom_point()+
+  geom_errorbar(aes(ymin = prop_choseBetterFractalBundle-sem_choseBetterFractalBundle,
+                    ymax = prop_choseBetterFractalBundle+sem_choseBetterFractalBundle), width=.2)+
+  geom_hline(aes(yintercept=.5), color="grey")+
+  facet_grid(conflictTrial~.)
+```
+
+Do they get better with time?
+
+```{r}
+clean_beh_data %>%
+  mutate(EVLeft = referenceProb * referenceValue,
+         EVRight = lotteryValue * lotteryProb,
+         conflictTrial = ifelse(EVLeft<EVRight & fractalLeftProb>fractalRightProb, "conflict", ifelse(EVLeft>EVRight & fractalLeftProb<fractalRightProb, "conflict", "no conflict"))) %>%
+  # filter(EVLeft != EVRight) %>% 
+  mutate(probFractalDraw = as.factor(probFractalDraw),
+         leftFractalBetter = fractalLeftProb > fractalRightProb,
+         choseBetterFractalBundle = ifelse(leftFractalBetter & choiceLeft == 1, 1, ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0)),
+         session = paste0("run ", session)) %>%
+  group_by(probFractalDraw, conflictTrial, session) %>%
+  summarise(.groups="keep",
+            prop_choseBetterFractalBundle = mean(choseBetterFractalBundle),
+            sem_choseBetterFractalBundle = sd(choseBetterFractalBundle)/sqrt(n())) %>%
+  ggplot(aes(probFractalDraw, prop_choseBetterFractalBundle))+
+  geom_point()+
+  geom_errorbar(aes(ymin = prop_choseBetterFractalBundle-sem_choseBetterFractalBundle,
+                    ymax = prop_choseBetterFractalBundle+sem_choseBetterFractalBundle), width=.2)+
+  geom_hline(aes(yintercept=.5), color="grey")+
+  facet_grid(conflictTrial~session)+
+  theme(legend.position = "none")
+```
+
+These didn't suggest terrible performance in NB3 when I used the QValues.
+
+Check the same plots with Qvalues and 
+Check correlation between QValues with true values (fractalProbs)
+
+```{r}
+source(paste0(helpers_path, 'add_inferred_pars.R'))
+source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical.R'))
+clean_beh_data_ip = add_inferred_pars(clean_beh_data, par_ests)
+```
+
+This one suggests performance is reasonable with the expected flip for conflict trials and persistent highs for no conflict
+
+```{r}
+clean_beh_data_ip %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw))%>%
+  group_by(probFractalDraw, subnum, conflictTrial) %>%
+  summarise(.groups="keep",
+            prop_choseBetterLotteryBundle = mean(choseBetterLottery)) %>%
   ggplot(aes(probFractalDraw, prop_choseBetterLotteryBundle))+
   geom_boxplot()+
   geom_hline(aes(yintercept=.5), color="grey")+
   facet_grid(conflictTrial~.)
   
 ```
-
-## Choice based on fractal
-
-When the lotteries don't have the same EV do subjects choose the bundle with the better lottery? No. This suggests terrible performance.
+There is some discrepancies between true fractal and q values but the larger difference is in how I've defined conflict trials in this nb.
 
 ```{r}
 clean_beh_data %>%
   mutate(EVLeft = referenceProb * referenceValue,
          EVRight = lotteryValue * lotteryProb,
-         conflictTrial = ifelse(EVLeft<EVRight & fractalLeftProb>fractalRightProb, "conflict", ifelse(EVLeft>EVRight & fractalLeftProb<fractalRightProb, "conflict", "no conflict"))) %>%
-  mutate(probFractalDraw = as.factor(probFractalDraw),
-         leftFractalBetter = fractalLeftProb > fractalRightProb,
-         choseBetterFractalBundle = ifelse(leftFractalBetter & choiceLeft == 1, 1, ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0))) %>%
-  group_by(probFractalDraw, subnum) %>%
-  summarise(.groups="keep",
-            prop_choseBetterFractalBundle = mean(choseBetterFractalBundle)) %>%
-  ggplot(aes(probFractalDraw, prop_choseBetterFractalBundle))+
-  geom_boxplot()+
-  geom_hline(aes(yintercept=.5), color="grey")
-  
+         conflictTrial = ifelse(EVLeft<EVRight & fractalLeftProb>fractalRightProb, "conflict", ifelse(EVLeft>EVRight & fractalLeftProb<fractalRightProb, "conflict", "no conflict")),
+         leftLotteryBetter = (lotteryProb*lotteryValue)-(referenceProb*referenceValue)>0,
+         leftFractalBetter = (fractalLeftProb)-(fractalRightProb)>0) %>%
+  select(subnum, trialNum, session, conflictTrial, leftFractalBetter, leftLotteryBetter) %>%
+  left_join(clean_beh_data_ip %>%
+              select(subnum, trialNum, session, conflictTrial, leftFractalBetter, leftLotteryBetter),
+            by=c('subnum', 'trialNum', 'session')) %>%
+  mutate(sameConflict = ifelse(conflictTrial.x == conflictTrial.y, 1, 0),
+         sameLotteryBetter = ifelse(leftLotteryBetter.x == leftLotteryBetter.y, 1, 0),
+         sameFractalBetter = ifelse(leftFractalBetter.x == leftFractalBetter.y, 1, 0)) %>%
+  summarise(sumSameConflict = sum(sameConflict),
+            sumSameLottery = sum(sameLotteryBetter),
+            sumSameFractal = sum(sameFractalBetter))
+```
+```{r}
+clean_beh_data_ip %>%
+  ggplot(aes(fractalLeftProb, leftQValue))+
+  geom_point(color="gray")+
+  geom_abline(aes(intercept=0, slope=1), color="black")+
+  geom_smooth(method="lm", formula='y~x')
+```
+```{r}
+clean_beh_data_ip %>%
+  ggplot(aes(fractalRightProb, rightQValue))+
+  geom_point(color="gray")+
+  geom_abline(aes(intercept=0, slope=1), color="black")+
+  geom_smooth(method="lm", formula='y~x')
+```
+
+What is wrong with how I define conflict in this nb
+
+LEFT has the varying lottery! Not right!
+
+```{r}
+clean_beh_data %>%
+  mutate(EVRight = referenceProb * referenceValue,
+         EVLeft = lotteryValue * lotteryProb,
+         conflictTrial = ifelse((EVLeft<EVRight) & (fractalLeftProb>fractalRightProb), "conflict", ifelse((EVLeft>EVRight) & (fractalLeftProb<fractalRightProb), "conflict", "no conflict")),
+         leftLotteryBetter = (lotteryProb*lotteryValue)-(referenceProb*referenceValue)>0,
+         leftFractalBetter = (fractalLeftProb)-(fractalRightProb)>0) %>%
+  select(EVRight, EVLeft, fractalLeftProb, fractalRightProb, leftLotteryBetter, leftFractalBetter, conflictTrial)
+
+```
+Do the two definitions match better when you fix the EV sides? Yes.
+
+```{r}
+clean_beh_data %>%
+  mutate(EVRight = referenceProb * referenceValue,
+         EVLeft = lotteryValue * lotteryProb,
+         conflictTrial = ifelse(EVLeft<EVRight & fractalLeftProb>fractalRightProb, "conflict", ifelse(EVLeft>EVRight & fractalLeftProb<fractalRightProb, "conflict", "no conflict")),
+         leftLotteryBetter = (lotteryProb*lotteryValue)-(referenceProb*referenceValue)>0,
+         leftFractalBetter = (fractalLeftProb)-(fractalRightProb)>0) %>%
+  select(subnum, trialNum, session, conflictTrial, leftFractalBetter, leftLotteryBetter) %>%
+  left_join(clean_beh_data_ip %>%
+              select(subnum, trialNum, session, conflictTrial, leftFractalBetter, leftLotteryBetter),
+            by=c('subnum', 'trialNum', 'session')) %>%
+  mutate(sameConflict = ifelse(conflictTrial.x == conflictTrial.y, 1, 0),
+         sameLotteryBetter = ifelse(leftLotteryBetter.x == leftLotteryBetter.y, 1, 0),
+         sameFractalBetter = ifelse(leftFractalBetter.x == leftFractalBetter.y, 1, 0)) %>%
+  summarise(sumSameConflict = sum(sameConflict),
+            sumSameLottery = sum(sameLotteryBetter),
+            sumSameFractal = sum(sameFractalBetter))
+```
+Are the differences in conflict definitions only due to true versus q values?
+Different conflict definitions are either differing q vs true values OR when the lotteries have the same value.
+That is defined better in this NB I think. 
+
+```{r}
+clean_beh_data %>%
+  mutate(EVRight = referenceProb * referenceValue,
+         EVLeft = lotteryValue * lotteryProb,
+         conflictTrial = ifelse(EVLeft<EVRight & fractalLeftProb>fractalRightProb, "conflict", ifelse(EVLeft>EVRight & fractalLeftProb<fractalRightProb, "conflict", "no conflict")),
+         leftLotteryBetter = (lotteryProb*lotteryValue)-(referenceProb*referenceValue)>0,
+         leftFractalBetter = (fractalLeftProb)-(fractalRightProb)>0,
+         lotteriesSame = EVLeft == EVRight) %>%
+  select(subnum, trialNum, session, conflictTrial, leftFractalBetter, leftLotteryBetter, lotteriesSame) %>%
+  left_join(clean_beh_data_ip %>%
+              select(subnum, trialNum, session, conflictTrial, leftFractalBetter, leftLotteryBetter),
+            by=c('subnum', 'trialNum', 'session')) %>%
+  select(-subnum, -trialNum, -session, -leftLotteryBetter.x, -leftLotteryBetter.y) %>%
+  mutate(sameConflict = ifelse(conflictTrial.x == conflictTrial.y, 1, 0),
+         sameFractalBetter = ifelse(leftFractalBetter.x == leftFractalBetter.y, 1, 0)) %>%
+  filter(sameConflict == 0 & sameFractalBetter == 1)
 ```
 
 ```{r}
 clean_beh_data %>%
-  mutate(EVLeft = referenceProb * referenceValue,
-         EVRight = lotteryValue * lotteryProb,
-         conflictTrial = ifelse(EVLeft<EVRight & fractalLeftProb>fractalRightProb, "conflict", ifelse(EVLeft>EVRight & fractalLeftProb<fractalRightProb, "conflict", "no conflict"))) %>%
-  mutate(probFractalDraw = as.factor(probFractalDraw),
-         leftFractalBetter = fractalLeftProb > fractalRightProb,
-         choseBetterFractalBundle = ifelse(leftFractalBetter & choiceLeft == 1, 1, ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0))) %>%
-  group_by(probFractalDraw, subnum, conflictTrial) %>%
-  summarise(.groups="keep",
-            prop_choseBetterFractalBundle = mean(choseBetterFractalBundle)) %>%
-  ggplot(aes(probFractalDraw, prop_choseBetterFractalBundle))+
-  geom_boxplot()+
-  geom_hline(aes(yintercept=.5), color="grey")+
-  facet_grid(conflictTrial~.)
-  
+  mutate(EVRight = referenceProb * referenceValue,
+         EVLeft = lotteryValue * lotteryProb,
+         conflictTrial = ifelse(EVLeft<EVRight & fractalLeftProb>fractalRightProb, "conflict", ifelse(EVLeft>EVRight & fractalLeftProb<fractalRightProb, "conflict", "no conflict")),
+         leftLotteryBetter = (lotteryProb*lotteryValue)-(referenceProb*referenceValue)>0,
+         leftFractalBetter = (fractalLeftProb)-(fractalRightProb)>0,
+         lotteriesSame = EVLeft == EVRight) %>%
+  select(subnum, trialNum, session, conflictTrial, leftFractalBetter, leftLotteryBetter, lotteriesSame) %>%
+  left_join(clean_beh_data_ip %>%
+              select(subnum, trialNum, session, conflictTrial, leftFractalBetter, leftLotteryBetter),
+            by=c('subnum', 'trialNum', 'session')) %>%
+  select(-subnum, -trialNum, -session, -leftLotteryBetter.x, -leftLotteryBetter.y) %>%
+  mutate(sameConflict = ifelse(conflictTrial.x == conflictTrial.y, 1, 0),
+         sameFractalBetter = ifelse(leftFractalBetter.x == leftFractalBetter.y, 1, 0)) %>%
+  filter(sameConflict == 0 & sameFractalBetter == 0)
 ```
 
-Why are both of them low? If you choose the bundle with the better lottery isn't choice of bundle with better fractal 0? Yes for conflict trials, no for no conflict.
-
-Do they get better with time?
-
 ```{r}
-
-  
+clean_beh_data %>%
+  mutate(EVRight = referenceProb * referenceValue,
+         EVLeft = lotteryValue * lotteryProb) %>%
+  filter(EVLeft == EVRight)
 ```
 
 ## Choice based on bundle value

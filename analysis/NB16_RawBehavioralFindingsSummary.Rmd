@@ -484,8 +484,8 @@ leftFrac rewarded, leftFrac not rewarded
 X
 rightFrac rewarded, rightFrac not rewarded
 
-No difference in perseverance depending on whether the trial was rewarded exxcept for 3/20 cases.  
-When lottery 
+
+When reward depends more on fractals and the previous trial was rewarded based on the fractals then subjects are more likely to choose the side they chose previously. Makes sense. Suggestive of learning and understanding of task.
 
 ```{r}
 clean_beh_data %>%
@@ -494,10 +494,11 @@ clean_beh_data %>%
   mutate(lastChoiceSide = lag(choiceLeft),
          lastFractalDraw = lag(fractalDraw),
          choseLastSide = choiceLeft == lastChoiceSide,
-         rewarded = reward > 0) %>%
+         lastTrialRewarded = paste0("Last Trial rewarded: ", lag(reward > 0))) %>%
   filter(trialNum > 1) %>% #remove first trial of each run
+  drop_na() %>% #for two subjects there are cases when trialNum == 1 is cleaned because there was no response. These lead to NAs in lastChoiceSide and lastFractalDraw so they are dropped
   ungroup()%>%
-  group_by(lastFractalDraw, rewarded, probFractalDraw) %>%
+  group_by(lastFractalDraw, lastTrialRewarded, probFractalDraw) %>%
   summarise(.groups='keep',
             prop_choseLastSide = mean(choseLastSide, na.rm=T),
             sem_choseLastSide = sd(choseLastSide, na.rm=T)/sqrt(n())) %>%
@@ -506,7 +507,7 @@ clean_beh_data %>%
   geom_point(position = position_dodge(width=.5))+
   geom_errorbar(aes(ymin=prop_choseLastSide-sem_choseLastSide, ymax=prop_choseLastSide+sem_choseLastSide), width=.2, position=position_dodge(width=.5))+
   geom_hline(aes(yintercept=.5), color="gray")+
-  facet_grid(rewarded~.)+
+  facet_grid(lastTrialRewarded~.)+
   theme(legend.position = "bottom")
   
 ```

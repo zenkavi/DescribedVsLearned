@@ -12,6 +12,7 @@ output:
 # Set up
 
 ```{r include=FALSE}
+library(broom)
 library(tidyverse)
 theme_set(theme_bw())
 library(here)
@@ -38,6 +39,10 @@ clean_beh_data = clean_beh_data %>%
          lottery_ev_diff = factor(lottery_ev_diff, levels=c("no EV diff", "small EV diff", "large EV diff"), labels = c("no", "small", "large")),
          choseBetterLotteryBundle = ifelse(leftLotteryBetter & choiceLeft == 1, 1, ifelse(!leftLotteryBetter & choiceLeft == 0, 1, 0)),
          choseBetterFractalBundle = ifelse(leftFractalBetter & choiceLeft == 1, 1, ifelse(!leftFractalBetter & choiceLeft == 0, 1, 0)),
+         leftBundleValue = (probFractalDraw*fractalLeftProb) + ((1-probFractalDraw)*EVLeft),
+         rightBundleValue = (probFractalDraw * fractalRightProb) + ((1-probFractalDraw)*EVRight),
+         leftBundleBetter = leftBundleValue > rightBundleValue,
+         choseBetterOverallBundle = ifelse(leftBundleBetter & choiceLeft == 1, 1, ifelse(!leftBundleBetter & choiceLeft == 0, 1, 0)),
          logRt = log(reactionTime),
          probFractalDraw = as.factor(probFractalDraw))
 ```
@@ -359,6 +364,7 @@ clean_beh_data %>%
   facet_grid(conflictTrial~.)
   
 ```
+
 Do they get better with time?
 
 ```{r}
@@ -379,27 +385,111 @@ clean_beh_data %>%
 
 ## Choice based on bundle value
 
-## Correct vs incorrect 
+```{r}
+clean_beh_data %>%
+  group_by(probFractalDraw, subnum, conflictTrial) %>%
+  summarise(.groups="keep",
+            prop_choseBetterOverallBundle = mean(choseBetterOverallBundle)) %>%
+  ggplot(aes(probFractalDraw, prop_choseBetterOverallBundle))+
+  geom_boxplot()+
+  geom_hline(aes(yintercept=.5), color="grey")+
+  facet_grid(conflictTrial~.)
+  
+```
 
-based on 
-1. objective lottery, 
-2.fractal and 
-3.weighted bundle values
+```{r}
+clean_beh_data %>%
+   mutate(session = paste0("run ", session)) %>%
+  group_by(probFractalDraw, conflictTrial, session) %>%
+  summarise(.groups="keep",
+            prop_choseBetterOverallBundle = mean(choseBetterOverallBundle),
+            sem_choseBetterOverallBundle = sd(choseBetterOverallBundle)/sqrt(n())) %>%
+  ggplot(aes(probFractalDraw, prop_choseBetterOverallBundle))+
+  geom_point()+
+  geom_errorbar(aes(ymin = prop_choseBetterOverallBundle-sem_choseBetterOverallBundle,
+                    ymax = prop_choseBetterOverallBundle+sem_choseBetterOverallBundle), width=.2)+
+  geom_hline(aes(yintercept=.5), color="grey")+
+  facet_grid(conflictTrial~session)+
+  theme(legend.position = "none")
+```
+
+## Logit analysis with true values 
+
+```{r}
+clean_beh_data %>%
+  select(EVLeft, EVRight, fractalLeftProb, fractalRightProb, probFractalDraw, choiceLeft) %>%
+  mutate(EVDiff = scale(EVLeft - EVRight), 
+         fractalDiff = scale(fractalLeftProb - fractalRightProb)) %>%
+  nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ EVDiff + fractalDiff, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(probFractalDraw, term, estimate, std.error) %>%
+  ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
+      geom_point()+
+      geom_line()+
+      geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
+      geom_hline(aes(yintercept=0), linetype="dashed")+
+      scale_color_manual(values = cbbPalette[2:1])+
+      theme(legend.position = "bottom")+
+      labs(color="", title="Relevant attribute effect on choice")
+```
+
+Individual differences in this pattern are very large. The pattern doesn't really exist clearly for any subject.
+
+```{r warning=FALSE, message=FALSE}
+tmp = clean_beh_data %>%
+  select(subnum, EVLeft, EVRight, fractalLeftProb, fractalRightProb, probFractalDraw, choiceLeft) %>%
+  mutate(EVDiff = scale(EVLeft - EVRight), 
+         fractalDiff = scale(fractalLeftProb - fractalRightProb)) %>%
+  nest(data = -c(probFractalDraw, subnum)) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ EVDiff + fractalDiff, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(subnum, probFractalDraw, term, estimate, std.error)
+```
+
+```{r warning=FALSE, message=FALSE}
+tmp %>% ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
+      geom_point()+
+      geom_line()+
+      geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
+      geom_hline(aes(yintercept=0), linetype="dashed")+
+      scale_color_manual(values = cbbPalette[2:1])+
+      theme(legend.position = "none")+
+      labs(color="") +
+  facet_wrap(~subnum, scales="free")+
+  ylim(-5, 5)
+```
 
 ## Perseverance of choice 
 
 (choosing the rewarded side)
 
-## Correct weighting of relevant attribute
+relevant columns: leftFractalReward, rightFractalReward, reward, fractalDraw
+Types of trials
 
-## Logit analysis with true values 
+fractal draw vs lottery draw
+X
+reward vs no reward
 
-instead of q values
+```{r}
+clean_beh_data
+```
+
 
 ## Learning of fractal values
 
 what do the drifting reward probabilities look like
 is there a good signal to learn?
+
+should I model "learning" for the whole task?
 
 ```{r}
 clean_beh_data %>%
@@ -420,29 +510,9 @@ clean_beh_data %>%
 
 ```
 
-Do people tend to choose the objectively better fractal more frequently later in the task?
 
-When there is a conflict (the lotteries and fractals point to different bundles as the better option; 60% of the trials) the average probability of choosing the better fractal is higher at all levels of fractal relevance compared to the average of no conflict trials. This suggests that when there is a conflict subjects choose more based on fractals than they do based on lotteries.
+## Differential learning, 
 
-When there isn't a conflict between the lotteries and the fractal about the better bundle (top row), the bundle with the better fractal is chosen more frequently as it becomes more relevant for the choice. The slopes are on average at best weakly positive suggesting little evidence for learning. Even when reward depends only on fractals average prob of choosing the better fractal is not much higher than chance.
-
-learning doesn't look strong looking at the slopes of these curves.
-
-```{r warning=FALSE, message=FALSE}
-clean_beh_data %>%
-  group_by(subnum) %>%
-  mutate(trialNum = 1:n()) %>%
-  ungroup() %>%
-  mutate(choseBundleWBetterFractal = ifelse(fractalRightProb>fractalLeftProb & choiceLeft == 0, 1, ifelse(fractalLeftProb>fractalRightProb & choiceLeft == 1, 1, 0)),
-         EVLeft = referenceProb * referenceValue,
-         EVRight = lotteryValue * lotteryProb,
-         conflictTrial = ifelse(EVLeft<EVRight & fractalLeftProb>fractalRightProb, "conflict", ifelse(EVLeft>EVRight & fractalLeftProb<fractalRightProb, "conflict", "no conflict"))) %>%
-  ggplot(aes(trialNum, choseBundleWBetterFractal))+
-  # geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, se=FALSE, alpha=.1, size=1, color=cbbPalette[5])+
-  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[3])+
-  facet_grid(conflictTrial~probFractalDraw)
-```
-
-Evidence of differential learning, more learning for rewarded side or chosen bundle fractal?
+more learning for rewarded side or chosen bundle fractal?
 
 ## Choice patterns to model

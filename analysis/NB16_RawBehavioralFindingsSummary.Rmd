@@ -300,7 +300,6 @@ clean_beh_data %>%
 
 Proportion of left choice by probFractalDraw for all subjects. No systematic idiosyncratic side bias.
 
-
 ```{r}
 clean_beh_data %>%
   group_by(subnum, probFractalDraw, conflictTrial) %>%
@@ -331,7 +330,10 @@ clean_beh_data %>%
   
 ```
 
-Do they get better with time? A bit for trials when lotteries matter more.
+Do they get better with time?  
+- Some improvement for pFracDraw <=.5 especially from run 1 to run 2
+- Even for pFracDraw <= .5 trials no conflict trials are slightly worse than conflict trials.
+- For trials where fractals matter more for the reward (pFracDraw > .5) performance is worse in both types of conflict trials. In conflict trials the drop for choosing the bundle with the better lottery is not as sharp as it should be and in no conflict trials choice of bundle with better lottery is not as high even though it is also the bundle with the better fractal.  
 
 ```{r}
 clean_beh_data %>%
@@ -365,7 +367,8 @@ clean_beh_data %>%
   
 ```
 
-Do they get better with time?
+Do they get better with time?  
+No new conclusions compared to the comparable graph above even when including trials with equal lottery EVs. Choice when the learned attribute matters for the reward is not as good as it is for when the described attribute (lotteries) matter more for the reward.
 
 ```{r}
 clean_beh_data %>%
@@ -516,3 +519,7 @@ clean_beh_data %>%
 more learning for rewarded side or chosen bundle fractal?
 
 ## Choice patterns to model
+
+- Better performance for trials where the lotteries matter more for the reward.
+- Asymmetric distortion of attribute relevance: Lottery slopes decline linearly but fractal slopes have a more step-like shape.
+- 

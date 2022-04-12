@@ -313,7 +313,7 @@ clean_beh_data %>%
   facet_grid(conflictTrial~.)
 ```
 
-## Choice based on lottery
+## Choice based on lottery, fractal, bundle value
 
 When the lotteries don't have the same EV do subjects choose the bundle with the better lottery? This should depend on how much the reward depends on the lotteries. Subject do choose the bundle with the better lottery more frequently when it matters for the reward. They appropriately choose it less frequently when the reward depends more on the fractals and the fractals suggest a different bundle to be the better one (conflict trials)
 
@@ -416,6 +416,94 @@ clean_beh_data %>%
   theme(legend.position = "none")
 ```
 
+```{r}
+tmp1 = clean_beh_data %>%
+  filter(EVLeft != EVRight) %>%
+  mutate(session = paste0("run ", session)) %>%
+  group_by(probFractalDraw, conflictTrial, session) %>%
+  summarise(.groups="keep",
+            prop_choseBetterLotteryBundle = mean(choseBetterLotteryBundle),
+            sem_choseBetterLotteryBundle = sd(choseBetterLotteryBundle)/sqrt(n()))
+
+clean_beh_data %>%
+  mutate(session = paste0("run ", session),
+         choseBetterLotteryBundle = ifelse(EVRight == EVLeft, NA, choseBetterLotteryBundle),
+         choseBetterOverallBundle = ifelse(leftBundleValue == rightBundleValue, NA, choseBetterOverallBundle)) %>%
+  group_by(probFractalDraw, conflictTrial, session) %>%
+  summarise(.groups="keep",
+            prop_choseBetterLotteryBundle = mean(choseBetterLotteryBundle, na.rm=T),
+            sem_choseBetterLotteryBundle = sd(choseBetterLotteryBundle, na.rm=T)/sqrt(n()),
+            prop_choseBetterFractalBundle = mean(choseBetterFractalBundle),
+            sem_choseBetterFractalBundle = sd(choseBetterFractalBundle)/sqrt(n()),
+            prop_choseBetterOverallBundle = mean(choseBetterOverallBundle, na.rm=T),
+            sem_choseBetterOverallBundle = sd(choseBetterOverallBundle, na.rm=T)/sqrt(n())) %>%
+    gather(prop_type, prop_value, -probFractalDraw, -conflictTrial, -session,-sem_choseBetterLotteryBundle ,-sem_choseBetterFractalBundle, -sem_choseBetterOverallBundle) %>%
+  gather(sem_type, sem_value,  -probFractalDraw, -conflictTrial, -session, -prop_type, -prop_value) %>%
+  ggplot(aes(probFractalDraw, prop_value, color=prop_type))+
+  geom_point(alpha=.5)+
+  geom_errorbar(aes(ymin = prop_value-sem_value,
+                    ymax = prop_value+sem_value), width=.2)+
+  geom_hline(aes(yintercept=.5), color="grey")+
+  facet_grid(conflictTrial~session)+
+  theme(legend.position = "bottom")+
+  labs(color="", x="p(Fractal)", y="Proportion of choices")+
+  scale_color_manual(values=c(cbbPalette[1:2], "purple"),
+                     breaks = c("prop_choseBetterFractalBundle", "prop_choseBetterLotteryBundle", "prop_choseBetterOverallBundle"),
+                     labels = c(c("Better Fractal Bundle", "Better Lottery Bundle", "Better Overall Bundle")))
+```
+
+```{r}
+tmp2 = clean_beh_data %>%
+   mutate(session = paste0("run ", session)) %>%
+  group_by(probFractalDraw, conflictTrial, session) %>%
+  summarise(.groups="keep",
+            prop_choseBetterFractalBundle = mean(choseBetterFractalBundle),
+            sem_choseBetterFractalBundle = sd(choseBetterFractalBundle)/sqrt(n()))
+
+
+tmp3 = clean_beh_data %>%
+  filter(leftBundleValue != rightBundleValue) %>%
+   mutate(session = paste0("run ", session)) %>%
+  group_by(probFractalDraw, conflictTrial, session) %>%
+  summarise(.groups="keep",
+            prop_choseBetterOverallBundle = mean(choseBetterOverallBundle),
+            sem_choseBetterOverallBundle = sd(choseBetterOverallBundle)/sqrt(n()))
+
+unique(tmp3$prop_choseBetterOverallBundle)
+```
+
+
+```{r}
+tmp2 %>%
+  left_join(tmp3, by=names(tmp2)[1:3]) %>%
+  gather(prop_type, prop_value, -probFractalDraw, -conflictTrial, -session,-sem_choseBetterFractalBundle, -sem_choseBetterOverallBundle) %>%
+  gather(sem_type, sem_value,  -probFractalDraw, -conflictTrial, -session, -prop_type, -prop_value) %>%
+  ggplot(aes(probFractalDraw, prop_value, color=prop_type))+
+  geom_point(alpha=.5)+
+  geom_errorbar(aes(ymin = prop_value-sem_value,
+                    ymax = prop_value+sem_value), width=.2)+
+  geom_hline(aes(yintercept=.5), color="grey")+
+  facet_grid(conflictTrial~session)+
+  theme(legend.position = "none")
+```
+
+```{r}
+tmp2 %>%
+  left_join(tmp3, by=names(tmp2)[1:3]) %>%
+  mutate(probFractalDraw = as.numeric(as.character(probFractalDraw))) %>%
+  filter(conflictTrial == "no conflict" & probFractalDraw == 0 & session == "run 2")
+```
+
+```{r}
+clean_beh_data %>%
+  select(-trialNum, -referenceValue, -referenceProb, -numRewardedTrials, -fractalDraw, -reactionTime, -responded, -reward, -totalReward, -logRt) %>%
+  mutate(probFractalDraw = as.numeric(as.character(probFractalDraw))) %>%
+  filter(conflictTrial == "conflict" & probFractalDraw == 0.9 & session == 2) %>%
+  mutate(same = choseBetterFractalBundle == choseBetterOverallBundle) %>%
+  arrange(same) %>%
+  select(fractalLeftProb, fractalRightProb, EVLeft, EVRight, leftBundleValue, rightBundleValue)
+```
+
 ## Logit analysis with true values 
 
 ```{r}
@@ -468,7 +556,8 @@ tmp %>% ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
       theme(legend.position = "none")+
       labs(color="") +
   facet_wrap(~subnum, scales="free")+
-  ylim(-5, 5)
+  ylim(-5, 5)+
+  labs(x="", y="")
 ```
 
 ## Perseverance of choice 
@@ -510,18 +599,6 @@ clean_beh_data %>%
   facet_grid(lastTrialRewarded~.)+
   theme(legend.position = "bottom")
   
-```
-
-longest streak of the same side
-
-```{r}
-clean_beh_data %>%
-  select(subnum, trialNum, choiceLeft, reward, fractalDraw, probFractalDraw) %>%
-  group_by(subnum) %>% # so the last choice for one subject does not bleed into the first choice of the next subject
-  mutate(lastChoiceSide = lag(choiceLeft),
-         choseLastSide = choiceLeft == lastChoiceSide,
-         diffChoseLastSide = c(NA,diff(choseLastSide))) %>%
-  filter(trialNum > 1)
 ```
 
 ## Learning of fractal values

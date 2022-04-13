@@ -219,22 +219,10 @@ p
 
 ## Perseverance of choice 
 
-are they more likely to choose the rewarded side
-rewarded how? trial reward or fractal reward?
-
-fractal draw vs lottery draw
-X
-reward vs no reward
-X
-leftFrac rewarded, leftFrac not rewarded
-X
-rightFrac rewarded, rightFrac not rewarded
-
-
 When reward depends more on fractals and the previous trial was rewarded based on the fractals then subjects are more likely to choose the side they chose previously. Makes sense. Suggestive of learning and understanding of task.
 
 ```{r}
-clean_beh_data %>%
+p = clean_beh_data %>%
   select(subnum, trialNum, choiceLeft, reward, fractalDraw, probFractalDraw) %>%
   group_by(subnum) %>% # so the last choice for one subject does not bleed into the first choice of the next subject
   mutate(lastChoiceSide = lag(choiceLeft),
@@ -254,7 +242,14 @@ clean_beh_data %>%
   geom_errorbar(aes(ymin=prop_choseLastSide-sem_choseLastSide, ymax=prop_choseLastSide+sem_choseLastSide), width=.2, position=position_dodge(width=.5))+
   geom_hline(aes(yintercept=.5), color="gray")+
   facet_grid(lastTrialRewarded~.)+
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom")+
+  labs(x= "p(Fractal)", y = "Proportion of repeated choice", color="Last rewarded attribute")+
+  scale_color_manual(values=cbbPalette[1:2],
+                     breaks = c("fractal", "lottery"),
+                     labels = c("Fractal", "Lottery"))
+
+ggsave(file=paste0(fig_out_path, 'perseverance_of_choice.jpg'), p, height = 5, width=8, units="in")
+p
   
 ```
 
@@ -284,14 +279,82 @@ clean_beh_data %>%
 
 ```
 
+Are you more likely to choose the better fractal bundle as trialnum increases
+columns for run
+rows for pfractaldraw
+
+```{r}
+clean_beh_data %>%
+  # filter(as.numeric(as.character(probFractalDraw))>.5) %>%
+  group_by(subnum) %>%
+  # mutate(trialNum = 1:n()) %>%
+  ggplot(aes(trialNum, choseBetterFractalBundle))+
+  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[3], alpha=.75)+
+  # facet_grid(probFractalDraw ~ session)
+  facet_wrap(~session)
+```
+
+How is the relevance of attributes changing across the task for each subject? Pretty erratically.
+There is a lot going on on the reward screen
+Ideally subjects would pay equal attention to both fractals and update the QValue for each
+But they might have a "good/bad" fractal signal that fades if in the next few trials the fractal is not relevant.
+How to check for this?
+
+
+is the fractal rewarded in the last trial
+is the fractal relevant in this trial
+is the better fractal bundle chosen in this trial
+increase lag in the same plot to see if the effect decreases
+
+```{r}
+clean_beh_data %>%
+  select(subnum, trialNum, choiceLeft, reward, fractalDraw, probFractalDraw, choseBetterFractalBundle) %>%
+  group_by(subnum) %>% # so the last choice for one subject does not bleed into the first choice of the next subject
+  mutate(
+         lastFractalDraw = lag(fractalDraw),
+         
+         lastTrialRewarded = paste0("Last Trial rewarded: ", lag(reward > 0))) %>%
+  filter(trialNum > 1) %>% #remove first trial of each run
+  drop_na() %>% #for two subjects there are cases when trialNum == 1 is cleaned because there was no response. These lead to NAs in lastChoiceSide and lastFractalDraw so they are dropped
+  ungroup()%>%
+  group_by(lastFractalDraw, lastTrialRewarded, probFractalDraw) %>%
+  summarise(.groups='keep',
+            prop_choseBetterFractalBundle = mean(choseBetterFractalBundle, na.rm=T),
+            sem_choseBetterFractalBundle = sd(choseBetterFractalBundle, na.rm=T)/sqrt(n())) %>%
+  mutate(lastRewardAttribute = ifelse(lastFractalDraw == 1, "fractal", "lottery")) %>%  
+  ggplot(aes(probFractalDraw, prop_choseBetterFractalBundle, color=lastRewardAttribute))+
+  geom_point(position = position_dodge(width=.5))+
+  geom_errorbar(aes(ymin=prop_choseBetterFractalBundle-sem_choseBetterFractalBundle, ymax=prop_choseBetterFractalBundle+sem_choseBetterFractalBundle), width=.2, position=position_dodge(width=.5))+
+  geom_hline(aes(yintercept=.5), color="gray")+
+  facet_grid(lastTrialRewarded~.)+
+  theme(legend.position = "bottom")+
+  labs(x= "p(Fractal)", y = "Proportion of better fractal bundle choice", color="Last rewarded attribute")+
+  scale_color_manual(values=cbbPalette[1:2],
+                     breaks = c("fractal", "lottery"),
+                     labels = c("Fractal", "Lottery"))
+  
+```
+
+
 
 ## Differential learning 
 
 more learning for rewarded side or chosen bundle fractal?
 
+More learning from rare events? E.g. if the fractaldraw wasn't likely but happened anyway?
+
+## Risk attitude
+
+This is a focus when studying the description-experience gap. 
+In description-based choice subjects are risk averse in gains and risk seeking in losses.
+In experience-based choice this flips and subjects are risk seeking in gains and risk averse in losses.
+We don't have losses in this experiment. Only gains.
+Could we quantify risk attitude in any way? What would be risky in this paradigm? Choosing based on fractals before you've seen enough to form a good representation of their value. Choosing the bundle with the lottery that has the same or larger EV.
+
+
 ## Choice patterns to model
 
-- Better performance for trials where the lotteries matter more for the reward.
+- Better performance for trials where the lotteries matter more for the reward.When fractal matters more choice is around chance in conflict trials and above chance but worse than lottery mattering trials for no conflict trials.
 - Asymmetric distortion of attribute relevance: Lottery slopes decline linearly but fractal slopes have a more step-like shape.
 
 # Reaction Time
@@ -310,13 +373,17 @@ clean_beh_data %>%
 Decisions are slowest when both attributes are equally relevant. They are also categorically faster when only fractals matter for reward.
 
 ```{r}
-clean_beh_data %>%
+p = clean_beh_data %>%
   group_by(probFractalDraw) %>%
   summarise(meanLogRt = mean(logRt),
             semLogRt = sd(logRt)/sqrt(n())) %>%
   ggplot(aes(probFractalDraw, meanLogRt))+
   geom_point()+
-  geom_errorbar(aes(ymin=meanLogRt - semLogRt, ymax=meanLogRt + semLogRt), width=.2)
+  geom_errorbar(aes(ymin=meanLogRt - semLogRt, ymax=meanLogRt + semLogRt), width=.2)+
+  labs(y="mean log RT", x="p(Fractal)")
+
+ggsave(file=paste0(fig_out_path, 'rt_by_probfractaldraw.jpg'), p, height = 5, width=8, units="in")
+p
 ```
 
 Do we see this pattern for all subjects? Most but not all. Subjects 9 nd 10 look particularly weird.
@@ -385,16 +452,20 @@ clean_beh_data %>%
 Choice is faster for larger differences between the lotteries *when* lotteries are more relevant for reward. Otherwise the effect disappears.
 
 ```{r}
-clean_beh_data %>%
+p = clean_beh_data %>%
   group_by(probFractalDraw, lottery_ev_diff) %>%
   summarise(.groups = "keep",
             mean_logRt = mean(logRt),
             sem_logRt = sd(logRt)/sqrt(n())) %>%
-  ggplot(aes(lottery_ev_diff, mean_logRt))+
-  geom_point()+
-  geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2)+
-  facet_wrap(~probFractalDraw)+
-  xlab("Lottery EV difference")
+  ggplot(aes(probFractalDraw, mean_logRt,color=lottery_ev_diff))+
+  geom_point(position=position_dodge(width=.5))+
+  geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2,position=position_dodge(width=.5))+
+  theme(legend.position = "bottom")+
+  labs(color="Lottery EV difference", y="Mean Log RT", x="p(Fractal)")+
+  scale_color_manual(values = c(cbbPalette[3], cbbPalette[5:6]))
+
+ggsave(file=paste0(fig_out_path, 'rt_by_lottery_ev_diff.jpg'), p, height = 5, width=8, units="in")
+p
 ```
 
 Larger fractal value differences *does not* translate to faster choice. There are large individual differences but the average effects are either 0 or in the opposite direction.
@@ -414,11 +485,16 @@ clean_beh_data %>%
 On average there is no effect of the relative value differences on RT.
 
 ```{r}
-clean_beh_data %>%
+p = clean_beh_data %>%
   ggplot(aes(fractal_diff, logRt)) + 
   geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "lm",se=FALSE, alpha=.1, size=1)+
   geom_smooth(formula = 'y~x', method = "lm")+
-  facet_grid(lottery_ev_diff~probFractalDraw)
+  facet_grid(lottery_ev_diff~probFractalDraw)+
+  labs(x="Difference between fractal probabilities", y = "log RT")+
+  scale_x_continuous(breaks=c())
+
+ggsave(file=paste0(fig_out_path, 'rt_by_fractal_prob_diff.jpg'), p, height = 5, width=8, units="in")
+p
 ```
 
 ## Learning
@@ -426,11 +502,17 @@ clean_beh_data %>%
 Does it depend on trial number/learning how to do the task? Yes. Subjects get faster in later runs on average. In the first run they also get faster with each trial.
 
 ```{r}
-clean_beh_data %>%
+p = clean_beh_data %>%
+  mutate(session = paste0("run ", session)) %>%
   ggplot(aes(trialNum, logRt))+
   geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "lm",se=FALSE, alpha=.1, size=1)+
   geom_smooth(formula = 'y~x', method = "lm")+
-  facet_grid(.~session)
+  facet_grid(.~session)+
+  labs(x = "Trial Number", y = "log RT")
+  
+  
+ggsave(file=paste0(fig_out_path, 'rt_by_session.jpg'), p, height = 5, width=8, units="in")
+p
 ```
 
 ## Choice side
@@ -487,7 +569,8 @@ clean_beh_data %>%
   ggplot(aes(probFractalDraw, mean_logRt, color=choseBetterLotteryBundle))+
   geom_point()+
   geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2)+
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom")+
+  labs(x="p(Fractal")
 ```
 The effect is driven by different types of conflict trials at different levels of probFractalDraw.
 
@@ -505,6 +588,7 @@ clean_beh_data %>%
   theme(legend.position = "bottom")+
   facet_grid(conflictTrial~.)
 ```
+
 ## Choice based on fractal
 
 Are they faster when they choose the bundle with the better fractal? No systematic difference.  

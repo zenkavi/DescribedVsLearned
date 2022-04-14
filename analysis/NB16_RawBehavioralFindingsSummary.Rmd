@@ -169,7 +169,7 @@ p = clean_beh_data %>%
   unnest(tidied) %>%
   filter(term != "(Intercept)") %>%
   select(probFractalDraw, term, estimate, std.error) %>%
-  mutate(term = ifelse(term == "EVDiff", "lottery EV difference", ifelse(term == "fractalDiff", "Fractal probability difference", NA))) %>%
+  mutate(term = ifelse(term == "EVDiff", "Lottery EV difference", ifelse(term == "fractalDiff", "Fractal probability difference", NA))) %>%
   ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
       geom_point()+
       geom_line()+
@@ -278,84 +278,204 @@ clean_beh_data %>%
 
 
 ```
-
 Are you more likely to choose the better fractal bundle as trialnum increases
-columns for run
-rows for pfractaldraw
 
 ```{r}
 clean_beh_data %>%
-  # filter(as.numeric(as.character(probFractalDraw))>.5) %>%
-  group_by(subnum) %>%
-  # mutate(trialNum = 1:n()) %>%
+  mutate(session = paste0("run ", session)) %>%
   ggplot(aes(trialNum, choseBetterFractalBundle))+
   geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[3], alpha=.75)+
-  # facet_grid(probFractalDraw ~ session)
-  facet_wrap(~session)
+  geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "lm",se=FALSE, alpha=.1, size=1)+
+  facet_grid(.~session)+
+  labs(x = "Trial Number", y="Choice of fractal with higher objective reward probability")
+```
+Are you more likely to choose the better fractal bundle as trialnum increases for trials where the fractals matter more for the reward?
+
+```{r}
+clean_beh_data %>%
+  filter(as.numeric(as.character(probFractalDraw))>.5) %>%
+  mutate(session = paste0("run ", session)) %>%
+  ggplot(aes(trialNum, choseBetterFractalBundle))+
+  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[3], alpha=.75)+
+  geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "lm",se=FALSE, alpha=.1, size=1)+
+  facet_grid(.~session)+
+  labs(x = "Trial Number", y="Choice of fractal with higher objective reward probability", title="For p(Fractal)>.5")
+```
+Maybe choice of objectively better bundle is not revealing learning because subjects don't know this but only know how frequently a fractal is rewarded.  
+
+Are they more likely to choose the bundle with the fractal that has been rewarded more frequently? Yes, when fractals matter more for the reward.
+
+```{r}
+clean_beh_data %>%
+  group_by(subnum, session) %>%
+  mutate(numLeftFractalRewarded = cumsum(leftFractalReward),
+         numRightFractalRewarded = cumsum(rightFractalReward),
+         choseMoreRewardedFractal = ifelse((numLeftFractalRewarded> numRightFractalRewarded) & (choiceLeft==1), TRUE, ifelse((numRightFractalRewarded>numLeftFractalRewarded) & (choiceLeft==0), TRUE, FALSE))) %>%
+  group_by(probFractalDraw) %>%
+  summarise(mean_choseMoreRewardedFractal = mean(choseMoreRewardedFractal), 
+            sem_choseMoreRewardedFractal = sd(choseMoreRewardedFractal)/sqrt(n()))%>%
+  ggplot(aes(probFractalDraw, mean_choseMoreRewardedFractal))+
+  geom_point()+
+  geom_errorbar(aes(ymin=mean_choseMoreRewardedFractal-sem_choseMoreRewardedFractal, ymax=mean_choseMoreRewardedFractal+sem_choseMoreRewardedFractal), width=.2)+
+  geom_hline(aes(yintercept = .5), color="gray")+
+  labs(x="p(Fractal)", y="Choice of more frequently rewarded fractal")
 ```
 
-How is the relevance of attributes changing across the task for each subject? Pretty erratically.
-There is a lot going on on the reward screen
+For trials where they on average choose the more frequently rewarded fractal does this choice change throughout the run?
+
+```{r}
+clean_beh_data %>%
+  group_by(subnum, session) %>%
+  mutate(numLeftFractalRewarded = cumsum(leftFractalReward),
+         numRightFractalRewarded = cumsum(rightFractalReward),
+         choseMoreRewardedFractal = ifelse((numLeftFractalRewarded> numRightFractalRewarded) & (choiceLeft==1), 1, ifelse((numRightFractalRewarded>numLeftFractalRewarded) & (choiceLeft==0), 1, 0))) %>%
+  ungroup() %>%
+  filter(as.numeric(as.character(probFractalDraw))>.5) %>%
+  mutate(session = paste0("run ", session)) %>%
+  ggplot(aes(trialNum, choseMoreRewardedFractal))+
+  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[3], alpha=.75)+
+  geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "lm",se=FALSE, alpha=.1, size=1)+
+  facet_grid(.~session)+
+  labs(x = "Trial Number", y="Choice of more frequently rewarded fractal", title="For p(Fractal)>.5")
+```
+
+This holds if you don't filter for the trials where fractal isn't more relevant for the reward as well.
+
+```{r}
+clean_beh_data %>%
+  group_by(subnum, session) %>%
+  mutate(numLeftFractalRewarded = cumsum(leftFractalReward),
+         numRightFractalRewarded = cumsum(rightFractalReward),
+         choseMoreRewardedFractal = ifelse((numLeftFractalRewarded> numRightFractalRewarded) & (choiceLeft==1), 1, ifelse((numRightFractalRewarded>numLeftFractalRewarded) & (choiceLeft==0), 1, 0))) %>%
+  ungroup() %>%
+  mutate(session = paste0("run ", session)) %>%
+  ggplot(aes(trialNum, choseMoreRewardedFractal))+
+  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[3], alpha=.75)+
+  geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "lm",se=FALSE, alpha=.1, size=1)+
+  facet_grid(.~session)+
+  labs(x = "Trial Number", y="Choice of more frequently rewarded fractal")
+```
+
+```{r}
+clean_beh_data %>%
+  mutate(session = paste0("run ", session),
+         choseBetterLotteryBundle = ifelse(EVRight == EVLeft, NA, choseBetterLotteryBundle),
+         choseBetterOverallBundle = ifelse(leftBundleValue == rightBundleValue, NA, choseBetterOverallBundle)) %>%
+  group_by(subnum, session) %>%
+  mutate(numLeftFractalRewarded = cumsum(leftFractalReward),
+         numRightFractalRewarded = cumsum(rightFractalReward),
+         choseMoreRewardedFractal = ifelse((numLeftFractalRewarded> numRightFractalRewarded) & (choiceLeft==1), 1, ifelse((numRightFractalRewarded>numLeftFractalRewarded) & (choiceLeft==0), 1, 0))) %>%
+  ungroup() %>%
+  group_by(probFractalDraw, conflictTrial, session) %>%
+  summarise(.groups="keep",
+            prop_choseBetterLotteryBundle = mean(choseBetterLotteryBundle, na.rm=T),
+            sem_choseBetterLotteryBundle = sd(choseBetterLotteryBundle, na.rm=T)/sqrt(n()),
+            prop_choseMoreRewardedFractalBundle = mean(choseMoreRewardedFractal),
+            sem_choseMoreRewardedFractalBundle = sd(choseMoreRewardedFractal)/sqrt(n()),
+            prop_choseBetterFractalBundle = mean(choseBetterFractalBundle),
+            sem_choseBetterFractalBundle = sd(choseBetterFractalBundle)/sqrt(n()),
+            prop_choseBetterOverallBundle = mean(choseBetterOverallBundle, na.rm=T),
+            sem_choseBetterOverallBundle = sd(choseBetterOverallBundle, na.rm=T)/sqrt(n())) %>%
+    gather(prop_type, prop_value, -probFractalDraw, -conflictTrial, -session,-sem_choseBetterLotteryBundle ,-sem_choseMoreRewardedFractalBundle, -sem_choseBetterFractalBundle, -sem_choseBetterOverallBundle) %>%
+  gather(sem_type, sem_value,  -probFractalDraw, -conflictTrial, -session, -prop_type, -prop_value) %>%
+  ggplot(aes(probFractalDraw, prop_value, color=prop_type))+
+  geom_point(alpha=.5)+
+  geom_errorbar(aes(ymin = prop_value-sem_value,
+                    ymax = prop_value+sem_value), width=.2)+
+  geom_hline(aes(yintercept=.5), color="grey")+
+  facet_grid(conflictTrial~session)+
+  theme(legend.position = "bottom")+
+  labs(color="", x="p(Fractal)", y="Proportion of choices")+
+  scale_color_manual(values=c("red", cbbPalette[1:2], "purple"),
+                     breaks = c("prop_choseMoreRewardedFractalBundle","prop_choseBetterFractalBundle", "prop_choseBetterLotteryBundle", "prop_choseBetterOverallBundle"),
+                     labels = c(c("More Rewarded Fractal Bundle", "Better Fractal Bundle", "Better Lottery Bundle", "Better Overall Bundle")))+
+  scale_x_discrete(breaks = c("0", "0.2", "0.4", "0.6", "0.8", "1"))+
+  ylim(0,1)
+```
+
+Relevance of attribute changes randomly in each trial and there is a lot going on on the reward screen
 Ideally subjects would pay equal attention to both fractals and update the QValue for each
 But they might have a "good/bad" fractal signal that fades if in the next few trials the fractal is not relevant.
 How to check for this?
 
-
-is the fractal rewarded in the last trial
-is the fractal relevant in this trial
-is the better fractal bundle chosen in this trial
-increase lag in the same plot to see if the effect decreases
-
 ```{r}
-clean_beh_data %>%
-  select(subnum, trialNum, choiceLeft, reward, fractalDraw, probFractalDraw, choseBetterFractalBundle) %>%
-  group_by(subnum) %>% # so the last choice for one subject does not bleed into the first choice of the next subject
-  mutate(
-         lastFractalDraw = lag(fractalDraw),
-         
-         lastTrialRewarded = paste0("Last Trial rewarded: ", lag(reward > 0))) %>%
-  filter(trialNum > 1) %>% #remove first trial of each run
-  drop_na() %>% #for two subjects there are cases when trialNum == 1 is cleaned because there was no response. These lead to NAs in lastChoiceSide and lastFractalDraw so they are dropped
-  ungroup()%>%
-  group_by(lastFractalDraw, lastTrialRewarded, probFractalDraw) %>%
-  summarise(.groups='keep',
-            prop_choseBetterFractalBundle = mean(choseBetterFractalBundle, na.rm=T),
-            sem_choseBetterFractalBundle = sd(choseBetterFractalBundle, na.rm=T)/sqrt(n())) %>%
-  mutate(lastRewardAttribute = ifelse(lastFractalDraw == 1, "fractal", "lottery")) %>%  
-  ggplot(aes(probFractalDraw, prop_choseBetterFractalBundle, color=lastRewardAttribute))+
-  geom_point(position = position_dodge(width=.5))+
-  geom_errorbar(aes(ymin=prop_choseBetterFractalBundle-sem_choseBetterFractalBundle, ymax=prop_choseBetterFractalBundle+sem_choseBetterFractalBundle), width=.2, position=position_dodge(width=.5))+
-  geom_hline(aes(yintercept=.5), color="gray")+
-  facet_grid(lastTrialRewarded~.)+
-  theme(legend.position = "bottom")+
-  labs(x= "p(Fractal)", y = "Proportion of better fractal bundle choice", color="Last rewarded attribute")+
-  scale_color_manual(values=cbbPalette[1:2],
-                     breaks = c("fractal", "lottery"),
-                     labels = c("Fractal", "Lottery"))
   
 ```
 
+### Differential learning 
 
+more learning for rewarded side? 
+more chosen bundle fractal?
+more learning from rare events? E.g. if the fractaldraw wasn't likely but happened anyway?
 
-## Differential learning 
+```{r}
+  
+```
 
-more learning for rewarded side or chosen bundle fractal?
-
-More learning from rare events? E.g. if the fractaldraw wasn't likely but happened anyway?
 
 ## Risk attitude
 
 This is a focus when studying the description-experience gap. 
 In description-based choice subjects are risk averse in gains and risk seeking in losses.
 In experience-based choice this flips and subjects are risk seeking in gains and risk averse in losses.
-We don't have losses in this experiment. Only gains.
-Could we quantify risk attitude in any way? What would be risky in this paradigm? Choosing based on fractals before you've seen enough to form a good representation of their value. Choosing the bundle with the lottery that has the same or larger EV.
 
+Risk attitude in description based choice: Risk aversion but this is based on a very limited number of trials
+
+```{r}
+clean_beh_data %>%
+  filter(lotteriesSame == 1) %>%
+  group_by(probFractalDraw) %>%
+  summarise(.groups = "keep",
+            mean_choiceRef = mean(1-choiceLeft),
+            sem_choiceRef = sd(1-choiceLeft)/sqrt(n()),
+            numTrials = n()) %>%
+  ggplot(aes(probFractalDraw, mean_choiceRef))+
+  geom_point()+
+  geom_errorbar(aes(ymin=mean_choiceRef-sem_choiceRef, ymax=mean_choiceRef+sem_choiceRef), width=.2)+
+  geom_hline(aes(yintercept = .5), color="gray")+
+  theme(legend.position="none")
+```
+
+```{r}
+clean_beh_data %>%
+  filter(lotteriesSame == 1 & probFractalDraw != "0.5" ) %>%
+  mutate(lotteryMoreRelevant = as.numeric(as.character(probFractalDraw))<.6) %>%
+  group_by(lotteryMoreRelevant) %>%
+  summarise(.groups = "keep",
+            mean_choiceRef = mean(1-choiceLeft),
+            sem_choiceRef = sd(1-choiceLeft)/sqrt(n()),
+            numTrials = n()) %>%
+  ggplot(aes(lotteryMoreRelevant, mean_choiceRef))+
+  geom_point()+
+  geom_errorbar(aes(ymin=mean_choiceRef-sem_choiceRef, ymax=mean_choiceRef+sem_choiceRef), width=.2)+
+  geom_hline(aes(yintercept = .5), color="gray")+
+  theme(legend.position="none")
+```
+
+Risk aversion for fractals
+
+what counts as risky when choice is based on fractals?
+
+```{r}
+clean_beh_data %>%
+  group_by(subnum, session) %>%
+  mutate(numLeftFractalRewarded = cumsum(leftFractalReward),
+         numRightFractalRewarded = cumsum(rightFractalReward),
+         choseMoreRewardedFractal = ifelse((numLeftFractalRewarded> numRightFractalRewarded) & (choiceLeft==1), TRUE, ifelse((numRightFractalRewarded>numLeftFractalRewarded) & (choiceLeft==0), TRUE, FALSE))) %>%
+  group_by(probFractalDraw) %>%
+  summarise(mean_choseMoreRewardedFractal = mean(choseMoreRewardedFractal), 
+            sem_choseMoreRewardedFractal = sd(choseMoreRewardedFractal)/sqrt(n()))%>%
+  ggplot(aes(probFractalDraw, mean_choseMoreRewardedFractal))+
+  geom_point()+
+  geom_errorbar(aes(ymin=mean_choseMoreRewardedFractal-sem_choseMoreRewardedFractal, ymax=mean_choseMoreRewardedFractal+sem_choseMoreRewardedFractal), width=.2)+
+  geom_hline(aes(yintercept = .5), color="gray")
+```
 
 ## Choice patterns to model
 
 - Better performance for trials where the lotteries matter more for the reward.When fractal matters more choice is around chance in conflict trials and above chance but worse than lottery mattering trials for no conflict trials.
 - Asymmetric distortion of attribute relevance: Lottery slopes decline linearly but fractal slopes have a more step-like shape.
+- When reward depends more on fractals and the previous trial was rewarded based on the fractals then subjects are more likely to choose the side they chose previously.
 
 # Reaction Time
 

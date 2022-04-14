@@ -559,18 +559,22 @@ clean_beh_data %>%
 When the lotteries don't have the same EV (80% of the trials) are subjects faster when they choose the bundle with the better lottery? Yes, when the lottery matters more for the reward. This suggests less/no integration of additional attribute (fractals) when correctly choosing based on the relevant attribute. Trials where the lotteries mattered more for the reward but the better lottery bundle was not selected could be considered "errors".
 
 ```{r}
-clean_beh_data %>%
+p = clean_beh_data %>%
   filter(!lotteriesSame) %>%
   group_by(probFractalDraw, choseBetterLotteryBundle) %>%
   summarise(.groups="keep",
             mean_logRt = mean(logRt),
             sem_logRt = sd(logRt)/sqrt(n())) %>%
-  mutate(choseBetterLotteryBundle = as.factor(choseBetterLotteryBundle)) %>%
+  mutate(choseBetterLotteryBundle = ifelse(choseBetterLotteryBundle ==1, "TRUE", "FALSE")) %>%
   ggplot(aes(probFractalDraw, mean_logRt, color=choseBetterLotteryBundle))+
   geom_point()+
   geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2)+
   theme(legend.position = "bottom")+
-  labs(x="p(Fractal")
+  labs(x="p(Fractal)", color="Chose Bundle with Better Lottery", y = "mean log RT")+
+  scale_color_manual(values = cbbPalette[1:2])
+
+ggsave(file=paste0(fig_out_path, 'rt_by_correct_lottery.jpg'), p, height = 5, width=8, units="in")
+p
 ```
 The effect is driven by different types of conflict trials at different levels of probFractalDraw.
 
@@ -581,11 +585,13 @@ clean_beh_data %>%
   summarise(.groups="keep",
             mean_logRt = mean(logRt),
             sem_logRt = sd(logRt)/sqrt(n())) %>%
-  mutate(choseBetterLotteryBundle = as.factor(choseBetterLotteryBundle)) %>%
+  mutate(choseBetterLotteryBundle = ifelse(choseBetterLotteryBundle ==1, "TRUE", "FALSE")) %>%
   ggplot(aes(probFractalDraw, mean_logRt, color=choseBetterLotteryBundle))+
   geom_point()+
   geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2)+
   theme(legend.position = "bottom")+
+  labs(x="p(Fractal)", color="Chose Bundle with Better Lottery", y = "mean log RT")+
+  scale_color_manual(values = cbbPalette[1:2])+
   facet_grid(conflictTrial~.)
 ```
 
@@ -594,16 +600,21 @@ clean_beh_data %>%
 Are they faster when they choose the bundle with the better fractal? No systematic difference.  
 
 ```{r}
-clean_beh_data %>%
+p = clean_beh_data %>%
   group_by(probFractalDraw, choseBetterFractalBundle) %>%
   summarise(.groups="keep",
             mean_logRt = mean(logRt),
             sem_logRt = sd(logRt)/sqrt(n())) %>%
-  mutate(choseBetterFractalBundle = as.factor(choseBetterFractalBundle)) %>%
+  mutate(choseBetterFractalBundle = ifelse(choseBetterFractalBundle ==1, "TRUE", "FALSE")) %>%
   ggplot(aes(probFractalDraw, mean_logRt, color=choseBetterFractalBundle))+
   geom_point()+
   geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2)+
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom")+
+  labs(x="p(Fractal)", color="Chose Bundle with Better Fractal", y = "mean log RT")+
+  scale_color_manual(values = cbbPalette[2:1])
+
+ggsave(file=paste0(fig_out_path, 'rt_by_correct_fractal.jpg'), p, height = 5, width=8, units="in")
+p
 ```
 
 ## RT patterns to model  

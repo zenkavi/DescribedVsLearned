@@ -375,14 +375,14 @@ p = clean_beh_data %>%
   ungroup() %>%
   mutate(session = paste0("run ", session)) %>%
   filter(trialNum>5) %>%
-  filter(as.numeric(as.character(probFractalDraw))>.5) %>%
+  # filter(as.numeric(as.character(probFractalDraw))>.5) %>%
   ggplot(aes(trialNum, choseMoreRewardedFractal))+
   geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[3], alpha=.75)+
-  geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "lm",se=FALSE, alpha=.1, size=1)+
+  geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "glm",se=FALSE, alpha=.1, size=1)+
   facet_grid(.~session)+
   labs(x = "Trial Number", y="Choice of more frequently rewarded fractal\n in the last five trials")
 
-ggsave(file=paste0(fig_out_path, 'choice_of_rewarded_fractal.jpg'), p, height = 5, width=8, units="in")
+ggsave(file=paste0(fig_out_path, 'choice_of_rewarded_fractal.jpg'), p, height = 5, width=10, units="in")
 p
 ```
 
@@ -422,6 +422,64 @@ clean_beh_data %>%
                      labels = c(c("More Rewarded Fractal Bundle", "Better Fractal Bundle", "Better Lottery Bundle", "Better Overall Bundle")))+
   scale_x_discrete(breaks = c("0", "0.2", "0.4", "0.6", "0.8", "1"))+
   ylim(0,1)
+```
+
+```{r}
+clean_beh_data %>%
+  group_by(subnum, session) %>%
+  mutate(weightedNumLeftFractalRewarded  = zoo::rollapplyr(1:n(),
+                                                   width = 4,
+                                                   FUN = function(ix) weighted.mean(leftFractalReward[ix], c(.1, .2, .3, .4)),
+                                                   fill = NA),
+         weightedNumRightFractalRewarded = zoo::rollapplyr(1:n(),
+                                                   width = 4,
+                                                   FUN = function(ix) weighted.mean(rightFractalReward[ix], c(.1, .2, .3, .4)),
+                                                   fill = NA),
+         choseMoreRewardedFractal = ifelse((weightedNumLeftFractalRewarded> weightedNumRightFractalRewarded) & (choiceLeft==1), 1, ifelse((weightedNumRightFractalRewarded>weightedNumLeftFractalRewarded) & (choiceLeft==0), 1, 0))) %>%
+  ungroup() %>%
+  mutate(session = paste0("run ", session)) %>%
+  # filter(subnum %in% c("01", "02", "03","04")) %>%
+  filter(subnum %in% c("05", "06", "07","08")) %>% #08
+  # filter(subnum %in% c("09", "10", "11","12")) %>% 
+  # filter(subnum %in% c("13", "14", "15","16")) %>% 
+  # filter(subnum %in% c("17", "18", "19","20")) %>% 
+  # filter(subnum %in% c("22", "23", "24","25")) %>% 
+  
+  filter(as.numeric(as.character(probFractalDraw))>.5) %>%
+  ggplot(aes(trialNum, choseMoreRewardedFractal, color=subnum))+
+  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), se=FALSE, fullrange=TRUE, alpha=.25)+
+  # geom_line(aes(color=subnum),stat='smooth',formula = 'y~x', method = "lm",se=FALSE, alpha=.5, size=1)+
+  # geom_line(stat='smooth',formula = 'y~x', method = "lm",se=FALSE, alpha=.5, size=1)+
+  # facet_grid(subnum~session)+
+  facet_grid(.~session)+
+  labs(x = "Trial Number", y="Choice of more frequently rewarded fractal\n in the last five trials")+
+  theme(legend.position = "none")
+```
+
+```{r}
+clean_beh_data %>%
+  group_by(subnum, session) %>%
+  mutate(weightedNumLeftFractalRewarded  = zoo::rollapplyr(1:n(),
+                                                   width = 4,
+                                                   FUN = function(ix) weighted.mean(leftFractalReward[ix], c(.1, .2, .3, .4)),
+                                                   fill = NA),
+         weightedNumRightFractalRewarded = zoo::rollapplyr(1:n(),
+                                                   width = 4,
+                                                   FUN = function(ix) weighted.mean(rightFractalReward[ix], c(.1, .2, .3, .4)),
+                                                   fill = NA),
+         choseMoreRewardedFractal = ifelse((weightedNumLeftFractalRewarded> weightedNumRightFractalRewarded) & (choiceLeft==1), 1, ifelse((weightedNumRightFractalRewarded>weightedNumLeftFractalRewarded) & (choiceLeft==0), 1, 0))) %>%
+  ungroup() %>%
+  mutate(session = paste0("run ", session), 
+         trialGroup = ifelse(trialNum < 21, "first", ifelse(trialNum < 41 & trialNum > 20, "second", "third"))) %>%
+  # select(subnum, session, trialNum, trialGroup, choseMoreRewardedFractal)
+  group_by(session, subnum, trialGroup) %>%
+  summarise(.groups="keep", 
+            mean_choseMoreRewardedFractal = mean(choseMoreRewardedFractal, na.rm=T),
+            sem_choseMoreRewardedFractal = sd(choseMoreRewardedFractal, na.rm=T)/sqrt(n())) %>%
+  ggplot(aes(trialGroup, mean_choseMoreRewardedFractal))+
+  geom_boxplot()+
+  geom_hline(aes(yintercept=.5), color="gray")+
+  facet_grid(.~session)
 ```
 
 Relevance of attribute changes randomly in each trial and there is a lot going on on the reward screen

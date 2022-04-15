@@ -356,6 +356,36 @@ clean_beh_data %>%
   labs(x = "Trial Number", y="Choice of more frequently rewarded fractal")
 ```
 
+But based on the size of the individual differences maybe I shouldn't be looking for a group level learning effect and instead split the sample into learners vs not learners.
+
+Weighted sum of last 4 trials
+
+```{r}
+clean_beh_data %>%
+  group_by(subnum, session) %>%
+  mutate(weightedNumLeftFractalRewarded  = zoo::rollapplyr(1:n(),
+                                                   width = 4,
+                                                   FUN = function(ix) weighted.mean(leftFractalReward[ix], c(.1, .2, .3, .4)),
+                                                   fill = NA),
+         weightedNumRightFractalRewarded = zoo::rollapplyr(1:n(),
+                                                   width = 4,
+                                                   FUN = function(ix) weighted.mean(rightFractalReward[ix], c(.1, .2, .3, .4)),
+                                                   fill = NA),
+         choseMoreRewardedFractal = ifelse((weightedNumLeftFractalRewarded> weightedNumRightFractalRewarded) & (choiceLeft==1), 1, ifelse((weightedNumRightFractalRewarded>weightedNumLeftFractalRewarded) & (choiceLeft==0), 1, 0))) %>%
+  ungroup() %>%
+  mutate(session = paste0("run ", session)) %>%
+  filter(trialNum>5) %>%
+  filter(as.numeric(as.character(probFractalDraw))>.5) %>%
+  ggplot(aes(trialNum, choseMoreRewardedFractal))+
+  geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[3], alpha=.75)+
+  geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "lm",se=FALSE, alpha=.1, size=1)+
+  facet_grid(.~session)+
+  labs(x = "Trial Number", y="Choice of more frequently rewarded fractal")
+
+
+```
+
+
 ```{r}
 clean_beh_data %>%
   mutate(session = paste0("run ", session),

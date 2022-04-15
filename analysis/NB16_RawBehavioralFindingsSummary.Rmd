@@ -361,7 +361,7 @@ But based on the size of the individual differences maybe I shouldn't be looking
 Weighted sum of last 4 trials
 
 ```{r}
-clean_beh_data %>%
+p = clean_beh_data %>%
   group_by(subnum, session) %>%
   mutate(weightedNumLeftFractalRewarded  = zoo::rollapplyr(1:n(),
                                                    width = 4,
@@ -380,9 +380,10 @@ clean_beh_data %>%
   geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, color=cbbPalette[3], alpha=.75)+
   geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "lm",se=FALSE, alpha=.1, size=1)+
   facet_grid(.~session)+
-  labs(x = "Trial Number", y="Choice of more frequently rewarded fractal")
+  labs(x = "Trial Number", y="Choice of more frequently rewarded fractal\n in the last five trials")
 
-
+ggsave(file=paste0(fig_out_path, 'choice_of_rewarded_fractal.jpg'), p, height = 5, width=8, units="in")
+p
 ```
 
 

@@ -217,6 +217,35 @@ ggsave(file=paste0(fig_out_path, 'ind_diff_logit.jpg'), p, height = 9, width=16,
 p
 ```
 
+### Logit with ambiguity aversion
+
+Before you fit anything, what does the fractalDiff curve look like if you just multiply it with a constant? Can you mostly match the EVDiff curve to support the idea of a constant ambiguity aversion?
+
+```{r}
+clean_beh_data %>%
+  select(EVLeft, EVRight, fractalLeftProb, fractalRightProb, probFractalDraw, choiceLeft) %>%
+  mutate(EVDiff = scale(EVLeft - EVRight), 
+         fractalDiff = scale(fractalLeftProb - fractalRightProb)) %>%
+  nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ EVDiff + fractalDiff, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(probFractalDraw, term, estimate, std.error) %>%
+  mutate(estimate = ifelse(term == "fractalDiff", estimate*3.5, estimate))%>%
+  mutate(term = ifelse(term == "EVDiff", "Lottery EV difference", ifelse(term == "fractalDiff", "Fractal probability difference", NA))) %>%
+  ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
+      geom_point()+
+      geom_line()+
+      geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
+      geom_hline(aes(yintercept=0), linetype="dashed")+
+      scale_color_manual(values = cbbPalette[1:2])+
+      theme(legend.position = "bottom")+
+      labs(color="", y="Logit slope estimate", x="p(Fractal)")
+```
+
 ## Perseverance of choice 
 
 When reward depends more on fractals and the previous trial was rewarded based on the fractals then subjects are more likely to choose the side they chose previously. Makes sense. Suggestive of learning and understanding of task.

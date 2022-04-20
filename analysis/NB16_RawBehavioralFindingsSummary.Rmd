@@ -72,7 +72,7 @@ p = clean_beh_data %>%
   facet_grid(conflictTrial~.)+
   labs(x="p(Fractal)", y="Proportion of left choice")
 
-ggsave(file=paste0(fig_out_path, 'prop_left_choice.jpg'), p, height = 5, width=8, units="in")
+# ggsave(file=paste0(fig_out_path, 'prop_left_choice.jpg'), p, height = 5, width=8, units="in")
 p
 
 ```
@@ -116,42 +116,8 @@ p = clean_beh_data %>%
   scale_x_discrete(breaks = c("0", "0.2", "0.4", "0.6", "0.8", "1"))+
   ylim(0,1)
 
-ggsave(file=paste0(fig_out_path, 'prop_better_choice.jpg'), p, height = 5, width=10, units="in")
+# ggsave(file=paste0(fig_out_path, 'prop_better_choice.jpg'), p, height = 5, width=10, units="in")
 p
-```
-
-```{r warning=FALSE, message=FALSE}
-p = clean_beh_data %>%
-  mutate(session = paste0("run ", session),
-         choseBetterLotteryBundle = ifelse(EVRight == EVLeft, NA, choseBetterLotteryBundle),
-         choseBetterOverallBundle = ifelse(leftBundleValue == rightBundleValue, NA, choseBetterOverallBundle)) %>%
-  group_by(probFractalDraw, conflictTrial, session) %>%
-  summarise(.groups="keep",
-            prop_choseBetterLotteryBundle = mean(choseBetterLotteryBundle, na.rm=T),
-            sem_choseBetterLotteryBundle = sd(choseBetterLotteryBundle, na.rm=T)/sqrt(n()),
-            prop_choseBetterFractalBundle = mean(choseBetterFractalBundle),
-            sem_choseBetterFractalBundle = sd(choseBetterFractalBundle)/sqrt(n()),
-            prop_choseBetterOverallBundle = mean(choseBetterOverallBundle, na.rm=T),
-            sem_choseBetterOverallBundle = sd(choseBetterOverallBundle, na.rm=T)/sqrt(n())) %>%
-    gather(prop_type, prop_value, -probFractalDraw, -conflictTrial, -session,-sem_choseBetterLotteryBundle ,-sem_choseBetterFractalBundle, -sem_choseBetterOverallBundle) %>%
-  gather(sem_type, sem_value,  -probFractalDraw, -conflictTrial, -session, -prop_type, -prop_value) %>%
-  mutate(prop_value = ifelse(session == "run 1", prop_value, NA),
-         sem_value = ifelse(session == "run 1", sem_value, NA)) %>%
-  ggplot(aes(probFractalDraw, prop_value, color=prop_type))+
-  geom_point(alpha=.5)+
-  geom_errorbar(aes(ymin = prop_value-sem_value,
-                    ymax = prop_value+sem_value), width=.2)+
-  geom_hline(aes(yintercept=.5), color="grey")+
-  facet_grid(conflictTrial~session)+
-  theme(legend.position = "bottom")+
-  labs(color="", x="p(Fractal)", y="Proportion of choices")+
-  scale_color_manual(values=c(cbbPalette[1:2], "purple"),
-                     breaks = c("prop_choseBetterFractalBundle", "prop_choseBetterLotteryBundle", "prop_choseBetterOverallBundle"),
-                     labels = c(c("Better Fractal Bundle", "Better Lottery Bundle", "Better Overall Bundle")))+
-  scale_x_discrete(breaks = c("0", "0.2", "0.4", "0.6", "0.8", "1"))+
-  ylim(0,1)
-
-ggsave(file=paste0(fig_out_path, 'prop_better_choice_build.jpg'), p, height = 5, width=10, units="in")
 ```
 
 ## Logit analysis with true values 
@@ -179,48 +145,40 @@ p = clean_beh_data %>%
       theme(legend.position = "bottom")+
       labs(color="", y="Logit slope estimate", x="p(Fractal)")
 
-ggsave(file=paste0(fig_out_path, 'group_logit.jpg'), p, height = 5, width=8, units="in")
+# ggsave(file=paste0(fig_out_path, 'group_logit.jpg'), p, height = 5, width=8, units="in")
 p
 ```
 
-Individual differences in this pattern are very large. The pattern doesn't really exist clearly for any subject.
+### TD: Ambiguity aversion
 
-```{r warning=FALSE, message=FALSE}
-tmp = clean_beh_data %>%
-  select(subnum, EVLeft, EVRight, fractalLeftProb, fractalRightProb, probFractalDraw, choiceLeft) %>%
+Can a single constant ambiguity aversion parameter explain the discrepancy between the logit slopes for EV and fractal prob differences?
+
+Is the ratio of the slopes for EV at (1-p) and QV at p constant?  When fractal matters equally or more for the reward the ratio of EV slope to QV slope, i.e. ambiguity aversion relatively constant.
+
+Note to add error bars to this plot you need to use the formula described [here](https://en.wikipedia.org/wiki/Taylor_expansions_for_the_moments_of_functions_of_random_variables).
+
+```{r}
+clean_beh_data %>%
+  select(EVLeft, EVRight, fractalLeftProb, fractalRightProb, probFractalDraw, choiceLeft) %>%
   mutate(EVDiff = scale(EVLeft - EVRight), 
          fractalDiff = scale(fractalLeftProb - fractalRightProb)) %>%
-  nest(data = -c(probFractalDraw, subnum)) %>% 
+  nest(data = -probFractalDraw) %>% 
   mutate(
     fit = map(data, ~ glm(choiceLeft ~ EVDiff + fractalDiff, data = .x, family=binomial(link="logit"))),
     tidied = map(fit, tidy)
   ) %>% 
   unnest(tidied) %>%
   filter(term != "(Intercept)") %>%
-  select(subnum, probFractalDraw, term, estimate, std.error)
+  select(probFractalDraw, term, estimate) %>%
+  spread(term, estimate) %>%
+  mutate(ambAve = rev(EVDiff)/fractalDiff) %>%
+  ggplot(aes(probFractalDraw, ambAve))+
+  geom_point()+
+  geom_line(group=1)+
+  labs(x = "p(Fractal)", y="Ambiguity Aversion\nslope(EVDiff)/slope(fractalDiff)")
+  
+
 ```
-
-```{r warning=FALSE, message=FALSE}
-p = tmp %>% ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
-      geom_point()+
-      geom_line()+
-      geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
-      geom_hline(aes(yintercept=0), linetype="dashed")+
-      scale_color_manual(values = cbbPalette[2:1])+
-      theme(legend.position = "none")+
-      labs(color="") +
-  facet_wrap(~subnum, scales="free")+
-  ylim(-5, 5)+
-  labs(x="", y="")
-
-ggsave(file=paste0(fig_out_path, 'ind_diff_logit.jpg'), p, height = 9, width=16, units="in")
-p
-```
-
-### TD: Logit with ambiguity aversion
-
-Can a single constant ambiguity aversion parameter explain the discrepancy between the logit slopes for EV and fractal prob differences?
-
 
 ## Perseverance of choice 
 
@@ -260,10 +218,9 @@ p
 
 ## TD: Learning of fractal values
 
-what do the drifting reward probabilities look like
-is there a good signal to learn?
+### Fractal reward probabilities
 
-should I model "learning" for the whole task?
+Is there a good signal to learn?
 
 ```{r}
 clean_beh_data %>%
@@ -280,8 +237,6 @@ clean_beh_data %>%
   facet_wrap(~subnum)+
   theme(legend.position = "bottom",
         legend.title=element_blank())
-
-
 ```
 
 Are you more likely to choose the better fractal bundle as trialnum increases

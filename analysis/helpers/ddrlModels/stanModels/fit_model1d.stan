@@ -21,10 +21,12 @@ parameters {
   real<lower=0.0000000001, upper=1> g_alpha;
   
   // DDM group parameters
+  // Matt trick for the drift rate
   real mu_p;
   real<lower=0> sigma;
   real g_d_pr;
   
+  // rdv sampling distribution sd allowed to vary from 1 by scaling alpha and d in the wiener likelihood function
   real<lower=0> g_s;
   
   // Prob distortion group parameter

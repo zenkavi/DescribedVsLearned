@@ -217,13 +217,11 @@ tmp %>%
   geom_point()+
   geom_line(group=1, color="gray")+
   geom_errorbar(aes(ymin = ambAve - semAmbAve, ymax = ambAve + semAmbAve), width=.2)+
+  geom_hline(aes(yintercept=1), linetype="dashed")+
+  annotate("text", x = 10, y = 1.25, label = "ambiguity neutral")+
   labs(x = "p(Fractal)", y="slope(EVDiff)/slope(fractalDiff)\nat equivalent relevance level")
 ```
-How to capture this as a parameter?
-
-```{r}
-
-```
+How to capture this as a parameter? Delta in the prob distortion?
 
 ## Perseverance of choice 
 

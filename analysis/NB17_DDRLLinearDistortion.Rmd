@@ -1,0 +1,55 @@
+---
+title: 'Experience vs. description based decision-making project: Hierarchical DDRL with linear distortion'
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    code_folding: 'hide'
+  pdf_document:
+    toc: yes
+---
+
+# Set up
+
+```{r include=FALSE}
+library(tidyverse)
+library(here)
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+library(RWiener)
+```
+
+```{r}
+helpers_path = here('analysis/helpers/')
+```
+
+```{r include=FALSE}
+source(paste0(helpers_path, 'facet_wrap_equal.R'))
+source(paste0(helpers_path, 'rlModels/make_posterior_predictive_data.R'))
+source(paste0(helpers_path, 'rlModels/identifiability_analysis.R'))
+```
+
+Set theme for plots
+
+```{r}
+theme_set(theme_bw())
+```
+
+Motivation
+
+```{r}
+
+```
+
+Model 1d:
+Linear distortion
+
+```{r}
+
+```
+
+Model 1e:
+Unbounded distortion
+
+```{r}
+
+```

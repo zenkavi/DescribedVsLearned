@@ -151,11 +151,9 @@ p
 
 ### TD: Ambiguity aversion
 
-Can a single constant ambiguity aversion parameter explain the discrepancy between the logit slopes for EV and fractal prob differences?
+Can a single constant ambiguity aversion parameter explain the discrepancy between the logit slopes for EV and fractal prob differences?  
 
-Is the ratio of the slopes for EV at (1-p) and QV at p constant?  When fractal matters equally or more for the reward the ratio of EV slope to QV slope, i.e. ambiguity aversion relatively constant.
-
-Note to add error bars to this plot you need to use the formula described [here](https://en.wikipedia.org/wiki/Taylor_expansions_for_the_moments_of_functions_of_random_variables).
+Is the ratio of the slopes for EV at (1-p) and QV at p constant?  
 
 ```{r}
 clean_beh_data %>%
@@ -169,14 +167,61 @@ clean_beh_data %>%
   ) %>% 
   unnest(tidied) %>%
   filter(term != "(Intercept)") %>%
-  select(probFractalDraw, term, estimate) %>%
+  select(probFractalDraw, term, estimate, std.error) %>%
+  mutate(probFractalDraw = as.numeric(as.character(probFractalDraw)),
+         attributeRelevance = ifelse(term == "EVDiff", 1-probFractalDraw, probFractalDraw),
+         attributeRelevance = as.factor(attributeRelevance),
+         term = ifelse(term == "EVDiff", "Lottery EV difference", ifelse(term == "fractalDiff", "Fractal probability difference", NA))) %>%
+  ggplot(aes(attributeRelevance, estimate, col=term, group=term))+
+      geom_point()+
+      geom_line()+
+      geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
+      geom_hline(aes(yintercept=0), linetype="dashed")+
+      scale_color_manual(values = cbbPalette[1:2])+
+      theme(legend.position = "bottom")+
+      labs(color="", y="Logit slope estimate", x="Attribute relevance")
+```
+When fractal matters equally or more for the reward the ratio of EV slope to QV slope, i.e. ambiguity aversion relatively constant.  
+
+Note error bars to this plot are added using the Taylor expansion for the second moment of a quotient as described [here](https://en.wikipedia.org/wiki/Taylor_expansions_for_the_moments_of_functions_of_random_variables).  
+
+```{r message=FALSE, warning=FALSE}
+tmp = clean_beh_data %>%
+  select(EVLeft, EVRight, fractalLeftProb, fractalRightProb, probFractalDraw, choiceLeft) %>%
+  mutate(EVDiff = scale(EVLeft - EVRight), 
+         fractalDiff = scale(fractalLeftProb - fractalRightProb)) %>%
+  nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ EVDiff + fractalDiff, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  mutate(varEVDiff = NA, varFracDiff = NA, covEVFracDiff = NA, n=NA)
+
+for(i in 1:nrow(tmp)){
+  vcovMat = vcov(tmp$fit[[i]])
+  tmp$n[[i]] = nrow(tmp$data[[i]])
+  tmp$varEVDiff[i] = vcovMat[5]
+  tmp$varFracDiff[i] = vcovMat[8]
+  tmp$covEVFracDiff[i] = vcovMat[6]
+}
+  
+tmp %>%
+  select(probFractalDraw, n, term, estimate, varEVDiff, varFracDiff, covEVFracDiff) %>%
   spread(term, estimate) %>%
-  mutate(ambAve = rev(EVDiff)/fractalDiff) %>%
+  mutate(ambAve = rev(EVDiff)/fractalDiff,
+         varAmbAve = (varEVDiff/(fractalDiff)^2) - ((2*EVDiff)/(fractalDiff)^3*(covEVFracDiff)) + ((EVDiff)^2/(fractalDiff)^4*(varFracDiff)),
+         semAmbAve = sqrt(varAmbAve)/sqrt(n)) %>%
   ggplot(aes(probFractalDraw, ambAve))+
   geom_point()+
-  geom_line(group=1)+
-  labs(x = "p(Fractal)", y="Ambiguity Aversion\nslope(EVDiff)/slope(fractalDiff)")
-  
+  geom_line(group=1, color="gray")+
+  geom_errorbar(aes(ymin = ambAve - semAmbAve, ymax = ambAve + semAmbAve), width=.2)+
+  labs(x = "p(Fractal)", y="slope(EVDiff)/slope(fractalDiff)\nat equivalent relevance level")
+```
+How to capture this as a parameter?
+
+```{r}
 
 ```
 

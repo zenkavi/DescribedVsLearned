@@ -35,7 +35,8 @@ theme_set(theme_bw())
 ```
 
 Motivation
-Can a linear probability distortion underweighting
+Can a linear probability distortion 
+The exact analysis suggested in lab meeting: fit lines to the logit slopes of EVdiff and fractalProbdiff on choice for each subject
 
 ```{r}
 
@@ -43,6 +44,7 @@ Can a linear probability distortion underweighting
 
 Model 1d:
 Linear distortion
+With subject specific sigma added (by distorting drift rate and boundary separation as described in Wabersich and Vandekerckhove)
 
 ```{r}
 

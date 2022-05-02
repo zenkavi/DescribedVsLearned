@@ -274,9 +274,13 @@ clean_beh_data %>%
   theme(legend.position = "bottom",
         legend.title=element_blank())
 ```
+To check this I looked at whether subjects are more likely to choose the fractal with the better bundle later in a run for each run. Note that these are pretty underpowered models since they're run on 60 trials each and for a large chunk of each run fractals aren't even the more relevant attribute for reward (filtering the trials where the fractals were at least as relevan is even more underpowered and doesn't lead to a different conclusion).   
+
+These slopes are not significantly different from 0 most of the time, i.e. subjects are not more likely to choose the bundle with the better fractal later in a run. The pattern between the fractal probabilities is not consistent for cases where the slopes are different from 0. So this perspective did not provide a clear raw behavioral measure of learning.  
 
 ```{r}
 tmp = clean_beh_data %>%
+  # filter(as.numeric(as.character(probFractalDraw))>.5) %>%
   select(subnum, session, trialNum, choseBetterFractalBundle) %>%
   nest(data = -c(subnum, session)) %>% 
   mutate(
@@ -295,20 +299,23 @@ p = tmp %>%
   ggplot(aes(session, estimate))+
   geom_point()+
   geom_errorbar(aes(ymin=estimate-std.error, ymax=estimate+std.error), width=.2)+
+  geom_hline(aes(yintercept=0), color="gray")+
   facet_wrap(~subnum, scale="free_y")+
   xlab("")+
   ylab("")+
-  theme(axis.text.x = element_blank(),
-        panel.grid = element_blank(),
+  theme(panel.grid = element_blank(),
         panel.background = element_rect(fill='transparent'),
-         plot.background = element_rect(fill='transparent', color=NA))+
+         plot.background = element_rect(fill='transparent', color=NA),
+        axis.ticks = element_blank(),
+        axis.text = element_blank())+
   scale_y_continuous(position = "right")
 
-ggsave(file=paste0(fig_out_path, 'betterFractalSlopes.png'), p, height = 5, width=8, units="in", bg='transparent')
+# ggsave(file=paste0(fig_out_path, 'betterFractalSlopes.png'), p, height = 5, width=8, units="in", bg='transparent')
 p
 ```
 
 ```{r}
+# Comparison figure on slide
 p =clean_beh_data %>%
   group_by(subnum) %>%
   mutate(trialNum = 1:n()) %>%
@@ -323,15 +330,18 @@ p =clean_beh_data %>%
   facet_wrap(~subnum, scale="free_y")+
   theme(legend.position = "none",
         legend.title=element_blank(),
-        panel.spacing = unit(1, "lines"))+
+        # panel.spacing = unit(1, "lines"),
+        panel.grid = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank())+
   xlab("")+
   ylab("")
 
-ggsave(file=paste0(fig_out_path, 'fractalProbs.png'), p, height = 5, width=8, units="in", bg='transparent')
-p
+# ggsave(file=paste0(fig_out_path, 'fractalProbs.png'), p, height = 5, width=8, units="in", bg='transparent')
+# p
 ```
 
-Are you more likely to choose the better fractal bundle as trialnum increases? No. No difference depending on conflict trial either.
+Looking at things at the group level for more power. Are you more likely to choose the better fractal bundle as trialnum increases? No. No difference depending on conflict trial either.
 
 ```{r}
 clean_beh_data %>%
@@ -343,7 +353,7 @@ clean_beh_data %>%
   labs(x = "Trial Number", y="Choice of fractal with higher objective reward probability")
 ```
 
-Are you more likely to choose the better fractal bundle as trialnum increases for trials where the fractals matter more for the reward? Somewhat in earlier runs.
+Are you more likely to choose the better fractal bundle as trialnum increases for trials where the fractals matter more for the reward? Somewhat in earlier runs. THis again is weak and not consistent. Plus, it would need an explanation for why in the last two runs the effect disappears.  
 
 ```{r}
 clean_beh_data %>%
@@ -356,45 +366,13 @@ clean_beh_data %>%
   labs(x = "Trial Number", y="Choice of fractal with higher objective reward probability", title="For p(Fractal)>.5")
 ```
 
-But based on the size of the individual differences (no longer shown in the plots above) maybe I shouldn't be looking for a group level learning effect and instead split the sample into learners vs not learners. No, the within subject slopes are not consistent across runs.  
+Is a group level learning effect masked due to individual differences? No, the within subject slopes are not consistent across runs.  
 
-Are you more likely/above chance to choose the bundle with the better fractal in the second half of each run when fractals matter more? Looked at this for the whole runs in the first large plot in the "Choice based on lottery, fractal, bundle value" section. It did not suggest strong learning signals for the conflict trials (looks above chance for no conflict but you can't tell in these trials if it's because the lottery is better).
-
-```{r}
-clean_beh_data %>%
-  filter(trialNum>30) %>%
-  mutate(session = paste0("run ", session),
-         choseBetterLotteryBundle = ifelse(EVRight == EVLeft, NA, choseBetterLotteryBundle),
-         choseBetterOverallBundle = ifelse(leftBundleValue == rightBundleValue, NA, choseBetterOverallBundle)) %>%
-  group_by(probFractalDraw, conflictTrial, session) %>%
-  summarise(.groups="keep",
-            prop_choseBetterLotteryBundle = mean(choseBetterLotteryBundle, na.rm=T),
-            sem_choseBetterLotteryBundle = sd(choseBetterLotteryBundle, na.rm=T)/sqrt(n()),
-            prop_choseBetterFractalBundle = mean(choseBetterFractalBundle),
-            sem_choseBetterFractalBundle = sd(choseBetterFractalBundle)/sqrt(n()),
-            prop_choseBetterOverallBundle = mean(choseBetterOverallBundle, na.rm=T),
-            sem_choseBetterOverallBundle = sd(choseBetterOverallBundle, na.rm=T)/sqrt(n())) %>%
-    gather(prop_type, prop_value, -probFractalDraw, -conflictTrial, -session,-sem_choseBetterLotteryBundle ,-sem_choseBetterFractalBundle, -sem_choseBetterOverallBundle) %>%
-  gather(sem_type, sem_value,  -probFractalDraw, -conflictTrial, -session, -prop_type, -prop_value) %>%
-  filter(prop_type == "prop_choseBetterFractalBundle") %>%
-  ggplot(aes(probFractalDraw, prop_value, color=prop_type))+
-  geom_point(alpha=.5)+
-  geom_errorbar(aes(ymin = prop_value-sem_value,
-                    ymax = prop_value+sem_value), width=.2)+
-  geom_hline(aes(yintercept=.5), color="grey")+
-  facet_grid(conflictTrial~session)+
-  theme(legend.position = "bottom")+
-  labs(color="", x="p(Fractal)", y="Proportion of choices")+
-  scale_color_manual(values=c(cbbPalette[1:2], "purple"),
-                     breaks = c("prop_choseBetterFractalBundle", "prop_choseBetterLotteryBundle", "prop_choseBetterOverallBundle"),
-                     labels = c(c("Better Fractal Bundle", "Better Lottery Bundle", "Better Overall Bundle")))+
-  scale_x_discrete(breaks = c("0", "0.2", "0.4", "0.6", "0.8", "1"))+
-  ylim(0,1)
-```
+Are you more likely/above chance to choose the bundle with the better fractal in the second half of each run when fractals matter more? Looked at this for the whole runs in the first large plot in the "Choice based on lottery, fractal, bundle value" section. It did not suggest strong learning signals for the conflict trials (looks above chance for no conflict but you can't tell in these trials if it's because the lottery is better).  
 
 Maybe choice of objectively better bundle is not revealing learning because subjects don't know this but only know how frequently a fractal is rewarded.  
 
-Are they more likely to choose the bundle with fractal that was rewarded more frequently in the last 4 trials weighted by its relevance in the given trial? (something like a good/bad fractal signal that decays with time and is weighted by its relevance in each trial). This is a very convoluted measure and I'm not sure it is indicative of anything useful. So far it hasn't looked like learning is happening well and this doesn't suggest anything different, if anything at all.  
+Are they more likely to choose the bundle with fractal that was rewarded more frequently in the last 4 trials weighted by its relevance in the given trial? (something like a good/bad fractal signal that decays with time and is weighted by its relevance in each trial). This is a very convoluted measure and I'm not sure it is indicative of anything useful. So far it hasn't looked like learning is happening well and this doesn't suggest anything different, if anything at all.    
 
 ```{r}
 clean_beh_data %>%
@@ -422,11 +400,52 @@ clean_beh_data %>%
   labs(x = "Trial Number", y="Choice of more frequently rewarded fractal\n in the last five trials")
 ```
 
-So far, I have not found a clear signal for learning in raw behavioral data.  
+Overall I have not found a clear signal for learning in raw behavioral data.  
 
-One suggestion from lab meeting was to compare predicted probability versus true proportion of choice for different levels of attribute relevance (?). I've actually done this before by sampling from subject posteriors n=100 times, generating choice data and comparing it true subject data. Overall we found that most subjects' choice at various levels fit in the middle of the posterior predictive distribution. This suggests that the choice behavior in the task can be recapitulated by RL models to a decent degree.  
+One suggestion from lab meeting was to compare predicted probability versus true proportion of choice for different levels of attribute relevance (?). I've done this before by sampling from subject posteriors n=100 times, generating choice data and comparing it true subject data. Overall we found that most subjects' choice at various levels fell in the middle of the posterior predictive distribution. This suggests that the choice behavior in the task can be recapitulated by RL models to a decent degree.  
 
-**Find a more succinct way of visualizing and summarizing posterior predictive data/model fit**
+Here is a more succinct way of visualizing and summarizing posterior predictive data/model fit. Each dot represents a subject and each facet a fractal relevance level. We see that there are differences both across subjects and across relevance levels but overall the model *can* generate reasonable looking data.
+
+**But the sequential nature of the model is crucial and this summary does not capture that.**
+
+```{r}
+modelName = 'fit_rl_hierarchical_oneParamProbDistortion'
+
+if(file.exists(paste0(helpers_path, 'rlModels/pp_data_', modelName, '.RDS'))){
+  pp_data = readRDS(paste0(helpers_path, 'rlModels/pp_data_', modelName, '.RDS'))
+} else{
+  pp_data = make_posterior_predictive_data(numDraws = 100, modelName = modelName) 
+}
+```
+
+```{r}
+tmp = clean_beh_data %>%
+  group_by(subnum, probFractalDraw) %>%
+  summarise(true_propLeft = mean(choiceLeft), .groups='keep')
+
+pp_data %>%
+  group_by(subnum, sampleNum, probFractalDraw) %>%
+  summarise(propLeft = mean(choiceLeft), .groups='keep') %>%
+  mutate(data_type = "predicted") %>%
+  group_by(subnum, probFractalDraw) %>%
+  summarise(.groups="keep",
+            mean_propLeft = mean(propLeft),
+            sem_propLeft = sd(propLeft)/sqrt(n())) %>%
+  mutate(subnum = as.factor(subnum),
+         probFractalDraw = as.factor(probFractalDraw)) %>%
+  left_join(tmp, by=c("subnum","probFractalDraw")) %>%
+  ggplot(aes(x=true_propLeft, y=mean_propLeft, color=subnum))+
+  geom_point()+
+  geom_errorbar(aes(ymin=mean_propLeft-sem_propLeft, ymax=mean_propLeft+sem_propLeft), width=.01)+
+  geom_abline(aes(intercept=0, slope=1), color="gray")+
+  facet_wrap(~probFractalDraw)+
+  theme(panel.grid = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        legend.position="none")+
+  xlab("True proportion of left choice")+
+  ylab("Predicted proportion of left choice\nfrom 100 posterior samples")
+```
 
 ### Differential learning 
 

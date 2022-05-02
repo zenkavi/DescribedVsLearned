@@ -177,11 +177,12 @@ clean_beh_data %>%
       theme(legend.position = "bottom")+
       labs(color="", y="Logit slope estimate", x="Attribute relevance")
 ```
+
 When fractal matters equally or more for the reward the ratio of EV slope to QV slope, i.e. ambiguity aversion relatively constant.  
 
 Initially I added error bars to this plot are added using the Taylor expansion for the second moment (variance) of a quotient as described [here](https://en.wikipedia.org/wiki/Taylor_expansions_for_the_moments_of_functions_of_random_variables) extracting the relevant statistics from the variance covariance matrix of the regression. But they didn't look sensible because they were much smaller than the error bars of the coefficient estimates above.  
 
-So this plot is more for demonstration purposes and the idea of whether a constant ambiguity aversion can account for the discrepancy between the effects of each attribute on choice is tested more systematically in NB17_DDRLLinearDistortion.
+So this plot is more for demonstration purposes and the idea of whether a constant ambiguity aversion can account for the discrepancy between the effects of each attribute on choice is tested more systematically in `NB17_DDRLLinearDistortion`.
 
 ```{r message=FALSE, warning=FALSE}
 tmp = clean_beh_data %>%
@@ -209,6 +210,7 @@ tmp %>%
   annotate("text", x = 10, y = 1.25, label = "ambiguity neutral")+
   labs(x = "Attribute relevance", y="slope(EVDiff)/slope(fractalDiff)\nat equivalent relevance level")
 ```
+
 ## Perseverance of choice 
 
 When reward depends more on fractals and the previous trial was rewarded based on the fractals then subjects are more likely to choose the side they chose previously. Makes sense. Suggestive of learning and understanding of task.
@@ -249,7 +251,9 @@ p
 
 ### Fractal reward probabilities
 
-Is there a good signal to learn?
+Is there a good signal to learn? Learn what? Learn which fractal is better from the other? Whether a fractal is good vs bad? These two are not the same. A signal of which fractal is better depends on the difference between the two fractal probabilities. A signal for whether a fractal is good or bad depends on how far the fractal probability is from chance.
+
+Neither of these signals are constant for any subject across runs. So in each run a subject might learn a different thing about the fractals.
 
 ```{r}
 clean_beh_data %>%
@@ -257,15 +261,74 @@ clean_beh_data %>%
   mutate(trialNum = 1:n()) %>%
   select(fractalLeftProb, fractalRightProb, trialNum, subnum) %>%
   gather(key, value, -trialNum, -subnum) %>%
-  ggplot(aes(trialNum, value, color=key))+
-  geom_line()+
+  ggplot()+
+  geom_line(aes(trialNum, value, color=key))+
   geom_vline(xintercept=60, color="gray")+
   geom_vline(xintercept=120, color="gray")+
   geom_vline(xintercept=180, color="gray")+
   geom_vline(xintercept=240, color="gray")+
+  # geom_point(data=tmp, aes(x=trialNum, y=estimate*10))+
+  # geom_errorbar(data = tmp, aes(ymin=10*estimate-std.error, ymax=10*estimate+std.error), width=.2)+
+  # facet_wrap(~subnum, scales="free_y")+
   facet_wrap(~subnum)+
   theme(legend.position = "bottom",
         legend.title=element_blank())
+```
+
+```{r}
+tmp = clean_beh_data %>%
+  select(subnum, session, trialNum, choseBetterFractalBundle) %>%
+  nest(data = -c(subnum, session)) %>% 
+  mutate(
+    fit = map(data, ~ glm(choseBetterFractalBundle ~ trialNum, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(subnum, session, estimate, std.error) %>%
+  mutate(trialNum = 30*((session*2)-1),
+         session = paste0("run ", session))
+```
+
+```{r}
+p = tmp %>%
+  ggplot(aes(session, estimate))+
+  geom_point()+
+  geom_errorbar(aes(ymin=estimate-std.error, ymax=estimate+std.error), width=.2)+
+  facet_wrap(~subnum, scale="free_y")+
+  xlab("")+
+  ylab("")+
+  theme(axis.text.x = element_blank(),
+        panel.grid = element_blank(),
+        panel.background = element_rect(fill='transparent'),
+         plot.background = element_rect(fill='transparent', color=NA))+
+  scale_y_continuous(position = "right")
+
+ggsave(file=paste0(fig_out_path, 'betterFractalSlopes.png'), p, height = 5, width=8, units="in", bg='transparent')
+p
+```
+
+```{r}
+p =clean_beh_data %>%
+  group_by(subnum) %>%
+  mutate(trialNum = 1:n()) %>%
+  select(fractalLeftProb, fractalRightProb, trialNum, subnum) %>%
+  gather(key, value, -trialNum, -subnum) %>%
+  ggplot()+
+  geom_line(aes(trialNum, value, color=key))+
+  geom_vline(xintercept=60, color="gray")+
+  geom_vline(xintercept=120, color="gray")+
+  geom_vline(xintercept=180, color="gray")+
+  geom_vline(xintercept=240, color="gray")+
+  facet_wrap(~subnum, scale="free_y")+
+  theme(legend.position = "none",
+        legend.title=element_blank(),
+        panel.spacing = unit(1, "lines"))+
+  xlab("")+
+  ylab("")
+
+ggsave(file=paste0(fig_out_path, 'fractalProbs.png'), p, height = 5, width=8, units="in", bg='transparent')
+p
 ```
 
 Are you more likely to choose the better fractal bundle as trialnum increases? No. No difference depending on conflict trial either.

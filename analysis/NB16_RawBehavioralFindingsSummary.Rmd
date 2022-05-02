@@ -22,10 +22,6 @@ source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 ```
 
 ```{r}
-source(paste0(helpers_path,'01_clean_behavioral_data.R'))
-```
-
-```{r}
 clean_beh_data = clean_beh_data %>%
   mutate(EVRight = referenceProb * referenceValue,
          EVLeft = lotteryValue * lotteryProb,
@@ -365,15 +361,9 @@ clean_beh_data %>%
 
 So far, I have not found a clear signal for learning in raw behavioral data.  
 
-One suggestion from lab meeting was to compare predicted probability versus true proportion of choice for ...
+One suggestion from lab meeting was to compare predicted probability versus true proportion of choice for different levels of attribute relevance (?). I've actually done this before by sampling from subject posteriors n=100 times, generating choice data and comparing it true subject data. Overall we found that most subjects' choice at various levels fit in the middle of the posterior predictive distribution. This suggests that the choice behavior in the task can be recapitulated by RL models to a decent degree.  
 
-### Posterior predictive check from vanilla RL
-
-Predicted versus true 
-
-```{r}
-
-```
+**Find a more succinct way of visualizing and summarizing posterior predictive data/model fit**
 
 ### Differential learning 
 
@@ -382,7 +372,7 @@ Is there:
 - more chosen bundle fractal?  
 -more learning from rare events? E.g. if the fractaldraw wasn't likely but happened anyway?
 
-Because I don't have a clear signal for learning in raw behavior I'm not sure how to test these ideas in behavior alone. Instead, I might expand on the analyses I did [here](https://zenkavi.github.io/DescribedVsLearned_beh/outputs/NB4_indiv_differences_in_rpe_models.html) fitting RL models with different update rules and chceking whether they explain data better.
+Because I don't have a clear signal for learning in raw behavior I'm not sure how to test these ideas in behavior alone. Instead, I might expand on the analyses I did [here](https://zenkavi.github.io/DescribedVsLearned_beh/outputs/NB4_indiv_differences_in_rpe_models.html) fitting RL models with different update rules and checking whether they explain data better.
 
 ## Risk attitude
 
@@ -391,7 +381,7 @@ The finding is that in description-based choice subjects are risk averse in gain
 
 To make contact with this literature anticipating any reviewer comments on this we considered assuming an exponential utility function $u(c) = 1-e^{(-\alpha c)}$ which exhibits constant absolute risk aversion $\alpha$ and test if this parameter is different for the extreme of attribute relevance when the choice is (/should be) either experience- or description-based.  
 
-We decided not to go through with this because there are several issues with this approach:  
+I decided not to go through with this because there are several issues with this approach:  
 - It would be estimated on too few trials  
 - Assumes a lot in functional forms especially since in neither case there is an explicity certainty equivalent  
 - Description-based choice is not strictly description only since it's outcome is played out in each trial  
@@ -536,8 +526,8 @@ p
 Larger fractal value differences *does not* translate to faster choice. There are large individual differences but the average effects are either 0 or in the opposite direction.
 
 Why not?  
-Because subjects are not aware/have not learned the value difference?
-Because information about the fractals has been processed before the stimulus presentation so the whatever effect fractal value difference might have had is dissipated when we begin measuring RT and the only stimulus processing that happens from that point on is about the lotteries and integration of bundle values?
+Because subjects are not aware/have not learned the value difference?  
+Because information about the fractals has been processed before the stimulus presentation so the whatever effect fractal value difference might have had is dissipated when we begin measuring RT and the only stimulus processing that happens from that point on is about the lotteries and integration of bundle values?  
 
 ```{r}
 clean_beh_data %>%
@@ -641,6 +631,7 @@ p = clean_beh_data %>%
 ggsave(file=paste0(fig_out_path, 'rt_by_correct_lottery.jpg'), p, height = 5, width=8, units="in")
 p
 ```
+
 The effect is driven by different types of conflict trials at different levels of probFractalDraw.
 
 ```{r}

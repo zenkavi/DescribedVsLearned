@@ -1,0 +1,33 @@
+---
+title: 'Experience vs. description based decision-making project: Revisiting RL models'
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    code_folding: 'hide'
+  pdf_document:
+    toc: yes
+---
+
+# Set up
+
+```{r include=FALSE}
+library(broom)
+library(tidyverse)
+theme_set(theme_bw())
+library(here)
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+helpers_path = here('analysis/helpers/')
+source(paste0(helpers_path,'01_clean_behavioral_data.R'))
+```
+
+
+Which model fits best? For group and for individuals?
+no distortion vs. fractal only linear distortion vs. symmetric linear distortion vs. fractal only non-linear distortion vs. symmetric non-linear distortion (5 conditions)
+update both to same degree vs. update fractal in chosen bundle vs. update rewarded bundle vs. update more for surprising events (4 conditions)
+
+Does the best fitting model's QVs account for choice data better than fractalprobdiff?
+(anova of logits with QV diff instead of fractalprobdiff)
+
+Does modeling RL with DD as the choice rule buy anything in this dataset? Compare alpha recoverability for RL vs DDRL
+

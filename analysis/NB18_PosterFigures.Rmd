@@ -22,10 +22,6 @@ source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 ```
 
 ```{r}
-source(paste0(helpers_path,'01_clean_behavioral_data.R'))
-```
-
-```{r}
 clean_beh_data = clean_beh_data %>%
   mutate(EVRight = referenceProb * referenceValue,
          EVLeft = lotteryValue * lotteryProb,
@@ -142,3 +138,65 @@ p = clean_beh_data %>%
 ggsave(file=paste0(fig_out_path, 'poster_rt_by_fractal_prob_diff.jpg'), p, height = 5, width=8, units="in")
 p
 ```
+
+
+```{r}
+clean_beh_data %>%
+  group_by(probFractalDraw, choseBetterFractalBundle) %>%
+  summarise(.groups="keep",
+            mean_logRt = mean(logRt),
+            sem_logRt = sd(logRt)/sqrt(n())) %>%
+  mutate(choseBetterFractalBundle = ifelse(choseBetterFractalBundle ==1, "TRUE", "FALSE"),
+         basedOn = "fractal") %>%
+  rename(betterChoice = choseBetterFractalBundle)
+```
+
+```{r}
+clean_beh_data %>%
+  filter(!lotteriesSame) %>%
+  group_by(probFractalDraw, choseBetterLotteryBundle) %>%
+  summarise(.groups="keep",
+            mean_logRt = mean(logRt),
+            sem_logRt = sd(logRt)/sqrt(n())) %>%
+  mutate(choseBetterLotteryBundle = ifelse(choseBetterLotteryBundle ==1, "TRUE", "FALSE"),
+         basedOn = "lottery") %>%
+  rename(betterChoice = choseBetterLotteryBundle)
+```
+
+```{r}
+clean_beh_data %>%
+  filter(!lotteriesSame) %>%
+  group_by(probFractalDraw, choseBetterLotteryBundle) %>%
+  summarise(.groups="keep",
+            mean_logRt = mean(logRt),
+            sem_logRt = sd(logRt)/sqrt(n())) %>%
+  mutate(choseBetterLotteryBundle = ifelse(choseBetterLotteryBundle ==1, "TRUE", "FALSE"),
+         basedOn = "Lottery") %>%
+  rename(betterChoice = choseBetterLotteryBundle) %>%
+  rbind(clean_beh_data %>%
+  group_by(probFractalDraw, choseBetterFractalBundle) %>%
+  summarise(.groups="keep",
+            mean_logRt = mean(logRt),
+            sem_logRt = sd(logRt)/sqrt(n())) %>%
+  mutate(choseBetterFractalBundle = ifelse(choseBetterFractalBundle ==1, "TRUE", "FALSE"),
+         basedOn = "Fractal") %>%
+  rename(betterChoice = choseBetterFractalBundle)) %>%
+  ggplot(aes(probFractalDraw, mean_logRt, shape=betterChoice, color=basedOn))+
+  geom_point( position = position_dodge(width = .5), size=3)+
+  geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2, size=1.5, position = position_dodge(width = .5))+
+   theme(legend.position = c(.34,.2),
+        legend.background = element_blank(),
+        panel.grid = element_blank(),
+        axis.text = element_text(size=24),
+        axis.title = element_text(size=24),
+        legend.text = element_text(size=18),
+        legend.title = element_text(size=20))+
+  guides(color=guide_legend(nrow=1), shape=guide_legend(nrow=1))+
+  labs(x="p(Fractal)", y = "Mean log RT", color="", shape="Better Choice")+
+  scale_color_manual(values = c(cbbPalette[3], cbbPalette[5], cbbPalette[6], cbbPalette[7]))+
+  scale_y_continuous(breaks = c(-.3, 0, .3), limits=c(-.36, .36))
+
+ggsave(file=paste0(fig_out_path, 'poster_rt_by_better_choice.jpg'), p, height = 5, width=8, units="in")
+p
+```
+

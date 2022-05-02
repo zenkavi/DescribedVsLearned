@@ -78,8 +78,8 @@ p
 When the lotteries don't have the same EV do subjects choose the bundle with the better lottery? This should depend on how much the reward depends on the lotteries. Subject do choose the bundle with the better lottery more frequently when it matters for the reward. They appropriately choose it less frequently when the reward depends more on the fractals and the fractals suggest a different bundle to be the better one (conflict trials)
 
 Do they get better with time?  
-- Some improvement for pFracDraw <=.5 especially from run 1 to run 2
-- Even for pFracDraw <= .5 trials no conflict trials are slightly worse than conflict trials.
+- Some improvement for pFracDraw <=.5 especially from run 1 to run 2  
+- Even for pFracDraw <= .5 trials no conflict trials are slightly worse than conflict trials.  
 - For trials where fractals matter more for the reward (pFracDraw > .5) performance is worse in both types of conflict trials. In conflict trials the drop for choosing the bundle with the better lottery is not as sharp as it should be and in no conflict trials choice of bundle with better lottery is not as high even though it is also the bundle with the better fractal.  
 
 
@@ -274,6 +274,7 @@ clean_beh_data %>%
   theme(legend.position = "bottom",
         legend.title=element_blank())
 ```
+
 To check this I looked at whether subjects are more likely to choose the fractal with the better bundle later in a run for each run. Note that these are pretty underpowered models since they're run on 60 trials each and for a large chunk of each run fractals aren't even the more relevant attribute for reward (filtering the trials where the fractals were at least as relevan is even more underpowered and doesn't lead to a different conclusion).   
 
 These slopes are not significantly different from 0 most of the time, i.e. subjects are not more likely to choose the bundle with the better fractal later in a run. The pattern between the fractal probabilities is not consistent for cases where the slopes are different from 0. So this perspective did not provide a clear raw behavioral measure of learning.  
@@ -402,11 +403,11 @@ clean_beh_data %>%
 
 Overall I have not found a clear signal for learning in raw behavioral data.  
 
-One suggestion from lab meeting was to compare predicted probability versus true proportion of choice for different levels of attribute relevance (?). I've done this before by sampling from subject posteriors n=100 times, generating choice data and comparing it true subject data. Overall we found that most subjects' choice at various levels fell in the middle of the posterior predictive distribution. This suggests that the choice behavior in the task can be recapitulated by RL models to a decent degree.  
+One suggestion from lab meeting was to compare predicted probability versus true proportion of choice for different levels of attribute relevance (?). I've done this before by sampling from subject posteriors n=100 times, generating choice data and comparing it true subject data. Overall we found that most subjects' choice at various levels fell in the middle of the posterior predictive distribution. This suggests that the choice behavior in the task can be recapitulated by RL models to a decent degree. But the subject facetted way of presenting this was difficult to digest.  
 
 Here is a more succinct way of visualizing and summarizing posterior predictive data/model fit. Each dot represents a subject and each facet a fractal relevance level. We see that there are differences both across subjects and across relevance levels but overall the model *can* generate reasonable looking data.
 
-**But the sequential nature of the model is crucial and this summary does not capture that.**
+**Note, however, the sequential nature of the model is crucial and this summary does not capture that.** Such a sequential change in raw behavior was what I was looking for in raw behavior but I couldn't find one.
 
 ```{r}
 modelName = 'fit_rl_hierarchical_oneParamProbDistortion'
@@ -435,8 +436,8 @@ pp_data %>%
          probFractalDraw = as.factor(probFractalDraw)) %>%
   left_join(tmp, by=c("subnum","probFractalDraw")) %>%
   ggplot(aes(x=true_propLeft, y=mean_propLeft, color=subnum))+
-  geom_point()+
-  geom_errorbar(aes(ymin=mean_propLeft-sem_propLeft, ymax=mean_propLeft+sem_propLeft), width=.01)+
+  # geom_point()+
+  geom_errorbar(aes(ymin=mean_propLeft-sem_propLeft, ymax=mean_propLeft+sem_propLeft), width=0.05)+
   geom_abline(aes(intercept=0, slope=1), color="gray")+
   facet_wrap(~probFractalDraw)+
   theme(panel.grid = element_blank(),
@@ -452,9 +453,9 @@ pp_data %>%
 Is there:  
 - more learning for rewarded side?   
 - more chosen bundle fractal?  
--more learning from rare events? E.g. if the fractaldraw wasn't likely but happened anyway?
+- more learning from rare events? E.g. if the fractaldraw wasn't likely but happened anyway?
 
-Because I don't have a clear signal for learning in raw behavior I'm not sure how to test these ideas in behavior alone. Instead, I might expand on the analyses I did [here](https://zenkavi.github.io/DescribedVsLearned_beh/outputs/NB4_indiv_differences_in_rpe_models.html) fitting RL models with different update rules and checking whether they explain data better.
+Because I don't have a clear signal for learning in raw behavior I'm not sure how to test these ideas in behavior alone. Instead, I will expand on the analyses I did [here](https://zenkavi.github.io/DescribedVsLearned_beh/outputs/NB4_indiv_differences_in_rpe_models.html) fitting RL models with different update rules and checking whether they explain data better.
 
 ## Risk attitude
 
@@ -465,28 +466,19 @@ To make contact with this literature anticipating any reviewer comments on this 
 
 I decided not to go through with this because there are several issues with this approach:  
 - It would be estimated on too few trials  
-- Assumes a lot in functional forms especially since in neither case there is an explicity certainty equivalent  
-- Description-based choice is not strictly description only since it's outcome is played out in each trial  
+- Assumes a lot in functional forms especially since in neither case there is an explicit certainty equivalent  
+- Description-based choice is not description only since it's outcome is played out in each trial  
 
 ## Choice patterns to model
 
 - Better performance for trials where the lotteries matter more for the reward. When fractal matters more choice is around chance in conflict trials and above chance but worse than lottery mattering trials for no conflict trials.  
-- Asymmetric distortion of attribute relevance: Lottery slopes decline linearly but fractal slopes might have a more step-like shape.  
+- Asymmetric distortion of attribute relevance: Lottery slopes decline linearly but fractal slopes might have a more step-like shape. The step-like is not confirmed but there is definitely an underweighting of the fractal value difference compared the lottery value difference.  
 - When reward depends more on fractals and the previous trial was rewarded based on the fractals then subjects are more likely to choose the side they chose previously.  
-- Did not find a clean signal of learning from raw behavioral measures.  
+- Did not find a clean signal of learning/sequential improvement of behavior from raw behavioral measures so it's difficult to test specific hypotheses of differential learning.  
 
 # Reaction Time
 
 ## Attribute relevance
-
-Distribution for each attribute relevance level. There is a difference in choice speed depending on attribute relevance.
-
-```{r}
-clean_beh_data %>%
-  ggplot(aes(reactionTime))+
-  geom_density(aes(fill=probFractalDraw), position = "identity", alpha=.5, color=NA)+
-  scale_fill_brewer(palette="PRGn")
-```
 
 Decisions are slowest when both attributes are equally relevant. They are also categorically faster when only fractals matter for reward.
 
@@ -523,16 +515,6 @@ Does RT depend on any other experimental manipulation?
 ## True fractal values
 
 Does it depend on the objective fractal values? Not on average but there are individual differences.
-
-```{r}
-clean_beh_data %>%
-  select(subnum, reactionTime, fractalLeftProb, fractalRightProb, probFractalDraw) %>%
-  gather(key, value, -subnum, -reactionTime, -probFractalDraw) %>%
-  ggplot(aes(value, reactionTime))+
-  geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "lm",se=FALSE, alpha=.1, size=1)+
-  geom_smooth(formula = 'y~x', method = "lm")+
-  facet_grid(key~probFractalDraw)
-```
 
 ```{r}
 clean_beh_data %>%
@@ -584,7 +566,7 @@ clean_beh_data %>%
         legend.title = element_blank())
 ```
 
-## Value difference
+## Lottery EV difference
 
 Choice is faster for larger differences between the lotteries *when* lotteries are more relevant for reward. Otherwise the effect disappears.
 
@@ -601,7 +583,7 @@ p = clean_beh_data %>%
   labs(color="Lottery EV difference", y="Mean Log RT", x="p(Fractal)")+
   scale_color_manual(values = c(cbbPalette[3], cbbPalette[5:6]))
 
-ggsave(file=paste0(fig_out_path, 'rt_by_lottery_ev_diff.jpg'), p, height = 5, width=8, units="in")
+# ggsave(file=paste0(fig_out_path, 'rt_by_lottery_ev_diff.jpg'), p, height = 5, width=8, units="in")
 p
 ```
 
@@ -610,29 +592,6 @@ Larger fractal value differences *does not* translate to faster choice. There ar
 Why not?  
 Because subjects are not aware/have not learned the value difference?  
 Because information about the fractals has been processed before the stimulus presentation so the whatever effect fractal value difference might have had is dissipated when we begin measuring RT and the only stimulus processing that happens from that point on is about the lotteries and integration of bundle values?  
-
-```{r}
-clean_beh_data %>%
-  ggplot(aes(fractal_diff, logRt)) + 
-  geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "lm",se=FALSE, alpha=.1, size=1)+
-  geom_smooth(formula = 'y~x', method = "lm")+
-  facet_grid(.~probFractalDraw)
-```
-
-On average there is no effect of the relative value differences on RT.
-
-```{r}
-p = clean_beh_data %>%
-  ggplot(aes(fractal_diff, logRt)) + 
-  geom_line(aes(group=subnum),stat='smooth',formula = 'y~x', method = "lm",se=FALSE, alpha=.1, size=1)+
-  geom_smooth(formula = 'y~x', method = "lm")+
-  facet_grid(lottery_ev_diff~probFractalDraw)+
-  labs(x="Difference between fractal probabilities", y = "log RT")+
-  scale_x_continuous(breaks=c())
-
-ggsave(file=paste0(fig_out_path, 'rt_by_fractal_prob_diff.jpg'), p, height = 5, width=8, units="in")
-p
-```
 
 ## Learning
 
@@ -648,7 +607,7 @@ p = clean_beh_data %>%
   labs(x = "Trial Number", y = "log RT")
   
   
-ggsave(file=paste0(fig_out_path, 'rt_by_session.jpg'), p, height = 5, width=8, units="in")
+# ggsave(file=paste0(fig_out_path, 'rt_by_session.jpg'), p, height = 5, width=8, units="in")
 p
 ```
 
@@ -710,7 +669,7 @@ p = clean_beh_data %>%
   labs(x="p(Fractal)", color="Chose Bundle with Better Lottery", y = "mean log RT")+
   scale_color_manual(values = cbbPalette[1:2])
 
-ggsave(file=paste0(fig_out_path, 'rt_by_correct_lottery.jpg'), p, height = 5, width=8, units="in")
+# ggsave(file=paste0(fig_out_path, 'rt_by_correct_lottery.jpg'), p, height = 5, width=8, units="in")
 p
 ```
 
@@ -751,7 +710,7 @@ p = clean_beh_data %>%
   labs(x="p(Fractal)", color="Chose Bundle with Better Fractal", y = "mean log RT")+
   scale_color_manual(values = cbbPalette[2:1])
 
-ggsave(file=paste0(fig_out_path, 'rt_by_correct_fractal.jpg'), p, height = 5, width=8, units="in")
+# ggsave(file=paste0(fig_out_path, 'rt_by_correct_fractal.jpg'), p, height = 5, width=8, units="in")
 p
 ```
 

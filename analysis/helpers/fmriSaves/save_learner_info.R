@@ -2,7 +2,7 @@ library(tidyr)
 library(here)
 
 helpers_path = here('analysis/helpers/')
-source(paste0(helpers_path,'rlModels/fit_rl_hierarchical.R'))
+source(paste0(helpers_path,'rlModels/fit_rl_hierarchical_twoParamsSymmNonLinearProbDistortion_rpeBoth.R'))
 
 learner_info = par_ests %>%
   filter(par == "alpha") %>%

@@ -65,12 +65,12 @@ $$QV_{i,t} = QV_{i, t-1} + \alpha(R_{i, t-1}- QV_{i, t-1})$$
 # Model fit
 
 ```{r}
-source(paste0(helpers_path, 'rlModels/fit_rl.R'))
+source(paste0(helpers_path, 'rlModels/fit_rl_nonhierarchical_twoParamsSymmNonLinear_rpeBoth.R'))
 # Rename objects 
 par_ests_nh = par_ests
 fit_nh = fit
 rm(par_ests, fit)
-source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical.R'))
+source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_twoParamsSymmNonLinear_rpeBoth.R'))
 ```
 
 ## Log likelihood distributions

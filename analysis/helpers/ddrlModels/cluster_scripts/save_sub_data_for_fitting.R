@@ -1,7 +1,7 @@
 library(tidyverse)
 library(here)
 helpers_path = paste0(here(), '/analysis/helpers/')
-source(paste0(helpers_path,'rlModels/fit_rl_hierarchical.R'))
+source(paste0(helpers_path,'rlModels/fit_rl_hierarchical_twoParamsSymmNonLinearProbDistortion_rpeBoth.R'))
 source(paste0(helpers_path,'add_inferred_pars.R'))
 
 clean_beh_data = add_inferred_pars(clean_beh_data, par_ests, model_name="original")

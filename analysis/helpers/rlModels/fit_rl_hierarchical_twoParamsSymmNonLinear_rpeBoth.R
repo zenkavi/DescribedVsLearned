@@ -18,8 +18,8 @@ if(!exists('organize_stan_output')){
 }
 
 ## If there is a fit object read it in
-if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_rpeChosenBundleFractal.RDS'))){
-  fit = readRDS(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_rpeChosenBundleFractal.RDS'))
+if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_twoParamsSymmNonLinear_rpeBoth.RDS'))){
+  fit = readRDS(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_twoParamsSymmNonLinear_rpeBoth.RDS'))
 } else {## Otherwise fit the model
   
   ## Reshape data
@@ -47,8 +47,6 @@ if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_rpe
   
   trial_pFrac = extract_var_for_stan(clean_beh_data, probFractalDraw)
   
-  pe_update_left = extract_var_for_stan(clean_beh_data, choiceLeft)
-  
   m_data=list(num_subjs = num_subjs,
               num_trials = num_trials,
               choices = choices,
@@ -56,16 +54,15 @@ if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_rpe
               ev_right = ev_right,
               fractal_outcomes_left = fractal_outcomes_left,
               fractal_outcomes_right = fractal_outcomes_right,
-              trial_pFrac = trial_pFrac, 
-              pe_update_left = pe_update_left)
+              trial_pFrac = trial_pFrac)
   
-  rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac, pe_update_left)
+  rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac)
   
   ## Fit model for all subjects
-  m = stan_model(paste0(helpers_path,'rlModels/stanModels/fit_rl_hierarchical_rpeChosenBundleFractal.stan'))
+  m = stan_model(paste0(helpers_path,'rlModels/stanModels/fit_rl_hierarchical_twoParamsSymmNonLinear_rpeBoth.stan'))
   
   fit = sampling(m, data=m_data)
-  saveRDS(fit, paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_rpeChosenBundleFractal.RDS'))
+  saveRDS(fit, paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_twoParamsSymmNonLinear_rpeBoth.RDS'))
 }
 
 ## Organize output

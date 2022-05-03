@@ -279,7 +279,7 @@ par_ests_ddrl %>%
 How do the learning rate alphas and probability distortion deltas from this model compare to the hierarchical rl with softmax as the choice rule?
 
 ```{r}
-source(paste0(helpers_path,'rlModels/fit_rl_hierarchical.R'))
+source(paste0(helpers_path,'rlModels/fit_rl_hierarchical_twoParamsSymmNonLinearProbDistortion_rpeBoth.R'))
 ```
 
 DDRL overestimates all learning rates. It also overestimates most probability distortion deltas and these estimates are often >1 (unlike the RL estimates) which suggest overestimation of fractal relevance. This is not the pattern we observe in empirical data.

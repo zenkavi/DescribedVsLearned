@@ -22,17 +22,17 @@ helpers_path = here('analysis/helpers/')
 ```
 
 ```{r include=FALSE}
-source(paste0(helpers_path,'rlModels/fit_rl_hierarchical_rpeWhenFractalRewarded.R'))
+source(paste0(helpers_path,'rlModels/fit_rl_hierarchical_twoParamsSymmNonLinear_rpeWhenFractalRewarded.R'))
 fit_rpeWhenFractalRewarded = fit
 g_par_ests_rpeWhenFractalRewarded = g_par_ests
 par_ests_rpeWhenFractalRewarded = par_ests
 
-source(paste0(helpers_path,'rlModels/fit_rl_hierarchical_rpeChosenBundleFractal.R'))
+source(paste0(helpers_path,'rlModels/fit_rl_hierarchical_twoParamsSymmNonLinear_rpeChosenBundleFractal.R'))
 fit_rpeChosenBundleFractal = fit
 g_par_ests_rpeChosenBundleFractal = g_par_ests
 par_ests_rpeChosenBundleFractal = par_ests
 
-source(paste0(helpers_path,'rlModels/fit_rl_hierarchical.R'))
+source(paste0(helpers_path,'rlModels/fit_rl_hierarchical_twoParamsSymmNonLinear_rpeBoth.R'))
 source(paste0(helpers_path,'add_inferred_pars.R'))
 ```
 

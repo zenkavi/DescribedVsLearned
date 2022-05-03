@@ -410,7 +410,7 @@ Here is a more succinct way of visualizing and summarizing posterior predictive 
 **Note, however, the sequential nature of the model is crucial and this summary does not capture that.** Such a sequential change in raw behavior was what I was looking for in raw behavior but I couldn't find one.
 
 ```{r}
-modelName = 'fit_rl_hierarchical_oneParamProbDistortion'
+modelName = 'fit_rl_hierarchical_oneParamSymmNonLinearProbDistortion_rpeBoth'
 
 if(file.exists(paste0(helpers_path, 'rlModels/pp_data_', modelName, '.RDS'))){
   pp_data = readRDS(paste0(helpers_path, 'rlModels/pp_data_', modelName, '.RDS'))

@@ -18,8 +18,8 @@ if(!exists('organize_stan_output')){
 }
 
 ## If there is a fit object read it in
-if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical.RDS'))){
-  fit = readRDS(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical.RDS'))
+if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_rl_nonhierarchical_twoParamsSymmNonLinear_rpeBoth.RDS'))){
+  fit = readRDS(paste0(helpers_path, 'rlModels/stanModels/fit_rl_nonhierarchical_twoParamsSymmNonLinear_rpeBoth.RDS'))
 } else {## Otherwise fit the model
   
   ## Reshape data
@@ -59,16 +59,12 @@ if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical.RDS
   rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac)
   
   ## Fit model for all subjects
-  m = stan_model(paste0(helpers_path,'rlModels/stanModels/fit_rl_hierarchical.stan'))
+  m = stan_model(paste0(helpers_path,'rlModels/stanModels/fit_rl_nonhierarchical_twoParamsSymmNonLinear_rpeBoth.stan'))
   
   fit = sampling(m, data=m_data)
-  saveRDS(fit, paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical.RDS'))
+  saveRDS(fit, paste0(helpers_path, 'rlModels/stanModels/fit_rl_nonhierarchical_twoParamsSymmNonLinear_rpeBoth.RDS'))
 }
 
-## Organize output
-out = organize_stan_output(fit, 
-                           subj_par_names=c("alpha","gamma", "delta", "beta"),
-                           group_par_names=c("g_alpha","g_gamma", "g_delta", "g_beta"))
+out = organize_stan_output(fit, subj_par_names = c("alpha","gamma", "delta", "beta"))
 par_ests = out$par_ests
-g_par_ests = out$g_par_ests
 rm(out)

@@ -22,7 +22,7 @@ sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 
 ```{r include=FALSE}
 helpers_path = here('analysis/helpers/')
-source(paste0(helpers_path,'rlModels/fit_rl_hierarchical.R'))
+source(paste0(helpers_path,'rlModels/fit_rl_hierarchical_twoParamsSymmNonLinear_rpeBoth.R'))
 source(paste0(helpers_path,'add_inferred_pars.R'))
 ```
 

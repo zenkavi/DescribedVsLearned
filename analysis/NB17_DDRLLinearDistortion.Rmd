@@ -21,10 +21,9 @@ helpers_path = here('analysis/helpers/')
 theme_set(theme_bw())
 ```
 
-
 # Linear distortion
 
-Motivation: the choice logit slopes showed choice depended a 
+Motivation: the choice logit slopes showed choice depended on the fractal value difference a lot less than the lottery value difference.
 Can a linear probability distortion parameter capture the choice effects?
 Would you see logit slopes crossing appropriately at .5 if instead of a logit of choice ~ evdiff + qvdiff you had a logit of choice ~ evdiff + theta*qvdiff
 
@@ -129,12 +128,185 @@ tmp %>%
   labs(color="", y="Logit slope estimate", x="p(Fractal)")
 ```
 
-How about the RT patterns? Since this is an DDRL, can you get the inverse U and other RT patterns?
+```{r}
+clean_beh_data %>%
+  mutate(EVRight = referenceProb * referenceValue,
+         EVLeft = lotteryValue * lotteryProb) %>%
+  select(EVLeft, EVRight, fractalLeftProb, fractalRightProb, probFractalDraw, choiceLeft) %>%
+  mutate(EVDiff = scale(EVLeft - EVRight), 
+         fractalDiff_theta = scale(fractalLeftProb - fractalRightProb)*(mean_theta)) %>%
+  nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ EVDiff + fractalDiff_theta, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(probFractalDraw, term, estimate, std.error) %>%
+  rbind(tmp %>% filter(term == "fractalDiff")) %>%
+  ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
+  geom_point()+
+  geom_line()+
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.02)+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  scale_color_manual(values = c(cbbPalette[2], cbbPalette[1], cbbPalette[3]) )+
+  theme(legend.position = "bottom")+
+  labs(color="", y="Logit slope estimate", x="p(Fractal)")
+```
+
+What does the logit look like with the q values from this model
+
+```{r}
+names(clean_beh_data)
+
+clean_beh_data %>%
+  mutate(EVRight = referenceProb * referenceValue,
+         EVLeft = lotteryValue * lotteryProb) %>%
+  select(EVLeft, EVRight, leftQValue, rightQValue, probFractalDraw, choiceLeft) %>%
+  mutate(EVDiff = scale(EVLeft - EVRight), 
+         QVDiff = scale(leftQValue - rightQValue)) %>%
+  nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ EVDiff + QVDiff, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(probFractalDraw, term, estimate, std.error) %>%
+  rbind(tmp %>% filter(term == "fractalDiff")) %>%
+  ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
+  geom_point()+
+  geom_line()+
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.02)+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  scale_color_manual(values = c(cbbPalette[2], cbbPalette[1], cbbPalette[3]) )+
+  theme(legend.position = "bottom")+
+  labs(color="", y="Logit slope estimate", x="p(Fractal)")
+```
+
+```{r}
+clean_beh_data %>%
+  mutate(EVRight = referenceProb * referenceValue,
+         EVLeft = lotteryValue * lotteryProb) %>%
+  select(EVLeft, EVRight, leftQValue, rightQValue, probFractalDraw, choiceLeft) %>%
+  mutate(EVDiff = scale(EVLeft - EVRight), 
+         QVDiff_theta = scale(leftQValue - rightQValue)*(mean_theta)) %>%
+  nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ EVDiff + QVDiff_theta, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(probFractalDraw, term, estimate, std.error) %>%
+  rbind(tmp %>% filter(term == "fractalDiff")) %>%
+  ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
+  geom_point()+
+  geom_line()+
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.02)+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  scale_color_manual(values = c(cbbPalette[2], cbbPalette[1], cbbPalette[3]) )+
+  theme(legend.position = "bottom")+
+  labs(color="", y="Logit slope estimate", x="p(Fractal)")
+```
+
+```{r}
+clean_beh_data %>%
+  mutate(EVRight = referenceProb * referenceValue,
+         EVLeft = lotteryValue * lotteryProb) %>%
+  select(EVLeft, EVRight, leftQValue, rightQValue, probFractalDraw, choiceLeft) %>%
+  mutate(EVDiff = scale(EVLeft - EVRight), 
+         QVDiff_theta = scale(leftQValue - rightQValue)*(mean_theta)) %>%
+  nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ EVDiff + QVDiff_theta, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(probFractalDraw, term, estimate, std.error) %>%
+  rbind(tmp %>% filter(term == "fractalDiff")) %>%
+  mutate(probFractalDraw = as.numeric(as.character(probFractalDraw)),
+         attributeRelevance = ifelse(term == "EVDiff", 1-probFractalDraw, probFractalDraw),
+         attributeRelevance = as.factor(attributeRelevance)) %>%
+  ggplot(aes(attributeRelevance, estimate, col=term, group=term))+
+  geom_point()+
+  geom_line()+
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  scale_color_manual(values = c(cbbPalette[2], cbbPalette[1], cbbPalette[3]) )+
+  theme(legend.position = "bottom")+
+  labs(color="", y="Logit slope estimate", x="Attribute relevance")
+```
+
+How about the RT patterns? Since this is an DDRL, can you get the inverse U and other RT patterns? No.
+
+```{r}
+sub_par_ests = par_ests %>%
+  group_by(subnum , par) %>%
+  summarise(mean_val = mean(value), .groups="keep") %>%
+  spread(par, mean_val)
+
+# Add mean posterior estimates to clean_beh_data
+clean_beh_data = sub_par_ests %>%
+  left_join(clean_beh_data, by='subnum')
+
+source(paste0(helpers_path, 'get_qvals.R'))
+## Add Q values of fractals to each trial
+clean_beh_data = clean_beh_data %>%
+  group_by(subnum) %>%
+  do(get_qvals(., model_name="original")) %>%
+  ungroup()
+
+clean_beh_data = clean_beh_data %>%
+  mutate(wpFrac = theta*probFractalDraw,
+         leftLotteryEV = lotteryValue*lotteryProb,
+         rightLotteryEV = referenceValue*referenceProb,
+         valLeftBundle = (1-probFractalDraw)*leftLotteryEV + wpFrac*leftQValue,
+         valRightBundle = (1-probFractalDraw)*rightLotteryEV + wpFrac*rightQValue,
+         trial_drift = d * (valLeftBundle - valRightBundle))
+
+sim_data = data.frame()
+library(RWiener)
+for(i in 1:nrow(clean_beh_data)){
+  
+  # This will have to be for each trial bc the delta depends on the val difference in that trial
+  # First generated the Q Values for all trials using the mean a posterior alpha for each subject
+  
+  sim_trial = rwiener(n =1, alpha = 2, tau = .1, beta = .5, delta = clean_beh_data$trial_drift[i])
+  
+  sim_trial$subnum = clean_beh_data$subnum[i]
+  
+  if(i == 1){
+    sim_data = sim_trial
+  } else{
+    sim_data = rbind(sim_data, sim_trial)
+  }
+}
+```
+
+Doesn't recap the RT patterns.
+
+```{r}
+sim_data %>%
+  cbind(clean_beh_data %>%
+          select(probFractalDraw)) %>%
+  mutate(logRt = log(q),
+         probFractalDraw = as.factor(probFractalDraw)) %>%
+  group_by(probFractalDraw) %>%
+  summarise(meanLogRt = mean(logRt),
+            semLogRt = sd(logRt)/sqrt(n())) %>%
+  ggplot(aes(probFractalDraw, meanLogRt))+
+  geom_point()+
+  geom_errorbar(aes(ymin=meanLogRt - semLogRt, ymax=meanLogRt + semLogRt), width=.2)+
+  labs(y="mean log RT", x="p(Fractal)")
+```
+
+How about estimating this from RL alone?
 
 ```{r}
 
 ```
-
 
 Model 1e:
 Unbounded distortion

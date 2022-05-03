@@ -66,12 +66,12 @@ $$QV_{i,t} = QV_{i, t-1} + \alpha(R_{i, t-1}- QV_{i, t-1})$$
 # Model fit
 
 ```{r message=FALSE}
-source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamProbDistortion.R'))
+source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamSymmNonLinearProbDistortion_rpeBoth.R'))
 # Rename objects 
 g_par_ests_sym = g_par_ests
 par_ests_sym = par_ests
 rm(g_par_ests, par_ests, fit)
-source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_AsymmProbDistortion.R'))
+source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamAsymmNonLinearProbDistortion_rpeBoth.R'))
 rm(fit)
 ```
 
@@ -233,7 +233,7 @@ Sample from each subject's posterior distributions 100 times and simulate data u
 Using the symmetric distortion model.
 
 ```{r}
-modelName = 'fit_rl_hierarchical_oneParamProbDistortion'
+modelName = 'fit_rl_hierarchical_oneParamSymmNonLinearProbDistortion_rpeBoth'
 
 if(file.exists(paste0(helpers_path, 'rlModels/pp_data_', modelName, '.RDS'))){
   pp_data = readRDS(paste0(helpers_path, 'rlModels/pp_data_', modelName, '.RDS'))
@@ -290,7 +290,7 @@ truePars = data.frame(alpha=truncnorm::rtruncnorm(numSims, mean=trueGroupPars$g_
                       beta=truncnorm::rtruncnorm(numSims, mean=trueGroupPars$g_beta, a=0, b=5), 
                       delta=truncnorm::rtruncnorm(numSims, mean=trueGroupPars$g_delta, a=0))
 
-modelName = 'fit_rl_hierarchical_oneParamProbDistortion'
+modelName = 'fit_rl_hierarchical_oneParamProbSymmNonLinear_rpeBoth'
 
 all_trials = clean_beh_data %>%
   select(-numRewardedTrials, -reactionTime, -responded, -choiceLeft, -reward, -totalReward) %>%
@@ -360,7 +360,7 @@ rm(id_par_ests, trueGroupPars, truePars, modelName, all_trials)
 g_par_ests_asym = g_par_ests
 par_ests_asym = par_ests
 
-source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical.R'))
+source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_twoParamsSymmNonLinear_rpeBoth.R'))
 # Rename objects 
 g_par_ests_old = g_par_ests
 par_ests_old = par_ests

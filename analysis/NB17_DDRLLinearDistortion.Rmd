@@ -14,41 +14,127 @@ output:
 ```{r include=FALSE}
 library(tidyverse)
 library(here)
+library(broom)
 cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
-library(RWiener)
-```
 
-```{r}
 helpers_path = here('analysis/helpers/')
-```
-
-```{r include=FALSE}
-source(paste0(helpers_path, 'facet_wrap_equal.R'))
-source(paste0(helpers_path, 'rlModels/make_posterior_predictive_data.R'))
-source(paste0(helpers_path, 'rlModels/identifiability_analysis.R'))
-```
-
-Set theme for plots
-
-```{r}
 theme_set(theme_bw())
 ```
 
-Motivation
-Can a linear probability distortion 
-The exact analysis suggested in lab meeting: fit lines to the logit slopes of EVdiff and fractalProbdiff on choice for each subject
 
-```{r}
+# Linear distortion
 
-```
+Motivation: the choice logit slopes showed choice depended a 
+Can a linear probability distortion parameter capture the choice effects?
+Would you see logit slopes crossing appropriately at .5 if instead of a logit of choice ~ evdiff + qvdiff you had a logit of choice ~ evdiff + theta*qvdiff
 
-Model 1d:
-Linear distortion
+**Model 1d:** 
+d - drift rate scaler for value difference  
+s - variance of evidence accumulation distribution  
+alpha - learning rate  
+theta - linear distortion  
 With subject specific sigma added (by distorting drift rate and boundary separation as described in Wabersich and Vandekerckhove)
 
+What are the parameter distributions?
+
+```{r}
+source(paste0(helpers_path, 'ddrlModels/fit_model1d.R'))
+```
+
+## Group posteriors
+
+Note that `s` variance of evidence accumulation distribution is still centered around 1.
+
+```{r}
+g_par_ests %>%
+  ggplot(aes(value))+
+  geom_histogram(bins=30, alpha=.5, position="identity")+
+  facet_wrap(~key, scales='free')+
+  theme(panel.grid = element_blank())+
+  xlab("")+
+  ylab("")
+
+```
+
+Covariance between parameters
+
+```{r}
+tmp = g_par_ests %>%
+  group_by(key) %>%
+  mutate(iter = 1:n()) %>%
+  group_by(iter) %>%
+  spread(key, value) %>%
+  ungroup() %>%
+  select(-iter)
+
+round(cor(tmp), 3)  
+```
+
+```{r}
+tmp = g_par_ests %>%
+  filter(key == "g_theta") %>%
+  summarise(mean_theta  = mean(value))
+mean_theta = tmp$mean_theta
+```
+
+Can the group theta bring the QV slope up sufficiently? Gets close but the switch is still not at .5.
+
+```{r}
+tmp = clean_beh_data %>%
+  mutate(EVRight = referenceProb * referenceValue,
+         EVLeft = lotteryValue * lotteryProb) %>%
+  select(EVLeft, EVRight, fractalLeftProb, fractalRightProb, probFractalDraw, choiceLeft) %>%
+  mutate(EVDiff = scale(EVLeft - EVRight), 
+         fractalDiff = scale(fractalLeftProb - fractalRightProb)) %>%
+  nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ EVDiff + fractalDiff, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(probFractalDraw, term, estimate, std.error)
+```
+
+
+```{r}
+tmp %>%
+  filter(term == "fractalDiff") %>%
+  mutate(estimate = estimate*(1/mean_theta),
+         term = "fractalDiff * (1/theta)") %>%
+  rbind(tmp) %>%
+  ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
+  geom_point()+
+  geom_line()+
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.02)+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  scale_color_manual(values = c(cbbPalette[2], cbbPalette[1], cbbPalette[3]) )+
+  theme(legend.position = "bottom")+
+  labs(color="", y="Logit slope estimate", x="p(Fractal)")
+```
+
+```{r}
+tmp %>%
+  filter(term == "EVDiff") %>%
+  mutate(estimate = estimate*mean_theta,
+         term = "EVDiff * theta") %>%
+  rbind(tmp) %>%
+  ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
+  geom_point()+
+  geom_line()+
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.02)+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  scale_color_manual(values = c(cbbPalette[2], cbbPalette[3], cbbPalette[1]) )+
+  theme(legend.position = "bottom")+
+  labs(color="", y="Logit slope estimate", x="p(Fractal)")
+```
+
+How about the RT patterns? Since this is an DDRL, can you get the inverse U and other RT patterns?
+
 ```{r}
 
 ```
+
 
 Model 1e:
 Unbounded distortion

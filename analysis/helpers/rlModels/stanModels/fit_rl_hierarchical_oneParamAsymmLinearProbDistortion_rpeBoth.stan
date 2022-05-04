@@ -8,6 +8,7 @@ data {
   real ev_left[num_subjs, 300];
   real ev_right[num_subjs, 300];
   real trial_pFrac[num_subjs, 300];
+  real pe_update_left[num_subjs, 300];
 }
 
 transformed data {

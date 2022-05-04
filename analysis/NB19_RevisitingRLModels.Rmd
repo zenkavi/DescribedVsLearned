@@ -29,10 +29,10 @@ aymm vs symm prob distortion
 linear vs non-linear prob distortion
 rpeBoth vs rpeChosenFractal vs rpeWhenFractalRewarded 
 
-oneParamAsymmLinearProbDistortion 
-oneParamAsymmNonLinearProbDistortion 
-oneParamSymmLinearProbDistortion 
-oneParamSymmNonLinearProbDistortion 
+oneParamAsymmLinearProbDistortion [done]
+oneParamAsymmNonLinearProbDistortion [done]
+oneParamSymmLinearProbDistortion [done]
+oneParamSymmNonLinearProbDistortion [done]
 twoParamsAsymmLinearProbDistortion 
 twoParamsAsymmNonLinearProbDistortion [done]
 twoParamsSymmLinearProbDistortion 
@@ -42,6 +42,7 @@ which ones do I have and which do I need?
 
 fit_rl_hierarchical_noProbDistortion_rpeBoth
 fit_rl_hierarchical_oneParamAsymmLinearProbDistortion_rpeBoth
+
 fit_rl_hierarchical_oneParamAsymmNonLinearProbDistortion_rpeBoth
 fit_rl_hierarchical_oneParamSymmNonLinearProbDistortion_rpeBoth
 fit_rl_hierarchical_twoParamsSymmLinear_rpeBoth

@@ -49,8 +49,8 @@ model {
       
       w_pi = theta[i]*trial_pFrac[i, t];
       
-      opt_val[1] = ((1-w_pi) * ev_left[i, t]) + (w_pi * qv[1]);
-      opt_val[2] = ((1-w_pi) * ev_right[i, t]) + (w_pi * qv[2]) ;
+      opt_val[1] = ((1-trial_pFrac[i, t]) * ev_left[i, t]) + (w_pi * qv[1]);
+      opt_val[2] = ((1-trial_pFrac[i, t]) * ev_right[i, t]) + (w_pi * qv[2]) ;
       
       // increment target with the following likelihood function:
       choices[i, t] ~ bernoulli_logit(beta[i] * (opt_val[1]-opt_val[2]));
@@ -91,8 +91,8 @@ generated quantities {
     for (t in 1:num_trials_for_subj) {
       w_pi = theta[i]*trial_pFrac[i, t];
       
-      opt_val[1] = ((1-w_pi) * ev_left[i, t]) + (w_pi * qv[1]);
-      opt_val[2] = ((1-w_pi) * ev_right[i, t]) + (w_pi * qv[2]) ;
+      opt_val[1] = ((1-trial_pFrac[i, t])* ev_left[i, t]) + (w_pi * qv[1]);
+      opt_val[2] = ((1-trial_pFrac[i, t]) * ev_right[i, t]) + (w_pi * qv[2]) ;
       
       // compute action probabilities
       logLikelihood_subj_trial = bernoulli_logit_lpmf(choices[i,t] | beta[i] * (opt_val[1]-opt_val[2]));

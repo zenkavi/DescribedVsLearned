@@ -76,6 +76,8 @@ tmp = g_par_ests %>%
 mean_theta = tmp$mean_theta
 ```
 
+## Logit slope adjustment
+
 Can the group theta bring the QV slope up sufficiently? Gets close but the switch is still not at .5.
 
 ```{r}
@@ -285,6 +287,8 @@ for(i in 1:nrow(clean_beh_data)){
 }
 ```
 
+## RT posterior predictive check
+
 Doesn't recap the RT patterns.
 
 ```{r}
@@ -302,15 +306,34 @@ sim_data %>%
   labs(y="mean log RT", x="p(Fractal)")
 ```
 
-How about estimating this from RL alone?
+## Theta estimate sans DDM
+
+How about estimating this linear distortion parameter from RL alone?
 
 ```{r}
+par_ests_ddrl = par_ests
+g_par_ests_ddrl = g_par_ests
+sub_par_ests_ddrl = sub_par_ests
+source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamAsymmLinearProbDistortion_rpeBoth.R'))
+par_ests_rl = par_ests
+g_par_ests_rl = g_par_ests
+```
+
+Estimates overlapping for most subjects. So I'll stick to estimating this parameter from RL alone since DDRL is a more complicated model that fails the posterior predictive check for half the data it's modeling (RTs).
+
+```{r}
+par_ests_ddrl %>%
+  mutate(fit_type = "ddrl") %>%
+  select(-iter) %>%
+  rbind(par_ests_rl %>% 
+          mutate(fit_type = "rl") %>%
+          select(-logLik)) %>%
+  filter(par == "theta") %>%
+  ggplot(aes(value, fill=fit_type))+
+  geom_histogram(bins=30, alpha=.5, position="identity")+
+  facet_wrap(~subnum)
 
 ```
 
 Model 1e:
-Unbounded distortion
-
-```{r}
-
-```
+Unbounded distortion - will examine this as part of RL only models in NB19_RevisitingRLModels.

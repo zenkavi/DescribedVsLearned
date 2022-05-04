@@ -21,11 +21,43 @@ helpers_path = here('analysis/helpers/')
 source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 ```
 
-
 Which model fits best? For group and for individuals?
-no distortion vs. fractal only linear distortion vs. symmetric linear distortion vs. fractal only non-linear distortion vs. symmetric non-linear distortion (5 conditions)
+
+[24 models - 2*2*2*3]
+one vs two param prob distortion
+aymm vs symm prob distortion
+linear vs non-linear prob distortion
+rpeBoth vs rpeChosenFractal vs rpeWhenFractalRewarded 
+
+oneParamAsymmLinearProbDistortion 
+oneParamAsymmNonLinearProbDistortion 
+oneParamSymmLinearProbDistortion 
+oneParamSymmNonLinearProbDistortion 
+twoParamsAsymmLinearProbDistortion 
+twoParamsAsymmNonLinearProbDistortion [done]
+twoParamsSymmLinearProbDistortion 
+twoParamsSymmNonLinearProbDistortion [done]
+
+which ones do I have and which do I need?
+
+fit_rl_hierarchical_noProbDistortion_rpeBoth
+fit_rl_hierarchical_oneParamAsymmLinearProbDistortion_rpeBoth
+fit_rl_hierarchical_oneParamAsymmNonLinearProbDistortion_rpeBoth
+fit_rl_hierarchical_oneParamSymmNonLinearProbDistortion_rpeBoth
+fit_rl_hierarchical_twoParamsSymmLinear_rpeBoth
+fit_rl_hierarchical_twoParamsSymmNonLinear_rpeBoth
+
+fit_rl_hierarchical_twoParamsSymmNonLinear_rpeChosenBundleFractal
+fit_rl_hierarchical_twoParamsSymmNonLinear_rpeWhenFractalRewarded
+
+[after fitting all revising the linear prob distortion nb to see if another single prob distortion model parameter shifts the fractal prob diff logit slopes the same way]
+
 update both to same degree vs. update fractal in chosen bundle vs. update rewarded bundle vs. update more for surprising events (4 conditions)
-- how to capture best fit for group? 1. stack all likelihoods for all subjects? 2. posterior predictive data for whole sample with new more succinct summary 3. replicate logit pattern
+- how to capture best fit for group? 
+1. stack all likelihoods for all subjects? stack mean likelihoods (25 points for each model)
+  - sample from likelihoods 100 times and count which model is best for each subject how many times
+2. posterior predictive data for whole sample with succinct summary 
+3. replicate logit pattern
 [eventually do this kind of comparison for ddms and possibly bayesian model averaging though unlikely for the poster]
 
 ```{r}
@@ -40,7 +72,7 @@ On the poster plot overlay the logit plot with the logit slopes of the qv model 
 
 ```
 
-Is there a value difference effect on RT for QVs? There isn't one for true fractalprobdiffs.
+Is there a value difference effect on (true) RTs for QVs? There isn't one for true fractalprobdiffs.
 
 ```{r}
 

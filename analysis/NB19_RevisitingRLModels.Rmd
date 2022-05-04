@@ -29,8 +29,6 @@ Which model fits best? For group and for individuals?
 - linear vs non-linear probability/relevance distortion  
 - Update QV for both fractals on each trial (rpeBoth) vs update QV of the fractal of the chosen bundle (rpeChosenFractal) vs update QVs for both fractals only when the trial reward depended on fractals (rpeWhenFractalRewarded)  
 
-[after fitting all revising the linear prob distortion nb to see if another single prob distortion model parameter shifts the fractal prob diff logit slopes the same way]
-
 update both to same degree vs. update fractal in chosen bundle vs. update rewarded bundle vs. update more for surprising events (4 conditions)
 - how to capture best fit for group? 
 1. stack all likelihoods for all subjects? stack mean likelihoods (25 points for each model)
@@ -40,8 +38,27 @@ update both to same degree vs. update fractal in chosen bundle vs. update reward
 [eventually do this kind of comparison for ddms and possibly bayesian model averaging though unlikely for the poster]
 
 ```{r}
+numpar_names = c("oneParam", "twoParams")
+symm_names = c("Asymm", "Symm")
+shape_names = c("LinearProbDistortion", "NonLinearProbDistortion")
+rpe_names = c("_rpeBoth", "_rpeChosenBundleFractal", "_rpeWhenFractalRewarded")
+prefix = "fit_rl_hierarchical_"
+
+for(i in 1:length(numpar_names)){
+  for(j in 1:length(symm_names)){
+    for(k in 1:length(shape_names)){
+      for(l in 1:length(rpe_names)){
+        model_name = paste0(prefix, numpar_names[i], symm_names[j], shape_names[k], rpe_names[l], ".R")
+        print(paste0(model_name, " = ", file.exists(paste0(helpers_path, 'rlModels/', model_name))))
+      }
+    }
+  }
+}
+
 
 ```
+
+[revisit the linear prob distortion nb to see if another single prob distortion model parameter shifts the fractal prob diff logit slopes the same way]
 
 Does the best fitting model's QVs account for choice data better than fractalprobdiff?
 (anova of logits with QV diff instead of fractalprobdiff)

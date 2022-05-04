@@ -18,8 +18,8 @@ if(!exists('organize_stan_output')){
 }
 
 ## If there is a fit object read it in
-if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_twoParamsAsymmLinear_rpeChosenBundleFractal.RDS'))){
-  fit = readRDS(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_twoParamsAsymmLinear_rpeChosenBundleFractal.RDS'))
+if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_oneParamSymmNonLinearProbDistortion_rpeWhenFractalRewarded.RDS'))){
+  fit = readRDS(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_oneParamSymmNonLinearProbDistortion_rpeWhenFractalRewarded.RDS'))
 } else {## Otherwise fit the model
   
   ## Reshape data
@@ -47,7 +47,7 @@ if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_two
   
   trial_pFrac = extract_var_for_stan(clean_beh_data, probFractalDraw)
   
-  pe_update_left = extract_var_for_stan(clean_beh_data, choiceLeft)
+  fractal_draw = extract_var_for_stan(clean_beh_data, fractalDraw)
   
   m_data=list(num_subjs = num_subjs,
               num_trials = num_trials,
@@ -56,22 +56,22 @@ if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_two
               ev_right = ev_right,
               fractal_outcomes_left = fractal_outcomes_left,
               fractal_outcomes_right = fractal_outcomes_right,
-              trial_pFrac = trial_pFrac, 
-              pe_update_left = pe_update_left)
+              trial_pFrac = trial_pFrac,
+              fractal_draw = fractal_draw)
   
-  rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac, pe_update_left)
+  rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac, fractal_draw)
   
   ## Fit model for all subjects
-  m = stan_model(paste0(helpers_path,'rlModels/stanModels/fit_rl_hierarchical_twoParamsAsymmLinear_rpeChosenBundleFractal.stan'))
+  m = stan_model(paste0(helpers_path,'rlModels/stanModels/fit_rl_hierarchical_oneParamSymmNonLinearProbDistortion_rpeWhenFractalRewarded.stan'))
   
   fit = sampling(m, data=m_data)
-  saveRDS(fit, paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_twoParamsAsymmLinear_rpeChosenBundleFractal.RDS'))
+  saveRDS(fit, paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_oneParamSymmNonLinearProbDistortion_rpeWhenFractalRewarded.RDS'))
 }
 
 ## Organize output
 out = organize_stan_output(fit, 
-                           subj_par_names=c("alpha","w_int", "w_slope", "beta"),
-                           group_par_names=c("g_alpha","g_w_int", "g_w_slope", "g_beta"))
+                           subj_par_names=c("alpha", "delta", "beta"),
+                           group_par_names=c("g_alpha", "g_delta", "g_beta"))
 par_ests = out$par_ests
 g_par_ests = out$g_par_ests
 rm(out)

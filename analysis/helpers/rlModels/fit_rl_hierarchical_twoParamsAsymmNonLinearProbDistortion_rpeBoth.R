@@ -18,8 +18,8 @@ if(!exists('organize_stan_output')){
 }
 
 ## If there is a fit object read it in
-if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_twoParamsAsymmNonLinear_rpeBoth.RDS'))){
-  fit = readRDS(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_twoParamsAsymmNonLinear_rpeBoth.RDS'))
+if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_twoParamsAsymmNonLinearProbDistortion_rpeBoth.RDS'))){
+  fit = readRDS(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_twoParamsAsymmNonLinearProbDistortion_rpeBoth.RDS'))
 } else {## Otherwise fit the model
   
   ## Reshape data
@@ -59,10 +59,10 @@ if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_two
   rm(num_subjs, num_trials, choices, ev_left, ev_right, fractal_outcomes_left, fractal_outcomes_right, trial_pFrac)
   
   ## Fit model for all subjects
-  m = stan_model(paste0(helpers_path,'rlModels/stanModels/fit_rl_hierarchical_twoParamsAsymmNonLinear_rpeBoth.stan'))
+  m = stan_model(paste0(helpers_path,'rlModels/stanModels/fit_rl_hierarchical_twoParamsAsymmNonLinearProbDistortion_rpeBoth.stan'))
   
   fit = sampling(m, data=m_data)
-  saveRDS(fit, paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_twoParamsAsymmNonLinear_rpeBoth.RDS'))
+  saveRDS(fit, paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_twoParamsAsymmNonLinearProbDistortion_rpeBoth.RDS'))
 }
 
 ## Organize output

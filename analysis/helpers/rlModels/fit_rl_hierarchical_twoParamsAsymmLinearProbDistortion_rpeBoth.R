@@ -61,12 +61,12 @@ if(file.exists(paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_two
   ## Fit model for all subjects
   m = stan_model(paste0(helpers_path,'rlModels/stanModels/fit_rl_hierarchical_twoParamsAsymmLinearProbDistortion_rpeBoth.stan'))
   
-  fit_linearW = sampling(m, data=m_data)
-  saveRDS(fit_linearW, paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_twoParamsAsymmLinearProbDistortion_rpeBoth.RDS'))
+  fit = sampling(m, data=m_data)
+  saveRDS(fit, paste0(helpers_path, 'rlModels/stanModels/fit_rl_hierarchical_twoParamsAsymmLinearProbDistortion_rpeBoth.RDS'))
 }
 
 ## Organize output
-out = organize_stan_output(fit_linearW, 
+out = organize_stan_output(fit, 
                            subj_par_names=c("alpha","w_int", "w_slope", "beta"),
                            group_par_names=c("g_alpha","g_w_int", "g_w_slope", "g_beta"))
 par_ests = out$par_ests

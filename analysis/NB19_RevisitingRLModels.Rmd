@@ -21,35 +21,13 @@ helpers_path = here('analysis/helpers/')
 source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 ```
 
-Which model fits best? For group and for individuals?
+Which model fits best? For group and for individuals?  
 
-[24 models - 2*2*2*3]
-one vs two param prob distortion
-aymm vs symm prob distortion
-linear vs non-linear prob distortion
-rpeBoth vs rpeChosenFractal vs rpeWhenFractalRewarded 
-
-oneParamAsymmLinearProbDistortion [done]
-oneParamAsymmNonLinearProbDistortion [done]
-oneParamSymmLinearProbDistortion [done]
-oneParamSymmNonLinearProbDistortion [done]
-twoParamsAsymmLinearProbDistortion 
-twoParamsAsymmNonLinearProbDistortion [done]
-twoParamsSymmLinearProbDistortion 
-twoParamsSymmNonLinearProbDistortion [done]
-
-which ones do I have and which do I need?
-
-fit_rl_hierarchical_noProbDistortion_rpeBoth
-fit_rl_hierarchical_oneParamAsymmLinearProbDistortion_rpeBoth
-
-fit_rl_hierarchical_oneParamAsymmNonLinearProbDistortion_rpeBoth
-fit_rl_hierarchical_oneParamSymmNonLinearProbDistortion_rpeBoth
-fit_rl_hierarchical_twoParamsSymmLinear_rpeBoth
-fit_rl_hierarchical_twoParamsSymmNonLinear_rpeBoth
-
-fit_rl_hierarchical_twoParamsSymmNonLinear_rpeChosenBundleFractal
-fit_rl_hierarchical_twoParamsSymmNonLinear_rpeWhenFractalRewarded
+[24 models - 2*2*2*3]  
+- one vs two parameter probability/relevance distortion  
+- asymmetric (distort only the relevance of fractals) vs symmetric probability/relevance distortion  
+- linear vs non-linear probability/relevance distortion  
+- Update QV for both fractals on each trial (rpeBoth) vs update QV of the fractal of the chosen bundle (rpeChosenFractal) vs update QVs for both fractals only when the trial reward depended on fractals (rpeWhenFractalRewarded)  
 
 [after fitting all revising the linear prob distortion nb to see if another single prob distortion model parameter shifts the fractal prob diff logit slopes the same way]
 

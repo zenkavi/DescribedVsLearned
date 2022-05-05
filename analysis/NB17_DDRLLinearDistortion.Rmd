@@ -36,7 +36,7 @@ With subject specific sigma added (by distorting drift rate and boundary separat
 
 What are the parameter distributions?
 
-```{r}
+```{r message=FALSE}
 source(paste0(helpers_path, 'ddrlModels/fit_model1d.R'))
 ```
 
@@ -78,7 +78,7 @@ mean_theta = tmp$mean_theta
 
 ## Logit slope adjustment
 
-Can the group theta bring the QV slope up sufficiently? Gets close but the switch is still not at .5.
+Can the group theta bring the QV slope up sufficiently? Gets close but...
 
 ```{r}
 tmp = clean_beh_data %>%
@@ -97,38 +97,9 @@ tmp = clean_beh_data %>%
   select(probFractalDraw, term, estimate, std.error)
 ```
 
+... still doesn't cross at .5 or reach the same weight at comparable relevance levels.
 
-```{r}
-tmp %>%
-  filter(term == "fractalDiff") %>%
-  mutate(estimate = estimate*(1/mean_theta),
-         term = "fractalDiff * (1/theta)") %>%
-  rbind(tmp) %>%
-  ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
-  geom_point()+
-  geom_line()+
-  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.02)+
-  geom_hline(aes(yintercept=0), linetype="dashed")+
-  scale_color_manual(values = c(cbbPalette[2], cbbPalette[1], cbbPalette[3]) )+
-  theme(legend.position = "bottom")+
-  labs(color="", y="Logit slope estimate", x="p(Fractal)")
-```
-
-```{r}
-tmp %>%
-  filter(term == "EVDiff") %>%
-  mutate(estimate = estimate*mean_theta,
-         term = "EVDiff * theta") %>%
-  rbind(tmp) %>%
-  ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
-  geom_point()+
-  geom_line()+
-  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.02)+
-  geom_hline(aes(yintercept=0), linetype="dashed")+
-  scale_color_manual(values = c(cbbPalette[2], cbbPalette[3], cbbPalette[1]) )+
-  theme(legend.position = "bottom")+
-  labs(color="", y="Logit slope estimate", x="p(Fractal)")
-```
+These models use the true values as the IVs though and the subjects do not know these. The believed values (QValues) might have a bigger influence on choice.
 
 ```{r}
 clean_beh_data %>%
@@ -136,10 +107,10 @@ clean_beh_data %>%
          EVLeft = lotteryValue * lotteryProb) %>%
   select(EVLeft, EVRight, fractalLeftProb, fractalRightProb, probFractalDraw, choiceLeft) %>%
   mutate(EVDiff = scale(EVLeft - EVRight), 
-         fractalDiff_theta = scale(fractalLeftProb - fractalRightProb)*(mean_theta)) %>%
+         fractalDiffXtheta = scale(fractalLeftProb - fractalRightProb)*(mean_theta) ) %>%
   nest(data = -probFractalDraw) %>% 
   mutate(
-    fit = map(data, ~ glm(choiceLeft ~ EVDiff + fractalDiff_theta, data = .x, family=binomial(link="logit"))),
+    fit = map(data, ~ glm(choiceLeft ~ EVDiff + fractalDiffXtheta, data = .x, family=binomial(link="logit"))),
     tidied = map(fit, tidy)
   ) %>% 
   unnest(tidied) %>%
@@ -159,8 +130,25 @@ clean_beh_data %>%
 What does the logit look like with the q values from this model
 
 ```{r}
-names(clean_beh_data)
+source(paste0(helpers_path, 'get_qvals.R'))
 
+# Add mean posterior estimates to clean_beh_data
+clean_beh_data = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = mean(value), .groups='keep') %>%
+  spread(par, est) %>%
+  left_join(clean_beh_data, by='subnum')
+
+## Add Q values of fractals to each trial
+clean_beh_data = clean_beh_data %>%
+  group_by(subnum) %>%
+  do(get_qvals(., model_name="original")) %>%
+  ungroup()
+```
+
+Indeed the QVs have a larger effect than the true fractal values. But they still have less weight than lotteries at comparable relevance levels. Can the single linear distortion parameter correct for this?
+
+```{r}
 clean_beh_data %>%
   mutate(EVRight = referenceProb * referenceValue,
          EVLeft = lotteryValue * lotteryProb) %>%
@@ -185,6 +173,8 @@ clean_beh_data %>%
   theme(legend.position = "bottom")+
   labs(color="", y="Logit slope estimate", x="p(Fractal)")
 ```
+
+It can to a large degree. Now for cases where fractals are more relevant the fractal weights are similar to littery weights at comparable levels of relevance. Still, the switch does not happen at .5.
 
 ```{r}
 clean_beh_data %>%
@@ -211,6 +201,7 @@ clean_beh_data %>%
   theme(legend.position = "bottom")+
   labs(color="", y="Logit slope estimate", x="p(Fractal)")
 ```
+Flip this for easier visual comparison
 
 ```{r}
 clean_beh_data %>%
@@ -240,26 +231,11 @@ clean_beh_data %>%
   theme(legend.position = "bottom")+
   labs(color="", y="Logit slope estimate", x="Attribute relevance")
 ```
+## RT posterior predictive check
 
 How about the RT patterns? Since this is an DDRL, can you get the inverse U and other RT patterns? No.
 
 ```{r}
-sub_par_ests = par_ests %>%
-  group_by(subnum , par) %>%
-  summarise(mean_val = mean(value), .groups="keep") %>%
-  spread(par, mean_val)
-
-# Add mean posterior estimates to clean_beh_data
-clean_beh_data = sub_par_ests %>%
-  left_join(clean_beh_data, by='subnum')
-
-source(paste0(helpers_path, 'get_qvals.R'))
-## Add Q values of fractals to each trial
-clean_beh_data = clean_beh_data %>%
-  group_by(subnum) %>%
-  do(get_qvals(., model_name="original")) %>%
-  ungroup()
-
 clean_beh_data = clean_beh_data %>%
   mutate(wpFrac = theta*probFractalDraw,
          leftLotteryEV = lotteryValue*lotteryProb,
@@ -287,8 +263,6 @@ for(i in 1:nrow(clean_beh_data)){
 }
 ```
 
-## RT posterior predictive check
-
 Doesn't recap the RT patterns.
 
 ```{r}
@@ -313,13 +287,12 @@ How about estimating this linear distortion parameter from RL alone?
 ```{r}
 par_ests_ddrl = par_ests
 g_par_ests_ddrl = g_par_ests
-sub_par_ests_ddrl = sub_par_ests
 source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamAsymmLinearProbDistortion_rpeBoth.R'))
 par_ests_rl = par_ests
 g_par_ests_rl = g_par_ests
 ```
 
-Estimates overlapping for most subjects. So I'll stick to estimating this parameter from RL alone since DDRL is a more complicated model that fails the posterior predictive check for half the data it's modeling (RTs).
+Estimates overlapping for half of the subjects. I'll stick to estimating this parameter from RL alone since DDRL is a more complicated model that fails the posterior predictive check for half the data it's modeling (RTs).
 
 ```{r}
 par_ests_ddrl %>%
@@ -331,9 +304,125 @@ par_ests_ddrl %>%
   filter(par == "theta") %>%
   ggplot(aes(value, fill=fit_type))+
   geom_histogram(bins=30, alpha=.5, position="identity")+
-  facet_wrap(~subnum)
+  facet_wrap(~subnum)+
+  theme(panel.grid = element_blank())
 
 ```
 
-Model 1e:
-Unbounded distortion - will examine this as part of RL only models in NB19_RevisitingRLModels.
+Do you get the same QV correction with the theta from RL only model? 
+
+```{r}
+rm(clean_beh_data)
+source(paste0(helpers_path,'01_clean_behavioral_data.R'))
+# Add mean posterior estimates to clean_beh_data
+clean_beh_data = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = mean(value), .groups='keep') %>%
+  spread(par, est) %>%
+  left_join(clean_beh_data, by='subnum')
+
+## Add Q values of fractals to each trial
+clean_beh_data = clean_beh_data %>%
+  group_by(subnum) %>%
+  do(get_qvals(., model_name="original")) %>%
+  ungroup()
+```
+
+Yes, to an even larger degree.
+
+```{r}
+tmp2 = g_par_ests %>%
+  filter(key == "g_theta") %>%
+  summarise(mean_theta  = mean(value))
+mean_theta = tmp2$mean_theta
+rm(tmp2)
+
+clean_beh_data %>%
+  mutate(EVRight = referenceProb * referenceValue,
+         EVLeft = lotteryValue * lotteryProb) %>%
+  select(EVLeft, EVRight, leftQValue, rightQValue, probFractalDraw, choiceLeft) %>%
+  mutate(EVDiff = scale(EVLeft - EVRight), 
+         QVDiffXtheta = scale(leftQValue - rightQValue)*(mean_theta)) %>%
+  nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ EVDiff + QVDiffXtheta, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(probFractalDraw, term, estimate, std.error) %>%
+  rbind(tmp %>% filter(term == "fractalDiff")) %>%
+  mutate(probFractalDraw = as.numeric(as.character(probFractalDraw)),
+         attributeRelevance = ifelse(term == "EVDiff", 1-probFractalDraw, probFractalDraw),
+         attributeRelevance = as.factor(attributeRelevance)) %>%
+  ggplot(aes(attributeRelevance, estimate, col=term, group=term))+
+  geom_point()+
+  geom_line()+
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  scale_color_manual(values = c(cbbPalette[2], cbbPalette[1], cbbPalette[3]) )+
+  theme(legend.position = "bottom")+
+  labs(color="", y="Logit slope estimate", x="Attribute relevance")
+```
+
+## One parameter non-linear distortion
+
+Do you get a similar QV slope correction with the d from RL only model?
+
+```{r}
+source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamAsymmNonLinearProbDistortion_rpeBoth.R'))
+```
+
+```{r}
+rm(clean_beh_data)
+source(paste0(helpers_path,'01_clean_behavioral_data.R'))
+# Add mean posterior estimates to clean_beh_data
+clean_beh_data = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = mean(value), .groups='keep') %>%
+  spread(par, est) %>%
+  left_join(clean_beh_data, by='subnum')
+
+## Add Q values of fractals to each trial
+clean_beh_data = clean_beh_data %>%
+  group_by(subnum) %>%
+  do(get_qvals(., model_name="original")) %>%
+  ungroup()
+```
+
+```{r}
+tmp2 = g_par_ests %>%
+  filter(key == "g_delta") %>%
+  summarise(mean_delta  = mean(value))
+mean_delta = tmp2$mean_delta
+rm(tmp2)
+
+clean_beh_data %>%
+  mutate(EVRight = referenceProb * referenceValue,
+         EVLeft = lotteryValue * lotteryProb) %>%
+  select(EVLeft, EVRight, leftQValue, rightQValue, probFractalDraw, choiceLeft) %>%
+  mutate(EVDiff = scale(EVLeft - EVRight), 
+         QVDiffXd = scale(leftQValue - rightQValue)*(mean_delta)) %>%
+  nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ EVDiff + QVDiffXd, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(probFractalDraw, term, estimate, std.error) %>%
+  rbind(tmp %>% filter(term == "fractalDiff")) %>%
+  mutate(probFractalDraw = as.numeric(as.character(probFractalDraw)),
+         attributeRelevance = ifelse(term == "EVDiff", 1-probFractalDraw, probFractalDraw),
+         attributeRelevance = as.factor(attributeRelevance)) %>%
+  ggplot(aes(attributeRelevance, estimate, col=term, group=term))+
+  geom_point()+
+  geom_line()+
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  scale_color_manual(values = c(cbbPalette[2], cbbPalette[1], cbbPalette[3]) )+
+  theme(legend.position = "bottom")+
+  labs(color="", y="Logit slope estimate", x="Attribute relevance")
+```
+
+**Unbounded distortion** - is examined as part of RL only models in NB19_RevisitingRLModels with two Parameter linear probability distortion where the slope parameter is allowed to be >1.

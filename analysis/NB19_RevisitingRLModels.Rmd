@@ -9,7 +9,7 @@ output:
     toc: yes
 ---
 
-# Set up
+Set up
 
 ```{r include=FALSE}
 library(broom)
@@ -19,7 +19,22 @@ library(here)
 cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 helpers_path = here('analysis/helpers/')
 source(paste0(helpers_path,'01_clean_behavioral_data.R'))
+set.seed(2038573)
 ```
+
+# Modeling approach
+
+Motivation for modeling RL and DDM separately:
+
+- Recovering learning rates and distortion parameters with hierarchical DDRL (Stan) has been problematic (see [here](https://zenkavi.github.io/DescribedVsLearned_beh/outputs/NB12_DDMRLRecovery.html))
+- Hierarchical DDRL's (Stan) have not done a good job in capturing RL patterns (see [here](https://zenkavi.github.io/DescribedVsLearned_beh/outputs/NB15_DDRLStan.html#Posterior_predictive_checks13))
+- Non-hierarchical DDMs (optim) had very similar parameter estimates for RL --> DDM and DDRL (see [here](https://zenkavi.github.io/DescribedVsLearned_beh/outputs/NB13_DDMAndDDMRLSubjectFitsWOptim.html#Comparison_of_ddrl_alpha%E2%80%99s_to_hierarchical_rl_alpha%E2%80%99s))
+- Testing different DDM's is a lot easier and faster when not hierarchical (i.e. optim instead of Stan)
+- Testing different RL's is a lot easier without DDMs
+
+**Preferred modeling approach: Hierarchical RL (Stan) followed by non-hierarchical DDMs**
+
+# RL model comparison
 
 Which model fits best? For group and for individuals?  
 
@@ -29,9 +44,29 @@ Which model fits best? For group and for individuals?
 - linear vs non-linear probability/relevance distortion  
 - Update QV for both fractals on each trial (rpeBoth) vs update QV of the fractal of the chosen bundle (rpeChosenFractal) vs update QVs for both fractals only when the trial reward depended on fractals (rpeWhenFractalRewarded)  
 
+Probability distortion functions:
+
+Two parameter non-linear
+
+$$w(pFrac) = \frac{\delta*pFrac^{\gamma}}{\delta*pFrac^{\gamma}+(1- pFrac)^{\gamma}}$$
+
+One parameter non-linear
+
+$$w(pFrac) = \frac{\delta*pFrac}{\delta*pFrac+(1- pFrac)}$$
+
+One parameter linear bounnded
+
+$$w(pFrac) = \theta * pFrac$$
+
+where $0 < \theta < 1$
+
+Two parameter non-linear unbounded
+
+$$w(pFrac) = c + m * pFrac$$
+
 - how to capture best fit for group? 
-1. stack all likelihoods for all subjects? stack mean likelihoods (25 points for each model)
-  - sample from likelihoods 100 times and count which model is best for each subject how many times
+1. sample from likelihoods 100 times
+  - count which model is best for each subject how many times
 2. posterior predictive data for whole sample with succinct summary 
 3. replicate logit pattern
 [eventually do this kind of comparison for ddms and possibly bayesian model averaging though unlikely for the poster]
@@ -43,7 +78,6 @@ shape_names = c("LinearProbDistortion", "NonLinearProbDistortion")
 rpe_names = c("_rpeBoth", "_rpeChosenBundleFractal", "_rpeWhenFractalRewarded")
 prefix = "fit_rl_hierarchical_"
 
-mean_logLiks = data.frame(subnum = NA, mean_logLik = NA, model_name = NA, numpar = NA, symm = NA, shape = NA, rpe = NA)
 sampled_logLiks = data.frame(subnum = NA, logLik = NA, model_name = NA, numpar = NA, symm = NA, shape = NA, rpe = NA)
 
 for(i in 1:length(numpar_names)){
@@ -53,22 +87,13 @@ for(i in 1:length(numpar_names)){
         model_name = paste0(prefix, numpar_names[i], symm_names[j], shape_names[k], rpe_names[l], ".R")
         source(paste0(helpers_path, 'rlModels/', model_name))
         
-        tmp = par_ests %>%
-          filter(par == "alpha") %>%
-          group_by(subnum) %>%
-          summarise(mean_logLik = mean(logLik)) %>%
-          mutate(model_name = model_name,
-                 numpar = numpar_names[i],
-                 symm = symm_names[j],
-                 shape = shape_names[k],
-                 rpe = rpe_names[l])
-        
-        mean_logLiks = rbind(mean_logLiks, tmp)
         
         # Sample 100 per subject
         tmp = par_ests %>%
           filter(par == "alpha") %>%
           group_by(subnum) %>% 
+          mutate(iter = 1:n()) %>%
+          filter(iter > 2000) %>%
           sample_n(100) %>%
           select(subnum, logLik) %>%
           mutate(model_name = model_name,
@@ -83,7 +108,6 @@ for(i in 1:length(numpar_names)){
   }
 }
 
-mean_logLiks = mean_logLiks %>% drop_na()
 sampled_logLiks = sampled_logLiks %>% drop_na()
 rm(i, j, k, l, model_name, tmp, numpar_names, rpe_names, shape_names, symm_names, prefix, fit, g_par_ests, par_ests)
 ```

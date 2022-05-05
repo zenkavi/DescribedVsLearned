@@ -43,17 +43,40 @@ clean_beh_data = clean_beh_data %>%
          probFractalDraw = as.factor(probFractalDraw))
 ```
 
+```{r message=FALSE}
+model_name = 'fit_rl_hierarchical_oneParamSymmNonLinearProbDistortion_rpeBoth.R'
+source(paste0(helpers_path, 'rlModels/', model_name))
+```
+
+```{r}
+source(paste0(helpers_path, 'get_qvals.R'))
+
+# Add mean posterior estimates to clean_beh_data
+clean_beh_data = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = mean(value), .groups='keep') %>%
+  spread(par, est) %>%
+  left_join(clean_beh_data, by='subnum')
+
+## Add Q values of fractals to each trial
+clean_beh_data = clean_beh_data %>%
+  group_by(subnum) %>%
+  do(get_qvals(., model_name="original")) %>%
+  ungroup() %>%
+  mutate(EVDiff = scale(EVLeft - EVRight),
+         QVDiff = scale(leftQValue - rightQValue),
+         fractalDiff = scale(fractalLeftProb - fractalRightProb))
+```
+
+
 ```{r}
 fig_out_path = paste0(here(), '/outputs/fig/')
 ```
 
 
 ```{r}
-p = clean_beh_data %>%
-  select(EVLeft, EVRight, fractalLeftProb, fractalRightProb, probFractalDraw, choiceLeft) %>%
-  mutate(EVDiff = scale(EVLeft - EVRight), 
-         fractalDiff = scale(fractalLeftProb - fractalRightProb)) %>%
-  nest(data = -probFractalDraw) %>% 
+tmp1 = clean_beh_data %>%
+   nest(data = -probFractalDraw) %>% 
   mutate(
     fit = map(data, ~ glm(choiceLeft ~ EVDiff + fractalDiff, data = .x, family=binomial(link="logit"))),
     tidied = map(fit, tidy)
@@ -61,13 +84,29 @@ p = clean_beh_data %>%
   unnest(tidied) %>%
   filter(term != "(Intercept)") %>%
   select(probFractalDraw, term, estimate, std.error) %>%
-  mutate(term = ifelse(term == "EVDiff", "Lottery EV difference", ifelse(term == "fractalDiff", "Fractal prob difference", NA))) %>%
+  mutate(model = "m1")
+
+tmp2 = clean_beh_data %>%
+   nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ EVDiff + QVDiff, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(probFractalDraw, term, estimate, std.error) %>%
+  mutate(model = "m2")
+
+p = tmp2 %>%
+rbind(tmp1 %>% filter(term == "fractalDiff")) %>%
+  mutate(term = ifelse(term == "EVDiff", "Lottery EV difference", ifelse(term == "fractalDiff", "True fractal difference", "Learned QV difference")),
+         term = factor(term, levels = c("True fractal difference", "Lottery EV difference", "Learned QV difference"))) %>%
   ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
   geom_point(size=3)+
   geom_line(size=3)+
   geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2,size=3)+
   geom_hline(aes(yintercept=0), linetype="dashed")+
-  scale_color_manual(values = cbbPalette[1:2])+
+  scale_color_manual(values = cbbPalette[1:3] )+
   labs(color="", y="Logit slope estimate", x="p(Fractal)")+  
   theme(legend.position = c(.7,.88),
         legend.background = element_blank(),
@@ -80,6 +119,58 @@ p = clean_beh_data %>%
 ggsave(file=paste0(fig_out_path, 'poster_group_logit.jpg'), p, height = 5, width=8, units="in")
 p
 ```
+
+```{r}
+sampled_logLiks = readRDS('~/Downloads/sampled_logLiks.RDS')
+
+tmp = sampled_logLiks %>%
+  group_by(model_name) %>%
+  summarise(sem_logLik = sd(logLik)/sqrt(n()),
+            mean_logLik = mean(logLik),
+            numpar = unique(numpar),
+            symm = unique(symm),
+            shape = unique(shape),
+            rpe = unique(rpe)) %>%
+  mutate(model_name = as.factor(model_name),
+         model_name = reorder(model_name, mean_logLik))
+
+p = tmp %>%
+  ggplot(aes(model_name, mean_logLik, col=rpe, shape = symm, alpha = shape))+
+  geom_point(size=3)+
+  geom_errorbar(aes(ymin=mean_logLik - sem_logLik, ymax=mean_logLik + sem_logLik, linetype=numpar),size=2)+
+  labs(x="Model", y="Mean Log likelihood")+
+  scale_alpha_manual(values=c(.6, 1), name="",
+                     breaks = c("LinearProbDistortion", "NonLinearProbDistortion"),
+                     labels = c("Linear", "NonLinear"))+
+  scale_shape_manual(values = c(16, 17), name="")+
+  scale_color_manual(breaks=c("_rpeBoth", "_rpeChosenBundleFractal", "_rpeWhenFractalRewarded"),
+                     labels=c("Both", "Chosen", "Rewarded"),
+                     name="",
+                     values=c(cbbPalette[5], cbbPalette[3], cbbPalette[7]))+
+  scale_linetype_manual(values = c("solid", "dashed"), name="")+
+  theme(legend.position = "bottom",
+        legend.background = element_blank(),
+        legend.box = "vertical",
+        panel.grid = element_blank(),
+        axis.text = element_blank(),
+        axis.title = element_text(size=24),
+        legend.text = element_text(size=20),
+        legend.title = element_text(size=20),
+        axis.title.y = element_text(margin = margin(t = 0, r = 25, b = 0, l = 0)),
+        axis.title.x = element_text(margin = margin(t = 25, r = 0, b = 0, l = 0)))
+
+#grab legend before removing it
+legend <- cowplot::get_legend(p)
+
+p =p + theme(legend.position = "none")
+p
+ggsave(file=paste0(fig_out_path, 'poster_rl_model_comparison.jpg'), p, height = 5, width=8, units="in")
+
+grid::grid.newpage()
+grid::grid.draw(legend)
+
+```
+
 
 ```{r}
 p = clean_beh_data %>%
@@ -108,21 +199,34 @@ p
 ```
 
 ```{r}
-p = clean_beh_data %>%
+tmp = clean_beh_data %>%
   group_by(subnum) %>%
-  mutate(fractal_prob_diff = ifelse(fractal_diff < quantile(fractal_diff, probs=c(.33))[[1]], "small",
-                                    ifelse(fractal_diff > quantile(fractal_diff, probs=c(.66))[[1]], "large", "medium")),
-         fractal_prob_diff = factor(fractal_prob_diff, levels=c("small", "medium", "large"))) %>%
+  mutate(diff_level = ifelse(qv_diff < quantile(qv_diff, probs=c(.33))[[1]], "small",
+                                    ifelse(qv_diff > quantile(qv_diff, probs=c(.66))[[1]], "large", "medium")),
+         diff_level = factor(diff_level, levels=c("small", "medium", "large"))) %>%
   ungroup() %>%
-  # mutate(fractal_prob_diff = factor(fractal_prob_diff, levels=c("small", "medium", "large"), labels=c("small", "medium", "large"))) %>%
-  group_by(probFractalDraw, fractal_prob_diff) %>%
+  group_by(probFractalDraw, diff_level) %>%
   summarise(.groups = "keep",
             mean_logRt = mean(logRt),
             sem_logRt = sd(logRt)/sqrt(n())) %>%
-  ggplot(aes(probFractalDraw, mean_logRt,color=fractal_prob_diff))+
+  mutate(diff_type = "Learned")
+
+p = clean_beh_data %>%
+  group_by(subnum) %>%
+  mutate(diff_level = ifelse(fractal_diff < quantile(fractal_diff, probs=c(.33))[[1]], "small",
+                                    ifelse(fractal_diff > quantile(fractal_diff, probs=c(.66))[[1]], "large", "medium")),
+         diff_level = factor(diff_level, levels=c("small", "medium", "large"))) %>%
+  ungroup() %>%
+  group_by(probFractalDraw, diff_level) %>%
+  summarise(.groups = "keep",
+            mean_logRt = mean(logRt),
+            sem_logRt = sd(logRt)/sqrt(n())) %>%
+  mutate(diff_type="True") %>%
+  rbind(tmp) %>%
+  ggplot(aes(probFractalDraw, mean_logRt,color=diff_level, alpha=diff_type))+
   geom_point(position=position_dodge(width=.5), size=3)+
   geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=0,position=position_dodge(width=.5), size=2)+
-  labs(color="Fractal prob difference", y="Mean Log RT", x="p(Fractal)")+
+  labs(color="Difference Level", y="Mean Log RT", x="p(Fractal)", alpha = "Value type")+
   scale_color_manual(values = c(cbbPalette[3], cbbPalette[5:6]))+
    theme(legend.position = c(.34,.2),
         legend.background = element_blank(),
@@ -131,8 +235,9 @@ p = clean_beh_data %>%
         axis.title = element_text(size=24),
         legend.text = element_text(size=18),
         legend.title = element_text(size=20))+
-  guides(color=guide_legend(nrow=1))+
-  scale_y_continuous(breaks = c(-.3, 0, .3), limits=c(-.36, .36))
+  guides(color=guide_legend(nrow=1), alpha=guide_legend(nrow=1))+
+  scale_y_continuous(breaks = c(-.3, 0, .3), limits=c(-.36, .36))+
+  scale_alpha_manual(values = c(1, .25))
   
 
 ggsave(file=paste0(fig_out_path, 'poster_rt_by_fractal_prob_diff.jpg'), p, height = 5, width=8, units="in")

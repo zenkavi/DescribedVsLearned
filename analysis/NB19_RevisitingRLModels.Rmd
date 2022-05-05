@@ -66,12 +66,12 @@ $$w(pFrac) = c + m * pFrac$$
 
 - how to capture best fit for group? 
 1. sample from likelihoods 100 times
-  - count which model is best for each subject how many times
+- count which model is best for each subject how many times
 2. posterior predictive data for whole sample with succinct summary 
 3. replicate logit pattern
 [eventually do this kind of comparison for ddms and possibly bayesian model averaging though unlikely for the poster]
 
-```{r}
+```{r message=FALSE}
 numpar_names = c("oneParam", "twoParams")
 symm_names = c("Asymm", "Symm")
 shape_names = c("LinearProbDistortion", "NonLinearProbDistortion")
@@ -125,57 +125,136 @@ tmp = sampled_logLiks %>%
          model_name = reorder(model_name, mean_logLik)) 
 
 tmp %>%
-  ggplot(aes(model_name, mean_logLik, col=numpar))+
+  ggplot(aes(model_name, mean_logLik, col=rpe, shape = symm, alpha = shape))+
   geom_point()+
-  geom_errorbar(aes(ymin=mean_logLik - sem_logLik, ymax=mean_logLik + sem_logLik))+
+  geom_errorbar(aes(ymin=mean_logLik - sem_logLik, ymax=mean_logLik + sem_logLik, linetype=numpar))+
   theme(axis.text.x = element_blank(),
         legend.position = "bottom",
         panel.grid = element_blank())+
-  labs(x="Model", "Mean Log likelihood")
-
-tmp %>%
-  ggplot(aes(model_name, mean_logLik, col=symm))+
-  geom_point()+
-  geom_errorbar(aes(ymin=mean_logLik - sem_logLik, ymax=mean_logLik + sem_logLik))+
-  theme(axis.text.x = element_blank(),
-        legend.position = "bottom",
-        panel.grid = element_blank())+
-  labs(x="Model", "Mean Log likelihood")
-
-tmp %>%
-  ggplot(aes(model_name, mean_logLik, col=shape))+
-  geom_point()+
-  geom_errorbar(aes(ymin=mean_logLik - sem_logLik, ymax=mean_logLik + sem_logLik))+
-  theme(axis.text.x = element_blank(),
-        legend.position = "bottom",
-        panel.grid = element_blank())+
-  labs(x="Model", "Mean Log likelihood")
-
-tmp %>%
-  ggplot(aes(model_name, mean_logLik, col=rpe))+
-  geom_point()+
-  geom_errorbar(aes(ymin=mean_logLik - sem_logLik, ymax=mean_logLik + sem_logLik))+
-  theme(axis.text.x = element_blank(),
-        legend.position = "bottom",
-        panel.grid = element_blank())+
-  labs(x="Model", "Mean Log likelihood")
+  labs(x="Model", y="Mean Log likelihood")+
+  scale_alpha_manual(values=c(.6, 1), name="",
+                     breaks = c("LinearProbDistortion", "NonLinearProbDistortion"),
+                     labels = c("Linear", "NonLinear"))+
+  scale_shape_manual(values = c(16, 17), name="")+
+  scale_color_manual(breaks=c("_rpeBoth", "_rpeChosenBundleFractal", "_rpeWhenFractalRewarded"),
+                     labels=c("Both", "Chosen", "Rewarded"),
+                     name="Learning",
+                     values=c(cbbPalette[5], cbbPalette[3], cbbPalette[7]))+
+  scale_linetype_manual(values = c("solid", "dashed"), name="")
 
 ```
 
-[revisit the linear prob distortion nb to see if another single prob distortion model parameter shifts the fractal prob diff logit slopes the same way]
+Does the best fitting model's QVs account for choice data better than fractalprobdiff? Yes, it has a lower AIC.
 
-Does the best fitting model's QVs account for choice data better than fractalprobdiff?
-(anova of logits with QV diff instead of fractalprobdiff)
 On the poster plot overlay the logit plot with the logit slopes of the qv model as well with a lower alpha for the worse fitting model.
 
-```{r}
+```{r message=FALSE}
+model_name = 'fit_rl_hierarchical_oneParamSymmNonLinearProbDistortion_rpeBoth.R'
+source(paste0(helpers_path, 'rlModels/', model_name))
+```
 
+```{r}
+source(paste0(helpers_path, 'get_qvals.R'))
+
+# Add mean posterior estimates to clean_beh_data
+clean_beh_data = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = mean(value), .groups='keep') %>%
+  spread(par, est) %>%
+  left_join(clean_beh_data, by='subnum')
+
+## Add Q values of fractals to each trial
+clean_beh_data = clean_beh_data %>%
+  group_by(subnum) %>%
+  do(get_qvals(., model_name="original")) %>%
+  ungroup()
+```
+
+```{r}
+clean_beh_data = clean_beh_data %>%
+  mutate(EVRight = referenceProb * referenceValue,
+         EVLeft = lotteryValue * lotteryProb) %>%
+  mutate(EVDiff = scale(EVLeft - EVRight),
+         QVDiff = scale(leftQValue - rightQValue),
+         fractalDiff = scale(fractalLeftProb - fractalRightProb))
+
+         
+m1 = glm(choiceLeft ~ (EVDiff + fractalDiff) * probFractalDraw, data = clean_beh_data, family=binomial(link="logit"))
+m2 = glm(choiceLeft ~ (EVDiff + QVDiff) * probFractalDraw, data = clean_beh_data, family=binomial(link="logit"))
+summary(m1)
+```
+
+```{r}
+summary(m2)
+```
+
+```{r}
+tmp1 = clean_beh_data %>%
+   nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ EVDiff + fractalDiff, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(probFractalDraw, term, estimate, std.error) %>%
+  mutate(model = "m1")
+
+tmp2 = clean_beh_data %>%
+   nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ EVDiff + QVDiff, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(probFractalDraw, term, estimate, std.error) %>%
+  mutate(model = "m2")
+
+# EVDiff estimates are almost identical with no systematic difference for the two models
+rbind(tmp1, tmp2) %>%
+  filter(term == "EVDiff") %>%
+  select(-std.error) %>%
+  spread(model, estimate) %>%
+  ggplot(aes(m1, m2))+
+  geom_point()+
+  geom_abline(aes(intercept=0, slope=1))
+
+tmp2 %>%
+rbind(tmp1 %>% filter(term == "fractalDiff")) %>%
+  ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
+  geom_point()+
+  geom_line()+
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.02)+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  scale_color_manual(values = c(cbbPalette[2], cbbPalette[1], cbbPalette[3]) )+
+  theme(legend.position = "bottom")+
+  labs(color="", y="Logit slope estimate", x="p(Fractal)")
 ```
 
 Is there a value difference effect on (true) RTs for QVs? There isn't one for true fractalprobdiffs.
 
 ```{r}
-
+clean_beh_data %>%
+  mutate(qv_diff = abs(leftQValue - rightQValue),
+         logRt = log(reactionTime)) %>%
+  group_by(subnum) %>%
+  mutate(qv_diff_level = ifelse(qv_diff < quantile(qv_diff, probs=c(.33))[[1]], "small",
+                                    ifelse(qv_diff > quantile(qv_diff, probs=c(.66))[[1]], "large", "medium")),
+         qv_diff_level = factor(qv_diff_level, levels=c("small", "medium", "large"))) %>%
+  ungroup() %>%
+  group_by(probFractalDraw, qv_diff_level) %>%
+  summarise(.groups = "keep",
+            mean_logRt = mean(logRt),
+            sem_logRt = sd(logRt)/sqrt(n())) %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw),
+         diff_type = "qv") %>%
+  ggplot(aes(probFractalDraw, mean_logRt,color=qv_diff_level))+
+  geom_point(position=position_dodge(width=.5))+
+  geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=0,position=position_dodge(width=.5))+
+  labs(color="QV difference", y="Mean Log RT", x="p(Fractal)")+
+  scale_color_manual(values = c(cbbPalette[3], cbbPalette[5:6]))+
+   theme(legend.position = "bottom")
 ```
 
 Does modeling RL with DD as the choice rule buy anything in this dataset? Compare alpha recoverability for RL vs DDRL [might move to another nb]
@@ -183,3 +262,99 @@ Does modeling RL with DD as the choice rule buy anything in this dataset? Compar
 ```{r}
 
 ```
+
+## Non-parameteric probability distortion
+
+```{r}
+model_name = 'fit_rl_hierarchical_nonParamSymmProbDistortion_rpeBoth.R'
+source(paste0(helpers_path, 'rlModels/', model_name))
+```
+
+How does this model compare to the others in fit? It's much worse.
+
+```{r}
+sampled_logLiks_nonParam  = par_ests %>%
+  filter(par == "alpha") %>%
+  group_by(subnum) %>% 
+  mutate(iter = 1:n()) %>%
+  filter(iter > 2000) %>%
+  sample_n(100) %>%
+  select(subnum, logLik) %>%
+  mutate(model_name = model_name)
+```
+
+```{r}
+sampled_logLiks_nonParam %>%
+  group_by(model_name) %>%
+  summarise(sem_logLik = sd(logLik)/sqrt(n()),
+            mean_logLik = mean(logLik),
+            numpar = "11",
+            symm = "Symm",
+            shape = "none",
+            rpe = "_rpeBoth") %>%
+  rbind(tmp) %>%
+  mutate(model_name = as.factor(model_name),
+         model_name = reorder(model_name, mean_logLik), 
+         red = ifelse(numpar == "11", "new", "old")) %>%
+  ggplot(aes(model_name, mean_logLik, col=red))+
+  geom_point()+
+  geom_errorbar(aes(ymin=mean_logLik - sem_logLik, ymax=mean_logLik + sem_logLik))+
+  theme(axis.text.x = element_blank(),
+        legend.position = "none",
+        panel.grid = element_blank())+
+  labs(x="Model", "Mean Log likelihood")
+```
+
+```{r}
+g_par_ests %>%
+  group_by(key) %>%
+  # mutate(iter = 1:n()) %>%
+  # filter(iter > 2000) %>%
+  ggplot(aes(value))+
+  geom_histogram(bins=30, alpha=.5, position="identity")+
+  facet_wrap(~key, scales='free')+
+  theme(panel.grid = element_blank())+
+  xlab("")+
+  ylab("")
+```
+
+Why are weights for pFrac < .5 so close to .5?
+
+Are the weights for true fractal probabilities closer to pFractalDraw (are the qvalue weights so high because they reflect subjects' beliefs, even if distorted)? Fit model without learning and the weights (especially for pFractalDraw < .6) was basically the same.
+
+```{r}
+g_par_ests %>%
+  group_by(key) %>%
+  summarise(mean_par = mean(value),
+            sem_par = sd(value)/sqrt(n())) %>%
+  filter(key %in% c("g_alpha", "g_beta") == FALSE) %>%
+  mutate(key = factor(key, levels = c("g_w0", "g_w1", "g_w2", "g_w3", "g_w4", "g_w5", "g_w6", "g_w7", "g_w8", "g_w9", "g_w10"))) %>%
+  arrange(key) %>%
+  mutate(pFractal = seq(0, 1, .1)) %>%
+  ggplot(aes(pFractal, mean_par))+
+  geom_point()+
+  geom_errorbar(aes(ymin=mean_par-sem_par, ymax=mean_par+sem_par), width=.02)+
+  geom_abline(aes(intercept=0, slope=1))
+# ylim(0,1)
+```
+
+```{r}
+par_ests %>%
+  select(-logLik) %>%
+  group_by(par, subnum) %>%
+  mutate(iter = 1:n()) %>%
+  filter(iter>2000) %>%
+  summarise(mean_par = mean(value),
+            sem_par = sd(value)/sqrt(n()), .groups="keep") %>%
+  filter(par %in% c("alpha", "beta") == FALSE) %>%
+  mutate(par = factor(par, levels = c("w0", "w1", "w2", "w3", "w4", "w5", "w6", "w7", "w8", "w9", "w10"))) %>%
+  arrange(subnum, par) %>%
+  ungroup() %>%
+  mutate(pFractal = rep(seq(0, 1, .1), 25)) %>%
+  ggplot(aes(pFractal, mean_par))+
+  # geom_point()+
+  geom_errorbar(aes(ymin=mean_par-sem_par, ymax=mean_par+sem_par), width=.02)+
+  geom_abline(aes(intercept=0, slope=1)) +
+  facet_wrap(~subnum)
+```
+

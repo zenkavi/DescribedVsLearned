@@ -9,16 +9,14 @@ output:
     toc: yes
 ---
 
-# Set up
-
 ```{r include=FALSE}
 library(broom)
 library(tidyverse)
-theme_set(theme_bw())
 library(here)
 cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 helpers_path = here('analysis/helpers/')
 source(paste0(helpers_path,'01_clean_behavioral_data.R'))
+fig_out_path = paste0(here(), '/outputs/fig/')
 ```
 
 ```{r}
@@ -66,11 +64,6 @@ clean_beh_data = clean_beh_data %>%
   mutate(EVDiff = scale(EVLeft - EVRight),
          QVDiff = scale(leftQValue - rightQValue),
          fractalDiff = scale(fractalLeftProb - fractalRightProb))
-```
-
-
-```{r}
-fig_out_path = paste0(here(), '/outputs/fig/')
 ```
 
 
@@ -302,25 +295,61 @@ Attribute relevance (pFractalDraw) affects attribute integrators directly, not t
 Arbitrator depends on the difference in absolute attribute integrator RDVs
 
 ```{r}
-library(RWiener)
+rdv = .25
+rt = 200
+d = .003
+s = .08
+out = data.frame(rdv = c(rdv, rep(NA, rt-1)))
+for(i in 1:(rt-1)){
+  change = rnorm(n = 1, mean=d, sd = s)
+  out$rdv[i+1] = out$rdv[i]+change
+  if(abs(out$rdv[i+1])>1){
+    break
+  }
+}
+
+p = out %>%
+  drop_na() %>%
+  mutate(step = 1:n()) %>%
+  ggplot(aes(step, rdv))+
+  geom_line(group=1, size=2) +
+  geom_hline(aes(yintercept=max(abs(out$rdv), na.rm=T)))+
+  geom_hline(aes(yintercept=(-1)*max(abs(out$rdv), na.rm=T)))+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  # theme_classic()+
+  ylim(-1*max(out$rdv), max(out$rdv))+
+  theme(panel.grid = element_blank(),
+        panel.background = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank())+
+  labs(x="", y="")
+
+p
+# ggsave(file=paste0(fig_out_path, 'poster_arbitrator_integrator.jpg'), p, height = 5, width=8, units="in")
+
 ```
 
 ```{r}
 rdv = 0
 rt = 200
-d = .05
-s = .2
-out = data.frame(rdv = rep(0, rt+1))
-for(i in 1:rt){
+d = -.003
+s = .08
+out = data.frame(rdv = c(rdv, rep(NA, rt-1)))
+for(i in 1:(rt-1)){
   change = rnorm(n = 1, mean=d, sd = s)
   out$rdv[i+1] = out$rdv[i]+change
+  if(abs(out$rdv[i+1])>1){
+    break
+  }
 }
-out %>%
+p=out %>%
+  drop_na() %>%
+  filter(abs(rdv) < .75) %>%
   mutate(step = 1:n()) %>%
   ggplot(aes(step, rdv))+
-  geom_line(group=1) +
-  geom_hline(aes(yintercept=max(out$rdv)))+
-  geom_hline(aes(yintercept=(-1)*max(out$rdv)))+
+  geom_line(group=1, size=2, color=cbbPalette[1]) +
+  geom_hline(aes(yintercept=max(abs(out$rdv), na.rm=T)))+
+  geom_hline(aes(yintercept=(-1)*max(abs(out$rdv), na.rm=T)))+
   geom_hline(aes(yintercept=0), linetype="dashed")+
   # theme_classic()+
   ylim(-1*max(out$rdv), max(out$rdv))+
@@ -329,23 +358,32 @@ out %>%
         axis.text = element_blank(),
         axis.ticks = element_blank(),)+
   labs(x="", y="")
+
+p
+# ggsave(file=paste0(fig_out_path, 'poster_fractal_integrator.jpg'), p, height = 5, width=8, units="in")
 ```
+
 ```{r}
 rdv = 0
 rt = 200
-d = .05
-s = .2
-out = data.frame(rdv = rep(0, rt+1))
-for(i in 1:rt){
+d = .003
+s = .08
+out = data.frame(rdv = c(rdv, rep(NA, rt-1)))
+for(i in 1:(rt-1)){
   change = rnorm(n = 1, mean=d, sd = s)
   out$rdv[i+1] = out$rdv[i]+change
+  if(abs(out$rdv[i+1])>1){
+    break
+  }
 }
-out %>%
+p=out %>%
+  drop_na() %>%
+  filter(rdv < .85) %>%
   mutate(step = 1:n()) %>%
   ggplot(aes(step, rdv))+
-  geom_line(group=1) +
-  geom_hline(aes(yintercept=max(out$rdv)))+
-  geom_hline(aes(yintercept=(-1)*max(out$rdv)))+
+  geom_line(group=1, size=2, color=cbbPalette[2]) +
+  geom_hline(aes(yintercept=max(abs(out$rdv), na.rm=T)))+
+  geom_hline(aes(yintercept=(-1)*max(abs(out$rdv), na.rm=T)))+
   geom_hline(aes(yintercept=0), linetype="dashed")+
   # theme_classic()+
   ylim(-1*max(out$rdv), max(out$rdv))+
@@ -354,4 +392,7 @@ out %>%
         axis.text = element_blank(),
         axis.ticks = element_blank(),)+
   labs(x="", y="")
+
+p
+ggsave(file=paste0(fig_out_path, 'poster_lottery_integrator.jpg'), p, height = 5, width=8, units="in")
 ```

@@ -365,6 +365,84 @@ clean_beh_data %>%
   labs(color="", y="Logit slope estimate", x="Attribute relevance")
 ```
 
+## Theta with double symmetry
+
+$$w(pFrac) = \theta * pFrac$$
+$$w(pLott) = (1-\theta) * (1-pFrac)$$
+$$V_i = w(pLott)EV_{i} + w(pFrac)QV_{i}$$
+
+```{r}
+source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamDoubleSymmLinearProbDistortion_rpeBoth.R'))
+par_ests_rl_double = par_ests
+g_par_ests_rl_double = g_par_ests
+
+source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamSymmLinearProbDistortion_rpeBoth.R'))
+par_ests_rl = par_ests
+g_par_ests_rl = g_par_ests
+
+
+par_ests_rl_double %>%
+  mutate(fit_type = "rl double") %>%
+  rbind(par_ests_rl %>% 
+          mutate(fit_type = "rl")) %>%
+  filter(par == "theta") %>%
+  ggplot(aes(value, fill=fit_type))+
+  geom_histogram(bins=30, alpha=.5, position="identity")+
+  facet_wrap(~subnum)+
+  theme(panel.grid = element_blank())
+
+
+```
+
+```{r}
+rm(clean_beh_data)
+source(paste0(helpers_path,'01_clean_behavioral_data.R'))
+# Add mean posterior estimates to clean_beh_data
+clean_beh_data = par_ests_rl_double %>%
+  group_by(subnum, par) %>%
+  summarise(est = mean(value), .groups='keep') %>%
+  spread(par, est) %>%
+  left_join(clean_beh_data, by='subnum')
+
+## Add Q values of fractals to each trial
+clean_beh_data = clean_beh_data %>%
+  group_by(subnum) %>%
+  do(get_qvals(., model_name="original")) %>%
+  ungroup()
+```
+
+```{r}
+clean_beh_data %>%
+  mutate(EVRight = referenceProb * referenceValue,
+         EVLeft = lotteryValue * lotteryProb) %>%
+  # select(EVLeft, EVRight, leftQValue, rightQValue, probFractalDraw, choiceLeft, theta) %>%
+  mutate(EVDiff_theta = scale(EVLeft - EVRight)*(1-theta), 
+         QVDiff_theta = scale(leftQValue - rightQValue)*(theta)) %>%
+  nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ EVDiff_theta + QVDiff_theta, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(probFractalDraw, term, estimate, std.error) %>%
+  # rbind(tmp %>% filter(term == "fractalDiff")) %>%
+ mutate(probFractalDraw = as.numeric(as.character(probFractalDraw)),
+         attributeRelevance = ifelse(term == "EVDiff_theta", 1-probFractalDraw, probFractalDraw),
+         attributeRelevance = as.factor(attributeRelevance)) %>%
+  ggplot(aes(attributeRelevance, estimate, col=term, group=term))+
+   # ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
+  geom_point()+
+  geom_line()+
+    geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
+  # geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.02)+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  scale_color_manual(values = c(cbbPalette[2], cbbPalette[1], cbbPalette[3]) )+
+  theme(legend.position = "bottom")+
+  labs(color="", y="Logit slope estimate", x="Attribute relevance")
+```
+
+
 ## One parameter non-linear distortion
 
 Do you get a similar QV slope correction with the d from RL only model?

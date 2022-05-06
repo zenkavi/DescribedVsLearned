@@ -294,3 +294,64 @@ ggsave(file=paste0(fig_out_path, 'poster_rt_by_better_choice.jpg'), p, height = 
 p
 ```
 
+
+3 integrators all with their own drift and noise rates
+Arbitrator integrator starts biased towards lotteries
+If pFractalDraw == 1 fractal integrator (not the arbitrator) starts biased towards the better fractal
+Attribute relevance (pFractalDraw) affects attribute integrators directly, not the arbitrator
+Arbitrator depends on the difference in absolute attribute integrator RDVs
+
+```{r}
+library(RWiener)
+```
+
+```{r}
+rdv = 0
+rt = 200
+d = .05
+s = .2
+out = data.frame(rdv = rep(0, rt+1))
+for(i in 1:rt){
+  change = rnorm(n = 1, mean=d, sd = s)
+  out$rdv[i+1] = out$rdv[i]+change
+}
+out %>%
+  mutate(step = 1:n()) %>%
+  ggplot(aes(step, rdv))+
+  geom_line(group=1) +
+  geom_hline(aes(yintercept=max(out$rdv)))+
+  geom_hline(aes(yintercept=(-1)*max(out$rdv)))+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  # theme_classic()+
+  ylim(-1*max(out$rdv), max(out$rdv))+
+  theme(panel.grid = element_blank(),
+        panel.background = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),)+
+  labs(x="", y="")
+```
+```{r}
+rdv = 0
+rt = 200
+d = .05
+s = .2
+out = data.frame(rdv = rep(0, rt+1))
+for(i in 1:rt){
+  change = rnorm(n = 1, mean=d, sd = s)
+  out$rdv[i+1] = out$rdv[i]+change
+}
+out %>%
+  mutate(step = 1:n()) %>%
+  ggplot(aes(step, rdv))+
+  geom_line(group=1) +
+  geom_hline(aes(yintercept=max(out$rdv)))+
+  geom_hline(aes(yintercept=(-1)*max(out$rdv)))+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  # theme_classic()+
+  ylim(-1*max(out$rdv), max(out$rdv))+
+  theme(panel.grid = element_blank(),
+        panel.background = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),)+
+  labs(x="", y="")
+```

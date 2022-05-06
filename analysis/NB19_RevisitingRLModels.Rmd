@@ -146,8 +146,6 @@ tmp %>%
 
 Does the best fitting model's QVs account for choice data better than fractalprobdiff? Yes, it has a lower AIC.
 
-On the poster plot overlay the logit plot with the logit slopes of the qv model as well with a lower alpha for the worse fitting model.
-
 ```{r message=FALSE}
 model_name = 'fit_rl_hierarchical_oneParamSymmNonLinearProbDistortion_rpeBoth.R'
 source(paste0(helpers_path, 'rlModels/', model_name))
@@ -212,13 +210,13 @@ tmp2 = clean_beh_data %>%
   mutate(model = "m2")
 
 # EVDiff estimates are almost identical with no systematic difference for the two models
-rbind(tmp1, tmp2) %>%
-  filter(term == "EVDiff") %>%
-  select(-std.error) %>%
-  spread(model, estimate) %>%
-  ggplot(aes(m1, m2))+
-  geom_point()+
-  geom_abline(aes(intercept=0, slope=1))
+# rbind(tmp1, tmp2) %>%
+#   filter(term == "EVDiff") %>%
+#   select(-std.error) %>%
+#   spread(model, estimate) %>%
+#   ggplot(aes(m1, m2))+
+#   geom_point()+
+#   geom_abline(aes(intercept=0, slope=1))
 
 tmp2 %>%
 rbind(tmp1 %>% filter(term == "fractalDiff")) %>%
@@ -232,7 +230,7 @@ rbind(tmp1 %>% filter(term == "fractalDiff")) %>%
   labs(color="", y="Logit slope estimate", x="p(Fractal)")
 ```
 
-Is there a value difference effect on (true) RTs for QVs? There isn't one for true fractalprobdiffs.
+Is there a value difference effect on (true) RTs for QVs? There isn't one for true fractalprobdiffs. Not for QVs either.
 
 ```{r}
 clean_beh_data %>%

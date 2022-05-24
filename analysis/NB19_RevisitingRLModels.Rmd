@@ -26,13 +26,13 @@ set.seed(2038573)
 
 Motivation for modeling RL and DDM separately:
 
-- Recovering learning rates and distortion parameters with hierarchical DDRL (Stan) has been problematic (see [here](https://zenkavi.github.io/DescribedVsLearned_beh/outputs/NB12_DDMRLRecovery.html))
+- Recovering learning rates and distortion parameters with hierarchical DDRL (Stan) has been problematic (see [here](https://zenkavi.github.io/DescribedVsLearned_beh/outputs/NB12_DDMRLRecovery.html)). Recovery of parameters that have smaller effects on RT distributions seems to be problematic in the literature as well (see learning rate recovery in Figure 6 of Pedersen, Frank, Biele, 2016 and Table 2 of Shahar et al. 2019)
 - Hierarchical DDRL's (Stan) have not done a good job in capturing RL patterns (see [here](https://zenkavi.github.io/DescribedVsLearned_beh/outputs/NB15_DDRLStan.html#Posterior_predictive_checks13))
 - Non-hierarchical DDMs (optim) had very similar parameter estimates for RL --> DDM and DDRL (see [here](https://zenkavi.github.io/DescribedVsLearned_beh/outputs/NB13_DDMAndDDMRLSubjectFitsWOptim.html#Comparison_of_ddrl_alpha%E2%80%99s_to_hierarchical_rl_alpha%E2%80%99s))
 - Testing different DDM's is a lot easier and faster when not hierarchical (i.e. optim instead of Stan)
 - Testing different RL's is a lot easier without DDMs
 
-**Preferred modeling approach: Hierarchical RL (Stan) followed by non-hierarchical DDMs**
+**Preferred modeling approach: Hierarchical RL (Stan) followed by either 1.non-hierarchical DDMs or 2. hierarchical DDMs (maybe in Stan) with QValues (mapping onto trial-wise drift rates) from prior fits of RL**
 
 # RL model comparison
 

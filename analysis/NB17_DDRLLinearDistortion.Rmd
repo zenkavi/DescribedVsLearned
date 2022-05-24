@@ -9,8 +9,6 @@ output:
     toc: yes
 ---
 
-# Set up
-
 ```{r include=FALSE}
 library(tidyverse)
 library(here)
@@ -78,7 +76,7 @@ mean_theta = tmp$mean_theta
 
 ## Logit slope adjustment
 
-Can the group theta bring the QV slope up sufficiently? Gets close but...
+Can the mean a posteriori group theta bring the QV slope up sufficiently? Gets close but...
 
 ```{r}
 tmp = clean_beh_data %>%
@@ -174,7 +172,7 @@ clean_beh_data %>%
   labs(color="", y="Logit slope estimate", x="p(Fractal)")
 ```
 
-It can to a large degree. Now for cases where fractals are more relevant the fractal weights are similar to littery weights at comparable levels of relevance. Still, the switch does not happen at .5.
+It can to a large degree. Now for cases where fractals are more relevant the fractal weights are similar to lottery weights at comparable levels of relevance. Still, the switch does not happen at .5.
 
 ```{r}
 clean_beh_data %>%
@@ -201,9 +199,11 @@ clean_beh_data %>%
   theme(legend.position = "bottom")+
   labs(color="", y="Logit slope estimate", x="p(Fractal)")
 ```
-Flip this for easier visual comparison
 
-```{r}
+
+```{r eval=FALSE}
+# Flip the above plot for easier visual comparison
+
 clean_beh_data %>%
   mutate(EVRight = referenceProb * referenceValue,
          EVLeft = lotteryValue * lotteryProb) %>%
@@ -231,7 +231,8 @@ clean_beh_data %>%
   theme(legend.position = "bottom")+
   labs(color="", y="Logit slope estimate", x="Attribute relevance")
 ```
-## RT posterior predictive check
+
+### RT posterior predictive check
 
 How about the RT patterns? Since this is an DDRL, can you get the inverse U and other RT patterns? No.
 
@@ -265,6 +266,8 @@ for(i in 1:nrow(clean_beh_data)){
 
 Doesn't recap the RT patterns.
 
+**But there a lot of assumptions on the WFTP here with a fixed NDT, threshold and bias. Fitting those might do a much better job in capturing the RT patterns.**
+
 ```{r}
 sim_data %>%
   cbind(clean_beh_data %>%
@@ -280,9 +283,9 @@ sim_data %>%
   labs(y="mean log RT", x="p(Fractal)")
 ```
 
-## Theta estimate sans DDM
+## Theta sans DDM
 
-How about estimating this linear distortion parameter from RL alone?
+How about estimating this linear distortion parameter $\theta$ from RL alone?
 
 ```{r}
 par_ests_ddrl = par_ests
@@ -292,7 +295,7 @@ par_ests_rl = par_ests
 g_par_ests_rl = g_par_ests
 ```
 
-Estimates overlapping for half of the subjects. I'll stick to estimating this parameter from RL alone since DDRL is a more complicated model that fails the posterior predictive check for half the data it's modeling (RTs).
+Estimates overlapping for half of the subjects. When they don't overlap the RL only theta estimates are lower. What do lower theta's mean? Smaller theta --> more distortion (w(p) = p*theta). Theta closer to 1 is less distortion.
 
 ```{r}
 par_ests_ddrl %>%
@@ -328,7 +331,7 @@ clean_beh_data = clean_beh_data %>%
   ungroup()
 ```
 
-Yes, to an even larger degree.
+The correction is larger than the DDRL estimates because the estimated theta's from RL alone suggest more distortion of the QValues.
 
 ```{r}
 tmp2 = g_par_ests %>%
@@ -365,11 +368,24 @@ clean_beh_data %>%
   labs(color="", y="Logit slope estimate", x="Attribute relevance")
 ```
 
-## Theta with double symmetry
+### Symmmetric distortion
+
+In the models above $\theta$ was parameterized asymmetrically only distortion the relevance of the fractal QValues. This might be handicapping both the recovery of the parameter and as a result its ability to capture the group level distortions in the logits. We can parameterize the model more symmetrically by allowing it to distort the relevance of both attributes with or without normalizing (i.e. making sure the sum of the relevances adds up 1). 
+
+What I call double symmetry here is parameterized as follows to ensure normalization of attribute relevance.
 
 $$w(pFrac) = \theta * pFrac$$
 $$w(pLott) = (1-\theta) * (1-pFrac)$$
 $$V_i = w(pLott)EV_{i} + w(pFrac)QV_{i}$$
+
+Below is a comparison of the recovered theta distributions for each subjects for three different models
+1. ddrl with asymmetric distortion  
+2. rl with symmetric distortion but no normalization  
+3. rl with symmetric distortion and normalization  
+
+The estimates are vastly differently for each subject. Of course, one can get some sort of correction on the logit slopes using any one of these estimates. But the recapitulation of the logit pattern is not an indication of fit to data.
+
+*Ultimately, the question of whether a single parameter can capture the discrepancy between the logit slopes of the attributes should come down to determining the best fitting model for all behavior (RT and choice) and then checking whether logits of value estimates distorted by (subject-specific) parameters from this model can result in the same pattern*
 
 ```{r}
 source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamDoubleSymmLinearProbDistortion_rpeBoth.R'))
@@ -385,6 +401,9 @@ par_ests_rl_double %>%
   mutate(fit_type = "rl double") %>%
   rbind(par_ests_rl %>% 
           mutate(fit_type = "rl")) %>%
+  rbind(par_ests_ddrl %>%
+          mutate(fit_type = "ddrl") %>%
+          rename(logLik = iter)) %>%
   filter(par == "theta") %>%
   ggplot(aes(value, fill=fit_type))+
   geom_histogram(bins=30, alpha=.5, position="identity")+
@@ -442,10 +461,15 @@ clean_beh_data %>%
   labs(color="", y="Logit slope estimate", x="Attribute relevance")
 ```
 
+### One parameter non-linear distortion
 
-## One parameter non-linear distortion
+Above we saw that a single linear relevance distortion parameter from various models can correct for the difference in the logit slopes to different degrees.  
 
-Do you get a similar QV slope correction with the d from RL only model?
+Here we check if this specific to a linear distortion or whether a single non linear distortion parameter can produce qualitatively similar effects.  
+
+So the question is: Do you get a similar QV slope correction with the d from RL only model? You can get some sort of correction but these qualitative comparisons are not conclusive.  
+
+Still, this is not an indication of the fit of this model to data. This only suggests that the correction/best fitting models does not need to be limited to a linear distortion.   
 
 ```{r}
 source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamAsymmNonLinearProbDistortion_rpeBoth.R'))

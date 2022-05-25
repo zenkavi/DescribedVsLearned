@@ -51,32 +51,30 @@ Which model fits best? For group and for individuals?
 
 Probability distortion functions:
 
-Two parameter non-linear
+Two parameter non-linear  
 
-$$w(pFrac) = \frac{\delta*pFrac^{\gamma}}{\delta*pFrac^{\gamma}+(1- pFrac)^{\gamma}}$$
+$$w(pFrac) = \frac{\delta*pFrac^{\gamma}}{\delta*pFrac^{\gamma}+(1- pFrac)^{\gamma}}$$  
 
-One parameter non-linear
+One parameter non-linear  
 
-$$w(pFrac) = \frac{\delta*pFrac}{\delta*pFrac+(1- pFrac)}$$
+$$w(pFrac) = \frac{\delta*pFrac}{\delta*pFrac+(1- pFrac)}$$  
 
-One parameter linear bounnded
+One parameter linear bounded  
 
-$$w(pFrac) = \theta * pFrac$$
+$$w(pFrac) = \theta * pFrac$$  
 
-where $0 < \theta < 1$
+where $0 < \theta < 1$  
 
-Two parameter non-linear unbounded
+Two parameter non-linear unbounded  
 
-$$w(pFrac) = c + m * pFrac$$
-Normalized single parameter distortion
+$$w(pFrac) = c + m * pFrac$$  
+Normalized single parameter distortion  
 
-$$w(pLott) = (1-\theta) * (1-pFrac)$$
-$$V_i = w(pLott)EV_{i} + w(pFrac)QV_{i}$$
+$$w(pLott) = (1-\theta) * (1-pFrac)$$  
+$$V_i = w(pLott)EV_{i} + w(pFrac)QV_{i}$$  
 
 - how to capture best fit for group? 
-*add model with double symmetry (normalization) to comparison set*
-*rank models using waic and/or loo-cv*
-~~1. sample from likelihoods 100 times~~
+1. rank models by log_likelihoods sampled from the post burn-in fits 100 times
 - count which model is best for each subject how many times
 2. posterior predictive data for whole sample with succinct summary 
 3. replicate logit pattern
@@ -87,7 +85,6 @@ numpar_names = c("oneParam", "twoParams")
 symm_names = c("Asymm", "Symm")
 shape_names = c("LinearProbDistortion", "NonLinearProbDistortion")
 rpe_names = c("_rpeBoth", "_rpeChosenBundleFractal", "_rpeWhenFractalRewarded")
-prefix = "fit_rl_hierarchical_"
 
 model_names = c("oneParamDoubleSymmLinearProbDistortion_rpeBoth")
 model_info = data.frame(model_name = "oneParamDoubleSymmLinearProbDistortion_rpeBoth", numpar=  "oneParam", symm = "Symm", shape = "LinearProbDistortion", rpe="_rpeBoth", norm=1)
@@ -105,11 +102,14 @@ for(i in 1:length(numpar_names)){
   }
 }
 
-rm(i, j, k, l, model_name, tmp, numpar_names, rpe_names, shape_names, symm_names, prefix, cur_row)
+rm(i, j, k, l, model_name, numpar_names, rpe_names, shape_names, symm_names, cur_row)
 
 elpds = data.frame(Estimate = NA, SE = NA, model_name = NA, numpar=  NA, symm = NA, shape = NA, rpe=NA, norm=NA)
+sampled_logLiks = data.frame(subnum = NA, logLik = NA, model_name=NA)
+loaded_sampled_logLiks = FALSE
 
 for(i in 1:length(model_names)){
+  
   cur_model = model_names[i]
   
   source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_', cur_model, '.R'))
@@ -122,9 +122,33 @@ for(i in 1:length(model_names)){
   elpds = rbind(elpds, cur_row)
   
   rbind(elpds)
+  
+  if(file.exists(paste0(helpers_path, 'rlModels/sampled_logLiks.RDS')) & !loaded_sampled_logLiks){
+    readRDS(paste0(helpers_path, 'rlModels/sampled_logLiks.RDS'))
+    loaded_sampled_logLiks = TRUE
+  } else{
+   tmp = par_ests %>%
+    filter(par == "alpha") %>%
+    group_by(subnum) %>% 
+    mutate(iter = 1:n()) %>%
+    filter(iter > 2000) %>%
+    sample_n(100) %>%
+    select(subnum, logLik) %>%
+    mutate(model_name = cur_model)
+  
+  sampled_logLiks = rbind(sampled_logLiks, tmp) 
+  }
 }
 
+rm(i, tmp)
+
 elpds = elpds %>% drop_na()
+sampled_logLiks = sampled_logLiks %>% drop_na()
+
+if(!loaded_sampled_logLiks){
+  saveRDS(sampled_logLiks, paste0(helpers_path, 'rlModels/sampled_logLiks.RDS'))
+}
+
 ```
 
 ```{r}
@@ -133,12 +157,13 @@ elpds %>%
   ggplot(aes(model_name, Estimate))+
   geom_point()+
   geom_errorbar(aes(ymin=Estimate-SE, ymax=Estimate+SE), width=.2)+
-  theme(axis.text.x = element_blank())
+  theme(axis.text = element_blank())+
+  ylab("elpd")
 ```
-
 
 ```{r}
 tmp = sampled_logLiks %>%
+  left_join(model_info, by="model_name") %>%
   group_by(model_name) %>%
   summarise(sem_logLik = sd(logLik)/sqrt(n()),
             mean_logLik = mean(logLik),
@@ -168,6 +193,30 @@ tmp %>%
   scale_linetype_manual(values = c("solid", "dashed"), name="")
 
 ```
+
+```{r}
+elpds %>%
+  arrange(-Estimate) %>%
+  mutate(elpd_rank = 1:n()) %>%
+  select(elpd_rank, model_name) %>%
+  remove_rownames() %>%
+  left_join(tmp %>%
+  arrange(-mean_logLik) %>%
+  mutate(mean_logLik_rank = 1:n()) %>%
+  select(model_name, mean_logLik_rank), by="model_name") %>%
+  select(model_name, elpd_rank, mean_logLik_rank) %>%
+  mutate(rank_diff = elpd_rank - mean_logLik_rank)
+```
+
+Which is the best model for each subject based on the 100 sampled log liks
+
+```{r}
+sampled_logLiks %>%
+  group_by(subnum) %>%
+  summarise(minLogLik = min(logLik))
+```
+
+# Evidence for learning
 
 Does the best fitting model's QVs account for choice data better than fractalprobdiff? Yes, it has a lower AIC.
 
@@ -286,7 +335,7 @@ Does modeling RL with DD as the choice rule buy anything in this dataset? Compar
 
 ```
 
-## Non-parameteric probability distortion
+# Non-parameteric probability distortion
 
 ```{r}
 model_name = 'fit_rl_hierarchical_nonParamSymmProbDistortion_rpeBoth.R'

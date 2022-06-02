@@ -197,7 +197,8 @@ fit_trial = function(d, sigma, barrierDecay, delta, barrier=1, nonDecisionTime=0
     # and probDownCrossing add up to 1.
     # If there is barrier decay and there are next states that are cross
     # the decayed barrier set their probabilities to 0.
-    prStatesNew = (stateStep * (dnorm(changeMatrix, mu, sigma) %*% prStates[,curTime]) )
+    # prStatesNew = (stateStep * (dnorm(changeMatrix, mu, sigma) %*% prStates[,curTime]) )
+    prStatesNew = t(stateStep * (prStates[,curTime] %*% dnorm(changeMatrix, mu, sigma)) )
     prStatesNew[states >= barrier[nextTime] | states <= -barrier[nextTime]] = 0
     
     # Calculate the probabilities of crossing the up barrier and the

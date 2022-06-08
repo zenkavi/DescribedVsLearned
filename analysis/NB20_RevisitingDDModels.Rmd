@@ -1,0 +1,75 @@
+---
+title: 'Experience vs. description based decision-making project: Revisiting DD models'
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    code_folding: 'hide'
+  pdf_document:
+    toc: yes
+---
+
+
+```{r include=FALSE}
+library(tidyverse)
+theme_set(theme_bw())
+library(here)
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+helpers_path = here('analysis/helpers/')
+source(paste0(helpers_path,'01_clean_behavioral_data.R'))
+```
+
+```{r}
+source(paste0(helpers_path, 'get_qvals.R'))
+
+source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamDoubleSymmLinearProbDistortion_rpeBoth.R'))
+par_ests_rl_double = par_ests
+g_par_ests_rl_double = g_par_ests
+
+clean_beh_data = par_ests_rl_double %>%
+  group_by(subnum, par) %>%
+  summarise(est = mean(value), .groups='keep') %>%
+  spread(par, est) %>%
+  left_join(clean_beh_data, by='subnum')
+
+## Add Q values of fractals to each trial
+clean_beh_data = clean_beh_data %>%
+  group_by(subnum) %>%
+  do(get_qvals(., model_name="original")) %>%
+  ungroup()
+
+clean_beh_data = clean_beh_data %>%
+  mutate(EVRight = referenceProb * referenceValue,
+         EVLeft = lotteryValue * lotteryProb,
+         lottery_ev_diff = EVLeft - EVRight,
+         fractal_qv_diff = leftQValue - rightQValue,
+         distorted_ev_diff = (1-theta)*(1-probFractalDraw)*lottery_ev_diff,
+         distorted_qv_diff = theta*probFractalDraw*fractal_qv_diff,
+         abs_side_value = abs(distorted_ev_diff+distorted_qv_diff),
+         abs_side_value_bins = cut(abs_side_value, breaks=seq(-1e-10,.38,.03)),
+         logRt = log(reactionTime))
+```
+
+Problem for 3 integrator model: When both attributes point to the same option choices are faster in true data.
+
+But the model would predict slower decisions because the difference in the absolute value of each attribute integrator RDV would be small.
+
+```{r}
+clean_beh_data %>%
+  group_by(abs_side_value_bins) %>%
+  # summarise(meanLogRt = mean(logRt),
+  #           semLogRt = sd(logRt)/sqrt(n())) %>%
+  summarise(meanLogRt = mean(reactionTime),
+            semLogRt = sd(reactionTime)/sqrt(n()), .groups="keep") %>%
+  ggplot(aes(abs_side_value_bins, meanLogRt))+
+  geom_point()+
+  geom_errorbar(aes(ymin=meanLogRt-semLogRt,ymax=meanLogRt+semLogRt), width=.2)+
+  # xlab("")+
+  theme(axis.text.x = element_text(angle=45)) 
+```
+Simulate data with a 3 integrator model and show this doesn't hold.
+
+```{r}
+
+```
+

@@ -17,7 +17,6 @@ sim_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
   
   timeOut = 0
   
-  arbitrator_mu_mean = NA
   if(debug){
     debug_df = data.frame()
   }

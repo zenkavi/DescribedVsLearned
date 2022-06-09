@@ -1,4 +1,4 @@
-sim_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrierDecay, barrier=1, nonDecisionTime=0, lotteryBias=0.1, timeStep=10, maxIter=400, debug=FALSE,...){
+sim_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrierDecay, barrier=1, nonDecisionTime=0, bias=0.1, timeStep=10, maxIter=400, debug=FALSE,...){
   
   # d : drift rate
   # sigma: sd of the normal distribution 
@@ -7,7 +7,7 @@ sim_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
   # maxIter: num max samples. if a barrier isn't hit by this sampling of evidence no decision is made. If time step is 10ms and maxIter is 1000 this would be a 10sec timeout maximum
   
   
-  arbitratorRDV = lotteryBias
+  arbitratorRDV = bias
   fractalRDV = 0
   lotteryRDV = 0
   time = 1
@@ -22,17 +22,18 @@ sim_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
   }
   
   kwargs = list(...)
-  # EVLeft=kwargs$EVLeft
-  # EVRight=kwargs$EVRight
-  # 
-  # QVLeft=kwargs$QVLeft
-  # QVRight=kwargs$QVRight
+  
+  # Keep these for output and the sim_sanity_checks function
+  EVRight = kwargs$EVRight
+  EVLeft = kwargs$EVLeft
+  QVRight = kwargs$QVRight
+  QVLeft = kwargs$QVLeft
+  probFractalDraw=kwargs$probFractalDraw
   
   distortedEVDiff = kwargs$distortedEVDiff
   distortedQVDiff = kwargs$distortedQVDiff
   
   # pFrac == 1 bias
-  probFractalDraw=kwargs$probFractalDraw
   if(probFractalDraw == 1){
     fractalRDV = distortedQVDiff
   }
@@ -111,7 +112,7 @@ sim_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
   }
   
   #Organize output 
-  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, arbitrator = arbitrator, dArb=dArb, dLott=dLott, dFrac=dFrac, sigmaArb=sigmaArb, sigmaLott=sigmaLott, sigmaFrac=sigmaFrac, barrierDecay=barrierDecay, barrier=barrier[time], nonDecisionTime=nonDecisionTime, lotteryBias=lotteryBias, timeStep=timeStep, maxIter=maxIter)
+  out = data.frame(EVLeft = EVLeft, EVRight = EVRight,QVLeft = QVLeft, QVRight = QVRight, distortedEVDiff = distortedEVDiff, distortedQVDiff = distortedQVDiff, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, arbitrator = arbitrator, dArb=dArb, dLott=dLott, dFrac=dFrac, sigmaArb=sigmaArb, sigmaLott=sigmaLott, sigmaFrac=sigmaFrac, barrierDecay=barrierDecay, barrier=barrier[time], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, maxIter=maxIter)
   
   if(debug){
     out = list(out=out, debug_df=debug_df[-1,])
@@ -157,7 +158,7 @@ getArbStateProbs = function(pLottStates,  pFracStates, pArbStates, states, dArb,
   return(pArbStatesNew)
 }
 
-fit_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrierDecay, barrier=1, nonDecisionTime=0, lotteryBias=0.1, timeStep=10, approxStateStep = 0.1, debug=FALSE, ...){
+fit_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrierDecay, barrier=1, nonDecisionTime=0, bias=0.1, timeStep=10, approxStateStep = 0.1, debug=FALSE, ...){
   
   # RDV = bias
   
@@ -175,9 +176,7 @@ fit_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
   }
   distortedEVDiff = kwargs$distortedEVDiff
   distortedQVDiff = kwargs$distortedQVDiff
-  probFractalDraw=kwargs$probFractalDraw
-  
-  bias = lotteryBias
+  probFractalDraw = kwargs$probFractalDraw
   
   nonDecIters = nonDecisionTime / timeStep
   
@@ -198,8 +197,7 @@ fit_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
   
   # The vertical axis is divided into states.
   states = seq(-1*(initialBarrier) + (stateStep / 2), initialBarrier - (stateStep / 2), stateStep)
-  halfStateLen = floor(length(states)/2)
-  
+
   # Find the state corresponding to the bias parameter.
   biasState = which.min(abs(states - bias))
   
@@ -209,10 +207,10 @@ fit_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
   prStatesArb[biasState,1] = 1 #bias affects arbitrator not the attribute integrators
   
   prStatesLott = matrix(data = 0, nrow = length(states), ncol = numTimeSteps)
-  prStatesLott[halfStateLen+1,1] = 1 
+  prStatesLott[halfNumStateBins+1,1] = 1 
   
   prStatesFrac = matrix(data = 0, nrow = length(states), ncol = numTimeSteps)
-  prStatesFrac[halfStateLen+1,1] = 1
+  prStatesFrac[halfNumStateBins+1,1] = 1
   
   # The probability of crossing each barrier over the time of the trial.
   probUpCrossing = rep(0, numTimeSteps)
@@ -262,13 +260,6 @@ fit_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
     # tempUpCross = tempUpCross * sumIn / sumCurrent
     # tempDownCross = tempDownCross * sumIn / sumCurrent
     
-    # Avoid NAs for likelihood conditional statements
-    # if (is.na(tempUpCross)){
-    #   tempUpCross = 0
-    # }
-    # if (is.na(tempDownCross)){
-    #   tempDownCross = 0
-    # }
     
     # Update the probabilities of each state and the probabilities of
     # crossing each barrier at this timestep.
@@ -290,7 +281,7 @@ fit_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
     } 
   }
   
-  out = data.frame(likelihood = likelihood, EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = reactionTime, d = d, sigma = sigma, barrierDecay = barrierDecay, delta=delta, barrier=barrier[numTimeSteps], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep)
+  out = data.frame(likelihood = likelihood, distortedEVDiff = distortedEVDiff, distortedQVDiff = distortedQVDiff, probFractalDraw = probFractalDraw, choice=choice, reactionTime = reactionTime, dArb = dArb, dLott = dLott, dFrac = dFrac, sigmaArb = sigmaArb, sigmaLott = sigmaLott, sigmaFrac = sigmaFrac, barrierDecay = barrierDecay, barrier=barrier[numTimeSteps], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep)
   
   
   return(out)

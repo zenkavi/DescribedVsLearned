@@ -10,18 +10,8 @@ my.sim.cluster <- parallel::makeCluster(
   type = "FORK"
 )
 
-#check cluster definition (optional)
-# print(my.cluster)
-
 #register it to be used by %dopar%
 doParallel::registerDoParallel(cl = my.sim.cluster)
-
-#check if it is registered (optional)
-# foreach::getDoParRegistered()
-
-#how many workers are available? (optional)
-# foreach::getDoParWorkers()
-
 
 # Function to simulate ddm process for a given set of stimuli using a model provided as a string in the model_name argument
 sim_task = function(stimuli, model_name, sim_trial_list_ = sim_trial_list, ...){
@@ -136,24 +126,35 @@ sim_task = function(stimuli, model_name, sim_trial_list_ = sim_trial_list, ...){
   #register it to be used by %dopar%
   # doParallel::registerDoParallel(cl = my.sim.cluster)
   
+  if("distortedEVDiff" %in% names(stimuli)==FALSE){
+    stimuli$distortedEVDiff = NA
+  }
+  
+  if("distortedQVDiff" %in% names(stimuli)==FALSE){
+    stimuli$distortedQVDiff = NA
+  }
+  
   # Parallel loop
   out <- foreach(
-    EVLeft=stimuli$EVLeft, 
+    EVLeft = stimuli$EVLeft, 
     EVRight = stimuli$EVRight, 
     QVLeft = stimuli$QVLeft, 
-    QVRight= stimuli$QVRight , 
+    QVRight = stimuli$QVRight , 
     probFractalDraw = stimuli$probFractalDraw,
+    distortedEVDiff = stimuli$distortedEVDiff,
+    distortedQVDiff = stimuli$distortedQVDiff,
     .combine = 'rbind'
   ) %dopar% {
     # Simulate RT and choice for a single trial with given DDM parameters and trial stimulus values
-      sim_trial(d=kwargs$d, sigma = kwargs$sigma, 
-                dArb=kwargs$dArb, dAttr=kwargs$dAttr, sigmaArb = kwargs$sigmaArb, sigmaAttr = kwargs$sigmaAttr,
-                dLott=kwargs$dLott, dFrac=kwargs$dFrac, sigmaLott = kwargs$sigmaLott, sigmaFrac = kwargs$sigmaFrac,
+      sim_trial(d = kwargs$d, sigma = kwargs$sigma, 
+                dArb = kwargs$dArb, dAttr=kwargs$dAttr, sigmaArb = kwargs$sigmaArb, sigmaAttr = kwargs$sigmaAttr,
+                dLott = kwargs$dLott, dFrac = kwargs$dFrac, sigmaLott = kwargs$sigmaLott, sigmaFrac = kwargs$sigmaFrac,
                 theta = kwargs$theta, delta = kwargs$delta, gamma = kwargs$gamma,
                 barrier = kwargs$barrier, nonDecisionTime = kwargs$nonDecisionTime, barrierDecay = kwargs$barrierDecay,
                 bias = kwargs$bias, timeStep = kwargs$timeStep, maxIter = kwargs$maxIter, epsilon = kwargs$epsilon,
                 stimDelay = kwargs$stimDelay,
-                EVLeft=EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight= QVRight, probFractalDraw = probFractalDraw)
+                EVLeft=EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight= QVRight, probFractalDraw = probFractalDraw,
+                distortedEVDiff = distortedEVDiff, distortedQVDiff = distortedQVDiff)
 
     }
   

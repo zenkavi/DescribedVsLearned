@@ -56,7 +56,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       p = sim_data %>%
         select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
         mutate(data_type = "sim") %>%
-        rbind(true_data %>% select(-subnum)) %>%
+        rbind(true_data %>% select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, data_type)) %>%
         mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
         ggplot(aes(reactionTime, fill=data_type)) +
         geom_histogram(position="identity", bins=30, alpha=.5) +
@@ -83,7 +83,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       p = sim_data %>%
         select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
         mutate(data_type = "sim") %>%
-        rbind(true_data %>% select(-subnum)) %>%
+        rbind(true_data %>% select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, data_type)) %>%
         drop_na()%>%
         mutate(probFractalDraw = as.factor(probFractalDraw), 
                log_rt = log(reactionTime)) %>%

@@ -72,4 +72,3 @@ Simulate data with a 3 integrator model and show this doesn't hold.
 ```{r}
 
 ```
-

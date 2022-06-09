@@ -122,10 +122,12 @@ sim_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
 
 library(tidyverse)
 
-getArbStateProbs = function(pLottStates,  pFracStates, pArbStates, states, changeMatrix){
+getArbStateProbs = function(pLottStates,  pFracStates, pArbStates, states, dArb, sigmaArb){
   
-  AbsLottStates = unique(abs(round(states, 1)))
-  AbsFracStates = unique(abs(round(states, 1)))
+  changeMatrix = matrix(data = states, ncol=length(states), nrow=length(states), byrow=FALSE) - matrix(data = states, ncol=length(states), nrow=length(states), byrow=TRUE)
+  
+  AbsLottStates = unique(abs(round(states, 7)))
+  AbsFracStates = unique(abs(round(states, 7)))
   halfStateLen = floor(length(states)/2)
   pAbsLottStates = c( pLottStates[1:halfStateLen]+pLottStates[length(states):(halfStateLen+2)] , pLottStates[halfStateLen+1])
   pAbsFracStates = c( pFracStates[1:halfStateLen]+pFracStates[length(states):(halfStateLen+2)] , pFracStates[halfStateLen+1])
@@ -137,23 +139,20 @@ getArbStateProbs = function(pLottStates,  pFracStates, pArbStates, states, chang
     rename(AbsLottStates = Var1, AbsFracStates = Var2) %>%
     left_join(absLottIntegrator, by="AbsLottStates") %>%
     left_join(absFracIntegrator, by="AbsFracStates") %>%
-    mutate(DiffStates = round(AbsLottStates-AbsFracStates,1),
+    mutate(DiffStates = round(AbsLottStates-AbsFracStates,7),
            pDiffStates = pAbsLottStates * pAbsFracStates) %>%
     group_by(DiffStates) %>%
-    summarise(sumPDiffStates = sum(pDiffStates))
+    summarise(sumPDiffStates = sum(pDiffStates)) %>%
+    filter(sumPDiffStates > 0)
   
-  changeMatrixArb = ifelse(abs(changeMatrix)>1, 0, changeMatrix)
-  pchangeMatrixArb = changeMatrixArb
-  for(i in 1:nrow(changeMatrixArb)){
-    for(j in 1:ncol(changeMatrixArb)){
-      changeVal = round(changeMatrixArb[i,j], 1)
-      if(changeVal %in% tmp$DiffStates){
-        pchangeMatrixArb[i, j] = tmp$sumPDiffStates[which(tmp$DiffStates == changeVal)]
-      }
-    }
+  pChangeMatrixArb = matrix(data=0, nrow = nrow(changeMatrix), ncol=ncol(changeMatrix)) 
+  
+  #weighted sum of dnorm(changeMatrix, diffStates*dArb, sigmaArb) weighted by the prob of the mu == diffState
+  for (i in 1:nrow(tmp)){
+    pChangeMatrixArb = pChangeMatrixArb + dnorm(changeMatrix, tmp$sumPDiffStates[i]*tmp$DiffStates[i]*dArb, sigmaArb)
   }
   
-  pArbStatesNew = pArbStates %*% pchangeMatrixArb
+  pArbStatesNew = pArbStates %*% pChangeMatrixArb
   
   return(pArbStatesNew)
 }
@@ -242,12 +241,15 @@ fit_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
     # prStatesNew = (stateStep * (dnorm(changeMatrix, mu, sigma) %*% prStates[,curTime]) )
     prStatesNewLott = t(stateStep * (prStatesLott[,curTime] %*% dnorm(changeMatrix, muLott, sigmaLott)) )
     prStatesNewLott[states >= barrier[nextTime] | states <= -barrier[nextTime]] = 0
+    prStatesNewLott = prStatesNewLott/sum(prStatesNewLott)
     
     prStatesNewFrac = t(stateStep * (prStatesFrac[,curTime] %*% dnorm(changeMatrix, muFrac, sigmaFrac)) )
     prStatesNewFrac[states >= barrier[nextTime] | states <= -barrier[nextTime]] = 0
+    prStatesNewFrac = prStatesNewFrac/sum(prStatesNewFrac)
     
-    prStatesNewArb = getArbStateProbs(prStatesNewLott, prStatesNewFrac, prStatesArb[,curTime], states, changeMatrix)
-    
+    prStatesNewArb = getArbStateProbs(prStatesNewLott, prStatesNewFrac, prStatesArb[,curTime], states, dArb, sigmaArb)
+    prStatesNewArb = prStatesNewArb/sum(prStatesNewArb)
+
     # Calculate the probabilities of crossing the up barrier and the
     # down barrier. 
     # tempUpCross = (prStates[,curTime] %*% (1 - pnorm(changeUp[,nextTime], mu, sigma)))[1]

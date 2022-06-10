@@ -144,13 +144,13 @@ getArbStateProbs = function(pLottStates,  pFracStates, pArbStates, states, dArb,
            pDiffStates = pAbsLottStates * pAbsFracStates) %>%
     group_by(DiffStates) %>%
     summarise(sumPDiffStates = sum(pDiffStates)) %>%
-    filter(sumPDiffStates > 0)
+    filter(sumPDiffStates > 0) #to reduce the number of computations in the for loop below
   
   pChangeMatrixArb = matrix(data=0, nrow = nrow(changeMatrix), ncol=ncol(changeMatrix)) 
   
   #weighted sum of dnorm(changeMatrix, diffStates*dArb, sigmaArb) weighted by the prob of the mu == diffState
   for (i in 1:nrow(tmp)){
-    pChangeMatrixArb = pChangeMatrixArb + dnorm(changeMatrix, tmp$sumPDiffStates[i]*tmp$DiffStates[i]*dArb, sigmaArb)
+    pChangeMatrixArb = pChangeMatrixArb + tmp$sumPDiffStates[i]*dnorm(changeMatrix, tmp$DiffStates[i]*dArb, sigmaArb)
   }
   
   pArbStatesNew = pArbStates %*% pChangeMatrixArb
@@ -250,8 +250,8 @@ fit_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
 
     # Calculate the probabilities of crossing the up barrier and the
     # down barrier. 
-    # tempUpCross = (prStates[,curTime] %*% (1 - pnorm(changeUp[,nextTime], mu, sigma)))[1]
-    # tempDownCross = (prStates[,curTime] %*% (pnorm(changeDown[,nextTime], mu, sigma)))[1]
+    # tempUpCross = (prStatesArb[,curTime] %*% (1 - pnorm(changeUp[,nextTime], mu, sigma)))[1]
+    # tempDownCross = (prStatesArb[,curTime] %*% (pnorm(changeDown[,nextTime], mu, sigma)))[1]
     
     # Renormalize to cope with numerical approximations.
     # sumIn = sum(prStates[,curTime])
@@ -266,19 +266,19 @@ fit_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
     prStatesLott[, nextTime] = prStatesNewLott
     prStatesFrac[, nextTime] = prStatesNewFrac
     prStatesArb[, nextTime] = prStatesNewArb
-    # probUpCrossing[nextTime] = tempUpCross
-    # probDownCrossing[nextTime] = tempDownCross
+    # probUpCrossingArb[nextTime] = tempUpCross
+    # probDownCrossingArb[nextTime] = tempDownCross
   }
   
   likelihood = 0
   if (choice == 1){ # Choice was left.
-    if (probUpCrossing[numTimeSteps] > 0){
-      likelihood = probUpCrossing[numTimeSteps]
-    }
+    
+      likelihood = probUpCrossingArb[numTimeSteps] * sum(prStatesLott[1:halfNumStateBins,numTimeSteps]) + probDownCrossingArb[numTimeSteps] * sum(prStatesFrac[1:halfNumStateBins,numTimeSteps])
+  
   } else if (choice == -1){
-    if(probDownCrossing[numTimeSteps] > 0){
-      likelihood = probDownCrossing[numTimeSteps]
-    } 
+
+    likelihood = probUpCrossingArb[numTimeSteps] * sum(prStatesLott[halfNumStateBins:nrow(prStatesLott),numTimeSteps]) + probDownCrossingArb[numTimeSteps] * sum(prStatesFrac[halfNumStateBins:nrow(prStatesFrac),numTimeSteps])
+     
   }
   
   out = data.frame(likelihood = likelihood, distortedEVDiff = distortedEVDiff, distortedQVDiff = distortedQVDiff, probFractalDraw = probFractalDraw, choice=choice, reactionTime = reactionTime, dArb = dArb, dLott = dLott, dFrac = dFrac, sigmaArb = sigmaArb, sigmaLott = sigmaLott, sigmaFrac = sigmaFrac, barrierDecay = barrierDecay, barrier=barrier[numTimeSteps], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep)

@@ -60,10 +60,14 @@ clean_beh_data %>%
   ggplot(aes(abs_distorted_side_value_bins, meanRt))+
   geom_point()+
   geom_errorbar(aes(ymin=meanRt-semRt,ymax=meanRt+semRt), width=.2)+
-  xlab("Absolute evidence ")+
+  xlab("Distorted Absolute evidence ")+
   theme(axis.text.x = element_text(angle=45)) 
 ```
-Simulate data with a 3 integrator model and show this doesn't hold.
+```{r}
+round(table(clean_beh_data$abs_distorted_side_value_bins)/nrow(clean_beh_data), 3)
+```
+
+Simulate data with a 3 integrator model and see uf this holds.
 
 ```{r message=FALSE}
 source(paste0(helpers_path,'ddModels/sim_task.R')) # do this first not to mess with cluster setup?
@@ -106,15 +110,6 @@ sim_sanity_checks(m4b_1, checks=c(1,3,4))
 ```
 
 ```{r}
-sub_data %>%
-  select(distortedEVDiff, distortedQVDiff) %>%
-  gather(key, value) %>%
-  ggplot(aes(value, fill=key))+
-  geom_histogram(bins=30, alpha=.5, position = "identity")
-```
-
-
-```{r}
 m4b_2 = sim_task(sub_data, model_name = "model4b", dLott=0.04, dFrac=0.06, dArb=0.06, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01)
 ```
 
@@ -146,16 +141,12 @@ m4b_1 %>%
 ```
 
 ```{r}
-sub_data %>%
-  mutate(abs_distorted_side_value = abs(distortedEVDiff+distortedQVDiff),
-         abs_distorted_side_value_bins = cut(abs_distorted_side_value, breaks=seq(-1e-10,.38,.03))) %>%
+clean_beh_data %>%
+  # mutate(abs_distorted_side_value = abs(distortedEVDiff+distortedQVDiff),
+  #        abs_distorted_side_value_bins = cut(abs_distorted_side_value, breaks=seq(-1e-10,.38,.03))) %>%
+  select(abs_distorted_side_value_bins) %>%
   group_by(abs_distorted_side_value_bins) %>%
-  summarise(meanRt = mean(reactionTime),
-            semRt = sd(reactionTime)/sqrt(n())) %>%
-  ggplot(aes(abs_distorted_side_value_bins, meanRt))+
-  geom_point()+
-  geom_errorbar(aes(ymin=meanRt-semRt,ymax=meanRt+semRt), width=.2)+
-  xlab("Absolute evidence ")+
-  theme(axis.text.x = element_text(angle=45),
-        legend.position = "bottom")
+  tally()
+
+sim_trial(dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, distortedEVDiff = sub_data$distortedEVDiff[100], distortedQVDiff = sub_data$distortedQVDiff[100], probFractalDraw = sub_data$probFractalDraw[100], barrierDecay = 0, EVLeft = sub_data$EVLeft[100], EVRight = sub_data$EVRight[100], QVLeft = sub_data$QVLeft[100], QVRight = sub_data$QVRight[100])
 ```

@@ -32,10 +32,12 @@ sim_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
   
   distortedEVDiff = kwargs$distortedEVDiff
   distortedQVDiff = kwargs$distortedQVDiff
+  rawQVDiff = QVLeft - QVRight
   
   # pFrac == 1 bias
   if(probFractalDraw == 1){
-    fractalRDV = distortedQVDiff
+    # fractalRDV = distortedQVDiff #when using distorted QV diff these choices were not as fast as true data
+    fractalRDV = rawQVDiff
   }
   
   nonDecIters = nonDecisionTime / timeStep
@@ -213,7 +215,13 @@ fit_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
   prStatesLott[halfNumStateBins+1,1] = 1 
   
   prStatesFrac = matrix(data = 0, nrow = length(states), ncol = numTimeSteps)
-  prStatesFrac[halfNumStateBins+1,1] = 1
+  if(probFractalDraw == 1){
+    rawQVDiff = kwargs$QVLeft - kwargs$QVRight
+    fracBiasState = which.min(abs(states - rawQVDiff))
+    prStatesFrac[fracBiasState, 1] = 1
+  } else {
+    prStatesFrac[halfNumStateBins+1,1] = 1
+  }
   
   # How much change is required from each state to move onto every other state
   changeMatrix = matrix(data = states, ncol=length(states), nrow=length(states), byrow=FALSE) - matrix(data = states, ncol=length(states), nrow=length(states), byrow=TRUE)

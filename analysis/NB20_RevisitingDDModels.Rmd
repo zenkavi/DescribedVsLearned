@@ -63,6 +63,8 @@ clean_beh_data %>%
   xlab("Distorted Absolute evidence ")+
   theme(axis.text.x = element_text(angle=45)) 
 ```
+Note there is very little data in the last three bins of the plot above.
+
 ```{r}
 round(table(clean_beh_data$abs_distorted_side_value_bins)/nrow(clean_beh_data), 3)
 ```
@@ -109,11 +111,15 @@ Simulate a dataset using half the stimuli and this three integrator model.
 m4b_1 = sim_task(sub_data, model_name = "model4b", dLott=0.04, dFrac=0.03, dArb=0.06, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01)
 ```
 
-Check how well the RT patterns in the simulated data match the true data
+Check how well the RT patterns in the simulated data match the true data.
+
+With this parameter setting predicted choice is systematically slower for trials where the fractals matter more. The true data histograms versus predicted density curves also do not look in general.
 
 ```{r}
 sim_sanity_checks(m4b_1, checks=c(1,3,4))
 ```
+
+Increasing the fractal drift rate can take care of the slower choice for when fractals are more relevant to a large degree except for the edge case trials where only the fractals matter.
 
 ```{r}
 m4b_2 = sim_task(sub_data, model_name = "model4b", dLott=0.04, dFrac=0.06, dArb=0.06, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01)
@@ -122,8 +128,20 @@ m4b_2 = sim_task(sub_data, model_name = "model4b", dLott=0.04, dFrac=0.06, dArb=
 ```{r}
 sim_sanity_checks(m4b_2, checks=c(1,3,4))
 ```
+This model's way of accounting for the categorically faster choice for probFractalDraw = 1 trials is to bias the fractal integrator to start from the distortedQVDiff.
 
-How could the negative relationship between RT and absolute evidence for an option be more pronounced for a three integrator model?
+It doesn't seem to be doing a good enough job in speeding the decision. Is this because the distortedQVDiff is too small?
+
+```{r}
+sub_data %>%
+  filter(probFractalDraw == 1) %>%
+  mutate(rawQVDiff = QVLeft - QVRight) %>%
+  ggplot(aes(distortedQVDiff, rawQVDiff))+
+  geom_point()+
+  geom_abline(aes(slope=1, intercept=0))
+```
+
+What does the relationship between RT and absolute evidence for an option look like in simulated data?
 
 ```{r}
 tmp = sub_data %>%
@@ -131,16 +149,6 @@ tmp = sub_data %>%
          abs_distorted_side_value_bins = cut(abs_distorted_side_value, breaks=seq(-1e-10,.38,.03))) %>%
   mutate(data_type="true")
 
-m4b_1 %>%
-  mutate(abs_distorted_side_value = abs(distortedEVDiff+distortedQVDiff),
-         abs_distorted_side_value_bins = cut(abs_distorted_side_value, breaks=seq(-1e-10,.38,.03))) %>%
-  left_join(tmp, by=c("EVLeft", "EVRight", "QVLeft", "QVRight", "distortedEVDiff", "distortedQVDiff", "probFractalDraw")) %>%
-  ggplot(aes(reactionTime.y, reactionTime.x))+
-    geom_point(color="light gray")+
-  geom_smooth(formula="y~x", method="lm")+
-  geom_abline(aes(slope=1, intercept=0), linetype="dashed")+
-  xlab("True RT")+
-  ylab("Predicted RT")
 
 m4b_1 %>%
   mutate(abs_distorted_side_value = abs(distortedEVDiff+distortedQVDiff),
@@ -162,6 +170,36 @@ m4b_1 %>%
         legend.position = "bottom")
 ```
 
+How could the negative relationship between RT and absolute evidence for an option be more pronounced for a three integrator model?
+
+Are the predicted response times close to the true response times? No! Despite the apparent correspondance when looking at aggregate data grouped by probFractalDraw level the individual trial estimates are not correlated at all.
+
+```{r}
+m4b_1 %>%
+  mutate(abs_distorted_side_value = abs(distortedEVDiff+distortedQVDiff),
+         abs_distorted_side_value_bins = cut(abs_distorted_side_value, breaks=seq(-1e-10,.38,.03))) %>%
+  left_join(tmp, by=c("EVLeft", "EVRight", "QVLeft", "QVRight", "distortedEVDiff", "distortedQVDiff", "probFractalDraw")) %>%
+  ggplot(aes(reactionTime.y, reactionTime.x))+
+    geom_point(color="light gray")+
+  geom_smooth(formula="y~x", method="lm")+
+  geom_abline(aes(slope=1, intercept=0), linetype="dashed")+
+  xlab("True RT")+
+  ylab("Predicted RT")
+```
+
+Does a well-established model do better in such an absolute check of model fit????
+
+```{r}
+
+```
+
+
 ```{r}
 sim_trial(dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, distortedEVDiff = sub_data$distortedEVDiff[100], distortedQVDiff = sub_data$distortedQVDiff[100], probFractalDraw = sub_data$probFractalDraw[100], barrierDecay = 0, EVLeft = sub_data$EVLeft[100], EVRight = sub_data$EVRight[100], QVLeft = sub_data$QVLeft[100], QVRight = sub_data$QVRight[100])
+```
+
+Check the fitting function
+
+```{r}
+
 ```

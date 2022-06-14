@@ -56,13 +56,13 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       p = sim_data %>%
         select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime) %>%
         mutate(data_type = "sim") %>%
-        rbind(true_data %>% select(EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, data_type)) %>%
         mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
-        ggplot(aes(reactionTime, fill=data_type)) +
-        geom_histogram(position="identity", bins=30, alpha=.5) +
-        labs(title="RT long tail?", fill="")+
+        ggplot(aes(reactionTime, color=data_type)) +
+        geom_density()+
+        geom_histogram(data=true_data, aes(reactionTime, y = ..density..), bins=30, alpha=.5)+
         facet_wrap(~probFractalDraw)+
-        theme(legend.position = "bottom")
+        theme(legend.position = "bottom")+
+        scale_color_manual(values=c("red",NA))
     }
     else{
       p = sim_data %>%

@@ -42,34 +42,21 @@ clean_beh_data = clean_beh_data %>%
          lottery_ev_diff = leftLotteryEV - rightLotteryEV,
          fractal_qv_diff = leftQValue - rightQValue,
          distorted_ev_diff = (1-theta)*(1-probFractalDraw)*lottery_ev_diff,
-         distorted_qv_diff = theta*probFractalDraw*fractal_qv_diff,
-         abs_distorted_side_value = abs(distorted_ev_diff+distorted_qv_diff),
-         abs_distorted_side_value_bins = cut(abs_distorted_side_value, breaks=seq(-1e-10,.38,.03)),
-         logRt = log(reactionTime))
+         distorted_qv_diff = theta*probFractalDraw*fractal_qv_diff)
 ```
-
-When both attributes point to the same option choices are faster in true data (plot below).
 
 **Potential problem** for 3 integrator model: The model would predict slower decisions because the difference in the absolute value of each attribute integrator RDV would be small.
 
+**BUT** by design there aren't trials that provide strong (distorted) evidence for a single side so for the current set of stimuli this should not be a concern.
+
 ```{r}
 clean_beh_data %>%
-  group_by(abs_distorted_side_value_bins) %>%
-  summarise(meanRt = mean(reactionTime),
-            semRt = sd(reactionTime)/sqrt(n()), .groups="keep") %>%
-  ggplot(aes(abs_distorted_side_value_bins, meanRt))+
+  ggplot(aes(distorted_ev_diff, distorted_qv_diff)) +
   geom_point()+
-  geom_errorbar(aes(ymin=meanRt-semRt,ymax=meanRt+semRt), width=.2)+
-  xlab("Distorted Absolute evidence ")+
-  theme(axis.text.x = element_text(angle=45)) 
-```
-Note there is very little data in the last three bins of the plot above.
-
-```{r}
-round(table(clean_beh_data$abs_distorted_side_value_bins)/nrow(clean_beh_data), 3)
+  geom_abline(aes(slope=1, intercept=0))
 ```
 
-Simulate data with a 3 integrator model and see uf this holds.
+Simulate data with a 3 integrator model.
 
 ```{r message=FALSE}
 source(paste0(helpers_path,'ddModels/sim_task.R')) # do this first not to mess with cluster setup?
@@ -87,15 +74,10 @@ sub_data = clean_beh_data %>%
   rename(EVLeft = leftLotteryEV, EVRight = rightLotteryEV, QVLeft = leftQValue, QVRight = rightQValue, distortedEVDiff = distorted_ev_diff, distortedQVDiff = distorted_qv_diff)
 ```
 
-Create empty list that will store the trial simulators for the forthcoming models.
-
-```{r}
-sim_trial_list = list()
-```
-
 Source trial simulating and fitting function three integrator model. The model only had the ddm parameters as variables; choice parameters (learning rate and probability distortion) are fitted elsewhere and used to compute the distorted value differences fed into this model.
 
 ```{r}
+sim_trial_list = list()
 source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_model4b_separatedProbDistortion.R'))
 sim_trial_list[['model4b']] = sim_trial
 ```
@@ -105,7 +87,8 @@ Test if trial simulating function works.
 ```{r}
 sim_trial(dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, distortedEVDiff = sub_data$distortedEVDiff[100], distortedQVDiff = sub_data$distortedQVDiff[100], probFractalDraw = sub_data$probFractalDraw[100], barrierDecay = 0, EVLeft = sub_data$EVLeft[100], EVRight = sub_data$EVRight[100], QVLeft = sub_data$QVLeft[100], QVRight = sub_data$QVRight[100])
 ```
-Simulate a dataset using half the stimuli and this three integrator model.
+
+Simulate a dataset using half the stimuli filtered earlier and this three integrator model.
 
 ```{r}
 m4b_1 = sim_task(sub_data, model_name = "model4b", dLott=0.04, dFrac=0.03, dArb=0.06, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01)
@@ -122,90 +105,101 @@ sim_sanity_checks(m4b_1, checks=c(1,3,4))
 Increasing the fractal drift rate can take care of the slower choice for when fractals are more relevant to a large degree except for the edge case trials where only the fractals matter.
 
 ```{r}
-m4b_2 = sim_task(sub_data, model_name = "model4b", dLott=0.035, dFrac=0.06, dArb=0.06, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01)
+m4b_2 = sim_task(sub_data, model_name = "model4b", dLott=0.03, dFrac=0.06, dArb=0.06, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01)
 ```
 
 ```{r}
 sim_sanity_checks(m4b_2, checks=c(1,3,4))
 ```
 
-What does the relationship between RT and absolute evidence for an option look like in simulated data?
+Are the effects by value difference there?
 
 ```{r}
-tmp = sub_data %>%
-  mutate(abs_distorted_side_value = abs(distortedEVDiff+distortedQVDiff),
-         abs_distorted_side_value_bins = cut(abs_distorted_side_value, breaks=seq(-1e-10,.38,.03))) %>%
-  mutate(data_type="true")
+m4b_2 %>%
+  mutate(lottery_ev_diff = round(abs(EVLeft - EVRight),3),
+         lottery_ev_diff = ifelse(lottery_ev_diff ==0, "no EV diff", ifelse(lottery_ev_diff == .2, "small EV diff", ifelse(lottery_ev_diff == .4, "large EV diff", NA))),
+         lottery_ev_diff = factor(lottery_ev_diff, levels=c("no EV diff", "small EV diff", "large EV diff"), labels = c("no", "small", "large")),
+         logRt = log(reactionTime),
+         probFractalDraw = as.factor(probFractalDraw)) %>%
+  group_by(probFractalDraw, lottery_ev_diff) %>%
+  summarise(.groups = "keep",
+            mean_logRt = mean(logRt),
+            sem_logRt = sd(logRt)/sqrt(n())) %>%
+  ggplot(aes(probFractalDraw, mean_logRt,color=lottery_ev_diff))+
+  geom_point(position=position_dodge(width=.5))+
+  geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2,position=position_dodge(width=.5))+
+  theme(legend.position = "bottom")+
+  labs(color="Lottery EV difference", y="Mean Log RT", x="p(Fractal)")+
+  scale_color_manual(values = c(cbbPalette[3], cbbPalette[5:6]))
+```
 
+Model not surprisingly predicts QV diff effects on RTs BUT note that these QV diff bins are not grouped by subject.
 
-m4b_1 %>%
-  mutate(abs_distorted_side_value = abs(distortedEVDiff+distortedQVDiff),
-         abs_distorted_side_value_bins = cut(abs_distorted_side_value, breaks=seq(-1e-10,.38,.03))) %>%
-  group_by(abs_distorted_side_value_bins) %>%
-  summarise(meanRt = mean(reactionTime),
-            semRt = sd(reactionTime)/sqrt(n()), .groups="keep") %>%
-  mutate(data_type="sim") %>%
-  rbind(tmp %>% 
-          group_by(abs_distorted_side_value_bins) %>%
-          summarise(meanRt = mean(reactionTime),
-                    semRt = sd(reactionTime)/sqrt(n())) %>%
-           mutate(data_type="true")) %>%
-  ggplot(aes(abs_distorted_side_value_bins, meanRt, col=data_type))+
+So effectively this assumes the same drift properties for all subjects and 
+
+Maybe this isn't a good way of looking at value difference effects. Maybe instead I should use absolute distorted value.
+
+```{r}
+m4b_2 %>%
+  mutate(logRt = log(reactionTime),
+         QVDiff = abs(QVLeft - QVRight),
+         diff_level = ifelse(QVDiff < quantile(QVDiff, probs=c(.33))[[1]], "small",
+                             ifelse(QVDiff > quantile(QVDiff, probs=c(.66))[[1]], "large", "medium")),
+         diff_level = factor(diff_level, levels=c("small", "medium", "large")),
+         probFractalDraw = as.factor(probFractalDraw)) %>%
+  group_by(probFractalDraw, diff_level) %>%
+  summarise(.groups = "keep",
+            mean_logRt = mean(logRt),
+            sem_logRt = sd(logRt)/sqrt(n())) %>%
+  ggplot(aes(probFractalDraw, mean_logRt,color=diff_level))+
+  geom_point(position=position_dodge(width=.5))+
+  geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2,position=position_dodge(width=.5))+
+  theme(legend.position = "bottom")+
+  labs(color="Fractal QV difference", y="Mean Log RT", x="p(Fractal)")+
+  scale_color_manual(values = c(cbbPalette[3], cbbPalette[5:6]))
+```
+
+```{r}
+sub_data %>%
+  group_by(subnum) %>%
+  mutate(logRt = log(reactionTime),
+         QVDiff = abs(QVLeft - QVRight),
+         diff_level = ifelse(QVDiff < quantile(QVDiff, probs=c(.33))[[1]], "small",
+                             ifelse(QVDiff > quantile(QVDiff, probs=c(.66))[[1]], "large", "medium")),
+         diff_level = factor(diff_level, levels=c("small", "medium", "large")),
+         probFractalDraw = as.factor(probFractalDraw)) %>%
+  group_by(probFractalDraw, diff_level) %>%
+  summarise(.groups = "keep",
+            mean_logRt = mean(logRt),
+            sem_logRt = sd(logRt)/sqrt(n())) %>%
+  ggplot(aes(probFractalDraw, mean_logRt,color=diff_level))+
+  geom_point(position=position_dodge(width=.5))+
+  geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2,position=position_dodge(width=.5))+
+  theme(legend.position = "bottom")+
+  labs(color="Fractal QV difference", y="Mean Log RT", x="p(Fractal)")+
+  scale_color_manual(values = c(cbbPalette[3], cbbPalette[5:6]))
+```
+
+```{r}
+sub_data %>%
+  ggplot(aes(abs(distortedEVDiff), reactionTime))+
   geom_point()+
-  geom_errorbar(aes(ymin=meanRt-semRt,ymax=meanRt+semRt), width=.2)+
-  xlab("Absolute evidence ")+
-  theme(axis.text.x = element_text(angle=45),
-        legend.position = "bottom")
-```
-How could the negative relationship between RT and absolute evidence for an option be more pronounced for a three integrator model?
-
-Start with looking at how the integrators move for the most extreme trials
-
-```{r}
-sample_stim = tmp %>% 
-  filter(abs_distorted_side_value_bins == "(0.03,0.06]") %>%
-  arrange(reactionTime)
-
-for(i in 1:5){
-  
-  out = sim_trial(dLott=0.03, dFrac=0.06, dArb=0.06, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, distortedEVDiff = sample_stim$distortedEVDiff[i], distortedQVDiff = sample_stim$distortedQVDiff[i], probFractalDraw = sample_stim$probFractalDraw[i], barrierDecay = 0, EVLeft = sample_stim$EVLeft[i], EVRight = sample_stim$EVRight[i], QVLeft = sample_stim$QVLeft[i], QVRight = sample_stim$QVRight[i], debug=TRUE)
-  
-  if (i == 1){
-    pred_df = out$out
-  } else{
-    pred_df = rbind(pred_df, out$out)
-  }
-  
-  debug_df = out$debug_df
-  
-  p = debug_df %>%
-    select(time, arbitratorRDV, lotteryRDV, fractalRDV) %>%
-    gather(key, value, -time) %>%
-    ggplot(aes(time, value, color=key))+
-    geom_line()+
-    geom_hline(aes(yintercept=0), linetype="dashed") +
-    theme(legend.position = "bottom")
-  
-  print(p)
-  
-}
-
-
+  geom_smooth(method="lm", formula='y~x')
 ```
 
+Are the effects by what the choice depends on there?
+
 ```{r}
-head(sample_stim)
+
 ```
 
 Are the predicted response times close to the true response times? No! Despite the apparent correspondance when looking at aggregate data grouped by probFractalDraw level the individual trial estimates are not correlated at all.
 
 ```{r}
 m4b_2 %>%
-  mutate(abs_distorted_side_value = abs(distortedEVDiff+distortedQVDiff),
-         abs_distorted_side_value_bins = cut(abs_distorted_side_value, breaks=seq(-1e-10,.38,.03))) %>%
-  left_join(tmp, by=c("EVLeft", "EVRight", "QVLeft", "QVRight", "distortedEVDiff", "distortedQVDiff", "probFractalDraw")) %>%
+  left_join(sub_data, by=c("EVLeft", "EVRight", "QVLeft", "QVRight", "distortedEVDiff", "distortedQVDiff", "probFractalDraw")) %>%
   ggplot(aes(reactionTime.y, reactionTime.x))+
-    geom_point(color="light gray")+
+  geom_point(color="light gray")+
   geom_smooth(formula="y~x", method="lm")+
   geom_abline(aes(slope=1, intercept=0), linetype="dashed")+
   xlab("True RT")+
@@ -214,14 +208,6 @@ m4b_2 %>%
 
 Does a well-established model do better in such an absolute check of model fit????
 
-```{r}
-
-```
-
-
-```{r}
-sim_trial(dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, distortedEVDiff = sub_data$distortedEVDiff[100], distortedQVDiff = sub_data$distortedQVDiff[100], probFractalDraw = sub_data$probFractalDraw[100], barrierDecay = 0, EVLeft = sub_data$EVLeft[100], EVRight = sub_data$EVRight[100], QVLeft = sub_data$QVLeft[100], QVRight = sub_data$QVRight[100])
-```
 
 Check the fitting function
 

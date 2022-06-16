@@ -17,6 +17,7 @@ cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00"
 helpers_path = here('analysis/helpers/')
 source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 fig_out_path = paste0(here(), '/outputs/fig/')
+theme_set(theme_bw())
 ```
 
 ```{r}
@@ -42,8 +43,10 @@ clean_beh_data = clean_beh_data %>%
 ```
 
 ```{r message=FALSE}
-model_name = 'fit_rl_hierarchical_oneParamSymmNonLinearProbDistortion_rpeBoth.R'
-source(paste0(helpers_path, 'rlModels/', model_name))
+# model_name = 'fit_rl_hierarchical_oneParamSymmNonLinearProbDistortion_rpeBoth.R'
+# source(paste0(helpers_path, 'rlModels/', model_name))
+
+source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamDoubleSymmLinearProbDistortion_rpeBoth.R'))
 ```
 
 ```{r}
@@ -194,9 +197,13 @@ p
 ```{r}
 tmp = clean_beh_data %>%
   group_by(subnum) %>%
-  mutate(diff_level = ifelse(QVDiff < quantile(QVDiff, probs=c(.33))[[1]], "small",
-                                    ifelse(QVDiff > quantile(QVDiff, probs=c(.66))[[1]], "large", "medium")),
-         diff_level = factor(diff_level, levels=c("small", "medium", "large"))) %>%
+  # mutate(diff_level = ifelse(QVDiff < quantile(QVDiff, probs=c(.33))[[1]], "small",
+  #                                   ifelse(QVDiff > quantile(QVDiff, probs=c(.66))[[1]], "large", "medium")),
+  #        diff_level = factor(diff_level, levels=c("small", "medium", "large"))) %>%
+  mutate(fractal_qv_diff = abs(leftQValue - rightQValue),
+         fractal_qv_diff = ifelse(fractal_qv_diff < quantile(fractal_qv_diff, probs=c(.33))[[1]], "small",
+                                    ifelse(fractal_qv_diff > quantile(fractal_qv_diff, probs=c(.66))[[1]], "large", "medium")),
+         diff_level = factor(fractal_qv_diff, levels=c("small", "medium", "large"))) %>%
   ungroup() %>%
   group_by(probFractalDraw, diff_level) %>%
   summarise(.groups = "keep",
@@ -215,8 +222,9 @@ tmp2 = clean_beh_data %>%
 
 p = clean_beh_data %>%
   group_by(subnum) %>%
-  mutate(diff_level = ifelse(fractal_diff < quantile(fractal_diff, probs=c(.33))[[1]], "small",
-                                    ifelse(fractal_diff > quantile(fractal_diff, probs=c(.66))[[1]], "large", "medium")),
+  mutate(fractal_prob_diff = abs(fractalLeftProb - fractalRightProb),
+         diff_level = ifelse(fractal_prob_diff < quantile(fractal_prob_diff, probs=c(.33))[[1]], "small",
+                                    ifelse(fractal_prob_diff > quantile(fractal_prob_diff, probs=c(.66))[[1]], "large", "medium")),
          diff_level = factor(diff_level, levels=c("small", "medium", "large"))) %>%
   ungroup() %>%
   group_by(probFractalDraw, diff_level) %>%
@@ -244,7 +252,7 @@ p = clean_beh_data %>%
   scale_y_continuous(breaks = c(-.3, 0, .3), limits=c(-.36, .36))+
   facet_wrap(~diff_type, nrow=3)
 
-ggsave(file=paste0(fig_out_path, 'poster_rt_by_value_diff.jpg'), p, height = 15, width=8, units="in")
+ggsave(file=paste0(fig_out_path, 'poster_rt_by_value_diff_corrected_GROUPED.jpg'), p, height = 15, width=8, units="in")
 p
 ```
 

@@ -13,7 +13,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       rename(QVLeft = leftQValue, QVRight = rightQValue, EVLeft = leftLotteryEV, EVRight = rightLotteryEV) %>%
       select(subnum, EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, data_type)
   }
-    
+  
   
   
   #Check 1
@@ -50,7 +50,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
   }
   
   
-  # Check 3: RT distributions
+  # Check 3: RT histograms overlaid with predicted densities
   if(3 %in% checks){
     if(compare_rts){
       p = sim_data %>%
@@ -168,7 +168,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
         scale_color_manual(values = cbbPalette[2:1])+
         theme(legend.position = "bottom")+
         labs(color="", title="Relevant attribute effect on choice") 
-        
+      
     } 
     
     yrange = layer_scales(p)$y$range$range
@@ -178,5 +178,97 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
     }
     
     print(p)
-  }  
+  }
+  
+  # Check 6: EV difference effect on RT
+  if(6 %in% checks){
+    
+    tmp = sim_data %>%
+      mutate(lottery_ev_diff = round(abs(EVLeft - EVRight),3),
+             lottery_ev_diff = ifelse(lottery_ev_diff ==0, "no EV diff", ifelse(lottery_ev_diff == .2, "small EV diff", ifelse(lottery_ev_diff == .4, "large EV diff", NA))),
+             lottery_ev_diff = factor(lottery_ev_diff, levels=c("no EV diff", "small EV diff", "large EV diff"), labels = c("no", "small", "large")),
+             logRt = log(reactionTime),
+             probFractalDraw = as.factor(probFractalDraw)) %>%
+      group_by(probFractalDraw, lottery_ev_diff) %>%
+      summarise(.groups = "keep",
+                mean_logRt = mean(logRt),
+                sem_logRt = sd(logRt)/sqrt(n())) %>%
+      mutate(data_type="sim")
+    
+    if(compare_rts){
+      
+      tmp_true = true_data %>%
+        mutate(lottery_ev_diff = round(abs(EVLeft - EVRight),3),
+               lottery_ev_diff = ifelse(lottery_ev_diff ==0, "no EV diff", ifelse(lottery_ev_diff == .2, "small EV diff", ifelse(lottery_ev_diff == .4, "large EV diff", NA))),
+               lottery_ev_diff = factor(lottery_ev_diff, levels=c("no EV diff", "small EV diff", "large EV diff"), labels = c("no", "small", "large")),
+               logRt = log(reactionTime),
+               probFractalDraw = as.factor(probFractalDraw)) %>%
+        group_by(probFractalDraw, lottery_ev_diff) %>%
+        summarise(.groups = "keep",
+                  mean_logRt = mean(logRt),
+                  sem_logRt = sd(logRt)/sqrt(n())) %>%
+        mutate(data_type="true")
+      
+      tmp = rbind(tmp, tmp_true)
+    }
+    
+    p = tmp %>%
+      ggplot(aes(probFractalDraw, mean_logRt,color=lottery_ev_diff, alpha = data_type, shape=data_type))+
+      geom_point(position=position_dodge(width=.5))+
+      geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2,position=position_dodge(width=.5))+
+      theme(legend.position = "bottom")+
+      labs(color="Lottery EV difference", y="Mean Log RT", x="p(Fractal)")+
+      scale_color_manual(values = c(cbbPalette[3], cbbPalette[5:6]))+
+      scale_alpha_manual(values=c(1, .5))
+    
+    print(p)
+  }
+  
+  if(7 %in% checks){
+    
+    tmp = sim_data %>%
+      mutate(logRt = log(reactionTime),
+             QVDiff = abs(QVLeft - QVRight),
+             diff_level = ifelse(QVDiff < quantile(QVDiff, probs=c(.33))[[1]], "small",
+                                 ifelse(QVDiff > quantile(QVDiff, probs=c(.66))[[1]], "large", "medium")),
+             diff_level = factor(diff_level, levels=c("small", "medium", "large")),
+             probFractalDraw = as.factor(probFractalDraw)) %>%
+      group_by(probFractalDraw, diff_level) %>%
+      summarise(.groups = "keep",
+                mean_logRt = mean(logRt),
+                sem_logRt = sd(logRt)/sqrt(n())) %>%
+      mutate(data_type="sim")
+    
+    if(compare_rts){
+      tmp_true = true_data %>%
+        # group_by(subnum) %>%
+        mutate(logRt = log(reactionTime),
+               QVDiff = abs(QVLeft - QVRight),
+               diff_level = ifelse(QVDiff < quantile(QVDiff, probs=c(.33))[[1]], "small",
+                                   ifelse(QVDiff > quantile(QVDiff, probs=c(.66))[[1]], "large", "medium")),
+               diff_level = factor(diff_level, levels=c("small", "medium", "large")),
+               probFractalDraw = as.factor(probFractalDraw)) %>%
+        group_by(probFractalDraw, diff_level) %>%
+        summarise(.groups = "keep",
+                  mean_logRt = mean(logRt),
+                  sem_logRt = sd(logRt)/sqrt(n())) %>%
+        mutate(data_type="true")
+      
+      tmp = rbind(tmp, tmp_true)
+    }
+    
+    p = tmp %>%
+      ggplot(aes(probFractalDraw, mean_logRt,color=diff_level, alpha = data_type, shape=data_type))+
+      geom_point(position=position_dodge(width=.5))+
+      geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2,position=position_dodge(width=.5))+
+      theme(legend.position = "bottom")+
+      labs(color="Fractal QV difference", y="Mean Log RT", x="p(Fractal)")+
+      scale_color_manual(values = c(cbbPalette[3], cbbPalette[5:6]))+
+      scale_alpha_manual(values=c(1, .5))
+    
+    print(p)
+    
+  }
+  
+  
 }

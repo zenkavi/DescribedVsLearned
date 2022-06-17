@@ -224,6 +224,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
     print(p)
   }
   
+  # Check 7: QV difference effect on RT
   if(7 %in% checks){
     
     tmp = sim_data %>%
@@ -270,5 +271,62 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
     
   }
   
+  # Check 8: EV difference effect on RT
+  if(8 %in% checks){
+    
+    tmp = sim_data %>%
+      mutate(leftLotterySubjBetter = distortedEVDiff > 0,
+             leftFractSubjBetter = distortedQVDiff > 0,
+             choseBetterSubjLott = ifelse(choice == "left" & leftLotterySubjBetter, "correct", ifelse(choice == "right" & !leftLotterySubjBetter, "correct", "incorrect")),
+             choseBetterSubjFrac = ifelse(choice == "left" & leftFractSubjBetter, "correct", ifelse(choice == "right" & !leftFractSubjBetter, "correct", "incorrect")),
+             logRt = log(reactionTime),
+             fractalMoreRelevant = ifelse(probFractalDraw > .5, "fractal more relevant", "lottery more relevant"),
+             fractalMoreRelevant = factor(fractalMoreRelevant, levels=c("lottery more relevant", "fractal more relevant"))) %>%
+      select(fractalMoreRelevant, choseBetterSubjLott, choseBetterSubjFrac, logRt) %>%
+      gather(key, value, -fractalMoreRelevant, -logRt) %>%
+      group_by(fractalMoreRelevant, key, value) %>%
+      summarise(.groups="keep",
+                meanLogRt = mean(logRt),
+                semLogRt = sd(logRt)/sqrt(n())) %>%
+      mutate(data_type="stim") 
+    
+    if(compare_rts){
+      
+      tmp_true = true_data %>%
+        mutate(leftLotterySubjBetter = distortedEVDiff > 0,
+               leftFractSubjBetter = distortedQVDiff > 0,
+               choseBetterSubjLott = ifelse(choice == "left" & leftLotterySubjBetter, "correct", ifelse(choice == "right" & !leftLotterySubjBetter, "correct", "incorrect")),
+               choseBetterSubjFrac = ifelse(choice == "left" & leftFractSubjBetter, "correct", ifelse(choice == "right" & !leftFractSubjBetter, "correct", "incorrect")),
+               logRt = log(reactionTime),
+               fractalMoreRelevant = ifelse(probFractalDraw > .5, "fractal more relevant", "lottery more relevant"),
+               fractalMoreRelevant = factor(fractalMoreRelevant, levels=c("lottery more relevant", "fractal more relevant"))) %>%
+        select(fractalMoreRelevant, choseBetterSubjLott, choseBetterSubjFrac, logRt) %>%
+        gather(key, value, -fractalMoreRelevant, -logRt) %>%
+        group_by(fractalMoreRelevant, key, value) %>%
+        summarise(.groups="keep",
+                  meanLogRt = mean(logRt),
+                  semLogRt = sd(logRt)/sqrt(n())) %>%
+        mutate(data_type =  "true")
+      
+      tmp = rbind(tmp, tmp_true)
+      
+    }
+    
+    p = tmp %>%
+      rbind(tmp_true) %>%
+      mutate(correctBasedOn = ifelse(key == "choseBetterSubjLott", "Correct based on Lottery", "Correct based on Fractal"),
+             correctBasedOn = factor(correctBasedOn, levels = c("Correct based on Lottery", "Correct based on Fractal"))) %>%
+      ggplot(aes(fractalMoreRelevant, meanLogRt, color=value, alpha=data_type, shape=data_type))+
+      geom_point(position=position_dodge(width=.5))+
+      geom_errorbar(aes(ymin=meanLogRt-semLogRt, ymax=meanLogRt+semLogRt),width=.2,position=position_dodge(width=.5))+
+      xlab("")+
+      theme(legend.position = "bottom")+
+      scale_alpha_manual(values = c(1, .5))+
+      scale_color_manual(values = c("blue", "red"))+
+      facet_wrap(~correctBasedOn)
+    
+    print(p)
+    
+  }
   
 }

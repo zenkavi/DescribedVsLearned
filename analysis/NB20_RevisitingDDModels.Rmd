@@ -111,59 +111,7 @@ m4b_2 = sim_task(sub_data, model_name = "model4b", dLott=0.03, dFrac=0.06, dArb=
 ```
 
 ```{r}
-sim_sanity_checks(m4b_2, checks=c(1,3,4,6, 7))
-```
-
-Are the effects by what the choice depends on there?
-
-"Incorrect" choice based on the relevant attribute is slower for both attributes.
-
-```{r}
-tmp_true = sub_data %>%
-  mutate(leftLotterySubjBetter = distortedEVDiff > 0,
-         leftFractSubjBetter = distortedQVDiff > 0,
-         choseBetterSubjLott = ifelse(choiceLeft == 1 & leftLotterySubjBetter, TRUE, ifelse(choiceLeft == 0 & !leftLotterySubjBetter, TRUE, FALSE)),
-         choseBetterSubjFrac = ifelse(choiceLeft == 1 & leftFractSubjBetter, TRUE, ifelse(choiceLeft == 0 & !leftFractSubjBetter, TRUE, FALSE)),
-         logRt = log(reactionTime),
-         fractalMoreRelevant = ifelse(probFractalDraw > .5, "fractal more relevant", "lottery more relevant"),
-         fractalMoreRelevant = factor(fractalMoreRelevant, levels=c("lottery more relevant", "fractal more relevant"))) %>%
-  select(fractalMoreRelevant, choseBetterSubjLott, choseBetterSubjFrac, logRt) %>%
-  gather(key, value, -fractalMoreRelevant, -logRt) %>%
-  group_by(fractalMoreRelevant, key, value) %>%
-  summarise(.groups="keep",
-            meanLogRt = mean(logRt),
-            semLogRt = sd(logRt)/sqrt(n())) %>%
-  mutate(data_type =  "true")
-
-
-tmp = m4b_2 %>%
-  mutate(leftLotterySubjBetter = distortedEVDiff > 0,
-         leftFractSubjBetter = distortedQVDiff > 0,
-         choseBetterSubjLott = ifelse(choice == "left" & leftLotterySubjBetter, TRUE, ifelse(choice == "right" & !leftLotterySubjBetter, TRUE, FALSE)),
-         choseBetterSubjFrac = ifelse(choice == "left" & leftFractSubjBetter, TRUE, ifelse(choice == "right" & !leftFractSubjBetter, TRUE, FALSE)),
-         logRt = log(reactionTime),
-         fractalMoreRelevant = ifelse(probFractalDraw > .5, "fractal more relevant", "lottery more relevant"),
-         fractalMoreRelevant = factor(fractalMoreRelevant, levels=c("lottery more relevant", "fractal more relevant"))) %>%
-  select(fractalMoreRelevant, choseBetterSubjLott, choseBetterSubjFrac, logRt) %>%
-  gather(key, value, -fractalMoreRelevant, -logRt) %>%
-  group_by(fractalMoreRelevant, key, value) %>%
-  summarise(.groups="keep",
-            meanLogRt = mean(logRt),
-            semLogRt = sd(logRt)/sqrt(n())) %>%
-  mutate(data_type="stim") 
-
-tmp %>%
-  rbind(tmp_true) %>%
-  ggplot(aes(fractalMoreRelevant, meanLogRt, color=value, shape=key, alpha=data_type))+
-  geom_point(position=position_dodge(width=.5))+
-  geom_errorbar(aes(ymin=meanLogRt-semLogRt, ymax=meanLogRt+semLogRt),width=.2,position=position_dodge(width=.5))+
-  xlab("")+
-  theme(legend.position = "bottom")+
-  scale_alpha_manual(values = c(1, .5))
-
-
-
-  
+sim_sanity_checks(m4b_2, checks=c(1,3,4,6,7,8))
 ```
 
 Are the predicted response times close to the true response times? No! Despite the apparent correspondence when looking at aggregate data grouped by probFractalDraw level the individual trial estimates are not correlated at all.

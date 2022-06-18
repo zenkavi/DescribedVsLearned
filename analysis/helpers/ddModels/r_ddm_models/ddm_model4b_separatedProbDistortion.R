@@ -123,50 +123,52 @@ sim_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
   return(out)
 }
 
-library(tidyverse)
-
-getArbMuDist = function(pLottStates,  pFracStates, states){
-  
-  AbsLottStates = unique(abs(round(states, 7))) # rounding to the 7th decimal is sufficient for these binds
-  AbsFracStates = unique(abs(round(states, 7)))
-  halfStateLen = floor(length(states)/2)
-  pAbsLottStates = c( pLottStates[1:halfStateLen]+pLottStates[length(states):(halfStateLen+2)] , pLottStates[halfStateLen+1])
-  pAbsFracStates = c( pFracStates[1:halfStateLen]+pFracStates[length(states):(halfStateLen+2)] , pFracStates[halfStateLen+1])
-  
-  absLottIntegrator = data.frame(AbsLottStates, pAbsLottStates)
-  absFracIntegrator = data.frame(AbsFracStates, pAbsFracStates)
-  
-  ArbMuDist = expand.grid(AbsLottStates, AbsFracStates) %>%
-    rename(AbsLottStates = Var1, AbsFracStates = Var2) %>%
-    left_join(absLottIntegrator, by="AbsLottStates") %>%
-    left_join(absFracIntegrator, by="AbsFracStates") %>%
-    mutate(DiffStates = round(AbsLottStates-AbsFracStates,7),
-           pDiffStates = pAbsLottStates * pAbsFracStates) %>%
-    group_by(DiffStates) %>%
-    summarise(sumPDiffStates = sum(pDiffStates)) %>%
-    filter(sumPDiffStates > 0) #to reduce the number of computations in the for loop below
-  
-  return(ArbMuDist)
-}
-
-getArbStateProbs = function(ArbMuDist, changeMatrix, dArb, sigmaArb, pArbStates){
-  
-  pChangeMatrixArb = matrix(data=0, nrow = nrow(changeMatrix), ncol=ncol(changeMatrix)) 
-  
-  # dnorm(changeMatrix, diffStates*dArb, sigmaArb) -> prob density of observing  change of size x in the changeMatrix if the change is coming from a distribution with mu=diffStates*dArb and sd = sigmaArb
-  # weighted sum of dnorm(changeMatrix, diffStates*dArb, sigmaArb) weighted by the prob of the mu == diffState
-  for (i in 1:nrow(ArbMuDist)){
-    pChangeMatrixArb = pChangeMatrixArb + ArbMuDist$sumPDiffStates[i]*dnorm(changeMatrix, ArbMuDist$DiffStates[i]*dArb, sigmaArb)
-  }
-  
-  pArbStatesNew = pArbStates %*% pChangeMatrixArb
-  
-  return(pArbStatesNew)
-}
 
 fit_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrierDecay, barrier=1, nonDecisionTime=0, bias=0.1, timeStep=10, approxStateStep = 0.1, debug=FALSE, ...){
   
+  ############### HELPER FUNCTIONS DEFINED WITHIN FUNCTION FOR SCOPING OF TASK FITTING ###############
 
+  getArbMuDist = function(pLottStates,  pFracStates, states){
+    
+    AbsLottStates = unique(abs(round(states, 7))) # rounding to the 7th decimal is sufficient for these binds
+    AbsFracStates = unique(abs(round(states, 7)))
+    halfStateLen = floor(length(states)/2)
+    pAbsLottStates = c( pLottStates[1:halfStateLen]+pLottStates[length(states):(halfStateLen+2)] , pLottStates[halfStateLen+1])
+    pAbsFracStates = c( pFracStates[1:halfStateLen]+pFracStates[length(states):(halfStateLen+2)] , pFracStates[halfStateLen+1])
+    
+    absLottIntegrator = data.frame(AbsLottStates, pAbsLottStates)
+    absFracIntegrator = data.frame(AbsFracStates, pAbsFracStates)
+    
+    ArbMuDist = expand.grid(AbsLottStates, AbsFracStates) %>%
+      rename(AbsLottStates = Var1, AbsFracStates = Var2) %>%
+      left_join(absLottIntegrator, by="AbsLottStates") %>%
+      left_join(absFracIntegrator, by="AbsFracStates") %>%
+      mutate(DiffStates = round(AbsLottStates-AbsFracStates,7),
+             pDiffStates = pAbsLottStates * pAbsFracStates) %>%
+      group_by(DiffStates) %>%
+      summarise(sumPDiffStates = sum(pDiffStates)) %>%
+      filter(sumPDiffStates > 0) #to reduce the number of computations in the for loop below
+    
+    return(ArbMuDist)
+  }
+  
+  getArbStateProbs = function(ArbMuDist, changeMatrix, dArb, sigmaArb, pArbStates){
+    
+    pChangeMatrixArb = matrix(data=0, nrow = nrow(changeMatrix), ncol=ncol(changeMatrix)) 
+    
+    # dnorm(changeMatrix, diffStates*dArb, sigmaArb) -> prob density of observing  change of size x in the changeMatrix if the change is coming from a distribution with mu=diffStates*dArb and sd = sigmaArb
+    # weighted sum of dnorm(changeMatrix, diffStates*dArb, sigmaArb) weighted by the prob of the mu == diffState
+    for (i in 1:nrow(ArbMuDist)){
+      pChangeMatrixArb = pChangeMatrixArb + ArbMuDist$sumPDiffStates[i]*dnorm(changeMatrix, ArbMuDist$DiffStates[i]*dArb, sigmaArb)
+    }
+    
+    pArbStatesNew = pArbStates %*% pChangeMatrixArb
+    
+    return(pArbStatesNew)
+  }
+  
+  ####################################### HELPER FUNCTIONS END #######################################
+  
   kwargs = list(...)
   
   choice=kwargs$choice #must be 1 for left and -1 for left
@@ -287,6 +289,10 @@ fit_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
   }
   
   out = data.frame(likelihood = likelihood, distortedEVDiff = distortedEVDiff, distortedQVDiff = distortedQVDiff, probFractalDraw = probFractalDraw, choice=choice, reactionTime = reactionTime, dArb = dArb, dLott = dLott, dFrac = dFrac, sigmaArb = sigmaArb, sigmaLott = sigmaLott, sigmaFrac = sigmaFrac, barrierDecay = barrierDecay, barrier=barrier[numTimeSteps], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep)
+  
+  if(debug){
+    out = list(out = out, prStatesArb = data.frame(prStatesArb), prStatesLott = data.frame(prStatesLott), prStatesFrac = data.frame(prStatesFrac))
+  }
   
   
   return(out)

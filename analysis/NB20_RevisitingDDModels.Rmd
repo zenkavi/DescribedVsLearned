@@ -16,11 +16,20 @@ theme_set(theme_bw())
 library(here)
 cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 helpers_path = here('analysis/helpers/')
+
+source(paste0(helpers_path,'ddModels/sim_task.R'))
+source(paste0(helpers_path,'ddModels/fit_task.R'))
 source(paste0(helpers_path,'01_clean_behavioral_data.R'))
+source(paste0(helpers_path, 'get_qvals.R'))
+source(paste0(helpers_path,'optimPostProcess/sim_sanity_checks.R'))
+
+
+set.seed(38573)
 ```
 
+Add distorted value estimates using the hierarchical RL fit.
+
 ```{r message=FALSE}
-source(paste0(helpers_path, 'get_qvals.R'))
 
 source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamDoubleSymmLinearProbDistortion_rpeBoth.R'))
 
@@ -58,13 +67,6 @@ clean_beh_data %>%
 
 Simulate data with a 3 integrator model.
 
-```{r message=FALSE}
-source(paste0(helpers_path,'ddModels/sim_task.R')) # do this first not to mess with cluster setup?
-source(paste0(helpers_path,'optimPostProcess/sim_sanity_checks.R'))
-
-set.seed(38573)
-```
-
 Select half the data to use as input stimuli for simulated data.
 
 ```{r}
@@ -91,33 +93,19 @@ sim_trial(dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03,
 Simulate a dataset using half the stimuli filtered earlier and this three integrator model.
 
 ```{r}
-m4b_1 = sim_task(sub_data, model_name = "model4b", dLott=0.04, dFrac=0.03, dArb=0.06, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01)
-```
-
-Check how well the RT patterns in the simulated data match the true data.
-
-With this parameter setting predicted choice is systematically slower for trials where the fractals matter more. The true data histograms versus predicted density curves also do not look in general.
-
-```{r}
-sim_sanity_checks(m4b_1, checks=c(1,3,4))
-```
-
-Increasing the fractal drift rate can take care of the slower choice for when fractals are more relevant to a large degree except for the edge case trials where only the fractals matter.
-
-Value difference effects on RT are exaggerated.
-
-```{r}
-m4b_2 = sim_task(sub_data, model_name = "model4b", dLott=0.03, dFrac=0.06, dArb=0.06, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01)
+m4b_1 = sim_task(sub_data, model_name = "model4b", dLott=0.03, dFrac=0.06, dArb=0.06, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01)
 ```
 
 ```{r}
-sim_sanity_checks(m4b_2, checks=c(1,3,4,6,7,8))
+sim_sanity_checks(m4b_1, checks=c(1,3,4,5,6,7,8), compare_logits = TRUE)
 ```
 
-Are the predicted response times close to the true response times? No! Despite the apparent correspondence when looking at aggregate data grouped by probFractalDraw level the individual trial estimates are not correlated at all.
+Are the predicted response times close to the true response times? Not really. Despite the apparent correspondence when looking at aggregate data grouped by probFractalDraw level the individual trial estimates are not correlated at all.
+
+Does a well-established model do better in such an absolute check of model fit?
 
 ```{r}
-m4b_2 %>%
+m4b_1 %>%
   left_join(sub_data, by=c("EVLeft", "EVRight", "QVLeft", "QVRight", "distortedEVDiff", "distortedQVDiff", "probFractalDraw")) %>%
   ggplot(aes(reactionTime.y, reactionTime.x))+
   geom_point(color="light gray")+
@@ -127,10 +115,28 @@ m4b_2 %>%
   ylab("Predicted RT")
 ```
 
-Does a well-established model do better in such an absolute check of model fit????
-
-
 Check the fitting function
+
+```{r}
+fit_trial_list = list()
+fit_trial_list[['model4b']] = fit_trial
+```
+
+```{r}
+i = 100
+
+fit_trial(dLott=0.03, dFrac=0.06, dArb=0.06, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, barrierDecay=0, distortedEVDiff = m4b_1$distortedEVDiff[i],
+    distortedQVDiff = m4b_1$distortedQVDiff[i], choice = m4b_1$choice[i], reactionTime = m4b_1$reactionTime[i], probFractalDraw = m4b_1$probFractalDraw[i], debug=TRUE)
+```
+
+Too slow..
+
+```{r}
+# optim_out = visualMLE::optim_save(c(.05, .05, .05, .05, .05, .05), get_task_nll, data=m4b_2, par_names = c("dArb", "dLott", "dFrac","sigmaArb", "sigmaLott", "sigmaFrac", ), model_name="model4b", fix_pars = list(bias = 0.1), control = list(maxit=100))
+
+```
+
+Interactive figure updating state probabilities
 
 ```{r}
 

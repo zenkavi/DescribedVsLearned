@@ -132,6 +132,8 @@ fit_task = function(data_, model_name_, pars_, fix_pars_ = list(), fit_trial_lis
     probFractalDraw = data_$probFractalDraw,
     choice = data_$choice,
     reactionTime = data_$reactionTime,
+    distortedEVDiff = data_$distortedEVDiff,
+    distortedQVDiff = data_$distortedQVDiff,
     .combine = 'rbind'
   ) %dopar% {
     # Simulate RT and choice for a single trial with given DDM parameters and trial stimulus values
@@ -142,7 +144,8 @@ fit_task = function(data_, model_name_, pars_, fix_pars_ = list(), fit_trial_lis
               barrier = pars_$barrier, nonDecisionTime = pars_$nonDecisionTime, barrierDecay = pars_$barrierDecay,
               bias = pars_$bias, timeStep = pars_$timeStep, maxIter = pars_$maxIter, epsilon = pars_$epsilon,
               stimDelay = pars_$stimDelay,
-              EVLeft=EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight= QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = reactionTime)
+              EVLeft=EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight= QVRight, probFractalDraw = probFractalDraw, choice=choice, reactionTime = reactionTime,
+              distortedEVDiff = distortedEVDiff, distortedQVDiff = distortedQVDiff)
     
   }
   

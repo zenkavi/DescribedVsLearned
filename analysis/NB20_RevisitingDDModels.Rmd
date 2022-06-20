@@ -87,13 +87,13 @@ sim_trial_list[['model4b']] = sim_trial
 Test if trial simulating function works.
 
 ```{r}
-sim_trial(dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, distortedEVDiff = sub_data$distortedEVDiff[100], distortedQVDiff = sub_data$distortedQVDiff[100], probFractalDraw = sub_data$probFractalDraw[100], barrierDecay = 0, EVLeft = sub_data$EVLeft[100], EVRight = sub_data$EVRight[100], QVLeft = sub_data$QVLeft[100], QVRight = sub_data$QVRight[100])
+sim_trial(dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, distortedEVDiff = sub_data$distortedEVDiff[100], distortedQVDiff = sub_data$distortedQVDiff[100], probFractalDraw = sub_data$probFractalDraw[100], barrierDecay = 0, EVLeft = sub_data$EVLeft[100], EVRight = sub_data$EVRight[100], QVLeft = sub_data$QVLeft[100], QVRight = sub_data$QVRight[100])
 ```
 
 Simulate a dataset using half the stimuli filtered earlier and this three integrator model.
 
 ```{r}
-m4b_1 = sim_task(sub_data, model_name = "model4b", dLott=0.03, dFrac=0.06, dArb=0.06, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01)
+m4b_1 = sim_task(sub_data, model_name = "model4b", dLott=0.03, dFrac=0.06, dArb=0.05, sigmaLott = 0.03, sigmaFrac = 0.03)
 ```
 
 ```{r}
@@ -125,7 +125,7 @@ fit_trial_list[['model4b']] = fit_trial
 ```{r}
 i = 100
 
-fit_trial(dLott=0.03, dFrac=0.06, dArb=0.06, sigmaLott = 0.03, sigmaFrac = 0.03, sigmaArb = 0.01, barrierDecay=0, distortedEVDiff = m4b_1$distortedEVDiff[i],
+fit_trial(dLott=0.03, dFrac=0.06, dArb=0.06, sigmaLott = 0.03, sigmaFrac = 0.03, barrierDecay=0, distortedEVDiff = m4b_1$distortedEVDiff[i],
     distortedQVDiff = m4b_1$distortedQVDiff[i], choice = m4b_1$choice[i], reactionTime = m4b_1$reactionTime[i], probFractalDraw = m4b_1$probFractalDraw[i], debug=TRUE)
 ```
 
@@ -140,34 +140,6 @@ What does the distribution of the absolute value difference between two random v
 Sampling approach
 Can I get a sense of the mean of the arbitrator to use the Lombardi toolbox?
 
-```{r}
-data.frame(var1 = rnorm(2500, mean = 3, sd = 1),
-           var2 = rnorm(2500, mean = -1, sd = 1)) %>%
-  mutate(avar1 = abs(var1),
-         avar2 = abs(var2),
-         var3 = avar1 - avar2) %>%
-  gather(key, value) %>%
-  group_by(key) %>%
-  mutate(ave = mean(value)) %>%
-  ggplot(aes(value))+
-  geom_histogram(position = "identity", alpha=.5, bins=30)+
-  geom_vline(aes(xintercept=ave))+
-  # annotate(aes(label=as.character(round(ave,3))), "text", x=-4, y=200)+
-  facet_grid(key~.)+
-  scale_x_continuous(breaks = seq(-5, 6, .5))
-```
-
-```{r}
-data.frame(var1 = rnorm(10000, mean = 1.529, sd = .438),
-           var2 = rnorm(10000, mean = -2.167, sd = 3.793)) %>%
-  mutate(avar1 = abs(var1),
-         avar2 = abs(var2),
-         var3 = avar1 - avar2) %>%
-  gather(key, value) %>%
-  group_by(key) %>%
-  summarise(mu = mean(value),
-            sd = sd(value))
-```
 
 ```{r}
 get_abs_dist_moments = function(mu, sigma){
@@ -181,10 +153,47 @@ get_abs_dist_moments = function(mu, sigma){
     
   return(list(mu_y = mu_y, sigma_y = sigma_y))
 }
+
+
+get_abs_diff_dist_moments = function(mu1, sigma1, mu2, sigma2){
+  
+  tmp = get_abs_dist_moments(mu1, sigma1)
+  abs_mu1 = tmp$mu_y
+  abs_sigma1 = tmp$sigma_y
+  
+  tmp = get_abs_dist_moments(mu2, sigma2)
+  abs_mu2 = tmp$mu_y
+  abs_sigma2 = tmp$sigma_y
+  
+  diff_mu = abs_mu1 - abs_mu2
+  diff_sigma = sqrt(abs_sigma1^2 + abs_sigma2^2)
+  
+  # out = data.frame(abs_mu1 = abs_mu1, abs_sigma1 = abs_sigma1, abs_mu2 = abs_mu2, abs_sigma2 = abs_sigma2, diff_mu = diff_mu, diff_sigma = diff_sigma)
+  out = list(diff_mu = diff_mu, diff_sigma = diff_sigma)
+  
+  return(out)
+}
 ```
 
 ```{r}
-get_abs_dist_moments(-2.167, 3.793)
+mu1 = 0
+sigma1 = 2
+mu2 = -5
+sigma2 = 2
+
+data.frame(var1 = rnorm(10000, mean = mu1, sd = sigma1),
+           var2 = rnorm(10000, mean = mu2, sd = sigma2)) %>%
+  mutate(avar1 = abs(var1),
+         avar2 = abs(var2),
+         var3 = avar1 - avar2) %>%
+  gather(key, value) %>%
+  group_by(key) %>%
+  summarise(mu = mean(value),
+            sd = sd(value))
+```
+
+```{r}
+get_abs_diff_dist_moments(mu1, sigma1, mu2, sigma2)
 ```
 
 Interactive figure updating state probabilities

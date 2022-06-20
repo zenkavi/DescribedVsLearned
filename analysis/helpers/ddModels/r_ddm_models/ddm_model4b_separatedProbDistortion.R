@@ -1,4 +1,4 @@
-sim_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrierDecay, barrier=1, nonDecisionTime=0, bias=0.1, timeStep=10, maxIter=400, debug=FALSE,...){
+sim_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, barrier=1, nonDecisionTime=0, bias=0.1, timeStep=10, maxIter=400, debug=FALSE,...){
   
   # d : drift rate
   # sigma: sd of the normal distribution 
@@ -52,6 +52,7 @@ sim_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
   
   lottery_mu = dLott * distortedEVDiff
   fractal_mu = dFrac * distortedQVDiff
+  sigmaArb = sqrt(sigmaLott^2 + sigmaFrac^2)
   
   while (time<maxIter){
     
@@ -124,7 +125,43 @@ sim_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
 }
 
 
-fit_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrierDecay, barrier=1, nonDecisionTime=0, bias=0.1, timeStep=10, approxStateStep = 0.1, debug=FALSE, ...){
+fit_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, barrier=1, nonDecisionTime=0, bias=0.1, timeStep=10, approxStateStep = 0.1, debug=FALSE, ...){
+  
+  ######################## HELPER FUNCTIONS ########################
+  
+  get_abs_dist_moments = function(mu, sigma){
+    
+    # Definitions of moments
+    # https://en.wikipedia.org/wiki/Folded_normal_distribution
+    
+    mu_y = sigma * sqrt(2/pi) * exp((-mu^2)/(2*sigma^2)) + mu * pracma::erf((mu)/(sqrt(2*sigma^2)))
+    
+    sigma_y = sqrt(mu^2 + sigma^2 - mu_y^2)
+    
+    return(list(mu_y = mu_y, sigma_y = sigma_y))
+  }
+  
+  
+  get_abs_diff_dist_moments = function(mu1, sigma1, mu2, sigma2){
+    
+    tmp = get_abs_dist_moments(mu1, sigma1)
+    abs_mu1 = tmp$mu_y
+    abs_sigma1 = tmp$sigma_y
+    
+    tmp = get_abs_dist_moments(mu2, sigma2)
+    abs_mu2 = tmp$mu_y
+    abs_sigma2 = tmp$sigma_y
+    
+    diff_mu = abs_mu1 - abs_mu2
+    diff_sigma = sqrt(abs_sigma1^2 + abs_sigma2^2)
+    
+    # out = data.frame(abs_mu1 = abs_mu1, abs_sigma1 = abs_sigma1, abs_mu2 = abs_mu2, abs_sigma2 = abs_sigma2, diff_mu = diff_mu, diff_sigma = diff_sigma)
+    out = list(diff_mu = diff_mu, diff_sigma = diff_sigma)
+    
+    return(out)
+  }
+  
+  ######################## HELPER FUNCTIONS ########################
 
   kwargs = list(...)
   
@@ -187,6 +224,9 @@ fit_trial = function(dArb, dLott, dFrac, sigmaArb, sigmaLott, sigmaFrac, barrier
   
   muLott = dLott * distortedEVDiff
   muFrac = dFrac * distortedQVDiff
+  
+  tmp = get_abs_diff_dist_moments(muLott, sigmaLott, muFrac, sigmaFrac)
+  muArb = ...
   
   # LOOP of state probability updating up to reaction time
   # looping only on computation time steps. Non decision time iterations have been subtracted above. Might revisit if this makes sense later

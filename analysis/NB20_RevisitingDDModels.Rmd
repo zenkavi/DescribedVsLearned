@@ -129,75 +129,86 @@ fit_trial(dLott=0.03, dFrac=0.06, dArb=0.06, sigmaLott = 0.03, sigmaFrac = 0.03,
     distortedQVDiff = m4b_1$distortedQVDiff[i], choice = m4b_1$choice[i], reactionTime = m4b_1$reactionTime[i], probFractalDraw = m4b_1$probFractalDraw[i], debug=TRUE)
 ```
 
-Too slow..
+What are the true parameters?
 
 ```{r}
-# optim_out = visualMLE::optim_save(c(.05, .05, .05, .05, .05, .05), get_task_nll, data=m4b_2, par_names = c("dArb", "dLott", "dFrac","sigmaArb", "sigmaLott", "sigmaFrac", ), model_name="model4b", fix_pars = list(bias = 0.1), control = list(maxit=100))
+m4b_1 %>%
+  select(dLott, dFrac, dArb, sigmaLott, sigmaFrac, sigmaArb, bias) %>%
+  distinct()
+```
+
+What is the true negative log likelihood?
+
+```{r}
+get_task_nll(data = m4b_1[1:200,], par_ = c(.03, .06, .05, .03, .03), par_names = c("dArb", "dLott", "dFrac", "sigmaLott", "sigmaFrac"), model_name_="model4b", fix_pars_ = list(bias = 0) )
+```
+
+What is the negative log likelihood from the starting point. This shouldn't be lower than the true parameter combination. If it is then the algorithm cannot converge on the true parameters. 
+
+**FIND THE ERROR IN THE LIKELIHOOD COMPUTATION**
+
+```{r}
+get_task_nll(data = m4b_1[1:200,], par_ = c(.05, .05, .05, .05, .05), par_names = c("dArb", "dLott", "dFrac", "sigmaLott", "sigmaFrac"), model_name_="model4b", fix_pars_ = list(bias = 0) )
+```
+
+Still pretty slow but at least it ends and does not produce errors. Whether it's any good in recovering true parameters I'm not sure yet.
+
+```{r}
+# dLott=0.03, dFrac=0.06, dArb=0.05, sigmaLott = 0.03, sigmaFrac = 0.03
+# optim_out = visualMLE::optim_save(c(.05, .05, .05, .05, .05), get_task_nll, data=m4b_1[1:200,], par_names = c("dArb", "dLott", "dFrac", "sigmaLott", "sigmaFrac"), model_name_="model4b", fix_pars_ = list(bias = 0.1), control = list(maxit=100))
 
 ```
 
-What does the distribution of the absolute value difference between two random variables look like?
-Sampling approach
-Can I get a sense of the mean of the arbitrator to use the Lombardi toolbox?
-
-
 ```{r}
-get_abs_dist_moments = function(mu, sigma){
-  
-  # Definitions of moments
-  # https://en.wikipedia.org/wiki/Folded_normal_distribution
-  
-  mu_y = sigma * sqrt(2/pi) * exp((-mu^2)/(2*sigma^2)) + mu * pracma::erf((mu)/(sqrt(2*sigma^2)))
-  
-  sigma_y = sqrt(mu^2 + sigma^2 - mu_y^2)
-    
-  return(list(mu_y = mu_y, sigma_y = sigma_y))
-}
-
-
-get_abs_diff_dist_moments = function(mu1, sigma1, mu2, sigma2){
-  
-  tmp = get_abs_dist_moments(mu1, sigma1)
-  abs_mu1 = tmp$mu_y
-  abs_sigma1 = tmp$sigma_y
-  
-  tmp = get_abs_dist_moments(mu2, sigma2)
-  abs_mu2 = tmp$mu_y
-  abs_sigma2 = tmp$sigma_y
-  
-  diff_mu = abs_mu1 - abs_mu2
-  diff_sigma = sqrt(abs_sigma1^2 + abs_sigma2^2)
-  
-  # out = data.frame(abs_mu1 = abs_mu1, abs_sigma1 = abs_sigma1, abs_mu2 = abs_mu2, abs_sigma2 = abs_sigma2, diff_mu = diff_mu, diff_sigma = diff_sigma)
-  out = list(diff_mu = diff_mu, diff_sigma = diff_sigma)
-  
-  return(out)
-}
-```
-
-```{r}
-mu1 = 0
-sigma1 = 2
-mu2 = -5
-sigma2 = 2
-
-data.frame(var1 = rnorm(10000, mean = mu1, sd = sigma1),
-           var2 = rnorm(10000, mean = mu2, sd = sigma2)) %>%
-  mutate(avar1 = abs(var1),
-         avar2 = abs(var2),
-         var3 = avar1 - avar2) %>%
-  gather(key, value) %>%
-  group_by(key) %>%
-  summarise(mu = mean(value),
-            sd = sd(value))
-```
-
-```{r}
-get_abs_diff_dist_moments(mu1, sigma1, mu2, sigma2)
+optim_out
 ```
 
 Interactive figure updating state probabilities
 
 ```{r}
 
+```
+
+```{r}
+data.frame(x=rnorm(10000, mean = muLott, sd=sigmaLott)) %>%
+  ggplot(aes(x))+
+  geom_density()+
+  scale_y_continuous(breaks=c(seq(0,15,1)))
+```
+
+Since I can simulate things is there another metric I can use to minimize for fitting?
+RT given choice does this look different for left/right (i.e. the only choice category that is measured)
+No.
+Differences exist for probFractalDraw levels
+But if I minimize distance between simulated and true RT for probFractalDraw levels then I wouldn't be checking if the model is doing a good job in capturing choice behavior too
+
+```{r}
+clean_beh_data %>%
+  ggplot(aes(reactionTime, color=as.factor(choiceLeft)))+
+  geom_density(position="identity")
+
+```
+```{r}
+data.frame(prStatesArb) %>%
+  mutate(state = 1:nrow(prStatesArb)) %>%
+  gather(key, value, -state) %>%
+  ggplot(aes(key, state))+
+  geom_tile(aes(fill=log(value+1e-100)))
+```
+
+
+```{r}
+data.frame(prStatesLott) %>%
+  mutate(state = 1:nrow(prStatesLott)) %>%
+  gather(key, value, -state) %>%
+  ggplot(aes(key, state))+
+  geom_tile(aes(fill=log(value+1e-100)))
+```
+
+```{r}
+data.frame(prStatesFrac) %>%
+  mutate(state = 1:nrow(prStatesFrac)) %>%
+  gather(key, value, -state) %>%
+  ggplot(aes(key, state))+
+  geom_tile(aes(fill=log(value+1e-10)))
 ```

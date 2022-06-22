@@ -226,7 +226,8 @@ fit_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, bar
   muFrac = dFrac * distortedQVDiff
   
   tmp = get_abs_diff_dist_moments(muLott, sigmaLott, muFrac, sigmaFrac)
-  muArb = ...
+  muArb = tmp$diff_mu
+  sigmaArb = tmp$diff_sigma
   
   # LOOP of state probability updating up to reaction time
   # looping only on computation time steps. Non decision time iterations have been subtracted above. Might revisit if this makes sense later
@@ -234,16 +235,19 @@ fit_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, bar
     curTime = nextTime - 1 
     
     # Update the probability of the states that remain inside the barriers.
-    prStatesNewLott = t(stateStep * (prStatesLott[,curTime] %*% dnorm(changeMatrix, muLott, sigmaLott)) )
+    # prStatesNewLott = (stateStep * (dnorm(changeMatrix, muLott, sigmaLott) %*% prStatesLott[,curTime]) )
+    prStatesNewLott = (dnorm(changeMatrix, muLott, sigmaLott) %*% prStatesLott[,curTime])
     prStatesNewLott[states >= barrier[nextTime] | states <= -barrier[nextTime]] = 0
-    prStatesNewLott = prStatesNewLott/sum(prStatesNewLott) #normalize
-    
-    prStatesNewFrac = t(stateStep * (prStatesFrac[,curTime] %*% dnorm(changeMatrix, muFrac, sigmaFrac)) )
+    prStatesNewLott = prStatesNewLott/sum(prStatesNewLott)
+
+    # prStatesNewFrac = (stateStep * (dnorm(changeMatrix, muFrac, sigmaFrac) %*% prStatesFrac[,curTime]) )
+    prStatesNewFrac = (dnorm(changeMatrix, muFrac, sigmaFrac) %*% prStatesFrac[,curTime])
     prStatesNewFrac[states >= barrier[nextTime] | states <= -barrier[nextTime]] = 0
     prStatesNewFrac = prStatesNewFrac/sum(prStatesNewFrac)
-    
-    ArbMuDist = getArbMuDist(prStatesNewLott, prStatesNewFrac, states)
-    prStatesNewArb = ...
+
+    # prStatesNewArb = (stateStep * (dnorm(changeMatrix, muArb, sigmaArb) %*% prStatesArb[,curTime]) )
+    prStatesNewArb = (dnorm(changeMatrix, muArb, sigmaArb) %*% prStatesArb[,curTime]) 
+    prStatesNewArb[states >= barrier[nextTime] | states <= -barrier[nextTime]] = 0
     prStatesNewArb = prStatesNewArb/sum(prStatesNewArb)
 
     # Update the probabilities of each state 
@@ -255,27 +259,32 @@ fit_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, bar
   
   penultimateStep = numTimeSteps-1
   
-  # How much change is required from each state to cross the up or down barrier from the penultimate time point
+  # How much change is required from each state to cross the up or down barrier in the final time step
   changeUp = matrix(data = barrier[numTimeSteps], ncol=1, nrow=length(states), byrow=TRUE) - matrix(data = states, ncol=1, nrow=length(states), byrow=FALSE)
   changeDown = matrix(data = -barrier[numTimeSteps], ncol=1, nrow=length(states), byrow=TRUE) - matrix(data = states, ncol=1, nrow=length(states), byrow=FALSE)
   
-  # What is the p of observing that size change given the moments of the distribution from which the change will come
-  pChangeUpArb = (1-pnorm(changeUp, ..., ...))
-  pChangeUpArb = (pnorm(changeDown, ..., ...))
+  # What is the p of observing that at least the size change sufficient to cross the bound given the moments of the distribution from which the change will come
+  pChangeUpArb = (1-pnorm(changeUp, muArb, sigmaArb))
+  pChangeDownArb = (pnorm(changeDown, muArb, sigmaArb))
   
   # p of crossing the boundary is the weighted sum of the prob of observing a given size change from every state bin and and the p of being in state bin
   probUpCrossingArb = (prStatesArb[,penultimateStep] %*% pChangeUpArb)[1]
   probDownCrossingArb = (prStatesArb[,penultimateStep] %*% pChangeDownArb)[1]
 
+  pLottLeft = sum(prStatesLott[(halfNumStateBins+1):nrow(prStatesLott),numTimeSteps]) #first numbers in the vector are the bottom half of the state space
+  pLottRight = sum(prStatesLott[1:(halfNumStateBins-1),numTimeSteps])
+  pFracLeft = sum(prStatesFrac[(halfNumStateBins+1):nrow(prStatesFrac),numTimeSteps])
+  pFracRight = sum(prStatesFrac[1:(halfNumStateBins-1),numTimeSteps])
+  
   likelihood = 0
   if (choice == 1){ # Choice was left.
     
     # p of left is p of crossing the lottery boundary * p of lottery integrator being closer to the left boundary + p of crossing the fractal boundary * p of fractal integrator being closer to the left boundary
-      likelihood = probUpCrossingArb * sum(prStatesLott[1:halfNumStateBins,numTimeSteps]) + probDownCrossingArb * sum(prStatesFrac[1:halfNumStateBins,numTimeSteps])
+      likelihood = probUpCrossingArb * pLottLeft + probDownCrossingArb * pFracLeft
   
   } else if (choice == -1){
 
-    likelihood = probUpCrossingArb * sum(prStatesLott[halfNumStateBins:nrow(prStatesLott),numTimeSteps]) + probDownCrossingArb * sum(prStatesFrac[halfNumStateBins:nrow(prStatesFrac),numTimeSteps])
+    likelihood = probUpCrossingArb * pLottRight + probDownCrossingArb * pFracRight
      
   }
   

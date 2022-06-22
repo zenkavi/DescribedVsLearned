@@ -150,6 +150,7 @@ fit_trial = function(d, sigma, barrierDecay, delta, barrier=1, nonDecisionTime=0
   
   # Initial probability for all states is zero, except the bias state,
   # for which the initial probability is one.
+  # p(bottom boundary) is the first value! Don't get confused by seeing it at the top 
   prStates = matrix(data = 0, nrow = length(states), ncol = numTimeSteps)
   prStates[biasState,1] = 1
   
@@ -159,9 +160,9 @@ fit_trial = function(d, sigma, barrierDecay, delta, barrier=1, nonDecisionTime=0
   
   # Rows of these matrices correspond to array elements in python
   
-  # How much change is required from each state to move onto every other state
+  # How much change is required from each state to move onto every other state. From the smallest state (bottom boundary) to the largest state (top boundary)
   changeMatrix = matrix(data = states, ncol=length(states), nrow=length(states), byrow=FALSE) - matrix(data = states, ncol=length(states), nrow=length(states), byrow=TRUE)
-  
+
   # How much change is required from each state to cross the up or down barrier at each time point
   changeUp = matrix(data = barrier, ncol=numTimeSteps, nrow=length(states), byrow=TRUE) - matrix(data = states, ncol=numTimeSteps, nrow=length(states), byrow=FALSE)
   changeDown = matrix(data = -barrier, ncol=numTimeSteps, nrow=length(states), byrow=TRUE) - matrix(data = states, ncol=numTimeSteps, nrow=length(states), byrow=FALSE)
@@ -197,8 +198,8 @@ fit_trial = function(d, sigma, barrierDecay, delta, barrier=1, nonDecisionTime=0
     # and probDownCrossing add up to 1.
     # If there is barrier decay and there are next states that are cross
     # the decayed barrier set their probabilities to 0.
-    # prStatesNew = (stateStep * (dnorm(changeMatrix, mu, sigma) %*% prStates[,curTime]) )
-    prStatesNew = t(stateStep * (prStates[,curTime] %*% dnorm(changeMatrix, mu, sigma)) )
+    prStatesNew = (stateStep * (dnorm(changeMatrix, mu, sigma) %*% prStates[,curTime]) )
+    # prStatesNew = t(stateStep * (prStates[,curTime] %*% dnorm(changeMatrix, mu, sigma)) )
     prStatesNew[states >= barrier[nextTime] | states <= -barrier[nextTime]] = 0
     
     # Calculate the probabilities of crossing the up barrier and the

@@ -2,7 +2,8 @@ library(foreach)
 
 # Parallelization setup based on this post
 # https://www.blasbenito.com/post/02_parallelizing_loops_with_r/
-n.cores <- parallel::detectCores() - 1
+# n.cores <- parallel::detectCores() - 1
+n.cores <- 4
 
 #create the cluster
 my.fit.cluster <- parallel::makeCluster(

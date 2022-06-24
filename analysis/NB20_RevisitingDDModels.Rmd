@@ -115,55 +115,11 @@ m4b_1 %>%
   ylab("Predicted RT")
 ```
 
-Check the fitting function
+# Sum of random variables approach to drift rate and noise estimation
 
-```{r}
-fit_trial_list = list()
-fit_trial_list[['model4b']] = fit_trial
-```
+Given the choice and RT for a trial the likelihood of 
 
-```{r}
-i = 100
-
-fit_trial(dLott=0.03, dFrac=0.06, dArb=0.06, sigmaLott = 0.03, sigmaFrac = 0.03, barrierDecay=0, distortedEVDiff = m4b_1$distortedEVDiff[i],
-          distortedQVDiff = m4b_1$distortedQVDiff[i], choice = m4b_1$choice[i], reactionTime = m4b_1$reactionTime[i], probFractalDraw = m4b_1$probFractalDraw[i], debug=TRUE)
-```
-
-What are the true parameters?
-
-```{r}
-m4b_1 %>%
-  select(dLott, dFrac, dArb, sigmaLott, sigmaFrac, sigmaArb, bias) %>%
-  distinct()
-```
-
-What is the true negative log likelihood?
-
-```{r}
-get_task_nll(data = m4b_1[1:200,], par_ = c(.03, .06, .05, .03, .03), par_names = c("dArb", "dLott", "dFrac", "sigmaLott", "sigmaFrac"), model_name_="model4b", fix_pars_ = list(bias = 0) )
-```
-
-What is the negative log likelihood from the starting point. This shouldn't be lower than the true parameter combination. If it is then the algorithm cannot converge on the true parameters. 
-
-**FIND THE ERROR IN THE LIKELIHOOD COMPUTATION**
-
-```{r}
-get_task_nll(data = m4b_1[1:200,], par_ = c(.05, .05, .05, .05, .05), par_names = c("dArb", "dLott", "dFrac", "sigmaLott", "sigmaFrac"), model_name_="model4b", fix_pars_ = list(bias = 0) )
-```
-
-Still pretty slow but at least it ends and does not produce errors. Whether it's any good in recovering true parameters I'm not sure yet.
-
-```{r}
-# dLott=0.03, dFrac=0.06, dArb=0.05, sigmaLott = 0.03, sigmaFrac = 0.03
-# optim_out = visualMLE::optim_save(c(.05, .05, .05, .05, .05), get_task_nll, data=m4b_1[1:200,], par_names = c("dArb", "dLott", "dFrac", "sigmaLott", "sigmaFrac"), model_name_="model4b", fix_pars_ = list(bias = 0.1), control = list(maxit=100))
-
-```
-
-```{r}
-# optim_out
-```
-
-Interactive figure updating state probabilities
+Demonstrate the case
 
 Assume for a single integrator drift rate etc parameters
 Simulate n particles
@@ -269,7 +225,7 @@ sim_data %>%
         axis.text = element_blank())
 ```
 
-What proportion of particles is in each state in each time step?
+Compute which state each particle is in based on the (continuous) RDV
 
 ```{r}
 for(i in 1:nrow(sim_data)){
@@ -277,7 +233,7 @@ for(i in 1:nrow(sim_data)){
 }
 ```
 
-For the 10 time steps (in facets).
+Plot number of particles in each state (on the y axis) for 10 time steps in facets.
 
 ```{r}
 sim_data %>%
@@ -298,6 +254,8 @@ sim_data %>%
   geom_vline(aes(xintercept=21))+
   geom_vline(aes(xintercept=1))
 ```
+
+Plot estimated pdf of each state for the summed RDV for the same time steps.
 
 ```{r}
 dLott = 0.03
@@ -331,9 +289,11 @@ est_data %>%
   geom_vline(aes(xintercept=1))+
   geom_vline(aes(xintercept=-1))
 ```
-For this single integrator is the density (/likelihood) at time step == true rt always higher for the true parameter combination compared to a wrong parameter combo?
+For this single integrator is the density (/likelihood) at time step == true rt always higher for the true parameter combination compared to a wrong parameter combo? Or is the density always larger for something stupid like the size of the mean?
 
-Or is the density always larger for something stupid like the size of the mean?
+The density of a particle that has crossed a barrier at time t is `dnorm(crossed barrier, mean=drift rate * t, sd = sqrt(sigma ^ 2 * t))`.
+
+Here I merged the data on when each particle crossed the barrier with the estimated densities of being at the state closest to the boundary at that time point given the true drift rate and sigma. So these aren't quiet right. More accurately I could compute the density for the `lotteryRDV` for each particle at the time they've crossed the boundary. Still, in empirical data I will only have choice which I translate to a boundary so this is probably a close enough approxiamtion.
 
 ```{r}
 true_liks = sim_data %>%
@@ -344,7 +304,7 @@ true_liks = sim_data %>%
 
 true_liks
 ```
-Having larger scaling factor doesn't translate higher pdfs
+Having larger scaling factor doesn't translate higher density. The plot shows the computed densities of crossing the boundary at the time each particle did using the true and incorrect parameters. For most particles the true density is higher.
 
 ```{r}
 false_dLott = 0.08
@@ -407,8 +367,7 @@ true_liks %>%
   geom_point()+
   geom_abline(aes(intercept=0, slope=1))
 ```
-
-Ok so try it for a full dataset
+Ok so try it for a set of distorted EV differences (akin to a subject). Note this is integrating only on lotteries so not simulating/modeling the actual task yet.
 
 ```{r}
 n_trials = 300
@@ -423,6 +382,8 @@ for(i in 1:n_trials){
 }
 ```
 
+Plot RDV time course for some trials.
+
 ```{r}
 sim_subj %>%
   filter(iter<50)%>%
@@ -436,8 +397,7 @@ sim_subj %>%
   theme(panel.grid.minor = element_blank(), 
         axis.text = element_blank())
 ```
-
-
+Compute the probability density of being in the given state at the time the integrator terminated for each trial using the true drift rate and sigma. This time using the actual RDV to compute the density but note again that this latent variable won't exist in empirical data so we'll assume an RDV of 1 or -1 depending on the boundary.
 
 ```{r}
 sim_subj_rts = sim_subj %>%
@@ -458,9 +418,13 @@ for(i in 1:nrow(sim_subj_rts)){
 }
 ```
 
+The sum of these would be the likelihood of the data (so are these like elpd's - expected log prob densities?)
+
 ```{r}
 sum(subj_liks$pdf_rdv)
 ```
+
+Confirm that this sum of likelihoods for each trial would be lower if you used the incorrect drift rate and sigma.
 
 ```{r}
 false_dLott = 0.08
@@ -483,7 +447,7 @@ for(i in 1:nrow(sim_subj_rts)){
 sum(false_subj_liks$pdf_rdv)
 ```
 
-Ok so try it with a model of the full task (integrating on both attributes instead of just on lotteries)
+Ok so try it with a model integrating on both attributes instead of just on lotteries.
 
 ```{r}
 

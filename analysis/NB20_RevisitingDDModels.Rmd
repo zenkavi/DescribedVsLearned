@@ -126,7 +126,7 @@ fit_trial_list[['model4b']] = fit_trial
 i = 100
 
 fit_trial(dLott=0.03, dFrac=0.06, dArb=0.06, sigmaLott = 0.03, sigmaFrac = 0.03, barrierDecay=0, distortedEVDiff = m4b_1$distortedEVDiff[i],
-    distortedQVDiff = m4b_1$distortedQVDiff[i], choice = m4b_1$choice[i], reactionTime = m4b_1$reactionTime[i], probFractalDraw = m4b_1$probFractalDraw[i], debug=TRUE)
+          distortedQVDiff = m4b_1$distortedQVDiff[i], choice = m4b_1$choice[i], reactionTime = m4b_1$reactionTime[i], probFractalDraw = m4b_1$probFractalDraw[i], debug=TRUE)
 ```
 
 What are the true parameters?
@@ -160,14 +160,174 @@ Still pretty slow but at least it ends and does not produce errors. Whether it's
 ```
 
 ```{r}
-optim_out
+# optim_out
 ```
 
 Interactive figure updating state probabilities
 
+Assume for a single integrator drift rate etc parameters
+Simulate n particles
+Then using the sum of independent variables logic to make a heat map of the probability of a particle in each state at each time step
+
 ```{r}
+run_lott_integrator = function(dLott, sigmaLott, distortedEVDiff, nonDecisionTime=0, bias=0, barrierDecay = 0, timeStep=10, barrier = 1, maxIter = 400, debug=TRUE){
+  
+  if(debug){
+    debug_df = data.frame(time=0, lotteryRDV=0)
+  }
+  
+  lotteryRDV = bias
+  time = 1
+  elapsedNDT = 0
+  choice = 0
+  RT = NA
+  nonDecIters = nonDecisionTime / timeStep
+  initialBarrier = barrier
+  barrier = rep(initialBarrier, maxIter)
+  
+  # The values of the barriers can change over time
+  for(t in seq(1, maxIter, 1)){
+    barrier[t] = initialBarrier / (1 + barrierDecay * t)
+  }
+  
+  lottery_mu = dLott * distortedEVDiff
+  
+  while (time<maxIter){
+    
+    # If the arbitrator RDV hits one of the barriers make decision
+    if (lotteryRDV >= barrier[time] | lotteryRDV <= -barrier[time]){
+      
+      # Convert ms back to secs
+      RT = (time * timeStep)/1000 
+      
+      if (lotteryRDV >= barrier[time]){
+        choice = "left"
+      } else if (lotteryRDV <= -barrier[time]){
+        choice = "right"
+      }
+      break
+    } 
+    
+    # Otherwise continue sampling evidence
+    if (elapsedNDT < nonDecIters){
+      elapsedNDT = elapsedNDT + 1
+    } else{
+      lotteryRDV = lotteryRDV + rnorm(1, lottery_mu, sigmaLott)
+    }
+    
+    if (debug){
+      debug_row = data.frame(time = time, lotteryRDV = round(lotteryRDV, 3))
+      debug_df = rbind(debug_df, debug_row)
+    }
+    
+    # Increment sampling iteration
+    time = time + 1
+  }
+  
+  out = data.frame(distortedEVDiff = distortedEVDiff, choice=choice, reactionTime = RT, dLott=dLott, sigmaLott=sigmaLott, barrier=barrier[time], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, maxIter=maxIter)
+  
+  if(debug){
+    out = list(out=out, debug_df=debug_df)
+  }
+  
+  return(out)
+}
 
 ```
+
+```{r}
+initialBarrier = 1
+approxStateStep = .1
+halfNumStateBins = round(initialBarrier / approxStateStep)
+stateStep = initialBarrier / (halfNumStateBins + 0.5)
+
+# The vertical axis is divided into states.
+states = seq(-1*(initialBarrier) + (stateStep / 2), initialBarrier - (stateStep / 2), stateStep)
+```
+
+```{r}
+n_particles = 250
+sim_data = data.frame()
+
+for(i in 1:n_particles){
+  tmp = run_lott_integrator(dLott = 0.03, sigmaLott = 0.05, distortedEVDiff = 0.4)$debug_df
+  tmp$iter = i
+  sim_data = rbind(sim_data, tmp)
+}
+```
+
+```{r}
+sim_data %>%
+  ggplot(aes(time, lotteryRDV, group=iter))+
+  geom_line(color="gray")+
+  scale_x_continuous(breaks = seq(0, 400, 1))+
+  scale_y_continuous(breaks = round(states,3))+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  geom_hline(aes(yintercept=1))+
+  geom_hline(aes(yintercept=-1))+
+  theme(panel.grid.minor = element_blank(), 
+        axis.text = element_blank())
+```
+
+What proportion of particles is in each state in each time step?
+
+```{r}
+for(i in 1:nrow(sim_data)){
+  sim_data$state_bin[i] = which.min(abs(states - sim_data$lotteryRDV[i]))
+}
+```
+
+```{r}
+sim_data %>%
+  filter(time< 11) %>%
+  ggplot(aes(state_bin))+
+  geom_histogram(bins=30)+
+  coord_flip()+
+  facet_grid(.~time)+
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.x = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank())+
+  ylab("")+
+  xlab("# particles / state")+
+  scale_x_continuous(breaks=c(1:21)) +
+  geom_vline(aes(xintercept=11), linetype="dashed")+
+  geom_vline(aes(xintercept=21))+
+  geom_vline(aes(xintercept=1))
+```
+
+```{r}
+dLott = 0.03
+distortedEVDiff = .4
+sigmaLott = .05
+
+est_data = data.frame()
+
+for(i in 0:max(sim_data$time)){
+ tmp=data.frame(time = i, 
+            states = states, 
+            pdf_states = dnorm(states, mean=dLott*distortedEVDiff*i, sd=sqrt(sigmaLott^2*i)))
+ est_data = rbind(est_data, tmp)
+}
+
+est_data %>%
+  filter(time<11) %>%
+  ggplot(aes(states, pdf_states))+
+  geom_bar(stat="identity")+
+  coord_flip()+
+  facet_grid(.~time)+
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.x = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank())+
+  ylab("")+
+  xlab("pdf / state")+
+  scale_x_continuous(breaks=states) +
+  geom_vline(aes(xintercept=0), linetype="dashed")+
+  geom_vline(aes(xintercept=1))+
+  geom_vline(aes(xintercept=-1))
+```
+
 
 ```{r}
 data.frame(x=rnorm(10000, mean = muLott, sd=sigmaLott)) %>%
@@ -203,34 +363,3 @@ RT given choice does this look different for left/right (i.e. the only choice ca
 No.
 Differences exist for probFractalDraw levels
 But if I minimize distance between simulated and true RT for probFractalDraw levels then I wouldn't be checking if the model is doing a good job in capturing choice behavior too
-
-```{r}
-clean_beh_data %>%
-  ggplot(aes(reactionTime, color=as.factor(choiceLeft)))+
-  geom_density(position="identity")
-
-```
-```{r}
-data.frame(prStatesArb) %>%
-  mutate(state = 1:nrow(prStatesArb)) %>%
-  gather(key, value, -state) %>%
-  ggplot(aes(key, state))+
-  geom_tile(aes(fill=value))
-```
-
-
-```{r}
-data.frame(prStatesLott) %>%
-  mutate(state = 1:nrow(prStatesLott)) %>%
-  gather(key, value, -state) %>%
-  ggplot(aes(key, state))+
-  geom_tile(aes(fill=value))
-```
-
-```{r}
-data.frame(prStatesFrac) %>%
-  mutate(state = 1:nrow(prStatesFrac)) %>%
-  gather(key, value, -state) %>%
-  ggplot(aes(key, state))+
-  geom_tile(aes(fill=log(value+1e-10)))
-```

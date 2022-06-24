@@ -277,11 +277,14 @@ for(i in 1:nrow(sim_data)){
 }
 ```
 
+For the 10 time steps (in facets).
+
 ```{r}
 sim_data %>%
-  filter(time< 11) %>%
+  # filter(time< 11) %>%
+  filter(time>20 &time<31) %>%
   ggplot(aes(state_bin))+
-  geom_histogram(bins=30)+
+  geom_histogram(bins=21)+
   coord_flip()+
   facet_grid(.~time)+
   theme(panel.grid.minor = element_blank(),
@@ -311,7 +314,8 @@ for(i in 0:max(sim_data$time)){
 }
 
 est_data %>%
-  filter(time<11) %>%
+  # filter(time<11) %>%
+    filter(time>20 &time<31) %>%
   ggplot(aes(states, pdf_states))+
   geom_bar(stat="identity")+
   coord_flip()+
@@ -327,39 +331,161 @@ est_data %>%
   geom_vline(aes(xintercept=1))+
   geom_vline(aes(xintercept=-1))
 ```
+For this single integrator is the density (/likelihood) at time step == true rt always higher for the true parameter combination compared to a wrong parameter combo?
 
+Or is the density always larger for something stupid like the size of the mean?
 
 ```{r}
-data.frame(x=rnorm(10000, mean = muLott, sd=sigmaLott)) %>%
-  ggplot(aes(x))+
-  geom_density()+
-  scale_y_continuous(breaks=c(seq(0,15,1)))+
-  geom_vline(aes(xintercept=0))
+true_liks = sim_data %>%
+  group_by(iter) %>%
+  filter(time == max(time)) %>%
+  left_join(est_data %>%
+  filter(states>.95), by="time")
+
+true_liks
 ```
+Having larger scaling factor doesn't translate higher pdfs
 
 ```{r}
-data.frame(x1=rnorm(10000, mean = muLott*30, sd=sqrt(sigmaLott^2*30)),
-           x2 = rnorm(10000, mean = muLott*30, sd=sqrt(sigmaLott^2*30))) %>%
-  ggplot(aes(x))+
-  geom_density()+
-  scale_y_continuous(breaks=c(seq(0,15,1)))+
-  geom_vline(aes(xintercept=0))
-```
+false_dLott = 0.08
+distortedEVDiff = .4
+false_sigmaLott = .08
 
-```{r}
-tmp = NA
-for(i in 1:10000){
-  tmp[i]=sum(rnorm(10))
+false_est_data = data.frame()
+
+for(i in 0:max(sim_data$time)){
+ tmp=data.frame(time = i, 
+            states = states, 
+            pdf_states = dnorm(states, mean=false_dLott*distortedEVDiff*i, sd=sqrt(false_sigmaLott^2*i)))
+ false_est_data = rbind(false_est_data, tmp)
 }
 
-data.frame(tmp) %>%
-  ggplot(aes(tmp))+
-  geom_density()+
-  geom_vline(aes(xintercept=0))
+false_liks = sim_data %>%
+  group_by(iter) %>%
+  filter(time == max(time)) %>%
+  left_join(false_est_data %>%
+  filter(states>.95), by="time")
+
+true_liks %>%
+  mutate(lik_type = "true") %>%
+  rbind(false_liks %>% mutate(lik_type="false")) %>%
+  select(iter, pdf_states, lik_type) %>%
+  spread(lik_type, pdf_states) %>%
+  ggplot(aes(true, false))+
+  geom_point()+
+  geom_abline(aes(intercept=0, slope=1))
 ```
 
-Since I can simulate things is there another metric I can use to minimize for fitting?
-RT given choice does this look different for left/right (i.e. the only choice category that is measured)
-No.
-Differences exist for probFractalDraw levels
-But if I minimize distance between simulated and true RT for probFractalDraw levels then I wouldn't be checking if the model is doing a good job in capturing choice behavior too
+Even with false parameters that are relatively close to the true ones the true pdf's are higher for most particles.
+
+```{r}
+false_dLott = 0.04
+distortedEVDiff = .4
+false_sigmaLott = .06
+
+false_est_data = data.frame()
+
+for(i in 0:max(sim_data$time)){
+ tmp=data.frame(time = i, 
+            states = states, 
+            pdf_states = dnorm(states, mean=false_dLott*distortedEVDiff*i, sd=sqrt(false_sigmaLott^2*i)))
+ false_est_data = rbind(false_est_data, tmp)
+}
+
+false_liks = sim_data %>%
+  group_by(iter) %>%
+  filter(time == max(time)) %>%
+  left_join(false_est_data %>%
+  filter(states>.95), by="time")
+
+true_liks %>%
+  mutate(lik_type = "true") %>%
+  rbind(false_liks %>% mutate(lik_type="false")) %>%
+  select(iter, pdf_states, lik_type) %>%
+  spread(lik_type, pdf_states) %>%
+  ggplot(aes(true, false))+
+  geom_point()+
+  geom_abline(aes(intercept=0, slope=1))
+```
+
+Ok so try it for a full dataset
+
+```{r}
+n_trials = 300
+sim_subj = data.frame()
+true_dLott = 0.03
+true_sigmaLott = 0.05
+
+for(i in 1:n_trials){
+  tmp = run_lott_integrator(dLott = true_dLott, sigmaLott = true_sigmaLott, distortedEVDiff = clean_beh_data$distorted_ev_diff[i])$debug_df
+  tmp$iter = i
+  sim_subj = rbind(sim_subj, tmp)
+}
+```
+
+```{r}
+sim_subj %>%
+  filter(iter<50)%>%
+  ggplot(aes(time, lotteryRDV, group=iter))+
+  geom_line(color="gray")+
+  scale_x_continuous(breaks = seq(0, 400, 1))+
+  scale_y_continuous(breaks = round(states,3))+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  geom_hline(aes(yintercept=1))+
+  geom_hline(aes(yintercept=-1))+
+  theme(panel.grid.minor = element_blank(), 
+        axis.text = element_blank())
+```
+
+
+
+```{r}
+sim_subj_rts = sim_subj %>%
+  group_by(iter) %>%
+  filter(time == max(time))
+
+subj_liks = data.frame()
+
+for(i in 1:nrow(sim_subj_rts)){
+  trial_time = sim_subj_rts$time[i]
+  trial_rdv = sim_subj_rts$lotteryRDV[i]
+  trial_evDiff = clean_beh_data$distorted_ev_diff[i]
+ tmp=data.frame(iter = sim_subj_rts$iter[i],
+                time = trial_time,
+                rdv = trial_rdv,
+                pdf_rdv = dnorm(trial_rdv, mean=true_dLott*trial_evDiff*trial_time, sd=sqrt(true_sigmaLott^2*trial_time)))
+ subj_liks = rbind(subj_liks, tmp)
+}
+```
+
+```{r}
+sum(subj_liks$pdf_rdv)
+```
+
+```{r}
+false_dLott = 0.08
+false_sigmaLott = 0.08
+false_subj_liks = data.frame()
+
+for(i in 1:nrow(sim_subj_rts)){
+  trial_time = sim_subj_rts$time[i]
+  trial_rdv = sim_subj_rts$lotteryRDV[i]
+  trial_evDiff = clean_beh_data$distorted_ev_diff[i]
+ tmp=data.frame(iter = sim_subj_rts$iter[i],
+                time = trial_time,
+                rdv = trial_rdv,
+                pdf_rdv = dnorm(trial_rdv, mean=false_dLott*trial_evDiff*trial_time, sd=sqrt(false_sigmaLott^2*trial_time)))
+ false_subj_liks = rbind(false_subj_liks, tmp)
+}
+```
+
+```{r}
+sum(false_subj_liks$pdf_rdv)
+```
+
+Ok so try it with a model of the full task (integrating on both attributes instead of just on lotteries)
+
+```{r}
+
+```
+

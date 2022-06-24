@@ -65,6 +65,10 @@ clean_beh_data %>%
   geom_abline(aes(slope=1, intercept=0))
 ```
 
+# Testing the 3 integrator model
+
+## Aggregate checks - pass
+
 Simulate data with a 3 integrator model.
 
 Select half the data to use as input stimuli for simulated data.
@@ -99,6 +103,7 @@ m4b_1 = sim_task(sub_data, model_name = "model4b", dLott=0.03, dFrac=0.06, dArb=
 ```{r}
 sim_sanity_checks(m4b_1, checks=c(1,3,4,5,6,7,8), compare_logits = TRUE)
 ```
+## Problem 1: Absolute check
 
 Are the predicted response times close to the true response times? Not really. Despite the apparent correspondence when looking at aggregate data grouped by probFractalDraw level the individual trial estimates are not correlated at all.
 
@@ -114,16 +119,15 @@ m4b_1 %>%
   xlab("True RT")+
   ylab("Predicted RT")
 ```
+## Problem 2: Parameter estimation
 
 # Sum of random variables approach to drift rate and noise estimation
 
-Given the choice and RT for a trial the likelihood of 
+Given the choice and RT for a trial the likelihood of ...
 
-Demonstrate the case
+## Demonstration
 
-Assume for a single integrator drift rate etc parameters
-Simulate n particles
-Then using the sum of independent variables logic to make a heat map of the probability of a particle in each state at each time step
+Assuming drift rate and noise parameters for a single integrator we simulate n particles for the same trial (i.e. same value difference) and make a histogram of a particles in each state at each time step.
 
 ```{r}
 run_lott_integrator = function(dLott, sigmaLott, distortedEVDiff, nonDecisionTime=0, bias=0, barrierDecay = 0, timeStep=10, barrier = 1, maxIter = 400, debug=TRUE){
@@ -212,6 +216,8 @@ for(i in 1:n_particles){
 }
 ```
 
+Plot the time course of each particle.
+
 ```{r}
 sim_data %>%
   ggplot(aes(time, lotteryRDV, group=iter))+
@@ -224,8 +230,7 @@ sim_data %>%
   theme(panel.grid.minor = element_blank(), 
         axis.text = element_blank())
 ```
-
-Compute which state each particle is in based on the (continuous) RDV
+Compute which discrete state each particle would be in based on the (continuous) RDV
 
 ```{r}
 for(i in 1:nrow(sim_data)){
@@ -255,7 +260,7 @@ sim_data %>%
   geom_vline(aes(xintercept=1))
 ```
 
-Plot estimated pdf of each state for the summed RDV for the same time steps.
+Plot estimated pdf of each state for the summed RDV for the same time steps. **The simulated particles are distributed (above) in the predicted (below) manner**
 
 ```{r}
 dLott = 0.03
@@ -289,21 +294,24 @@ est_data %>%
   geom_vline(aes(xintercept=1))+
   geom_vline(aes(xintercept=-1))
 ```
+To use this logic for parameter estimation we would maximize the likelihood of crossing the boundary corresponding to the choice at the observed response time. So we need to confirm that the likelihood of each simulated particle hitting the boundary at the simulated timestep is higher for the true parameter combination is than the likelihood computed using an incorrect parameter computation.
+
+## Likelihood checks
+
 For this single integrator is the density (/likelihood) at time step == true rt always higher for the true parameter combination compared to a wrong parameter combo? Or is the density always larger for something stupid like the size of the mean?
 
 The density of a particle that has crossed a barrier at time t is `dnorm(crossed barrier, mean=drift rate * t, sd = sqrt(sigma ^ 2 * t))`.
 
-Here I merged the data on when each particle crossed the barrier with the estimated densities of being at the state closest to the boundary at that time point given the true drift rate and sigma. So these aren't quiet right. More accurately I could compute the density for the `lotteryRDV` for each particle at the time they've crossed the boundary. Still, in empirical data I will only have choice which I translate to a boundary so this is probably a close enough approxiamtion.
+Here I merged the data on when each particle crossed the barrier with the estimated densities of being at the state closest to the boundary at that time point given the true drift rate and sigma. So these aren't quiet right. More accurately I could compute the density for the `lotteryRDV` for each particle at the time they've crossed the boundary. Still, in empirical data I will only have choice which I translate to a boundary so this is probably a close enough approximation.
 
 ```{r}
 true_liks = sim_data %>%
   group_by(iter) %>%
   filter(time == max(time)) %>%
   left_join(est_data %>%
-  filter(states>.95), by="time")
-
-true_liks
+  filter(states>.95), by="time") # this isn't full proof. ideally you'd merge on time and statebin since it's possible that the other boundary was hit
 ```
+
 Having larger scaling factor doesn't translate higher density. The plot shows the computed densities of crossing the boundary at the time each particle did using the true and incorrect parameters. For most particles the true density is higher.
 
 ```{r}
@@ -367,6 +375,8 @@ true_liks %>%
   geom_point()+
   geom_abline(aes(intercept=0, slope=1))
 ```
+## Different trials
+
 Ok so try it for a set of distorted EV differences (akin to a subject). Note this is integrating only on lotteries so not simulating/modeling the actual task yet.
 
 ```{r}
@@ -447,9 +457,72 @@ for(i in 1:nrow(sim_subj_rts)){
 sum(false_subj_liks$pdf_rdv)
 ```
 
+## Both attributes
+
 Ok so try it with a model integrating on both attributes instead of just on lotteries.
 
 ```{r}
-
+run_single_integrator = function(d, sigma, distortedEVDiff, distortedQVDiff, nonDecisionTime=0, bias=0, barrierDecay = 0, timeStep=10, barrier = 1, maxIter = 400, debug=TRUE){
+  
+  if(debug){
+    debug_df = data.frame(time=0, RDV=0)
+  }
+  
+  RDV = bias
+  time = 1
+  elapsedNDT = 0
+  choice = 0
+  RT = NA
+  nonDecIters = nonDecisionTime / timeStep
+  initialBarrier = barrier
+  barrier = rep(initialBarrier, maxIter)
+  
+  # The values of the barriers can change over time
+  for(t in seq(1, maxIter, 1)){
+    barrier[t] = initialBarrier / (1 + barrierDecay * t)
+  }
+  
+  mu = d * (distortedEVDiff + distortedQVDiff)
+  
+  while (time<maxIter){
+    
+    # If the arbitrator RDV hits one of the barriers make decision
+    if (RDV >= barrier[time] | RDV <= -barrier[time]){
+      
+      # Convert ms back to secs
+      RT = (time * timeStep)/1000 
+      
+      if (RDV >= barrier[time]){
+        choice = "left"
+      } else if (RDV <= -barrier[time]){
+        choice = "right"
+      }
+      break
+    } 
+    
+    # Otherwise continue sampling evidence
+    if (elapsedNDT < nonDecIters){
+      elapsedNDT = elapsedNDT + 1
+    } else{
+      RDV = RDV + rnorm(1, mu, sigma)
+    }
+    
+    if (debug){
+      debug_row = data.frame(time = time, RDV = round(RDV, 3))
+      debug_df = rbind(debug_df, debug_row)
+    }
+    
+    # Increment sampling iteration
+    time = time + 1
+  }
+  
+  out = data.frame(distortedEVDiff = distortedEVDiff, distortedQVDiff = distortedQVDiff, choice=choice, reactionTime = RT, d=d, sigma=sigma, barrier=barrier[time], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, maxIter=maxIter)
+  
+  if(debug){
+    out = list(out=out, debug_df=debug_df)
+  }
+  
+  return(out)
+}
 ```
 

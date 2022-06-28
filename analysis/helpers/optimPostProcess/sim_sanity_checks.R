@@ -59,7 +59,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
         mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
         ggplot(aes(reactionTime, color=data_type)) +
         geom_density()+
-        geom_histogram(data=true_data, aes(reactionTime, y = ..density..), bins=30, alpha=.5)+
+        geom_histogram(data=true_data, aes(reactionTime, y = ..density..), bins=20, alpha=.5)+
         facet_wrap(~probFractalDraw)+
         theme(legend.position = "bottom")+
         scale_color_manual(values=c("red",NA))
@@ -68,7 +68,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       p = sim_data %>%
         mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
         ggplot(aes(reactionTime)) +
-        geom_histogram(position="identity", bins=30) +
+        geom_histogram(position="identity", bins=10) +
         labs(title="RT long tail?")+
         facet_wrap(~probFractalDraw)
     }
@@ -313,7 +313,6 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
     }
     
     p = tmp %>%
-      rbind(tmp_true) %>%
       mutate(correctBasedOn = ifelse(key == "choseBetterSubjLott", "Correct based on Lottery", "Correct based on Fractal"),
              correctBasedOn = factor(correctBasedOn, levels = c("Correct based on Lottery", "Correct based on Fractal"))) %>%
       ggplot(aes(fractalMoreRelevant, meanLogRt, color=value, alpha=data_type, shape=data_type))+

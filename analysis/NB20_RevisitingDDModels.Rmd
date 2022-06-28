@@ -98,10 +98,20 @@ Simulate a dataset using half the stimuli filtered earlier and this three integr
 
 ```{r}
 m4b_1 = sim_task(sub_data, model_name = "model4b", dLott=0.03, dFrac=0.06, dArb=0.05, sigmaLott = 0.03, sigmaFrac = 0.03)
+# m4b_1 = sim_task(sub_data, model_name = "model4b", dLott=0.01, dFrac=0.02, dArb=0.015, sigmaLott = 0.01, sigmaFrac = 0.01)
 ```
 
 ```{r}
 sim_sanity_checks(m4b_1, checks=c(1,3,4,5,6,7,8), compare_logits = TRUE)
+```
+
+```{r}
+tmp = clean_beh_data %>%
+  filter(subnum == "20") %>%
+  rename(EVLeft = leftLotteryEV, EVRight=rightLotteryEV, QVLeft = leftQValue, QVRight=rightQValue, distortedEVDiff=distorted_ev_diff, distortedQVDiff=distorted_qv_diff) %>%
+  mutate(choice = ifelse(choiceLeft == 1, "left", "right"))
+
+sim_sanity_checks(tmp, checks=c(1,3,4,5,6,7,8), compare_logits = F, compare_rts = F)
 ```
 
 ## Problem 1: Absolute check

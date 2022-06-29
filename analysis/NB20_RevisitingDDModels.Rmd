@@ -29,7 +29,7 @@ set.seed(38573)
 
 Add distorted value estimates using the hierarchical RL fit.
 
-```{r message=FALSE}
+```{r message=FALSE, warning=FALSE}
 
 source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamDoubleSymmLinearProbDistortion_rpeBoth.R'))
 
@@ -65,20 +65,7 @@ clean_beh_data %>%
   geom_abline(aes(slope=1, intercept=0))
 ```
 
-# Testing the 3 integrator model
-
-## Aggregate checks - pass
-
-Simulate data with a 3 integrator model.
-
-Select half the data to use as input stimuli for simulated data.
-
-```{r}
-sub_data = clean_beh_data %>%
-  filter(subnum  %in% c("01", "03", "05","07", "09", "11", "13", "15", "17", "19")) %>%
-  select(leftLotteryEV, rightLotteryEV, leftQValue, rightQValue, probFractalDraw, reactionTime, choiceLeft, subnum, distorted_ev_diff, distorted_qv_diff) %>%
-  rename(EVLeft = leftLotteryEV, EVRight = rightLotteryEV, QVLeft = leftQValue, QVRight = rightQValue, distortedEVDiff = distorted_ev_diff, distortedQVDiff = distorted_qv_diff)
-```
+# The 3 integrator model
 
 Source trial simulating and fitting function three integrator model. The model only had the ddm parameters as variables; choice parameters (learning rate and probability distortion) are fitted elsewhere and used to compute the distorted value differences fed into this model.
 
@@ -91,10 +78,95 @@ sim_trial_list[['model4b']] = sim_trial
 Test if trial simulating function works.
 
 ```{r}
+sub_data = clean_beh_data %>%
+  filter(subnum  %in% c("01", "03", "05","07", "09", "11", "13", "15", "17", "19")) %>%
+  select(leftLotteryEV, rightLotteryEV, leftQValue, rightQValue, probFractalDraw, reactionTime, choiceLeft, subnum, distorted_ev_diff, distorted_qv_diff) %>%
+  rename(EVLeft = leftLotteryEV, EVRight = rightLotteryEV, QVLeft = leftQValue, QVRight = rightQValue, distortedEVDiff = distorted_ev_diff, distortedQVDiff = distorted_qv_diff)
+```
+
+```{r}
 sim_trial(dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, distortedEVDiff = sub_data$distortedEVDiff[100], distortedQVDiff = sub_data$distortedQVDiff[100], probFractalDraw = sub_data$probFractalDraw[100], barrierDecay = 0, EVLeft = sub_data$EVLeft[100], EVRight = sub_data$EVRight[100], QVLeft = sub_data$QVLeft[100], QVRight = sub_data$QVRight[100])
 ```
 
+## Folded distribution schematic representation
+
+Use the debug df from simulating a single trial with this model
+
+```{r}
+tmp = sim_trial(dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, distortedEVDiff = sub_data$distortedEVDiff[100], distortedQVDiff = sub_data$distortedQVDiff[100], probFractalDraw = sub_data$probFractalDraw[100], barrierDecay = 0, EVLeft = sub_data$EVLeft[100], EVRight = sub_data$EVRight[100], QVLeft = sub_data$QVLeft[100], QVRight = sub_data$QVRight[100], debug=T)
+
+tmp$debug_df %>%
+  select(time, arbitratorRDV, lotteryRDV, fractalRDV) %>%
+  gather(key, value, -time) %>%
+  ggplot(aes(time, value, color=key))+
+  geom_line()+
+  geom_hline(aes(yintercept=1))+
+  geom_hline(aes(yintercept=-1))+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  theme(legend.position = "bottom",
+        panel.grid = element_blank())+
+  labs(color="")
+```
+
+```{r}
+tmp
+```
+
+The p of this choice happening at this timestep with my method: prob arb crossing for lott * prob lott suggesting left + prob arb crossing frac * prob frac suggesting left
+
+```{r}
+timeStep = 10
+numTimeSteps = round(tmp$out$reactionTime*1000/timeStep)
+
+mu_lott_rdv = tmp$out$dLott * numTimeSteps
+s_lott_rdv = sqrt(tmp$out$sigmaLott^2*numTimeSteps)
+
+mu_frac_rdv = tmp$out$dFrac * numTimeSteps
+s_frac_rdv = sqrt(tmp$out$sigmaFrac^2*numTimeSteps)
+
+mu_folded_diff = get_abs_diff_dist_moments(tmp$out$dLott, tmp$out$sigmaLott, tmp$out$dFrac, tmp$out$sigmaFrac)$diff_mu
+mu_arb_rdv = mu_folded_diff * tmp$out$dArb * numTimeSteps
+s_arb_rdv = sqrt(tmp$out$sigmaArb^2*numTimeSteps)
+
+#p left
+p_left = (1-pnorm(1, mu_arb_rdv, s_arb_rdv))* (1-pnorm(0, mu_lott_rdv, s_arb_rdv)) + pnorm(-1, mu_arb_rdv, s_arb_rdv)*(1-pnorm(0, mu_frac_rdv, s_frac_rdv))
+
+#p right
+p_right = (1-pnorm(1, mu_arb_rdv, s_arb_rdv))* (pnorm(0, mu_lott_rdv, s_arb_rdv)) + pnorm(-1, mu_arb_rdv, s_arb_rdv)*(pnorm(0, mu_frac_rdv, s_frac_rdv))
+
+print(paste0("p(left) = ", round(p_left, 5)))
+print(paste0("p(right) = ", round(p_right, 5)))
+```
+
+The # of time it happens at t = RT if you run 1000 particles
+
+```{r}
+n_particles = 1000
+sim_data = data.frame()
+
+for(i in 1:n_particles){
+  tmp_trial = sim_trial(dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, distortedEVDiff = sub_data$distortedEVDiff[100], distortedQVDiff = sub_data$distortedQVDiff[100], probFractalDraw = sub_data$probFractalDraw[100], barrierDecay = 0, EVLeft = sub_data$EVLeft[100], EVRight = sub_data$EVRight[100], QVLeft = sub_data$QVLeft[100], QVRight = sub_data$QVRight[100])
+  tmp_trial$iter = i
+  sim_data = rbind(sim_data, tmp_trial)
+}
+```
+
+```{r}
+sim_data %>%
+  mutate(numTimeSteps = round(reactionTime*1000/10)) %>%
+  ggplot(aes(numTimeSteps))+
+  geom_histogram(bins=25)+
+  geom_hline(aes(yintercept = n_particles*p_left))+
+  geom_vline(aes(xintercept = tmp$out$reactionTime*1000/10))
+```
+
+## Aggregate checks 
+
+Simulate data with a 3 integrator model.
+
 Simulate a dataset using half the stimuli filtered earlier and this three integrator model.
+
+**Note: this selection of parameters provides a nice qualitative fit to data. It assumes integration is slower for lotteries than for fractals. This is one way of capturing the difference in processing lottery values, which can only be done after the stimulus presentation, as apposed to fractal values which are learned about trialwise. There are alternative ways of modeling this: e.g. integration for the fractal integrator might start before the stimulus presentation screen; ndt for the lottery integrator (or the arbitrator when the lottery is more relevant) might be longer etc. The way to determine which of these hypotheses is most supported by data would be a model comparison.**
 
 ```{r}
 m4b_1 = sim_task(sub_data, model_name = "model4b", dLott=0.03, dFrac=0.06, dArb=0.05, sigmaLott = 0.03, sigmaFrac = 0.03)
@@ -105,16 +177,8 @@ m4b_1 = sim_task(sub_data, model_name = "model4b", dLott=0.03, dFrac=0.06, dArb=
 sim_sanity_checks(m4b_1, checks=c(1,3,4,5,6,7,8), compare_logits = TRUE)
 ```
 
-```{r}
-tmp = clean_beh_data %>%
-  filter(subnum == "20") %>%
-  rename(EVLeft = leftLotteryEV, EVRight=rightLotteryEV, QVLeft = leftQValue, QVRight=rightQValue, distortedEVDiff=distorted_ev_diff, distortedQVDiff=distorted_qv_diff) %>%
-  mutate(choice = ifelse(choiceLeft == 1, "left", "right"))
 
-sim_sanity_checks(tmp, checks=c(1,3,4,5,6,7,8), compare_logits = F, compare_rts = F)
-```
-
-## Problem 1: Absolute check
+## Question: Absolute check
 
 Are the predicted response times close to the true response times? Not really. Despite the apparent correspondence when looking at aggregate data grouped by probFractalDraw level the individual trial estimates are not correlated at all.
 
@@ -131,11 +195,20 @@ m4b_1 %>%
   ylab("Predicted RT")
 ```
 
-## Problem 2: Parameter estimation
+## Parameter estimation
+
+1. Maximum likelihood estimation
+2. Chi sq 
+3. [Least squares]
+4. Bayesian
+5. Hierarchical Bayesian
 
 # Sum of random variables approach to drift rate and noise estimation
 
 Given the choice and RT for a trial the likelihood of ...
+
+**Why might this not have been used previously? Some ideas:**  
+**The boundary in traditional DDM is not fixed at 1 and -1. Instead it is a parameter. It's not immediately apparent to me **
 
 ## Demonstration
 
@@ -307,6 +380,7 @@ est_data %>%
   geom_vline(aes(xintercept=1))+
   geom_vline(aes(xintercept=-1))
 ```
+
 To use this logic for parameter estimation we would maximize the likelihood of crossing the boundary corresponding to the choice at the observed response time. So we need to confirm that the likelihood of each simulated particle hitting the boundary at the simulated timestep is higher for the true parameter combination is than the likelihood computed using an incorrect parameter computation.
 
 ## Likelihood checks
@@ -361,9 +435,10 @@ Even with false parameters that are relatively close to the true ones the true p
 
 ```{r}
 false_dLott = 0.04
+# false_dLott = 0.03
 distortedEVDiff = .4
-# false_sigmaLott = .06
-false_sigmaLott = .01
+false_sigmaLott = .06
+# false_sigmaLott = .01
 
 false_est_data = data.frame()
 
@@ -389,6 +464,7 @@ true_liks %>%
   geom_point()+
   geom_abline(aes(intercept=0, slope=1))
 ```
+
 ## Different trials (~single subject)
 
 Try it for a set of distorted EV differences (akin to a subject). Note this is integrating only on lotteries so not simulating/modeling the actual task yet.
@@ -410,7 +486,7 @@ Plot RDV time course for some trials.
 
 ```{r}
 sim_subj %>%
-  filter(iter<)%>%
+  filter(iter<10)%>%
   ggplot(aes(time, lotteryRDV, group=iter))+
   geom_line(color="gray")+
   scale_x_continuous(breaks = seq(0, 400, 1))+
@@ -597,10 +673,8 @@ tmp %>%
   arrange(-rdv_pdf)
 ```
 
-## Three integrators
+## TBD
 
-```{r}
-
-```
-
-## Full posteriors + hierarchical fit
+- What do you with these for the neuroimaging analyses?
+- Model all subjects together? Or can you get hierarchical Bayesian posteriors?
+- Are the individual parameter needed for anything or is the more interesting question one of model comparison to explain the RT patterns?

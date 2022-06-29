@@ -112,53 +112,6 @@ tmp$debug_df %>%
 tmp
 ```
 
-The p of this choice happening at this timestep with my method: prob arb crossing for lott * prob lott suggesting left + prob arb crossing frac * prob frac suggesting left
-
-```{r}
-timeStep = 10
-numTimeSteps = round(tmp$out$reactionTime*1000/timeStep)
-
-mu_lott_rdv = tmp$out$dLott * numTimeSteps
-s_lott_rdv = sqrt(tmp$out$sigmaLott^2*numTimeSteps)
-
-mu_frac_rdv = tmp$out$dFrac * numTimeSteps
-s_frac_rdv = sqrt(tmp$out$sigmaFrac^2*numTimeSteps)
-
-mu_folded_diff = get_abs_diff_dist_moments(tmp$out$dLott, tmp$out$sigmaLott, tmp$out$dFrac, tmp$out$sigmaFrac)$diff_mu
-mu_arb_rdv = mu_folded_diff * tmp$out$dArb * numTimeSteps
-s_arb_rdv = sqrt(tmp$out$sigmaArb^2*numTimeSteps)
-
-#p left
-p_left = (1-pnorm(1, mu_arb_rdv, s_arb_rdv))* (1-pnorm(0, mu_lott_rdv, s_arb_rdv)) + pnorm(-1, mu_arb_rdv, s_arb_rdv)*(1-pnorm(0, mu_frac_rdv, s_frac_rdv))
-
-#p right
-p_right = (1-pnorm(1, mu_arb_rdv, s_arb_rdv))* (pnorm(0, mu_lott_rdv, s_arb_rdv)) + pnorm(-1, mu_arb_rdv, s_arb_rdv)*(pnorm(0, mu_frac_rdv, s_frac_rdv))
-
-print(paste0("p(left) = ", round(p_left, 5)))
-print(paste0("p(right) = ", round(p_right, 5)))
-```
-
-The # of time it happens at t = RT if you run 1000 particles
-
-```{r}
-n_particles = 1000
-sim_data = data.frame()
-
-for(i in 1:n_particles){
-  tmp_trial = sim_trial(dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, distortedEVDiff = sub_data$distortedEVDiff[100], distortedQVDiff = sub_data$distortedQVDiff[100], probFractalDraw = sub_data$probFractalDraw[100], barrierDecay = 0, EVLeft = sub_data$EVLeft[100], EVRight = sub_data$EVRight[100], QVLeft = sub_data$QVLeft[100], QVRight = sub_data$QVRight[100])
-  tmp_trial$iter = i
-  sim_data = rbind(sim_data, tmp_trial)
-}
-```
-
-```{r}
-sim_data %>%
-  mutate(numTimeSteps = round(reactionTime*1000/10)) %>%
-  ggplot(aes(numTimeSteps))+
-  geom_histogram(bins=25)+
-  geom_hline(aes(yintercept = n_particles*p_left))+
-  geom_vline(aes(xintercept = tmp$out$reactionTime*1000/10))
-```
 
 ## Aggregate checks 
 
@@ -213,6 +166,16 @@ Given the choice and RT for a trial the likelihood of ...
 ## Demonstration
 
 Assuming drift rate and noise parameters for a single integrator we simulate n particles for the same trial (i.e. same value difference) and make a histogram of a particles in each state at each time step.
+
+```{r}
+initialBarrier = 1
+approxStateStep = .1
+halfNumStateBins = round(initialBarrier / approxStateStep)
+stateStep = initialBarrier / (halfNumStateBins + 0.5)
+
+# The vertical axis is divided into states.
+states = seq(-1*(initialBarrier) + (stateStep / 2), initialBarrier - (stateStep / 2), stateStep)
+```
 
 ```{r}
 run_lott_integrator = function(dLott, sigmaLott, distortedEVDiff, nonDecisionTime=0, bias=0, barrierDecay = 0, timeStep=10, barrier = 1, maxIter = 400, debug=TRUE){
@@ -280,17 +243,9 @@ run_lott_integrator = function(dLott, sigmaLott, distortedEVDiff, nonDecisionTim
 
 ```
 
-```{r}
-initialBarrier = 1
-approxStateStep = .1
-halfNumStateBins = round(initialBarrier / approxStateStep)
-stateStep = initialBarrier / (halfNumStateBins + 0.5)
-
-# The vertical axis is divided into states.
-states = seq(-1*(initialBarrier) + (stateStep / 2), initialBarrier - (stateStep / 2), stateStep)
-```
 
 ```{r}
+# n_particles = 1000
 n_particles = 250
 sim_data = data.frame()
 
@@ -305,6 +260,7 @@ Plot the time course of each particle.
 
 ```{r}
 sim_data %>%
+  filter(iter<20)%>%
   ggplot(aes(time, lotteryRDV, group=iter))+
   geom_line(color="gray")+
   scale_x_continuous(breaks = seq(0, 400, 1))+
@@ -324,29 +280,23 @@ for(i in 1:nrow(sim_data)){
 }
 ```
 
-Plot number of particles in each state (on the y axis) for 10 time steps in facets.
+Proportion of particles crossed at each time bin versus the proportion I expected to pass.
 
 ```{r}
 sim_data %>%
-  # filter(time< 11) %>%
-  filter(time>20 &time<31) %>%
-  ggplot(aes(state_bin))+
-  geom_histogram(bins=21)+
-  coord_flip()+
-  facet_grid(.~time)+
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.x = element_blank(),
-        axis.text = element_blank(),
-        axis.ticks = element_blank())+
-  ylab("")+
-  xlab("# particles / state")+
-  scale_x_continuous(breaks=c(1:21)) +
-  geom_vline(aes(xintercept=11), linetype="dashed")+
-  geom_vline(aes(xintercept=21))+
-  geom_vline(aes(xintercept=1))
+  group_by(iter) %>%
+  filter(lotteryRDV == max(lotteryRDV)) %>%
+  ungroup() %>%
+  group_by(time) %>%
+  summarise(num_passed = n()) %>%
+  ungroup() %>%
+  mutate(cum_passed = cumsum(num_passed),
+         prop_passed = cum_passed/n_particles,
+         exp_passed = pnorm(1, mean = dLott*distortedEVDiff*time , sd = sqrt((sigmaLott^2)*time), lower.tail = F)) %>%
+  ggplot(aes(exp_passed, prop_passed))+
+  geom_point()+
+  geom_abline(aes(intercept=0, slope=1))
 ```
-
-Plot estimated pdf of each state for the summed RDV for the same time steps. **The simulated particles are distributed (above) in the predicted (below) manner**
 
 ```{r}
 dLott = 0.03
@@ -362,23 +312,46 @@ for(i in 0:max(sim_data$time)){
  est_data = rbind(est_data, tmp)
 }
 
-est_data %>%
-  # filter(time<11) %>%
-    filter(time>20 &time<31) %>%
-  ggplot(aes(states, pdf_states))+
-  geom_bar(stat="identity")+
-  coord_flip()+
+for(i in 1:nrow(est_data)){
+  est_data$state_bin[i] = which.min(abs(states - est_data$states[i]))
+}
+```
+
+*The simulated particles are distributed (above) in the predicted (below) manner**
+
+```{r}
+sim_data %>%
+  group_by(time, state_bin) %>%
+  summarise(num_particles = n(), 
+            prop_particles = num_particles/n_particles,#once particles begin crossing would you need to normalize by the remaining particles?
+            .groups='keep') %>%
+  mutate(data_type="obs") %>%
+  select(time, state_bin, prop_particles, data_type) %>%
+  rbind(est_data %>%
+          group_by(time) %>%
+          mutate(norm_pdf_states = pdf_states/sum(pdf_states),
+                 norm_pdf_states = ifelse(is.na(norm_pdf_states), 1, norm_pdf_states),
+                 data_type="pred") %>%
+          rename(prop_particles=norm_pdf_states) %>%
+          select(time, state_bin, prop_particles, data_type))%>%
+  # filter(time < 10) %>%
+  filter(time>60 &time<71) %>%
+  ggplot(aes(state_bin, prop_particles, fill=data_type))+
+  geom_bar(stat="identity", position="identity", alpha=0.5)+
   facet_grid(.~time)+
+  coord_flip()+
   theme(panel.grid.minor = element_blank(),
         panel.grid.major.x = element_blank(),
         axis.text = element_blank(),
-        axis.ticks = element_blank())+
+        axis.ticks = element_blank(),
+        legend.position = "bottom")+
   ylab("")+
-  xlab("pdf / state")+
-  scale_x_continuous(breaks=states) +
-  geom_vline(aes(xintercept=0), linetype="dashed")+
-  geom_vline(aes(xintercept=1))+
-  geom_vline(aes(xintercept=-1))
+  xlab("prop particles / state")+
+  labs(fill="")+
+  scale_x_continuous(breaks=c(1:21)) +
+  geom_vline(aes(xintercept=11), linetype="dashed")+
+  geom_vline(aes(xintercept=21))+
+  geom_vline(aes(xintercept=1))
 ```
 
 To use this logic for parameter estimation we would maximize the likelihood of crossing the boundary corresponding to the choice at the observed response time. So we need to confirm that the likelihood of each simulated particle hitting the boundary at the simulated timestep is higher for the true parameter combination is than the likelihood computed using an incorrect parameter computation.

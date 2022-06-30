@@ -245,12 +245,15 @@ run_lott_integrator = function(dLott, sigmaLott, distortedEVDiff, nonDecisionTim
 
 
 ```{r}
+dLott = 0.03
+distortedEVDiff = .4
+sigmaLott = .05
 # n_particles = 1000
 n_particles = 250
 sim_data = data.frame()
 
 for(i in 1:n_particles){
-  tmp = run_lott_integrator(dLott = 0.03, sigmaLott = 0.05, distortedEVDiff = 0.4)$debug_df
+  tmp = run_lott_integrator(dLott = dLott, sigmaLott = sigmaLott, distortedEVDiff =distortedEVDiff)$debug_df
   tmp$iter = i
   sim_data = rbind(sim_data, tmp)
 }
@@ -272,11 +275,40 @@ sim_data %>%
         axis.text = element_blank())
 ```
 
+Plot how many particles have crossed at certain time points
+
+```{r}
+sim_data %>%
+  group_by(iter) %>%
+  filter(time == max(time)) %>%
+  ggplot(aes(time))+
+  geom_histogram(bins=30)
+
+sim_data %>%
+  group_by(iter) %>%
+  filter(lotteryRDV == max(lotteryRDV)) %>%
+  ungroup() %>%
+  group_by(time) %>%
+  summarise(num_passed = n()) %>%
+  ungroup() %>%
+  mutate(cum_passed = cumsum(num_passed)) %>%
+  ggplot(aes(time,cum_passed))+
+  geom_bar(stat="identity")
+```
+
 Compute which discrete state each particle would be in based on the (continuous) RDV
 
 ```{r}
+# for(i in 1:nrow(sim_data)){
+#   sim_data$state_bin[i] = which.min(abs(states - sim_data$lotteryRDV[i]))
+# }
+
 for(i in 1:nrow(sim_data)){
-  sim_data$state_bin[i] = which.min(abs(states - sim_data$lotteryRDV[i]))
+  if(sim_data$lotteryRDV[i]==0){
+    sim_data$lotteryRDV[i] = runif(1, min= (-0.01),max=0.01)
+  }
+  
+  sim_data$state_bin[i] = which.min(abs(seq(-1,1,stateStep) - sim_data$lotteryRDV[i]))
 }
 ```
 
@@ -306,36 +338,64 @@ sigmaLott = .05
 est_data = data.frame()
 
 for(i in 0:max(sim_data$time)){
- tmp=data.frame(time = i, 
-            states = states, 
-            pdf_states = dnorm(states, mean=dLott*distortedEVDiff*i, sd=sqrt(sigmaLott^2*i)))
+  tmp = data.frame(state_lb = seq(-1,.9, .1), state_ub = seq(-0.9,1,.1)) %>%
+    rbind(data.frame(state_lb = -Inf, state_ub = -1)) %>%
+    rbind(data.frame(state_lb = 1, state_ub = Inf)) %>%
+    arrange(state_lb) %>%
+    mutate(state_bin=1:n(), 
+           time=i,
+           cdf_lb = pnorm(state_lb,mean=dLott*distortedEVDiff*i, sd=sqrt(sigmaLott^2*i)),
+           cdf_ub = pnorm(state_ub,mean=dLott*distortedEVDiff*i, sd=sqrt(sigmaLott^2*i)),
+           p_bin = cdf_ub-cdf_lb)
+  
  est_data = rbind(est_data, tmp)
 }
 
-for(i in 1:nrow(est_data)){
-  est_data$state_bin[i] = which.min(abs(states - est_data$states[i]))
-}
+tmp
 ```
 
-*The simulated particles are distributed (above) in the predicted (below) manner**
+*Are the simulated particles distributed in the predicted manner?*
 
 ```{r}
-sim_data %>%
+# demo_data = sim_data %>%
+#   group_by(time, state_bin) %>%
+#   summarise(num_particles = n(), 
+#             .groups='keep') %>%
+#   ungroup() %>%
+#   group_by(time) %>%
+#   mutate(num_remanining_part = sum(num_particles),
+#          prop_particles = num_particles/num_remanining_part) %>%
+#   mutate(data_type="obs") %>%
+#   select(time, state_bin, prop_particles, data_type) %>%
+#   rbind(est_data %>%
+#           mutate(data_type="pred") %>%
+#           rename(prop_particles=p_bin) %>%
+#           select(time, state_bin, prop_particles, data_type))
+
+demo_data = sim_data %>%
+  right_join(expand.grid(c(1:max(sim_data$iter)), c(0:max(sim_data$time))) %>%
+               rename(iter=Var1, time=Var2), by=c("iter", "time")) %>%
+  mutate(state_bin=ifelse(is.na(state_bin), 22, state_bin)) %>%
   group_by(time, state_bin) %>%
-  summarise(num_particles = n(), 
-            prop_particles = num_particles/n_particles,#once particles begin crossing would you need to normalize by the remaining particles?
+  summarise(num_particles = n(),
+            prop_particles = num_particles/n_particles,
             .groups='keep') %>%
   mutate(data_type="obs") %>%
   select(time, state_bin, prop_particles, data_type) %>%
   rbind(est_data %>%
-          group_by(time) %>%
-          mutate(norm_pdf_states = pdf_states/sum(pdf_states),
-                 norm_pdf_states = ifelse(is.na(norm_pdf_states), 1, norm_pdf_states),
-                 data_type="pred") %>%
-          rename(prop_particles=norm_pdf_states) %>%
-          select(time, state_bin, prop_particles, data_type))%>%
-  # filter(time < 10) %>%
-  filter(time>60 &time<71) %>%
+          mutate(data_type="pred") %>%
+          rename(prop_particles=p_bin) %>%
+          select(time, state_bin, prop_particles, data_type))
+
+
+  
+
+```
+
+```{r}
+demo_data %>%
+  # filter(time>0 & time < 11) %>%
+  filter(time>60 & time < 71) %>%
   ggplot(aes(state_bin, prop_particles, fill=data_type))+
   geom_bar(stat="identity", position="identity", alpha=0.5)+
   facet_grid(.~time)+
@@ -348,10 +408,28 @@ sim_data %>%
   ylab("")+
   xlab("prop particles / state")+
   labs(fill="")+
-  scale_x_continuous(breaks=c(1:21)) +
-  geom_vline(aes(xintercept=11), linetype="dashed")+
-  geom_vline(aes(xintercept=21))+
+  scale_x_continuous(breaks=c(.5:22.5)) +
+  geom_vline(aes(xintercept=11.5), linetype="dashed")+
+  geom_vline(aes(xintercept=22))+
   geom_vline(aes(xintercept=1))
+```
+
+```{r}
+demo_data %>%
+  spread(data_type, prop_particles) %>%
+  mutate(obs=ifelse(is.na(obs),0, obs)) %>%
+  # filter(time<12) %>%
+  # filter(time>100&time<113) %>%
+  # filter(state_bin != 1) %>%
+  ggplot(aes(pred, obs, color=time))+
+  geom_point()+
+  geom_abline(aes(intercept=0, slope=1))+
+  # facet_wrap(~state_bin, scales = "free")+
+  facet_wrap(~state_bin)+
+  theme(legend.position = "none",
+        axis.ticks = element_blank(),
+        panel.grid = element_blank(),
+        axis.text = element_blank())
 ```
 
 To use this logic for parameter estimation we would maximize the likelihood of crossing the boundary corresponding to the choice at the observed response time. So we need to confirm that the likelihood of each simulated particle hitting the boundary at the simulated timestep is higher for the true parameter combination is than the likelihood computed using an incorrect parameter computation.

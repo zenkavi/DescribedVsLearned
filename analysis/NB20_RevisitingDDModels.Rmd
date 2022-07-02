@@ -148,14 +148,6 @@ m4b_1 %>%
   ylab("Predicted RT")
 ```
 
-## Parameter estimation
-
-1. Maximum likelihood estimation
-2. Chi sq 
-3. [Least squares]
-4. Bayesian
-5. Hierarchical Bayesian
-
 # Sum of random variables approach to drift rate and noise estimation
 
 Given the choice and RT for a trial the likelihood of ...
@@ -247,6 +239,7 @@ run_lott_integrator = function(dLott, sigmaLott, distortedEVDiff, nonDecisionTim
 ```{r}
 dLott = 0.03
 distortedEVDiff = .4
+# distortedEVDiff = 0
 sigmaLott = .05
 # n_particles = 1000
 n_particles = 250
@@ -275,7 +268,7 @@ sim_data %>%
         axis.text = element_blank())
 ```
 
-Plot how many particles have crossed at certain time points
+Plot RT distribution and how many particles have crossed at certain time points
 
 ```{r}
 sim_data %>%
@@ -304,9 +297,9 @@ Compute which discrete state each particle would be in based on the (continuous)
 # }
 
 for(i in 1:nrow(sim_data)){
-  if(sim_data$lotteryRDV[i]==0){
-    sim_data$lotteryRDV[i] = runif(1, min= (-0.01),max=0.01)
-  }
+  # if(sim_data$lotteryRDV[i]==0){
+  #   sim_data$lotteryRDV[i] = runif(1, min= (-0.01),max=0.01)
+  # }
   
   sim_data$state_bin[i] = which.min(abs(seq(-1,1,stateStep) - sim_data$lotteryRDV[i]))
 }
@@ -330,9 +323,12 @@ sim_data %>%
   geom_abline(aes(intercept=0, slope=1))
 ```
 
+What is the probability of a particle being in any given state bin at each time bin for a given set of drift and diffusion parameters for the single integrator?
+
 ```{r}
 dLott = 0.03
 distortedEVDiff = .4
+# distortedEVDiff = 0
 sigmaLott = .05
 
 est_data = data.frame()
@@ -350,52 +346,38 @@ for(i in 0:max(sim_data$time)){
   
  est_data = rbind(est_data, tmp)
 }
-
-tmp
 ```
 
-*Are the simulated particles distributed in the predicted manner?*
+*Are the simulated particles distributed in the predicted manner across time and space?*
 
 ```{r}
-# demo_data = sim_data %>%
-#   group_by(time, state_bin) %>%
-#   summarise(num_particles = n(), 
-#             .groups='keep') %>%
-#   ungroup() %>%
-#   group_by(time) %>%
-#   mutate(num_remanining_part = sum(num_particles),
-#          prop_particles = num_particles/num_remanining_part) %>%
-#   mutate(data_type="obs") %>%
-#   select(time, state_bin, prop_particles, data_type) %>%
-#   rbind(est_data %>%
-#           mutate(data_type="pred") %>%
-#           rename(prop_particles=p_bin) %>%
-#           select(time, state_bin, prop_particles, data_type))
-
 demo_data = sim_data %>%
+  group_by(iter) %>%
+  mutate(bound_state = ifelse(max(state_bin) == 22, 22, ifelse(min(state_bin) == 1, 1, NA))) %>%
+  ungroup() %>%
+  # to compute the correct proportion of particles in each bin after particles begin crossing a boundary add additional rows for the remaining time points placing that particle on the state above the boundary it had crossed
   right_join(expand.grid(c(1:max(sim_data$iter)), c(0:max(sim_data$time))) %>%
                rename(iter=Var1, time=Var2), by=c("iter", "time")) %>%
-  mutate(state_bin=ifelse(is.na(state_bin), 22, state_bin)) %>%
+  mutate(state_bin = ifelse(is.na(state_bin), unique(na.omit(bound_state)), state_bin)) %>%
   group_by(time, state_bin) %>%
   summarise(num_particles = n(),
             prop_particles = num_particles/n_particles,
             .groups='keep') %>%
+  # add column identifying it is simulated data
   mutate(data_type="obs") %>%
+  # remove columns that won't be used
   select(time, state_bin, prop_particles, data_type) %>%
+  # append predicted data renaming a column to match the simulated data
   rbind(est_data %>%
           mutate(data_type="pred") %>%
           rename(prop_particles=p_bin) %>%
           select(time, state_bin, prop_particles, data_type))
-
-
-  
-
 ```
 
 ```{r}
 demo_data %>%
   # filter(time>0 & time < 11) %>%
-  filter(time>60 & time < 71) %>%
+  filter(time>20 & time < 31) %>%
   ggplot(aes(state_bin, prop_particles, fill=data_type))+
   geom_bar(stat="identity", position="identity", alpha=0.5)+
   facet_grid(.~time)+
@@ -414,13 +396,12 @@ demo_data %>%
   geom_vline(aes(xintercept=1))
 ```
 
+Plot predicted versus observed proportion/probability of being in each state (panels) at each time point (colors)
+
 ```{r}
 demo_data %>%
   spread(data_type, prop_particles) %>%
   mutate(obs=ifelse(is.na(obs),0, obs)) %>%
-  # filter(time<12) %>%
-  # filter(time>100&time<113) %>%
-  # filter(state_bin != 1) %>%
   ggplot(aes(pred, obs, color=time))+
   geom_point()+
   geom_abline(aes(intercept=0, slope=1))+
@@ -597,89 +578,9 @@ for(i in 1:nrow(sim_subj_rts)){
 sum(false_subj_liks$pdf_rdv)
 ```
 
-## Both attributes single integrator
+## Three integrators
 
-Try it with a model integrating on both attributes instead of just on lotteries.
 
-```{r}
-run_single_integrator = function(d, sigma, distortedEVDiff, distortedQVDiff, nonDecisionTime=0, bias=0, barrierDecay = 0, timeStep=10, barrier = 1, maxIter = 400, debug=TRUE){
-  
-  if(debug){
-    debug_df = data.frame(time=0, RDV=0)
-  }
-  
-  RDV = bias
-  time = 1
-  elapsedNDT = 0
-  choice = 0
-  RT = NA
-  nonDecIters = nonDecisionTime / timeStep
-  initialBarrier = barrier
-  barrier = rep(initialBarrier, maxIter)
-  
-  # The values of the barriers can change over time
-  for(t in seq(1, maxIter, 1)){
-    barrier[t] = initialBarrier / (1 + barrierDecay * t)
-  }
-  
-  mu = d * (distortedEVDiff + distortedQVDiff)
-  
-  while (time<maxIter){
-    
-    # If the arbitrator RDV hits one of the barriers make decision
-    if (RDV >= barrier[time] | RDV <= -barrier[time]){
-      
-      # Convert ms back to secs
-      RT = (time * timeStep)/1000 
-      
-      if (RDV >= barrier[time]){
-        choice = "left"
-      } else if (RDV <= -barrier[time]){
-        choice = "right"
-      }
-      break
-    } 
-    
-    # Otherwise continue sampling evidence
-    if (elapsedNDT < nonDecIters){
-      elapsedNDT = elapsedNDT + 1
-    } else{
-      RDV = RDV + rnorm(1, mu, sigma)
-    }
-    
-    if (debug){
-      debug_row = data.frame(time = time, RDV = round(RDV, 3))
-      debug_df = rbind(debug_df, debug_row)
-    }
-    
-    # Increment sampling iteration
-    time = time + 1
-  }
-  
-  #If a choice hasn't been made by the time limit
-  if(is.na(RT)){
-    # Choose whatever you have most evidence for
-    if (RDV >= 0){
-      choice = "left"
-    } else if (RDV <= 0){
-      choice = "right"
-    }
-    if(debug){
-      print("Max iterations reached.")
-    }
-    timeOut = 1
-    RT=rlnorm(1, mean = 1.25, sd = 0.1)
-  }
-  
-  out = data.frame(distortedEVDiff = distortedEVDiff, distortedQVDiff = distortedQVDiff, choice=choice, reactionTime = RT, d=d, sigma=sigma, barrier=barrier[time], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, maxIter=maxIter)
-  
-  if(debug){
-    out = list(out=out, debug_df=debug_df)
-  }
-  
-  return(out)
-}
-```
 
 ```{r}
 get_rdv_pdf = function(data, test_d, test_sigma){
@@ -695,34 +596,6 @@ get_rdv_pdf = function(data, test_d, test_sigma){
 
 ```
 
-```{r}
-n_trials = 1000
-sim_subj = data.frame()
-true_d = 0.05
-true_sigma = 0.03
-
-for(i in 1:n_trials){
-  tmp = run_single_integrator(d = true_d, sigma = true_sigma, 
-                              distortedEVDiff = clean_beh_data$distorted_ev_diff[i],
-                              distortedQVDiff = clean_beh_data$distorted_qv_diff[i], debug=FALSE)
-  tmp$iter = i
-  sim_subj = rbind(sim_subj, tmp)
-}
-```
-
-Compute rdv pdf's for a grid of parameters. Do the true parameters have the highest density? It can identify the correct drift rate if you fix the noise.
-
-```{r}
-tmp = expand.grid(seq(.01, .09, .01), c(.03)) %>%
-  rename(d = Var1, sigma = Var2)
-
-for (i in 1:nrow(tmp)){
-  tmp$rdv_pdf[i] = get_rdv_pdf(sim_subj, tmp$d[i], tmp$sigma[i])
-}
-
-tmp %>%
-  arrange(-rdv_pdf)
-```
 
 ## TBD
 

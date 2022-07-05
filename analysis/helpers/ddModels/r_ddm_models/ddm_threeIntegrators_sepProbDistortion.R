@@ -52,7 +52,8 @@ sim_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, bar
   
   lottery_mu = dLott * distortedEVDiff
   fractal_mu = dFrac * distortedQVDiff
-  sigmaArb = sqrt(sigmaLott^2 + sigmaFrac^2)
+  # sigmaArb = sqrt(sigmaLott^2 + sigmaFrac^2)
+  sigmaArb = 0
   
   while (time<maxIter){
     
@@ -227,9 +228,8 @@ fit_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, bar
   muFrac = dFrac * distortedQVDiff
   
   # tmp = get_abs_diff_dist_moments(muLott, sigmaLott, muFrac, sigmaFrac)
-  # muArb = tmp$diff_mu
+  # muArb = tmp$diff_mu #this is the constant change in the change
   # sigmaArb = tmp$diff_sigma
-  
   
   # LOOP of state probability updating up to reaction time
   
@@ -238,8 +238,8 @@ fit_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, bar
     curTime = nextTime - 1 
     
     tmp = get_abs_diff_dist_moments(muLott*curTime, sqrt(sigmaLott^2*curTime), muFrac*curTime, sqrt(sigmaFrac^2*curTime))
-    muArb = tmp$diff_mu
-    sigmaArb = tmp$diff_sigma
+    muArb = dArb*tmp$diff_mu #the expected change at time t for the arbitrator based on the expected positions of the attribute integrators
+    sigmaArb = tmp$diff_sigma #the uncertainty associated with the expected change at time t
     
     if (elapsedNDT < nonDecIters){
       mu_mean = 0
@@ -249,6 +249,7 @@ fit_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, bar
     }
     
     mu = rnorm(1, mu_mean, epsilon)
+    # mu = rnorm(1, mu_mean, epsilon)*curTime #the rate change with time
     # print(mu)
     
     # Update the probability of the states that remain inside the
@@ -294,7 +295,7 @@ fit_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, bar
   
   pLottRight = pnorm(0, mean = muLott*numTimeSteps, sd = sqrt(sigmaLott^2*numTimeSteps))
   pLottLeft = 1-pLottRight
-  pFracRight = pnorm(0, mean = muLott*numTimeSteps, sd = sqrt(sigmaLott^2*numTimeSteps))
+  pFracRight = pnorm(0, mean = muFrac*numTimeSteps, sd = sqrt(sigmaFrac^2*numTimeSteps))
   pFracLeft = 1-pFracRight
   
   

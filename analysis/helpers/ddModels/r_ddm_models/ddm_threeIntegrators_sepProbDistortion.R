@@ -125,7 +125,7 @@ sim_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, bar
 }
 
 
-fit_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, barrier=1, nonDecisionTime=0, bias=0.1, timeStep=10, approxStateStep = 0.1, debug=FALSE, ...){
+fit_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, barrier=1, nonDecisionTime=0, bias=0.1, timeStep=10, approxStateStep = 0.1, debug=FALSE, epsilon=0, ...){
   
   ######################## HELPER FUNCTIONS ########################
   
@@ -204,87 +204,110 @@ fit_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, bar
   
   # Initial probability for all states is zero, except the bias state,
   # for which the initial probability is one.
+  # p(bottom boundary) is the first value! Don't get confused by seeing it at the top 
   prStatesArb = matrix(data = 0, nrow = length(states), ncol = numTimeSteps)
-  prStatesArb[biasState,1] = 1 #bias affects arbitrator not the attribute integrators
+  prStatesArb[biasState,1] = 1
   
-  prStatesLott = matrix(data = 0, nrow = length(states), ncol = numTimeSteps)
-  prStatesLott[halfNumStateBins+1,1] = 1 
+  # The probability of crossing each barrier over the time of the trial.
+  probUpCrossingArb = rep(0, numTimeSteps)
+  probDownCrossingArb = rep(0, numTimeSteps)
   
-  prStatesFrac = matrix(data = 0, nrow = length(states), ncol = numTimeSteps)
-  if(probFractalDraw == 1){
-    rawQVDiff = kwargs$QVLeft - kwargs$QVRight
-    fracBiasState = which.min(abs(states - rawQVDiff))
-    prStatesFrac[fracBiasState, 1] = 1
-  } else {
-    prStatesFrac[halfNumStateBins+1,1] = 1
-  }
+  # Rows of these matrices correspond to array elements in python
   
-  # How much change is required from each state to move onto every other state
+  # How much change is required from each state to move onto every other state. From the smallest state (bottom boundary) to the largest state (top boundary)
   changeMatrix = matrix(data = states, ncol=length(states), nrow=length(states), byrow=FALSE) - matrix(data = states, ncol=length(states), nrow=length(states), byrow=TRUE)
+  
+  # How much change is required from each state to cross the up or down barrier at each time point
+  changeUp = matrix(data = barrier, ncol=numTimeSteps, nrow=length(states), byrow=TRUE) - matrix(data = states, ncol=numTimeSteps, nrow=length(states), byrow=FALSE)
+  changeDown = matrix(data = -barrier, ncol=numTimeSteps, nrow=length(states), byrow=TRUE) - matrix(data = states, ncol=numTimeSteps, nrow=length(states), byrow=FALSE)
+  
+  elapsedNDT = 0
   
   muLott = dLott * distortedEVDiff
   muFrac = dFrac * distortedQVDiff
   
-  tmp = get_abs_diff_dist_moments(muLott, sigmaLott, muFrac, sigmaFrac)
-  muArb = tmp$diff_mu
-  sigmaArb = tmp$diff_sigma
+  # tmp = get_abs_diff_dist_moments(muLott, sigmaLott, muFrac, sigmaFrac)
+  # muArb = tmp$diff_mu
+  # sigmaArb = tmp$diff_sigma
+  
   
   # LOOP of state probability updating up to reaction time
-  # looping only on computation time steps. Non decision time iterations have been subtracted above. Might revisit if this makes sense later
-  for(nextTime in 2:numTimeSteps){ 
+  
+  # Start at 2 to match python indexing that starts at 0
+  for(nextTime in 2:numTimeSteps){
     curTime = nextTime - 1 
     
-    # Update the probability of the states that remain inside the barriers.
-    # prStatesNewLott = (stateStep * (dnorm(changeMatrix, muLott, sigmaLott) %*% prStatesLott[,curTime]) )
-    prStatesNewLott = (dnorm(changeMatrix, muLott, sigmaLott) %*% prStatesLott[,curTime])
-    prStatesNewLott[states >= barrier[nextTime] | states <= -barrier[nextTime]] = 0
-    prStatesNewLott = prStatesNewLott/sum(prStatesNewLott)
-
-    # prStatesNewFrac = (stateStep * (dnorm(changeMatrix, muFrac, sigmaFrac) %*% prStatesFrac[,curTime]) )
-    prStatesNewFrac = (dnorm(changeMatrix, muFrac, sigmaFrac) %*% prStatesFrac[,curTime])
-    prStatesNewFrac[states >= barrier[nextTime] | states <= -barrier[nextTime]] = 0
-    prStatesNewFrac = prStatesNewFrac/sum(prStatesNewFrac)
-
-    # prStatesNewArb = (stateStep * (dnorm(changeMatrix, muArb, sigmaArb) %*% prStatesArb[,curTime]) )
-    prStatesNewArb = (dnorm(changeMatrix, muArb, sigmaArb) %*% prStatesArb[,curTime]) 
-    prStatesNewArb[states >= barrier[nextTime] | states <= -barrier[nextTime]] = 0
-    prStatesNewArb = prStatesNewArb/sum(prStatesNewArb)
-
-    # Update the probabilities of each state 
-    prStatesLott[, nextTime] = prStatesNewLott
-    prStatesFrac[, nextTime] = prStatesNewFrac
-    prStatesArb[, nextTime] = prStatesNewArb
-
+    tmp = get_abs_diff_dist_moments(muLott*curTime, sqrt(sigmaLott^2*curTime), muFrac*curTime, sqrt(sigmaFrac^2*curTime))
+    muArb = tmp$diff_mu
+    sigmaArb = tmp$diff_sigma
+    
+    if (elapsedNDT < nonDecIters){
+      mu_mean = 0
+      elapsedNDT = elapsedNDT + 1
+    } else{
+      mu_mean = muArb
+    }
+    
+    mu = rnorm(1, mu_mean, epsilon)
+    # print(mu)
+    
+    # Update the probability of the states that remain inside the
+    # barriers. The probability of being in state B is the sum, over
+    # all states A, of the probability of being in A at the previous
+    # time step times the probability of changing from A to B. We
+    # multiply the probability by the stateStep to ensure that the area
+    # under the curves for the probability distributions probUpCrossing
+    # and probDownCrossing add up to 1.
+    # If there is barrier decay and there are next states that are cross
+    # the decayed barrier set their probabilities to 0.
+    prStatesArbNew = (stateStep * (dnorm(changeMatrix, mu, sigmaArb) %*% prStatesArb[,curTime]) )
+    prStatesArbNew[states >= barrier[nextTime] | states <= -barrier[nextTime]] = 0
+    
+    # Calculate the probabilities of crossing the up barrier and the
+    # down barrier. This is given by the sum, over all states A, of the
+    # probability of being in A at the previous timestep times the
+    # probability of crossing the barrier if A is the previous state.
+    tempUpCrossArb = (prStatesArb[,curTime] %*% (1 - pnorm(changeUp[,nextTime], mu, sigmaArb)))[1]
+    tempDownCrossArb = (prStatesArb[,curTime] %*% (pnorm(changeDown[,nextTime], mu, sigmaArb)))[1]
+    
+    # Renormalize to cope with numerical approximations.
+    sumIn = sum(prStatesArb[,curTime])
+    sumCurrent = sum(prStatesArbNew) + tempUpCrossArb + tempDownCrossArb
+    prStatesArbNew = prStatesArbNew * sumIn / sumCurrent
+    tempUpCrossArb = tempUpCrossArb * sumIn / sumCurrent
+    tempDownCrossArb = tempDownCrossArb * sumIn / sumCurrent
+    
+    # Avoid NAs for likelihood conditional statements
+    if (is.na(tempUpCrossArb)){
+      tempUpCrossArb = 0
+    }
+    if (is.na(tempDownCrossArb)){
+      tempDownCrossArb = 0
+    }
+    
+    # Update the probabilities of each state and the probabilities of
+    # crossing each barrier at this timestep.
+    prStatesArb[, nextTime] = prStatesArbNew
+    probUpCrossingArb[nextTime] = tempUpCrossArb
+    probDownCrossingArb[nextTime] = tempDownCrossArb
   }
   
-  penultimateStep = numTimeSteps-1
+  pLottRight = pnorm(0, mean = muLott*numTimeSteps, sd = sqrt(sigmaLott^2*numTimeSteps))
+  pLottLeft = 1-pLottRight
+  pFracRight = pnorm(0, mean = muLott*numTimeSteps, sd = sqrt(sigmaLott^2*numTimeSteps))
+  pFracLeft = 1-pFracRight
   
-  # How much change is required from each state to cross the up or down barrier in the final time step
-  changeUp = matrix(data = barrier[numTimeSteps], ncol=1, nrow=length(states), byrow=TRUE) - matrix(data = states, ncol=1, nrow=length(states), byrow=FALSE)
-  changeDown = matrix(data = -barrier[numTimeSteps], ncol=1, nrow=length(states), byrow=TRUE) - matrix(data = states, ncol=1, nrow=length(states), byrow=FALSE)
   
-  # What is the p of observing that at least the size change sufficient to cross the bound given the moments of the distribution from which the change will come
-  pChangeUpArb = (1-pnorm(changeUp, muArb, sigmaArb))
-  pChangeDownArb = (pnorm(changeDown, muArb, sigmaArb))
-  
-  # p of crossing the boundary is the weighted sum of the prob of observing a given size change from every state bin and and the p of being in state bin
-  probUpCrossingArb = (prStatesArb[,penultimateStep] %*% pChangeUpArb)[1]
-  probDownCrossingArb = (prStatesArb[,penultimateStep] %*% pChangeDownArb)[1]
 
-  pLottLeft = sum(prStatesLott[(halfNumStateBins+1):nrow(prStatesLott),numTimeSteps]) #first numbers in the vector are the bottom half of the state space
-  pLottRight = sum(prStatesLott[1:(halfNumStateBins-1),numTimeSteps])
-  pFracLeft = sum(prStatesFrac[(halfNumStateBins+1):nrow(prStatesFrac),numTimeSteps])
-  pFracRight = sum(prStatesFrac[1:(halfNumStateBins-1),numTimeSteps])
-  
   likelihood = 0
   if (choice == 1){ # Choice was left.
     
     # p of left is p of crossing the lottery boundary * p of lottery integrator being closer to the left boundary + p of crossing the fractal boundary * p of fractal integrator being closer to the left boundary
-      likelihood = probUpCrossingArb * pLottLeft + probDownCrossingArb * pFracLeft
+    likelihood = probUpCrossingArb[numTimeSteps] * pLottLeft + probDownCrossingArb[numTimeSteps] * pFracLeft
   
   } else if (choice == -1){
 
-    likelihood = probUpCrossingArb * pLottRight + probDownCrossingArb * pFracRight
+    likelihood = probUpCrossingArb[numTimeSteps] * pLottRight + probDownCrossingArb[numTimeSteps] * pFracRight
      
   }
   

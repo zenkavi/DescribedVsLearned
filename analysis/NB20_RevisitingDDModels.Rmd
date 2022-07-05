@@ -9,7 +9,6 @@ output:
     toc: yes
 ---
 
-
 ```{r include=FALSE}
 library(tidyverse)
 theme_set(theme_bw())
@@ -52,6 +51,8 @@ clean_beh_data = clean_beh_data %>%
          fractal_qv_diff = leftQValue - rightQValue,
          distorted_ev_diff = (1-theta)*(1-probFractalDraw)*lottery_ev_diff,
          distorted_qv_diff = theta*probFractalDraw*fractal_qv_diff)
+
+rm(fit, g_par_est, par_ests)
 ```
 
 **Potential problem** for 3 integrator model: The model would predict slower decisions because the difference in the absolute value of each attribute integrator RDV would be small.
@@ -88,31 +89,6 @@ sub_data = clean_beh_data %>%
 sim_trial(dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, distortedEVDiff = sub_data$distortedEVDiff[100], distortedQVDiff = sub_data$distortedQVDiff[100], probFractalDraw = sub_data$probFractalDraw[100], barrierDecay = 0, EVLeft = sub_data$EVLeft[100], EVRight = sub_data$EVRight[100], QVLeft = sub_data$QVLeft[100], QVRight = sub_data$QVRight[100])
 ```
 
-## Folded distribution schematic representation
-
-Use the debug df from simulating a single trial with this model
-
-```{r}
-tmp = sim_trial(dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, distortedEVDiff = sub_data$distortedEVDiff[100], distortedQVDiff = sub_data$distortedQVDiff[100], probFractalDraw = sub_data$probFractalDraw[100], barrierDecay = 0, EVLeft = sub_data$EVLeft[100], EVRight = sub_data$EVRight[100], QVLeft = sub_data$QVLeft[100], QVRight = sub_data$QVRight[100], debug=T)
-
-tmp$debug_df %>%
-  select(time, arbitratorRDV, lotteryRDV, fractalRDV) %>%
-  gather(key, value, -time) %>%
-  ggplot(aes(time, value, color=key))+
-  geom_line()+
-  geom_hline(aes(yintercept=1))+
-  geom_hline(aes(yintercept=-1))+
-  geom_hline(aes(yintercept=0), linetype="dashed")+
-  theme(legend.position = "bottom",
-        panel.grid = element_blank())+
-  labs(color="")
-```
-
-```{r}
-tmp
-```
-
-
 ## Aggregate checks 
 
 Simulate data with a 3 integrator model.
@@ -148,26 +124,26 @@ m4b_1 %>%
   ylab("Predicted RT")
 ```
 
-# Sum of random variables approach to drift rate and noise estimation
+# Sum of random variables approach in discrete time and space
 
-Given the choice and RT for a trial the likelihood of ...
+Given the $choice = C$ and $RT = T$ for a trial  
+
+Assuming time step $dt$ timestep of choice is
+$$t = \lceil\frac{T}{dt}\rceil$$
+Assuming the relative decision variable $RDV$ changes according to
+$$\frac{\triangle RDV}{dt} \sim N(d\triangle V, \sigma)$$  
+
+The distribution of the RDV from a starting point $z$ at timestep of choice would be 
+$$RDV (t) \sim N({d\triangle Vt+z}, \sqrt{\sigma^2t})$$  
+Then the probability of crossing the a boundary at timestep $t$ would be the AUC above (1-CDF) or below (CDF) the top or the bottom boundary respectively.
 
 **Why might this not have been used previously? Some ideas:**  
-**The boundary in traditional DDM is not fixed at 1 and -1. Instead it is a parameter. It's not immediately apparent to me **
+**The boundary in traditional DDM is not fixed at 1 and -1. Instead it is a parameter. It's not immediately apparent to me how to use the sum of random variables approach without assuming the boundaries at 1 and -1.**
+**The traditional DDM often models the whole of a response time distribution for correct vs incorrect.**
 
 ## Demonstration
 
 Assuming drift rate and noise parameters for a single integrator we simulate n particles for the same trial (i.e. same value difference) and make a histogram of a particles in each state at each time step.
-
-```{r}
-initialBarrier = 1
-approxStateStep = .1
-halfNumStateBins = round(initialBarrier / approxStateStep)
-stateStep = initialBarrier / (halfNumStateBins + 0.5)
-
-# The vertical axis is divided into states.
-states = seq(-1*(initialBarrier) + (stateStep / 2), initialBarrier - (stateStep / 2), stateStep)
-```
 
 ```{r}
 run_lott_integrator = function(dLott, sigmaLott, distortedEVDiff, nonDecisionTime=0, bias=0, barrierDecay = 0, timeStep=10, barrier = 1, maxIter = 400, debug=TRUE){
@@ -239,9 +215,7 @@ run_lott_integrator = function(dLott, sigmaLott, distortedEVDiff, nonDecisionTim
 ```{r}
 dLott = 0.03
 distortedEVDiff = .4
-# distortedEVDiff = 0
 sigmaLott = .05
-# n_particles = 1000
 n_particles = 250
 sim_data = data.frame()
 
@@ -252,7 +226,7 @@ for(i in 1:n_particles){
 }
 ```
 
-Plot the time course of each particle.
+Plot the time course of some particles.
 
 ```{r}
 sim_data %>%
@@ -260,12 +234,14 @@ sim_data %>%
   ggplot(aes(time, lotteryRDV, group=iter))+
   geom_line(color="gray")+
   scale_x_continuous(breaks = seq(0, 400, 1))+
-  scale_y_continuous(breaks = round(states,3))+
+  # scale_y_continuous(breaks = round(states,3))+
+  scale_y_continuous(breaks = seq(-1,1,.1))+
   geom_hline(aes(yintercept=0), linetype="dashed")+
   geom_hline(aes(yintercept=1))+
   geom_hline(aes(yintercept=-1))+
   theme(panel.grid.minor = element_blank(), 
-        axis.text = element_blank())
+        axis.text = element_blank(),
+        axis.ticks = element_blank())
 ```
 
 Plot RT distribution and how many particles have crossed at certain time points
@@ -292,45 +268,15 @@ sim_data %>%
 Compute which discrete state each particle would be in based on the (continuous) RDV
 
 ```{r}
-# for(i in 1:nrow(sim_data)){
-#   sim_data$state_bin[i] = which.min(abs(states - sim_data$lotteryRDV[i]))
-# }
-
-for(i in 1:nrow(sim_data)){
-  # if(sim_data$lotteryRDV[i]==0){
-  #   sim_data$lotteryRDV[i] = runif(1, min= (-0.01),max=0.01)
-  # }
-  
-  sim_data$state_bin[i] = which.min(abs(seq(-1,1,stateStep) - sim_data$lotteryRDV[i]))
-}
-```
-
-Proportion of particles crossed at each time bin versus the proportion I expected to pass.
-
-```{r}
-sim_data %>%
-  group_by(iter) %>%
-  filter(lotteryRDV == max(lotteryRDV)) %>%
-  ungroup() %>%
-  group_by(time) %>%
-  summarise(num_passed = n()) %>%
-  ungroup() %>%
-  mutate(cum_passed = cumsum(num_passed),
-         prop_passed = cum_passed/n_particles,
-         exp_passed = pnorm(1, mean = dLott*distortedEVDiff*time , sd = sqrt((sigmaLott^2)*time), lower.tail = F)) %>%
-  ggplot(aes(exp_passed, prop_passed))+
-  geom_point()+
-  geom_abline(aes(intercept=0, slope=1))
+sim_data = sim_data %>%
+  mutate(state_bin = cut(lotteryRDV, breaks =seq(-1.1,1.1,.1),labels=FALSE),
+         state_bin = ifelse(is.na(state_bin) & lotteryRDV>1, max(state_bin, na.rm=T), 
+                            ifelse(is.na(state_bin) & lotteryRDV<(-1), min(state_bin, na.rm=T), state_bin)))
 ```
 
 What is the probability of a particle being in any given state bin at each time bin for a given set of drift and diffusion parameters for the single integrator?
 
 ```{r}
-dLott = 0.03
-distortedEVDiff = .4
-# distortedEVDiff = 0
-sigmaLott = .05
-
 est_data = data.frame()
 
 for(i in 0:max(sim_data$time)){
@@ -344,8 +290,9 @@ for(i in 0:max(sim_data$time)){
            cdf_ub = pnorm(state_ub,mean=dLott*distortedEVDiff*i, sd=sqrt(sigmaLott^2*i)),
            p_bin = cdf_ub-cdf_lb)
   
- est_data = rbind(est_data, tmp)
+  est_data = rbind(est_data, tmp)
 }
+
 ```
 
 *Are the simulated particles distributed in the predicted manner across time and space?*
@@ -413,189 +360,200 @@ demo_data %>%
         axis.text = element_blank())
 ```
 
-To use this logic for parameter estimation we would maximize the likelihood of crossing the boundary corresponding to the choice at the observed response time. So we need to confirm that the likelihood of each simulated particle hitting the boundary at the simulated timestep is higher for the true parameter combination is than the likelihood computed using an incorrect parameter computation.
-
-## Likelihood checks
-
-For this single integrator is the density (/likelihood) at time step == true rt always higher for the true parameter combination compared to a wrong parameter combo? Or is the density always larger for something stupid like the size of the mean?
-
-The density of a particle that has crossed a barrier at time t is `dnorm(crossed barrier, mean=drift rate * t, sd = sqrt(sigma ^ 2 * t))`.
-
-Here I merged the data on when each particle crossed the barrier with the estimated densities of being at the state closest to the boundary at that time point given the true drift rate and sigma. So these aren't quiet right. More accurately I could compute the density for the `lotteryRDV` for each particle at the time they've crossed the boundary. Still, in empirical data I will only have choice which I translate to a boundary so this is probably a close enough approximation.
-
 ```{r}
-true_liks = sim_data %>%
-  group_by(iter) %>%
-  filter(time == max(time)) %>%
-  left_join(est_data %>%
-  filter(states>.95), by="time") # this isn't full proof. ideally you'd merge on time and statebin since it's possible that the other boundary was hit
+rm(run_lott_integrator, sim_data, est_data, demo_data)
 ```
 
-Having larger scaling factor doesn't translate higher density. The plot shows the computed densities of crossing the boundary at the time each particle did using the true and incorrect parameters. For most particles the true density is higher.
+# Recovery checks
+
+## One integrator
 
 ```{r}
-false_dLott = 0.08
-distortedEVDiff = .4
-false_sigmaLott = .08
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_oneIntegrator_sepProbDistortion.R'))
+```
 
-false_est_data = data.frame()
+### Same trial
 
-for(i in 0:max(sim_data$time)){
- tmp=data.frame(time = i, 
-            states = states, 
-            pdf_states = dnorm(states, mean=false_dLott*distortedEVDiff*i, sd=sqrt(false_sigmaLott^2*i)))
- false_est_data = rbind(false_est_data, tmp)
+```{r}
+d = 0.03
+distortedEVDiff = .3
+distortedQVDiff = .1
+sigma = .05
+n_particles = 250
+sim_data = data.frame()
+
+for(i in 1:n_particles){
+  tmp = sim_trial(d = d, sigma = sigma, distortedEVDiff =distortedEVDiff, distortedQVDiff =distortedQVDiff, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, probFractalDraw = NA)
+  tmp$iter = i
+  sim_data = rbind(sim_data, tmp)
 }
-
-false_liks = sim_data %>%
-  group_by(iter) %>%
-  filter(time == max(time)) %>%
-  left_join(false_est_data %>%
-  filter(states>.95), by="time")
-
-true_liks %>%
-  mutate(lik_type = "true") %>%
-  rbind(false_liks %>% mutate(lik_type="false")) %>%
-  select(iter, pdf_states, lik_type) %>%
-  spread(lik_type, pdf_states) %>%
-  ggplot(aes(true, false))+
-  geom_point()+
-  geom_abline(aes(intercept=0, slope=1))
 ```
-
-Even with false parameters that are relatively close to the true ones the true pdf's are higher for most particles.
 
 ```{r}
-false_dLott = 0.04
-# false_dLott = 0.03
-distortedEVDiff = .4
-false_sigmaLott = .06
-# false_sigmaLott = .01
+fit_trial_list = list(model1 = fit_trial)
 
-false_est_data = data.frame()
+d_range = seq(.01, .1, .01)
+sigma_range = seq(.01, .1, .01)
 
-for(i in 0:max(sim_data$time)){
- tmp=data.frame(time = i, 
-            states = states, 
-            pdf_states = dnorm(states, mean=false_dLott*distortedEVDiff*i, sd=sqrt(false_sigmaLott^2*i)))
- false_est_data = rbind(false_est_data, tmp)
+recovery_df = data.frame(test_d = NA, test_sigma = NA, nll = NA)
+
+for(i in 1:length(d_range)){
+  for(j in 1:length(sigma_range)){
+    test_d = d_range[i]
+    test_sigma = sigma_range[j]
+    test_nll = get_task_nll(data_ = sim_data, par = c(test_d, test_sigma), par_names_ = c("d", "sigma"), model_name = "model1", fix_pars_ = list())
+    recovery_df = rbind(recovery_df,
+                        data.frame(test_d = test_d, test_sigma = test_sigma, nll = test_nll))
+    
+  }
 }
-
-false_liks = sim_data %>%
-  group_by(iter) %>%
-  filter(time == max(time)) %>%
-  left_join(false_est_data %>%
-  filter(states>.95), by="time")
-
-true_liks %>%
-  mutate(lik_type = "true") %>%
-  rbind(false_liks %>% mutate(lik_type="false")) %>%
-  select(iter, pdf_states, lik_type) %>%
-  spread(lik_type, pdf_states) %>%
-  ggplot(aes(true, false))+
-  geom_point()+
-  geom_abline(aes(intercept=0, slope=1))
+recovery_df = recovery_df %>% drop_na()
 ```
 
-## Different trials (~single subject)
 
-Try it for a set of distorted EV differences (akin to a subject). Note this is integrating only on lotteries so not simulating/modeling the actual task yet.
+```{r}
+recovery_df %>%
+  mutate(test_d = as.factor(test_d),
+         test_sigma = as.factor(test_sigma)) %>%
+  ggplot(aes(test_d, test_sigma, fill=nll))+
+  geom_tile()
+
+#Zoom in
+recovery_df %>%
+  filter(test_sigma>.04 & test_d < .06)%>%
+  mutate(test_d = as.factor(test_d),
+         test_sigma = as.factor(test_sigma)) %>%
+  ggplot(aes(test_d, test_sigma, fill=nll))+
+  geom_tile()
+```
+
+### Different trials (~single subject)
+
+
+```{r}
+sim_trial_list = list()
+sim_trial_list[['model1']] = sim_trial
+```
 
 ```{r}
 n_trials = 300
-sim_subj = data.frame()
-true_dLott = 0.03
-true_sigmaLott = 0.05
+stimuli = clean_beh_data[1:n_trials,] %>%
+  select(leftLotteryEV, rightLotteryEV, leftQValue, rightQValue, probFractalDraw, reactionTime, choiceLeft, subnum, distorted_ev_diff, distorted_qv_diff) %>%
+  rename(EVLeft = leftLotteryEV, EVRight = rightLotteryEV, QVLeft = leftQValue, QVRight = rightQValue, distortedEVDiff = distorted_ev_diff, distortedQVDiff = distorted_qv_diff)
+sim_subj = sim_task(stimuli, model_name = "model1", d=d, sigma=sigma)
+# sim_subj
+```
 
-for(i in 1:n_trials){
-  tmp = run_lott_integrator(dLott = true_dLott, sigmaLott = true_sigmaLott, distortedEVDiff = clean_beh_data$distorted_ev_diff[i])$debug_df
-  tmp$iter = i
-  sim_subj = rbind(sim_subj, tmp)
+```{r}
+d_range = seq(.01, .1, .02)
+sigma_range = seq(.01, .1, .02)
+
+recovery_df = data.frame(test_d = NA, test_sigma = NA, nll = NA)
+
+for(i in 1:length(d_range)){
+  for(j in 1:length(sigma_range)){
+    test_d = d_range[i]
+    test_sigma = sigma_range[j]
+    test_nll = get_task_nll(data_ = sim_subj, par = c(test_d, test_sigma), par_names_ = c("d", "sigma"), model_name = "model1", fix_pars_ = list())
+    recovery_df = rbind(recovery_df,
+                        data.frame(test_d = test_d, test_sigma = test_sigma, nll = test_nll))
+    
+  }
 }
-```
+recovery_df = recovery_df %>% drop_na()
 
-Plot RDV time course for some trials.
+```
 
 ```{r}
-sim_subj %>%
-  filter(iter<10)%>%
-  ggplot(aes(time, lotteryRDV, group=iter))+
-  geom_line(color="gray")+
-  scale_x_continuous(breaks = seq(0, 400, 1))+
-  scale_y_continuous(breaks = round(states,3))+
-  geom_hline(aes(yintercept=0), linetype="dashed")+
-  geom_hline(aes(yintercept=1))+
-  geom_hline(aes(yintercept=-1))+
-  theme(panel.grid.minor = element_blank(), 
-        axis.text = element_blank())
+recovery_df %>%
+  mutate(test_d = as.factor(test_d),
+         test_sigma = as.factor(test_sigma)) %>%
+  ggplot(aes(test_d, test_sigma, fill=nll))+
+  geom_tile()
+
+recovery_df %>%
+  filter(test_sigma > .03) %>%
+  mutate(test_d = as.factor(test_d),
+         test_sigma = as.factor(test_sigma)) %>%
+  ggplot(aes(test_d, test_sigma, fill=nll))+
+  geom_tile()
 ```
 
-Compute the probability density of being in the given state at the time the integrator terminated for each trial using the true drift rate and sigma. This time using the actual RDV to compute the density but note again that this latent variable won't exist in empirical data so we'll assume an RDV of 1 or -1 depending on the boundary.
 
-```{r}
-sim_subj_rts = sim_subj %>%
-  group_by(iter) %>%
-  filter(time == max(time))
 
-subj_liks = data.frame()
-
-for(i in 1:nrow(sim_subj_rts)){
-  trial_time = sim_subj_rts$time[i]
-  trial_rdv = sim_subj_rts$lotteryRDV[i]
-  trial_evDiff = clean_beh_data$distorted_ev_diff[i]
- tmp=data.frame(iter = sim_subj_rts$iter[i],
-                time = trial_time,
-                rdv = trial_rdv,
-                pdf_rdv = dnorm(trial_rdv, mean=true_dLott*trial_evDiff*trial_time, sd=sqrt(true_sigmaLott^2*trial_time)))
- subj_liks = rbind(subj_liks, tmp)
-}
-```
-
-The sum of these would be the likelihood of the data (so are these like elpd's - expected log prob densities?)
-
-```{r}
-sum(subj_liks$pdf_rdv)
-```
-
-Confirm that this sum of likelihoods for each trial would be lower if you used the incorrect drift rate and sigma. **Doesn't do a good job estimating the noise**
-
-```{r}
-false_dLott = 0.05
-false_sigmaLott = 0.05
-false_subj_liks = data.frame()
-
-for(i in 1:nrow(sim_subj_rts)){
-  trial_time = sim_subj_rts$time[i]
-  trial_rdv = sim_subj_rts$lotteryRDV[i]
-  trial_evDiff = clean_beh_data$distorted_ev_diff[i]
- tmp=data.frame(iter = sim_subj_rts$iter[i],
-                time = trial_time,
-                rdv = trial_rdv,
-                pdf_rdv = dnorm(trial_rdv, mean=false_dLott*trial_evDiff*trial_time, sd=sqrt(false_sigmaLott^2*trial_time)))
- false_subj_liks = rbind(false_subj_liks, tmp)
-}
-
-sum(false_subj_liks$pdf_rdv)
-```
 
 ## Three integrators
 
-
-
 ```{r}
-get_rdv_pdf = function(data, test_d, test_sigma){
-  data = data %>%
-    mutate(rdv = ifelse(choice == "left", 1, -1),
-           num_timeSteps = round(reactionTime*1000/timeStep),
-           trial_drift = distortedEVDiff + distortedQVDiff,
-           pdf_rdv = dnorm(rdv, mean=test_d*trial_drift*num_timeSteps, sd=sqrt(test_sigma^2*num_timeSteps)))
-  
-  return(sum(data$pdf_rdv))
-         
-}
-
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_threeIntegrators_sepProbDistortion.R'))
 ```
 
+### Same trial
+
+```{r}
+d = 0.03
+distortedEVDiff = .3
+distortedQVDiff = .1
+sigma = .05
+n_particles = 250
+sim_data = data.frame()
+
+for(i in 1:n_particles){
+  tmp = sim_trial(dLott=0.03, dFrac=0.06, dArb=0.05, sigmaLott = 0.03, sigmaFrac = 0.03, distortedEVDiff =distortedEVDiff, distortedQVDiff =distortedQVDiff, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, probFractalDraw = .5, barrierDecay = 0)
+  tmp$iter = i
+  sim_data = rbind(sim_data, tmp)
+}
+```
+
+```{r}
+fit_trial_list = list(model3 = fit_trial)
+
+dLott_range = c(.01, .03, .09)
+dFrac_range = c(.01, .06, .09)
+dArb_range = c(.01, .05, .09)
+sigma_fix = .03
+
+recovery_df = data.frame(test_dLott = NA, test_dFrac = NA, test_dArb = NA, nll = NA)
+
+for(i in 1:length(dLott_range)){
+  for(j in 1:length(dFrac_range)){
+    for(k in 1:length(dArb_range)){
+      test_dLott = dLott_range[i]
+      test_dFrac = dFrac_range[j]
+      test_dArb = dArb_range[k]
+      test_nll = get_task_nll(data_ = sim_data, par = c(test_dLott, test_dFrac, test_dArb, sigma_fix, sigma_fix), par_names_ = c("dLott", "dFrac", "dArb","sigmaLott", "sigmaFrac"), model_name = "model3", fix_pars_ = list())
+      recovery_df = rbind(recovery_df,
+                          data.frame(test_dLott = test_dLott, test_dFrac = test_dFrac, test_dArb = test_dArb, nll = test_nll))
+    }
+  }
+}
+recovery_df = recovery_df %>% drop_na()
+```
+
+
+### Folded distribution schematic representation
+
+Use the debug df from simulating a single trial with this model
+
+```{r}
+tmp = sim_trial(dLott=0.03, dFrac=0.04, dArb=0.04, sigmaLott = 0.03, sigmaFrac = 0.03, distortedEVDiff = sub_data$distortedEVDiff[100], distortedQVDiff = sub_data$distortedQVDiff[100], probFractalDraw = sub_data$probFractalDraw[100], barrierDecay = 0, EVLeft = sub_data$EVLeft[100], EVRight = sub_data$EVRight[100], QVLeft = sub_data$QVLeft[100], QVRight = sub_data$QVRight[100], debug=T)
+
+tmp$debug_df %>%
+  select(time, arbitratorRDV, lotteryRDV, fractalRDV) %>%
+  gather(key, value, -time) %>%
+  ggplot(aes(time, value, color=key))+
+  geom_line()+
+  geom_hline(aes(yintercept=1))+
+  geom_hline(aes(yintercept=-1))+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  theme(legend.position = "bottom",
+        panel.grid = element_blank())+
+  labs(color="")
+```
+
+```{r}
+tmp
+```
 
 ## TBD
 

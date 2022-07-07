@@ -158,7 +158,7 @@ fit_task = function(data_, model_name_, pars_, fix_pars_ = list(), fit_trial_lis
 
 # Usage in optim
 # optim(par, get_task_nll, data_, par_names, model_name)
-get_task_nll = function(data_, par_, par_names_, model_name_, fix_pars_){
+get_task_nll = function(data_, par_, par_names_, model_name_, fix_pars_, filter_liks_=FALSE, filter_quant_=.5){
   
   # Initialize parameters
   # Different models will have different sets of parameters. Optim will optimize over all the parameters it is passed in
@@ -167,6 +167,11 @@ get_task_nll = function(data_, par_, par_names_, model_name_, fix_pars_){
   
   # Get trial likelihoods for the stimuli using the initialized parameters
   out = fit_task(data_ = data_, model_name_ = model_name_, pars_ = pars, fix_pars_ = fix_pars_)
+  
+  if(filter_liks_){
+    out = out %>%
+      filter(likelihood>quantile(likelihood, probs=c(filter_quant_)))
+  }
   
   nll = -sum(log(out$likelihood+1e-200))
   

@@ -246,7 +246,6 @@ fit_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, bar
     
     tmp = get_abs_diff_dist_moments(muLott*curTime, sqrt(sigmaLott^2*curTime), muFrac*curTime+fracBias, sqrt(sigmaFrac^2*curTime))
     
-    
     muArb = dArb*tmp$diff_mu #the expected change at time t for the arbitrator based on the expected positions of the attribute integrators
     sigmaArb = tmp$diff_sigma #the uncertainty associated with the expected change at time t
     
@@ -306,8 +305,6 @@ fit_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, bar
   pLottLeft = 1-pLottRight
   pFracRight = pnorm(0, mean = muFrac*numTimeSteps, sd = sqrt(sigmaFrac^2*numTimeSteps))
   pFracLeft = 1-pFracRight
-  
-  
   
   likelihood = 0
   if (choice == 1){ # Choice was left.

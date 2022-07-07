@@ -8,8 +8,21 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
              data_type = "true")
   }
+  
+  if("choiceLeft" %in% names(sim_data)){
+    sim_data = sim_data %>%
+      mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
+             data_type = "true")
+  }
+  
   if("leftQValue" %in% names(true_data)){
     true_data = true_data %>%
+      rename(QVLeft = leftQValue, QVRight = rightQValue, EVLeft = leftLotteryEV, EVRight = rightLotteryEV) %>%
+      select(subnum, EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, data_type)
+  }
+  
+  if("leftQValue" %in% names(sim_data)){
+    sim_data = sim_data %>%
       rename(QVLeft = leftQValue, QVRight = rightQValue, EVLeft = leftLotteryEV, EVRight = rightLotteryEV) %>%
       select(subnum, EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, data_type)
   }
@@ -221,6 +234,11 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       scale_color_manual(values = c(cbbPalette[3], cbbPalette[5:6]))+
       scale_alpha_manual(values=c(1, .5))
     
+    if(length(unique(tmp$data_type))==1){
+      p = p+
+        guides(shape="none", alpha="none")
+    }
+    
     print(p)
   }
   
@@ -267,11 +285,16 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       scale_color_manual(values = c(cbbPalette[3], cbbPalette[5:6]))+
       scale_alpha_manual(values=c(1, .5))
     
+    if(length(unique(tmp$data_type))==1){
+      p = p+
+        guides(shape="none", alpha="none")
+    }
+    
     print(p)
     
   }
   
-  # Check 8: EV difference effect on RT
+  # Check 8: Relevant error effect on RT
   if(8 %in% checks){
     
     tmp = sim_data %>%
@@ -323,6 +346,11 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       scale_alpha_manual(values = c(1, .5))+
       scale_color_manual(values = c("blue", "red"))+
       facet_wrap(~correctBasedOn)
+    
+    if(length(unique(tmp$data_type))==1){
+      p = p+
+        guides(shape="none", alpha="none")
+    }
     
     print(p)
     

@@ -55,17 +55,6 @@ clean_beh_data = clean_beh_data %>%
 rm(fit, g_par_est, par_ests)
 ```
 
-**Potential problem** for 3 integrator model: The model would predict slower decisions because the difference in the absolute value of each attribute integrator RDV would be small.
-
-**BUT** by design there aren't trials that provide strong (distorted) evidence for a single side so for the current set of stimuli this should not be a concern.
-
-```{r}
-clean_beh_data %>%
-  ggplot(aes(distorted_ev_diff, distorted_qv_diff)) +
-  geom_point()+
-  geom_abline(aes(slope=1, intercept=0))
-```
-
 
 ```{r}
 # Extract set of stimuli that will be used for simulations
@@ -75,111 +64,18 @@ sub_data = clean_beh_data %>%
   rename(EVLeft = leftLotteryEV, EVRight = rightLotteryEV, QVLeft = leftQValue, QVRight = rightQValue, distortedEVDiff = distorted_ev_diff, distortedQVDiff = distorted_qv_diff)
 ```
 
-# The 3 integrator model
+# RT effects to explain
 
 Source trial simulating and fitting function three integrator model. The model only had the ddm parameters as variables; choice parameters (learning rate and probability distortion) are fitted elsewhere and used to compute the distorted value differences fed into this model.
 
-```{r}
-sim_trial_list = list()
-source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_threeIntegrators_sepProbDistortion.R'))
-sim_trial_list[['model3']] = sim_trial
-```
-
-Test if trial simulating function works.
 
 ```{r}
-i=300
-tmp = sim_trial(dLott=0.03, dFrac=0.06, dArb=0.07, sigmaLott = 0.03, sigmaFrac = 0.03, distortedEVDiff = sub_data$distortedEVDiff[i], distortedQVDiff = sub_data$distortedQVDiff[i], probFractalDraw = sub_data$probFractalDraw[i], barrierDecay = 0, EVLeft = sub_data$EVLeft[i], EVRight = sub_data$EVRight[i], QVLeft = sub_data$QVLeft[i], QVRight = sub_data$QVRight[i], debug=TRUE)
-
-annot_top = paste0("distorted EV difference = ", round(tmp$out$distortedEVDiff, 3), 
-                    "\ndistorted QV difference = ", round(tmp$out$distortedQVDiff, 3),
-                   "\nprobFractalDraw = ", tmp$out$probFractalDraw,
-                    "\nchoice (based on) = ", tmp$out$choice, " (", tmp$out$arbitrator, ")")
-
-annot_bot = paste0("dLottery = ", tmp$out$dLott, 
-                    "\ndFractal = ", tmp$out$dFrac,
-                    "\ndArbitrator = ", tmp$out$dArb,
-                    "\nsigma = ", tmp$out$sigmaLott)
-
-tmp$debug_df %>%
-  select(arbitratorRDV, lotteryRDV, fractalRDV, time) %>%
-  gather(key, value, -time) %>%
-  ggplot(aes(time, value, color=key))+
-  geom_line()+
-  geom_hline(aes(yintercept=1))+
-  geom_hline(aes(yintercept=-1))+
-  geom_hline(aes(yintercept=0), linetype="dashed")+
-  theme(legend.position = "bottom",
-        panel.grid = element_blank())+
-  labs(color="", x = "Timestep (in 10 ms)", y="RDV")+
-  annotate(geom="text", x=20, y = .6, label = annot_top, hjust=0)+
-  annotate(geom="text", x=20, y = -.6, label = annot_bot, hjust=0)
-
-```
-
-Potential issue: trials where the attribute integrators move slowly in the same directions would result in unlikely slow responses.
-
-```{r}
-tmp = sim_trial(dLott=0.03, dFrac=0.03, dArb=0.07, sigmaLott = 0.003, sigmaFrac = 0.003, distortedEVDiff = .09, distortedQVDiff =.09, probFractalDraw =.5, barrierDecay = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE)
-
-annot_top = paste0("distorted EV difference = ", round(tmp$out$distortedEVDiff, 3), 
-                    "\ndistorted QV difference = ", round(tmp$out$distortedQVDiff, 3),
-                   "\nprobFractalDraw = ", tmp$out$probFractalDraw,
-                    "\nchoice (based on) = ", tmp$out$choice, " (", tmp$out$arbitrator, ")")
-
-annot_bot = paste0("dLottery = ", tmp$out$dLott, 
-                    "\ndFractal = ", tmp$out$dFrac,
-                    "\ndArbitrator = ", tmp$out$dArb,
-                    "\nsigma = ", tmp$out$sigmaLott)
-
-tmp$debug_df %>%
-  select(arbitratorRDV, lotteryRDV, fractalRDV, time) %>%
-  gather(key, value, -time) %>%
-  ggplot(aes(time, value, color=key))+
-  geom_line()+
-  geom_hline(aes(yintercept=1))+
-  geom_hline(aes(yintercept=-1))+
-  geom_hline(aes(yintercept=0), linetype="dashed")+
-  theme(legend.position = "bottom",
-        panel.grid = element_blank())+
-  labs(color="", x = "Timestep (in 10 ms)", y="RDV")+
-  annotate(geom="text", x=10, y = .6, label = annot_top, hjust=0)+
-  annotate(geom="text", x=10, y = -.6, label = annot_bot, hjust=0)
-```
-
-## Aggregate checks 
-
-Simulate data with a 3 integrator model using half the stimuli filtered earlier and this three integrator model.
-
-**Note: this selection of parameters provides a nice qualitative fit to data. It assumes integration is slower for lotteries than for fractals. This is one way of capturing the difference in processing lottery values, which can only be done after the stimulus presentation, as apposed to fractal values which are learned about trialwise. There are alternative ways of modeling this: e.g. integration for the fractal integrator might start before the stimulus presentation screen; ndt for the lottery integrator (or the arbitrator when the lottery is more relevant) might be longer etc. The way to determine which of these hypotheses is most supported by data would be a model comparison.**
-
-```{r}
-# m3_1 = sim_task(sub_data, model_name = "model3", dLott=0.03, dFrac=0.06, dArb=0.05, sigmaLott = 0.03, sigmaFrac = 0.03)
-m3_1 = sim_task(sub_data, model_name = "model3", dLott=0.03, dFrac=0.06, dArb=0.07, sigmaLott = 0.03, sigmaFrac = 0.03)
-```
-
-```{r}
-sim_sanity_checks(m3_1, checks=c(1,3,4,5,6,7,8), compare_logits = TRUE)
-```
-
-## Question: Absolute check
-
-Are the predicted response times close to the true response times? Not really. Despite the apparent correspondence when looking at aggregate data grouped by probFractalDraw level the individual trial estimates are not correlated at all.
-
-Does a well-established model do better in such an absolute check of model fit?
-
-```{r}
-m3_1 %>%
-  left_join(sub_data, by=c("EVLeft", "EVRight", "QVLeft", "QVRight", "distortedEVDiff", "distortedQVDiff", "probFractalDraw")) %>%
-  ggplot(aes(reactionTime.y, reactionTime.x))+
-  geom_point(color="light gray")+
-  geom_smooth(formula="y~x", method="lm")+
-  geom_abline(aes(slope=1, intercept=0), linetype="dashed")+
-  xlab("True RT")+
-  ylab("Predicted RT")
+sim_sanity_checks(sub_data, checks=c(1,3,4,5,6,7,8), compare_logits = F, compare_rts = FALSE)
 ```
 
 # Recovery checks
+
+## States-space method
 
 Using Gabi's discrete time and state-space method
 
@@ -301,21 +197,29 @@ recovery_df %>%
 
 ## Three integrators
 
-Extending the state space approach
-
 ```{r}
 source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_threeIntegrators_sepProbDistortion.R'))
 fit_trial_list = list(model3 = fit_trial)
 sim_trial_list = list(model3 = sim_trial)
 ```
 
-Check if single trial fit function estimates the probabilities correctly on a very simpl example
+### Schematic representation
+
+Extending the state space approach
+
+1. Likelihood computations depends on all three integrators' position
+
+2. Time-dependent change of arbitrator slope
 
 ```{r}
-# i=1000
-# tmp = sim_trial(dLott=0.03, dFrac=0.06, dArb=0.07, sigmaLott = 0.03, sigmaFrac = 0.03, distortedEVDiff = sub_data$distortedEVDiff[i], distortedQVDiff = sub_data$distortedQVDiff[i], probFractalDraw = sub_data$probFractalDraw[i], barrierDecay = 0, EVLeft = sub_data$EVLeft[i], EVRight = sub_data$EVRight[i], QVLeft = sub_data$QVLeft[i], QVRight = sub_data$QVRight[i], debug=TRUE)
 
-tmp = sim_trial(dLott=0.03, dFrac=0.06, dArb=0.07, sigmaLott = 0.001, sigmaFrac = 0.001, distortedEVDiff = .5, distortedQVDiff = -.1, probFractalDraw = 2, barrierDecay = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE)
+```
+
+Test if trial simulating function works.
+
+```{r}
+i=300
+tmp = sim_trial(dLott=0.03, dFrac=0.06, dArb=0.07, sigmaLott = 0.03, sigmaFrac = 0.03, distortedEVDiff = sub_data$distortedEVDiff[i], distortedQVDiff = sub_data$distortedQVDiff[i], probFractalDraw = sub_data$probFractalDraw[i], barrierDecay = 0, EVLeft = sub_data$EVLeft[i], EVRight = sub_data$EVRight[i], QVLeft = sub_data$QVLeft[i], QVRight = sub_data$QVRight[i], debug=TRUE)
 
 annot_top = paste0("distorted EV difference = ", round(tmp$out$distortedEVDiff, 3), 
                     "\ndistorted QV difference = ", round(tmp$out$distortedQVDiff, 3),
@@ -343,8 +247,80 @@ tmp$debug_df %>%
 
 ```
 
+Potential issue: trials where the attribute integrators move slowly in the same directions would result in unlikely slow responses.
+
 ```{r}
-tmp_fit = fit_trial(dLott=0.03, dFrac=0.06, dArb=0.07, sigmaLott = 0.001, sigmaFrac = 0.001, distortedEVDiff = .5, distortedQVDiff = -.1, probFractalDraw = 2, barrierDecay = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA,
+tmp = sim_trial(dLott=0.03, dFrac=0.03, dArb=0.07, sigmaLott = 0.003, sigmaFrac = 0.003, distortedEVDiff = .09, distortedQVDiff =.09, probFractalDraw =.5, barrierDecay = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE)
+
+annot_top = paste0("distorted EV difference = ", round(tmp$out$distortedEVDiff, 3), 
+                    "\ndistorted QV difference = ", round(tmp$out$distortedQVDiff, 3),
+                   "\nprobFractalDraw = ", tmp$out$probFractalDraw,
+                    "\nchoice (based on) = ", tmp$out$choice, " (", tmp$out$arbitrator, ")")
+
+annot_bot = paste0("dLottery = ", tmp$out$dLott, 
+                    "\ndFractal = ", tmp$out$dFrac,
+                    "\ndArbitrator = ", tmp$out$dArb,
+                    "\nsigma = ", tmp$out$sigmaLott)
+
+tmp$debug_df %>%
+  select(arbitratorRDV, lotteryRDV, fractalRDV, time) %>%
+  gather(key, value, -time) %>%
+  ggplot(aes(time, value, color=key))+
+  geom_line()+
+  geom_hline(aes(yintercept=1))+
+  geom_hline(aes(yintercept=-1))+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  theme(legend.position = "bottom",
+        panel.grid = element_blank())+
+  labs(color="", x = "Timestep (in 10 ms)", y="RDV")+
+  annotate(geom="text", x=10, y = .6, label = annot_top, hjust=0)+
+  annotate(geom="text", x=10, y = -.6, label = annot_bot, hjust=0)
+```
+
+**Potential problem** for 3 integrator model: The model would predict slower decisions because the difference in the absolute value of each attribute integrator RDV would be small.
+
+**BUT** by design there aren't trials that provide strong (distorted) evidence for a single side so for the current set of stimuli this should not be a concern.
+
+```{r}
+clean_beh_data %>%
+  ggplot(aes(distorted_ev_diff, distorted_qv_diff)) +
+  geom_point()+
+  geom_abline(aes(slope=1, intercept=0))
+```
+
+### Demo
+
+Check if single trial fit function estimates the probabilities correctly on a very simple example
+
+```{r}
+# tmp = sim_trial(dLott=1, dFrac=1, dArb=1, sigmaLott = 0.001, sigmaFrac = 0.001, distortedEVDiff = .25, distortedQVDiff = -.1, probFractalDraw = 2, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE)
+tmp = sim_trial(dLott=.25, dFrac=.25, dArb=.25, sigmaLott = 0.05, sigmaFrac = 0.05, distortedEVDiff = .25, distortedQVDiff = -.1, probFractalDraw = 2, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE)
+
+annot_top = paste0("distorted EV difference = ", round(tmp$out$distortedEVDiff, 3), 
+                    "\ndistorted QV difference = ", round(tmp$out$distortedQVDiff, 3),
+                    "\nchoice (based on) = ", tmp$out$choice, " (", tmp$out$arbitrator, ")")
+
+tmp$debug_df %>%
+  select(arbitratorRDV, lotteryRDV, fractalRDV, time) %>%
+  gather(key, value, -time) %>%
+  ggplot(aes(time, value, color=key))+
+  geom_point()+
+  geom_line()+
+  geom_hline(aes(yintercept=1))+
+  geom_hline(aes(yintercept=-1))+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  theme(legend.position = "bottom",
+        panel.grid = element_blank())+
+  labs(color="", x = "Timestep (in 10 ms)", y="RDV")+
+  annotate(geom="text", x=.25, y = .6, label = annot_top, hjust=0)
+
+```
+
+```{r}
+# tmp_fit = fit_trial(dLott=1, dFrac=1, dArb=1, sigmaLott = 0.001, sigmaFrac = 0.001, distortedEVDiff = .25, distortedQVDiff = -.1, probFractalDraw = 2, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA,
+#                     choice = tmp$out$choice, reactionTime = tmp$out$reactionTime, debug=TRUE)
+
+tmp_fit = fit_trial(dLott=.25, dFrac=.25, dArb=.25, sigmaLott = 0.05, sigmaFrac = 0.05, distortedEVDiff = .25, distortedEVDiff = .25, distortedQVDiff = -.1, probFractalDraw = 2, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA,
                     choice = tmp$out$choice, reactionTime = tmp$out$reactionTime, debug=TRUE)
 
 tmp_fit$prStatesArb %>%
@@ -355,55 +331,52 @@ tmp_fit$prStatesArb %>%
          timeStep = as.numeric(timeStep)) %>%
   ggplot(aes(timeStep,states, fill=prob))+
   geom_tile()
-    theme(legend.position = "none",
+    theme(legend.position = "bottom",
           panel.grid = element_blank(),
           axis.ticks = element_blank(),
-          axis.text = element_blank())
+          axis.text = element_blank())+
+  scale_fill_gradient2(midpoint=.5)
 ```
 
-### Folded distribution schematic representation
+Is the most likely state the correct state at each time point?
 
 ```{r}
-numTimeSteps = 1000
-# muLott = .03*0.3
-muLott = .25
-sigmaLott = 0.03
-# muFrac = .06*(-.1)
-muFrac = -.1
-sigmaFrac = 0.03
-
-
-data.frame(timeStep = 1:numTimeSteps,
-           changeLott = rnorm(numTimeSteps , muLott, sigmaLott),
-           changeFrac = rnorm(numTimeSteps, muFrac, sigmaFrac)) %>%
-  mutate(RDVLott = cumsum(changeLott),
-         RDVFrac = cumsum(changeFrac),
-         absRDVLott = abs(RDVLott),
-         absRDVFrac = abs(RDVFrac),
-         changeArb = absRDVLott - absRDVFrac,
-         RDVArb = cumsum(changeArb)) %>%
-  summarise(meanChangeArb = mean(changeArb),
-            sdChangeArb = sd(changeArb))
-  # select(RDVLott, RDVFrac, RDVArb, timeStep) %>%
-  # gather(key, value, -timeStep) %>%
-  # ggplot(aes(timeStep, value, color=key))+
-  # geom_line()+
-  # geom_point()
+tmp_fit$prStatesArb %>%
+  mutate(stateBins = 1:n()) %>%
+  gather(timeStep, prob, -stateBins) %>%
+  group_by(timeStep) %>%
+  filter(prob == max(prob)) %>%
+  mutate(timeStep = gsub("X", "", timeStep), 
+         timeStep = as.numeric(timeStep),
+         data_type="est") %>%
+  select(-prob) %>%
+  rbind(tmp$debug_df %>%
+          select(arbitratorRDV, time) %>%
+          rename(timeStep = time) %>%
+          mutate(stateBins = stateBin, 
+                 data_type="true") %>%
+          select(-arbitratorRDV)) %>%
+  ggplot(aes(timeStep, stateBins, color=data_type))+
+  geom_point()
 
 ```
-
-Expected change and its sd **at time t** for the arbitrator. This is what you can use in the loop for estimation.
 
 ```{r}
-get_abs_diff_dist_moments(muLott*numTimeSteps, sqrt(sigmaLott^2*numTimeSteps), muFrac*numTimeSteps, sqrt(sigmaFrac^2*numTimeSteps))
+  
+stateBin = c()
+
+for(i in 1:nrow(tmp$debug_df)){
+  stateBin[i] = which.min(abs(states - tmp$debug_df$arbitratorRDV[i]))
+}
+
+tmp$debug_df %>%
+  select(arbitratorRDV, time) %>%
+  rename(timeStep = time) %>%
+  mutate(states = stateBin, 
+         data_type="true") %>%
+  select(-arbitratorRDV)
+  
 ```
-
-Mean/expected constant change of the arbitrator for whole timecourse
-
-```{r}
-get_abs_diff_dist_moments(muLott, sigmaLott, muFrac, sigmaFrac)$diff_mu*sum(1:numTimeSteps)/numTimeSteps
-```
-
 
 ### Same trial
 
@@ -427,7 +400,7 @@ dFrac_range = c(.01, .06, .09)
 dArb_range = c(.01, .05, .09)
 sigma_fix = .03
 
-recovery_df = data.frame(test_dLott = NA, test_dFrac = NA, test_dArb = NA, nll = NA)
+threeInt_trial_recovery_df = data.frame(test_dLott = NA, test_dFrac = NA, test_dArb = NA, nll = NA)
 
 for(i in 1:length(dLott_range)){
   for(j in 1:length(dFrac_range)){
@@ -436,16 +409,16 @@ for(i in 1:length(dLott_range)){
       test_dFrac = dFrac_range[j]
       test_dArb = dArb_range[k]
       test_nll = get_task_nll(data_ = sim_data, par = c(test_dLott, test_dFrac, test_dArb, sigma_fix, sigma_fix), par_names_ = c("dLott", "dFrac", "dArb","sigmaLott", "sigmaFrac"), model_name = "model3", fix_pars_ = list())
-      recovery_df = rbind(recovery_df,
+      threeInt_trial_recovery_df = rbind(threeInt_trial_recovery_df,
                           data.frame(test_dLott = test_dLott, test_dFrac = test_dFrac, test_dArb = test_dArb, nll = test_nll))
     }
   }
 }
-recovery_df = recovery_df %>% drop_na()
+threeInt_trial_recovery_df = threeInt_trial_recovery_df %>% drop_na()
 ```
 
 ```{r}
-recovery_df %>%
+threeInt_trial_recovery_df %>%
   mutate(test_dLott = as.factor(test_dLott),
          test_dFrac = as.factor(test_dFrac),
          test_dArb = as.factor(test_dArb)) %>%
@@ -463,7 +436,7 @@ stimuli = clean_beh_data[1:n_trials,] %>%
   select(leftLotteryEV, rightLotteryEV, leftQValue, rightQValue, probFractalDraw, reactionTime, choiceLeft, subnum, distorted_ev_diff, distorted_qv_diff) %>%
   rename(EVLeft = leftLotteryEV, EVRight = rightLotteryEV, QVLeft = leftQValue, QVRight = rightQValue, distortedEVDiff = distorted_ev_diff, distortedQVDiff = distorted_qv_diff)
 
-sim_subj = sim_task(stimuli, model_name = "model3", dLott=0.03, dFrac=0.06, dArb=0.05, sigmaLott = 0.03, sigmaFrac = 0.03)
+sim_subj = sim_task(stimuli, model_name = "model3", dLott=0.03, dFrac=0.06, dArb=0.05, sigmaLott = 0.001, sigmaFrac = 0.001)
 # sim_subj
 ```
 
@@ -471,9 +444,12 @@ sim_subj = sim_task(stimuli, model_name = "model3", dLott=0.03, dFrac=0.06, dArb
 dLott_range = c(.01, .03, .09)
 dFrac_range = c(.01, .06, .09)
 dArb_range = c(.01, .05, .09)
-sigma_fix = .03
+# dLott_range = c(.001, .09, .5)
+# dFrac_range = c(.001, .06, .8)
+# dArb_range = c(.001, .05, .7)
+sigma_fix = .001
 
-recovery_df = data.frame(test_dLott = NA, test_dFrac = NA, test_dArb = NA, nll = NA)
+threeInt_subj_recovery_df = data.frame(test_dLott = NA, test_dFrac = NA, test_dArb = NA, nll = NA)
 
 for(i in 1:length(dLott_range)){
   for(j in 1:length(dFrac_range)){
@@ -481,27 +457,102 @@ for(i in 1:length(dLott_range)){
       test_dLott = dLott_range[i]
       test_dFrac = dFrac_range[j]
       test_dArb = dArb_range[k]
-      test_nll = get_task_nll(data_ = sim_subj, par = c(test_dLott, test_dFrac, test_dArb, sigma_fix, sigma_fix), par_names_ = c("dLott", "dFrac", "dArb","sigmaLott", "sigmaFrac"), model_name = "model3", fix_pars_ = list())
-      recovery_df = rbind(recovery_df,
+      test_nll = get_task_nll(data_ = sim_subj, par = c(test_dLott, test_dFrac, test_dArb, sigma_fix, sigma_fix), par_names_ = c("dLott", "dFrac", "dArb","sigmaLott", "sigmaFrac"), model_name = "model3", fix_pars_ = list(), filter_liks_ = F, filter_quant_ = .9)
+      threeInt_subj_recovery_df = rbind(threeInt_subj_recovery_df,
                           data.frame(test_dLott = test_dLott, test_dFrac = test_dFrac, test_dArb = test_dArb, nll = test_nll))
     }
   }
 }
-recovery_df = recovery_df %>% drop_na()
+threeInt_subj_recovery_df = threeInt_subj_recovery_df %>% drop_na()
 ```
 
 ```{r}
-recovery_df %>%
+threeInt_subj_recovery_df %>%
   mutate(test_dLott = as.factor(test_dLott),
          test_dFrac = as.factor(test_dFrac),
          test_dArb = as.factor(test_dArb)) %>%
-  ggplot(aes(test_dLott, test_dFrac, fill=nll))+
+  # ggplot(aes(test_dLott, test_dFrac, fill=nll))+
+   ggplot(aes(test_dLott, test_dArb, fill=nll))+
+   # ggplot(aes(test_dFrac, test_dArb, fill=nll))+
   geom_tile()+
-  facet_wrap(~test_dArb)+
+  # facet_wrap(~test_dArb)+
+  facet_wrap(~test_dFrac)+
+    # facet_wrap(~test_dLott)+
   theme(legend.position = "bottom")
 ```
 
+```{r}
+t1 = fit_task(data_= sim_subj, model_name_ = "model3", pars_ = list(dLott=0.01, dFrac=0.01, dArb=0.05, sigmaLott=.03, sigmaFrac = .03))
+sum(log(t1$likelihood))
+```
+```{r}
+t2 = fit_task(data_= sim_subj, model_name_ = "model3", pars_ = list(dLott=0.03, dFrac=0.06, dArb=0.05, sigmaLott=.03, sigmaFrac = .03))
+sum(log(t2$likelihood))
+```
 
+Plot likelihood of each trial computed using the correct vs incorrect parameter against each other
+
+For a lot of trials, which also have very small likelihoods the difference is very small. For trials with the highest likelihood, the likelihood computed using the true parameter is much larger. 
+
+What proportion of trials is this "most likely" and what if you optimized to maximize based on the most likely trials?
+
+Or maybe ignore all trials with likelihood below some threshold (e.g. .01) because estimates there are too noisy?
+
+```{r}
+t1 %>%
+  mutate(fit_par_type="false", trial=1:n()) %>%
+  rbind(t2 %>%
+          mutate(fit_par_type = "true", trial=1:n())) %>%
+  # rbind(t3 %>% 
+          # mutate(fit_par_type = "false2", trial=1:n())) %>%
+  select(likelihood, fit_par_type, trial) %>%
+  spread(fit_par_type, likelihood) %>%
+  ggplot(aes(true, false))+
+  # ggplot(aes(false2, false))+
+  geom_point()+
+  geom_abline(aes(slope=1, intercept=0))
+```
+```{r}
+t1 %>%
+  mutate(fit_par_type="false", trial=1:n()) %>%
+  rbind(t2 %>%
+          mutate(fit_par_type = "true", trial=1:n())) %>%
+  select(likelihood, fit_par_type, trial) %>%
+  spread(fit_par_type, likelihood) %>%
+  mutate(diff = true-false) %>%
+  ggplot(aes(diff))+
+  geom_histogram(bins=15, alpha=.5)
+```
+
+```{r}
+t1 %>%
+  filter(likelihood > quantile(likelihood, probs=c(.5))) %>%
+  summarise(nll=-sum(log(likelihood)))
+```
+
+### Motivation for the model
+
+Simulate data with a 3 integrator model using half the stimuli filtered earlier and this three integrator model.
+
+**Note: this selection of parameters provides a nice qualitative fit to data. It assumes integration is slower for lotteries than for fractals. This is one way of capturing the difference in processing lottery values, which can only be done after the stimulus presentation, as apposed to fractal values which are learned about trialwise. There are alternative ways of modeling this: e.g. integration for the fractal integrator might start before the stimulus presentation screen; ndt for the lottery integrator (or the arbitrator when the lottery is more relevant) might be longer etc. The way to determine which of these hypotheses is most supported by data would be a model comparison.**
+
+```{r}
+# m3_1 = sim_task(sub_data, model_name = "model3", dLott=0.03, dFrac=0.06, dArb=0.05, sigmaLott = 0.03, sigmaFrac = 0.03)
+m3_1 = sim_task(sub_data, model_name = "model3", dLott=0.03, dFrac=0.06, dArb=0.07, sigmaLott = 0.03, sigmaFrac = 0.03)
+```
+
+```{r}
+sim_sanity_checks(m3_1, checks=c(1,3,4,5,6,7,8), compare_logits = TRUE)
+```
+
+
+## Fits to data
+
+Simulated data using the MLE for each subject
+
+```{r}
+
+```
 
 ## TBD
 

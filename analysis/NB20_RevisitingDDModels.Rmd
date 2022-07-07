@@ -87,12 +87,20 @@ sim_trial_list[['model3']] = sim_trial
 
 Test if trial simulating function works.
 
-**ANNNOTATE THIS PLOT AUTOMATICALLY**
-
 ```{r}
 i=300
 tmp = sim_trial(dLott=0.03, dFrac=0.06, dArb=0.07, sigmaLott = 0.03, sigmaFrac = 0.03, distortedEVDiff = sub_data$distortedEVDiff[i], distortedQVDiff = sub_data$distortedQVDiff[i], probFractalDraw = sub_data$probFractalDraw[i], barrierDecay = 0, EVLeft = sub_data$EVLeft[i], EVRight = sub_data$EVRight[i], QVLeft = sub_data$QVLeft[i], QVRight = sub_data$QVRight[i], debug=TRUE)
 
+annot_top = paste0("distorted EV difference = ", round(tmp$out$distortedEVDiff, 3), 
+                    "\ndistorted QV difference = ", round(tmp$out$distortedQVDiff, 3),
+                   "\nprobFractalDraw = ", tmp$out$probFractalDraw,
+                    "\nchoice (based on) = ", tmp$out$choice, " (", tmp$out$arbitrator, ")")
+
+annot_bot = paste0("dLottery = ", tmp$out$dLott, 
+                    "\ndFractal = ", tmp$out$dFrac,
+                    "\ndArbitrator = ", tmp$out$dArb,
+                    "\nsigma = ", tmp$out$sigmaLott)
+
 tmp$debug_df %>%
   select(arbitratorRDV, lotteryRDV, fractalRDV, time) %>%
   gather(key, value, -time) %>%
@@ -101,12 +109,28 @@ tmp$debug_df %>%
   geom_hline(aes(yintercept=1))+
   geom_hline(aes(yintercept=-1))+
   geom_hline(aes(yintercept=0), linetype="dashed")+
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom",
+        panel.grid = element_blank())+
+  labs(color="", x = "Timestep (in 10 ms)", y="RDV")+
+  annotate(geom="text", x=20, y = .6, label = annot_top, hjust=0)+
+  annotate(geom="text", x=20, y = -.6, label = annot_bot, hjust=0)
 
 ```
+
+Potential issue: trials where the attribute integrators move slowly in the same directions would result in unlikely slow responses.
+
 ```{r}
-i=300
-tmp = sim_trial(dLott=0.03, dFrac=0.06, dArb=0.07, sigmaLott = 0.03, sigmaFrac = 0.03, distortedEVDiff = sub_data$distortedEVDiff[i], distortedQVDiff = sub_data$distortedQVDiff[i], probFractalDraw =1, barrierDecay = 0, EVLeft = sub_data$EVLeft[i], EVRight = sub_data$EVRight[i], QVLeft = sub_data$QVLeft[i], QVRight = sub_data$QVRight[i], debug=TRUE)
+tmp = sim_trial(dLott=0.03, dFrac=0.03, dArb=0.07, sigmaLott = 0.003, sigmaFrac = 0.003, distortedEVDiff = .09, distortedQVDiff =.09, probFractalDraw =.5, barrierDecay = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE)
+
+annot_top = paste0("distorted EV difference = ", round(tmp$out$distortedEVDiff, 3), 
+                    "\ndistorted QV difference = ", round(tmp$out$distortedQVDiff, 3),
+                   "\nprobFractalDraw = ", tmp$out$probFractalDraw,
+                    "\nchoice (based on) = ", tmp$out$choice, " (", tmp$out$arbitrator, ")")
+
+annot_bot = paste0("dLottery = ", tmp$out$dLott, 
+                    "\ndFractal = ", tmp$out$dFrac,
+                    "\ndArbitrator = ", tmp$out$dArb,
+                    "\nsigma = ", tmp$out$sigmaLott)
 
 tmp$debug_df %>%
   select(arbitratorRDV, lotteryRDV, fractalRDV, time) %>%
@@ -116,9 +140,11 @@ tmp$debug_df %>%
   geom_hline(aes(yintercept=1))+
   geom_hline(aes(yintercept=-1))+
   geom_hline(aes(yintercept=0), linetype="dashed")+
-  theme(legend.position = "bottom")
-
-tmp
+  theme(legend.position = "bottom",
+        panel.grid = element_blank())+
+  labs(color="", x = "Timestep (in 10 ms)", y="RDV")+
+  annotate(geom="text", x=10, y = .6, label = annot_top, hjust=0)+
+  annotate(geom="text", x=10, y = -.6, label = annot_bot, hjust=0)
 ```
 
 ## Aggregate checks 
@@ -160,7 +186,6 @@ Using Gabi's discrete time and state-space method
 **Why might this not have been used previously? Some ideas:**  
 **The boundary in traditional DDM is not fixed at 1 and -1. Instead it is a parameter. It's not immediately apparent to me how to use the sum of random variables approach without assuming the boundaries at 1 and -1.**
 **The traditional DDM often models the whole of a response time distribution for correct vs incorrect.**
-
 
 ## One integrator
 
@@ -274,60 +299,66 @@ recovery_df %>%
   geom_tile()
 ```
 
-
 ## Three integrators
 
 Extending the state space approach
 
 ```{r}
 source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_threeIntegrators_sepProbDistortion.R'))
-```
-
-### Same trial
-
-```{r}
-d = 0.03
-distortedEVDiff = .3
-distortedQVDiff = .1
-sigma = .05
-n_particles = 250
-sim_data = data.frame()
-
-for(i in 1:n_particles){
-  tmp = sim_trial(dLott=0.03, dFrac=0.06, dArb=0.05, sigmaLott = 0.03, sigmaFrac = 0.03, distortedEVDiff =distortedEVDiff, distortedQVDiff = distortedQVDiff, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, probFractalDraw = .5, barrierDecay = 0)
-  tmp$iter = i
-  sim_data = rbind(sim_data, tmp)
-}
-```
-
-```{r}
 fit_trial_list = list(model3 = fit_trial)
+sim_trial_list = list(model3 = sim_trial)
+```
 
-dLott_range = c(.01, .03, .09)
-dFrac_range = c(.01, .06, .09)
-dArb_range = c(.01, .05, .09)
-sigma_fix = .03
+Check if single trial fit function estimates the probabilities correctly on a very simpl example
 
-recovery_df = data.frame(test_dLott = NA, test_dFrac = NA, test_dArb = NA, nll = NA)
+```{r}
+# i=1000
+# tmp = sim_trial(dLott=0.03, dFrac=0.06, dArb=0.07, sigmaLott = 0.03, sigmaFrac = 0.03, distortedEVDiff = sub_data$distortedEVDiff[i], distortedQVDiff = sub_data$distortedQVDiff[i], probFractalDraw = sub_data$probFractalDraw[i], barrierDecay = 0, EVLeft = sub_data$EVLeft[i], EVRight = sub_data$EVRight[i], QVLeft = sub_data$QVLeft[i], QVRight = sub_data$QVRight[i], debug=TRUE)
 
-for(i in 1:length(dLott_range)){
-  for(j in 1:length(dFrac_range)){
-    for(k in 1:length(dArb_range)){
-      test_dLott = dLott_range[i]
-      test_dFrac = dFrac_range[j]
-      test_dArb = dArb_range[k]
-      test_nll = get_task_nll(data_ = sim_data, par = c(test_dLott, test_dFrac, test_dArb, sigma_fix, sigma_fix), par_names_ = c("dLott", "dFrac", "dArb","sigmaLott", "sigmaFrac"), model_name = "model3", fix_pars_ = list())
-      recovery_df = rbind(recovery_df,
-                          data.frame(test_dLott = test_dLott, test_dFrac = test_dFrac, test_dArb = test_dArb, nll = test_nll))
-    }
-  }
-}
-recovery_df = recovery_df %>% drop_na()
+tmp = sim_trial(dLott=0.03, dFrac=0.06, dArb=0.07, sigmaLott = 0.001, sigmaFrac = 0.001, distortedEVDiff = .5, distortedQVDiff = -.1, probFractalDraw = 2, barrierDecay = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE)
+
+annot_top = paste0("distorted EV difference = ", round(tmp$out$distortedEVDiff, 3), 
+                    "\ndistorted QV difference = ", round(tmp$out$distortedQVDiff, 3),
+                   "\nprobFractalDraw = ", tmp$out$probFractalDraw,
+                    "\nchoice (based on) = ", tmp$out$choice, " (", tmp$out$arbitrator, ")")
+
+annot_bot = paste0("dLottery = ", tmp$out$dLott, 
+                    "\ndFractal = ", tmp$out$dFrac,
+                    "\ndArbitrator = ", tmp$out$dArb,
+                    "\nsigma = ", tmp$out$sigmaLott)
+
+tmp$debug_df %>%
+  select(arbitratorRDV, lotteryRDV, fractalRDV, time) %>%
+  gather(key, value, -time) %>%
+  ggplot(aes(time, value, color=key))+
+  geom_line()+
+  geom_hline(aes(yintercept=1))+
+  geom_hline(aes(yintercept=-1))+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  theme(legend.position = "bottom",
+        panel.grid = element_blank())+
+  labs(color="", x = "Timestep (in 10 ms)", y="RDV")+
+  annotate(geom="text", x=20, y = .6, label = annot_top, hjust=0)+
+  annotate(geom="text", x=20, y = -.6, label = annot_bot, hjust=0)
+
 ```
 
 ```{r}
-recovery_df %>%
-  arrange(nll)
+tmp_fit = fit_trial(dLott=0.03, dFrac=0.06, dArb=0.07, sigmaLott = 0.001, sigmaFrac = 0.001, distortedEVDiff = .5, distortedQVDiff = -.1, probFractalDraw = 2, barrierDecay = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA,
+                    choice = tmp$out$choice, reactionTime = tmp$out$reactionTime, debug=TRUE)
+
+tmp_fit$prStatesArb %>%
+  mutate(states = 1:n()) %>%
+  gather(timeStep, prob, -states) %>%
+  mutate(states = as.factor(states),
+         timeStep = gsub("X", "", timeStep), 
+         timeStep = as.numeric(timeStep)) %>%
+  ggplot(aes(timeStep,states, fill=prob))+
+  geom_tile()
+    theme(legend.position = "none",
+          panel.grid = element_blank(),
+          axis.ticks = element_blank(),
+          axis.text = element_blank())
 ```
 
 ### Folded distribution schematic representation
@@ -374,16 +405,106 @@ get_abs_diff_dist_moments(muLott, sigmaLott, muFrac, sigmaFrac)$diff_mu*sum(1:nu
 ```
 
 
+### Same trial
+
 ```{r}
-data.frame(prStatesArb) %>%
-  mutate(state= 1:n()) %>%
-  gather(time, value, -state) %>%
-  ggplot(aes(time, state, fill=value))+
-  geom_tile()
+distortedEVDiff = .3
+distortedQVDiff = -.1
+n_particles = 250
+sim_data = data.frame()
+
+for(i in 1:n_particles){
+  tmp = sim_trial(dLott=0.03, dFrac=0.06, dArb=0.05, sigmaLott = 0.03, sigmaFrac = 0.03, distortedEVDiff =distortedEVDiff, distortedQVDiff = distortedQVDiff, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, probFractalDraw = .5, barrierDecay = 0, bias=0)
+  tmp$iter = i
+  sim_data = rbind(sim_data, tmp)
+}
 ```
+
+
+```{r}
+dLott_range = c(.01, .03, .09)
+dFrac_range = c(.01, .06, .09)
+dArb_range = c(.01, .05, .09)
+sigma_fix = .03
+
+recovery_df = data.frame(test_dLott = NA, test_dFrac = NA, test_dArb = NA, nll = NA)
+
+for(i in 1:length(dLott_range)){
+  for(j in 1:length(dFrac_range)){
+    for(k in 1:length(dArb_range)){
+      test_dLott = dLott_range[i]
+      test_dFrac = dFrac_range[j]
+      test_dArb = dArb_range[k]
+      test_nll = get_task_nll(data_ = sim_data, par = c(test_dLott, test_dFrac, test_dArb, sigma_fix, sigma_fix), par_names_ = c("dLott", "dFrac", "dArb","sigmaLott", "sigmaFrac"), model_name = "model3", fix_pars_ = list())
+      recovery_df = rbind(recovery_df,
+                          data.frame(test_dLott = test_dLott, test_dFrac = test_dFrac, test_dArb = test_dArb, nll = test_nll))
+    }
+  }
+}
+recovery_df = recovery_df %>% drop_na()
+```
+
+```{r}
+recovery_df %>%
+  mutate(test_dLott = as.factor(test_dLott),
+         test_dFrac = as.factor(test_dFrac),
+         test_dArb = as.factor(test_dArb)) %>%
+  ggplot(aes(test_dLott, test_dFrac, fill=nll))+
+  geom_tile()+
+  facet_wrap(~test_dArb)+
+  theme(legend.position = "bottom")
+```
+
+### Different trials (~single subject)
+
+```{r}
+n_trials = 300
+stimuli = clean_beh_data[1:n_trials,] %>%
+  select(leftLotteryEV, rightLotteryEV, leftQValue, rightQValue, probFractalDraw, reactionTime, choiceLeft, subnum, distorted_ev_diff, distorted_qv_diff) %>%
+  rename(EVLeft = leftLotteryEV, EVRight = rightLotteryEV, QVLeft = leftQValue, QVRight = rightQValue, distortedEVDiff = distorted_ev_diff, distortedQVDiff = distorted_qv_diff)
+
+sim_subj = sim_task(stimuli, model_name = "model3", dLott=0.03, dFrac=0.06, dArb=0.05, sigmaLott = 0.03, sigmaFrac = 0.03)
+# sim_subj
+```
+
+```{r}
+dLott_range = c(.01, .03, .09)
+dFrac_range = c(.01, .06, .09)
+dArb_range = c(.01, .05, .09)
+sigma_fix = .03
+
+recovery_df = data.frame(test_dLott = NA, test_dFrac = NA, test_dArb = NA, nll = NA)
+
+for(i in 1:length(dLott_range)){
+  for(j in 1:length(dFrac_range)){
+    for(k in 1:length(dArb_range)){
+      test_dLott = dLott_range[i]
+      test_dFrac = dFrac_range[j]
+      test_dArb = dArb_range[k]
+      test_nll = get_task_nll(data_ = sim_subj, par = c(test_dLott, test_dFrac, test_dArb, sigma_fix, sigma_fix), par_names_ = c("dLott", "dFrac", "dArb","sigmaLott", "sigmaFrac"), model_name = "model3", fix_pars_ = list())
+      recovery_df = rbind(recovery_df,
+                          data.frame(test_dLott = test_dLott, test_dFrac = test_dFrac, test_dArb = test_dArb, nll = test_nll))
+    }
+  }
+}
+recovery_df = recovery_df %>% drop_na()
+```
+
+```{r}
+recovery_df %>%
+  mutate(test_dLott = as.factor(test_dLott),
+         test_dFrac = as.factor(test_dFrac),
+         test_dArb = as.factor(test_dArb)) %>%
+  ggplot(aes(test_dLott, test_dFrac, fill=nll))+
+  geom_tile()+
+  facet_wrap(~test_dArb)+
+  theme(legend.position = "bottom")
+```
+
+
 
 ## TBD
 
 - What do you with these for the neuroimaging analyses?
-- Model all subjects together? Or can you get hierarchical Bayesian posteriors?
+- Model all subjects together? Individual MLEs? Or can you get hierarchical Bayesian posteriors?
 - Are the individual parameter needed for anything or is the more interesting question one of model comparison to explain the RT patterns?

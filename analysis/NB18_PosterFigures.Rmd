@@ -1,5 +1,5 @@
 ---
-title: 'Experience vs. description based decision-making project: Raw behavioral findings'
+title: 'Experience vs. description based decision-making project: Figure for Arrowhead poster'
 output:
   html_document:
     toc: yes
@@ -8,6 +8,8 @@ output:
   pdf_document:
     toc: yes
 ---
+
+
 
 ```{r include=FALSE}
 library(broom)
@@ -69,6 +71,7 @@ clean_beh_data = clean_beh_data %>%
          fractalDiff = scale(fractalLeftProb - fractalRightProb))
 ```
 
+# Attribute logits
 
 ```{r}
 tmp1 = clean_beh_data %>%
@@ -115,6 +118,8 @@ rbind(tmp1 %>% filter(term == "fractalDiff")) %>%
 ggsave(file=paste0(fig_out_path, 'poster_group_logit.jpg'), p, height = 5, width=8, units="in")
 p
 ```
+
+# RL model comparison
 
 ```{r}
 sampled_logLiks = readRDS('~/Downloads/sampled_logLiks.RDS')
@@ -167,6 +172,7 @@ grid::grid.draw(legend)
 
 ```
 
+# RT by value difference
 
 ```{r}
 p = clean_beh_data %>%
@@ -255,6 +261,7 @@ p = clean_beh_data %>%
 ggsave(file=paste0(fig_out_path, 'poster_rt_by_value_diff_corrected_GROUPED.jpg'), p, height = 15, width=8, units="in")
 p
 ```
+# Error RTs
 
 ```{r}
 p = clean_beh_data %>%
@@ -295,6 +302,7 @@ ggsave(file=paste0(fig_out_path, 'poster_rt_by_better_choice.jpg'), p, height = 
 p
 ```
 
+# DDM demo figures
 
 3 integrators all with their own drift and noise rates
 Arbitrator integrator starts biased towards lotteries

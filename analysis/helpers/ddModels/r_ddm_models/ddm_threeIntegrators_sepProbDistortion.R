@@ -18,7 +18,7 @@ sim_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, bar
   timeOut = 0
   
   if(debug){
-    debug_df = data.frame()
+    debug_df = data.frame(time = 0, arbitrator_mu = 0, arbitratorRDV = arbitratorRDV, barrier = round(barrier[time], 3), lotteryRDV = round(lotteryRDV, 3), fractalRDV = round(fractalRDV, 3))
   }
   
   kwargs = list(...)
@@ -119,7 +119,8 @@ sim_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, bar
   out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, distortedEVDiff = distortedEVDiff, distortedQVDiff = distortedQVDiff, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, arbitrator = arbitrator, dArb=dArb, dLott=dLott, dFrac=dFrac, sigmaArb=sigmaArb, sigmaLott=sigmaLott, sigmaFrac=sigmaFrac, barrierDecay=barrierDecay, barrier=barrier[time], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, maxIter=maxIter)
   
   if(debug){
-    out = list(out=out, debug_df=debug_df[-1,])
+    # out = list(out=out, debug_df=debug_df[-1,])
+    out = list(out=out, debug_df=debug_df)
   }
   
   return(out)
@@ -163,7 +164,7 @@ fit_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, bar
   }
   
   ######################## HELPER FUNCTIONS ########################
-
+  
   kwargs = list(...)
   
   choice=kwargs$choice #must be 1 for left and -1 for left
@@ -179,6 +180,8 @@ fit_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, bar
   distortedEVDiff = kwargs$distortedEVDiff
   distortedQVDiff = kwargs$distortedQVDiff
   probFractalDraw = kwargs$probFractalDraw
+  QVLeft = kwargs$QVLeft
+  QVRight = kwargs$QVRight
   
   nonDecIters = nonDecisionTime / timeStep
   
@@ -199,7 +202,7 @@ fit_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, bar
   
   # The vertical axis is divided into states.
   states = seq(-1*(initialBarrier) + (stateStep / 2), initialBarrier - (stateStep / 2), stateStep)
-
+  
   # Find the state corresponding to the bias parameter.
   biasState = which.min(abs(states - bias))
   
@@ -226,6 +229,10 @@ fit_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, bar
   
   muLott = dLott * distortedEVDiff
   muFrac = dFrac * distortedQVDiff
+  fracBias = 0
+  if (probFractalDraw == 1){
+    fracBias = QVLeft - QVRight
+  } 
   
   # tmp = get_abs_diff_dist_moments(muLott, sigmaLott, muFrac, sigmaFrac)
   # muArb = tmp$diff_mu #this is the constant change in the change
@@ -237,7 +244,9 @@ fit_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, bar
   for(nextTime in 2:numTimeSteps){
     curTime = nextTime - 1 
     
-    tmp = get_abs_diff_dist_moments(muLott*curTime, sqrt(sigmaLott^2*curTime), muFrac*curTime, sqrt(sigmaFrac^2*curTime))
+    tmp = get_abs_diff_dist_moments(muLott*curTime, sqrt(sigmaLott^2*curTime), muFrac*curTime+fracBias, sqrt(sigmaFrac^2*curTime))
+    
+    
     muArb = dArb*tmp$diff_mu #the expected change at time t for the arbitrator based on the expected positions of the attribute integrators
     sigmaArb = tmp$diff_sigma #the uncertainty associated with the expected change at time t
     
@@ -299,23 +308,23 @@ fit_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, bar
   pFracLeft = 1-pFracRight
   
   
-
+  
   likelihood = 0
   if (choice == 1){ # Choice was left.
     
     # p of left is p of crossing the lottery boundary * p of lottery integrator being closer to the left boundary + p of crossing the fractal boundary * p of fractal integrator being closer to the left boundary
     likelihood = probUpCrossingArb[numTimeSteps] * pLottLeft + probDownCrossingArb[numTimeSteps] * pFracLeft
-  
+    
   } else if (choice == -1){
-
+    
     likelihood = probUpCrossingArb[numTimeSteps] * pLottRight + probDownCrossingArb[numTimeSteps] * pFracRight
-     
+    
   }
   
   out = data.frame(likelihood = likelihood, distortedEVDiff = distortedEVDiff, distortedQVDiff = distortedQVDiff, probFractalDraw = probFractalDraw, choice=choice, reactionTime = reactionTime, dArb = dArb, dLott = dLott, dFrac = dFrac, sigmaArb = sigmaArb, sigmaLott = sigmaLott, sigmaFrac = sigmaFrac, barrierDecay = barrierDecay, barrier=barrier[numTimeSteps], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep)
   
   if(debug){
-    out = list(out = out, prStatesArb = data.frame(prStatesArb), prStatesLott = data.frame(prStatesLott), prStatesFrac = data.frame(prStatesFrac))
+    out = list(out = out, prStatesArb = data.frame(prStatesArb))
   }
   
   

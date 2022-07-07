@@ -1,0 +1,93 @@
+---
+title: 'Experience vs. description based decision-making project: Figures for 7/8 lab meeting'
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    code_folding: 'hide'
+  pdf_document:
+    toc: yes
+---
+
+```{r include=FALSE}
+library(broom)
+library(tidyverse)
+library(here)
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+helpers_path = here('analysis/helpers/')
+source(paste0(helpers_path,'01_clean_behavioral_data.R'))
+fig_out_path = paste0(here(), '/outputs/fig/')
+theme_set(theme_bw())
+```
+
+Logit w EV and fractal value
+
+```{r}
+
+```
+
+Logit w EV, fractal value and QV
+
+```{r}
+
+```
+
+Logit w EV, fractal value, QV and prob distortion correction
+
+```{r}
+
+```
+
+RL model comparison
+
+```{r}
+
+```
+
+RT by probFractalDraw
+
+```{r}
+
+```
+
+RT by probfractaldraw split by EV difference level
+
+```{r}
+
+```
+
+RT by probfractaldraw split by QV difference level
+
+```{r}
+
+```
+
+RT for errors
+
+```{r}
+
+```
+
+Demo 1 integrator DDM
+
+```{r}
+
+```
+
+Demo 3 integrator DDM
+
+```{r}
+
+```
+
+Distorted EV vs distorted QV (caveat trials)
+
+```{r}
+
+```
+
+Simulation/fit checks
+
+```{r}
+
+```

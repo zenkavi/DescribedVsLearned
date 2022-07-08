@@ -58,7 +58,8 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       ggplot(aes(value, choiceLeft))+
       geom_jitter(height = .1)+
       geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, alpha=.1)+
-      facet_grid(key ~ probFractalDraw)
+      facet_grid(key ~ probFractalDraw)+
+      theme(panel.grid = element_blank())
     print(p)
   }
   
@@ -75,7 +76,8 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
         geom_histogram(data=true_data, aes(reactionTime, y = ..density..), bins=20, alpha=.5)+
         facet_wrap(~probFractalDraw)+
         theme(legend.position = "bottom")+
-        scale_color_manual(values=c("red",NA))
+        scale_color_manual(values=c("red",NA))+
+        theme(panel.grid = element_blank())
     }
     else{
       p = sim_data %>%
@@ -83,7 +85,8 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
         ggplot(aes(reactionTime)) +
         geom_histogram(position="identity", bins=10) +
         labs(title="RT long tail?")+
-        facet_wrap(~probFractalDraw)
+        facet_wrap(~probFractalDraw)+
+        theme(panel.grid = element_blank())
     }
     
     print(p)
@@ -107,8 +110,8 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
         ggplot(aes(probFractalDraw, mean_log_rt, color=data_type))+
         geom_point()+
         geom_errorbar(aes(ymin = mean_log_rt - sem_log_rt, ymax = mean_log_rt + sem_log_rt), width=.2)+
-        labs(title="Inverse U and faster when pFrac ==1?", color="")+
-        theme(legend.position = "bottom")
+        labs(color="")+
+        theme(legend.position = "bottom", panel.grid = element_blank())
     } else{
       p = sim_data %>%
         drop_na()%>%
@@ -120,7 +123,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
         ggplot(aes(probFractalDraw, mean_log_rt))+
         geom_point()+
         geom_errorbar(aes(ymin = mean_log_rt - sem_log_rt, ymax = mean_log_rt + sem_log_rt), width=.2)+
-        labs(title="Inverse U and faster when pFrac ==1?")
+        theme(panel.grid = element_blank())
     }
     print(p)
   }
@@ -150,7 +153,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
       geom_hline(aes(yintercept=0), linetype="dashed")+
       scale_color_manual(values = cbbPalette[2:1])+
-      theme(legend.position = "bottom")+
+      theme(legend.position = "bottom", panel.grid = element_blank())+
       labs(color="", title="Relevant attribute effect on choice")
     
     if(compare_logits){
@@ -179,7 +182,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
         geom_hline(aes(yintercept=0), linetype="dashed")+
         facet_wrap(~data_type)+
         scale_color_manual(values = cbbPalette[2:1])+
-        theme(legend.position = "bottom")+
+        theme(legend.position = "bottom", panel.grid = element_blank())+
         labs(color="", title="Relevant attribute effect on choice") 
       
     } 
@@ -229,7 +232,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       ggplot(aes(probFractalDraw, mean_logRt,color=lottery_ev_diff, alpha = data_type, shape=data_type))+
       geom_point(position=position_dodge(width=.5))+
       geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2,position=position_dodge(width=.5))+
-      theme(legend.position = "bottom")+
+      theme(legend.position = "bottom", panel.grid = element_blank())+
       labs(color="Lottery EV difference", y="Mean Log RT", x="p(Fractal)")+
       scale_color_manual(values = c(cbbPalette[3], cbbPalette[5:6]))+
       scale_alpha_manual(values=c(1, .5))
@@ -280,7 +283,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       ggplot(aes(probFractalDraw, mean_logRt,color=diff_level, alpha = data_type, shape=data_type))+
       geom_point(position=position_dodge(width=.5))+
       geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2,position=position_dodge(width=.5))+
-      theme(legend.position = "bottom")+
+      theme(legend.position = "bottom", panel.grid = element_blank())+
       labs(color="Fractal QV difference", y="Mean Log RT", x="p(Fractal)")+
       scale_color_manual(values = c(cbbPalette[3], cbbPalette[5:6]))+
       scale_alpha_manual(values=c(1, .5))
@@ -342,7 +345,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       geom_point(position=position_dodge(width=.5))+
       geom_errorbar(aes(ymin=meanLogRt-semLogRt, ymax=meanLogRt+semLogRt),width=.2,position=position_dodge(width=.5))+
       xlab("")+
-      theme(legend.position = "bottom")+
+      theme(legend.position = "bottom", panel.grid = element_blank())+
       scale_alpha_manual(values = c(1, .5))+
       scale_color_manual(values = c("blue", "red"))+
       facet_wrap(~correctBasedOn)

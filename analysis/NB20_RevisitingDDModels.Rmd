@@ -70,7 +70,7 @@ Source trial simulating and fitting function three integrator model. The model o
 
 
 ```{r}
-sim_sanity_checks(sub_data, checks=c(1,3,4,5,6,7,8), compare_logits = F, compare_rts = FALSE)
+sim_sanity_checks(sub_data, checks=c(1,3,4,5,6,7,8), compare_logits = F, compare_rts = F)
 ```
 
 # Recovery checks
@@ -294,7 +294,8 @@ Check if single trial fit function estimates the probabilities correctly on a ve
 
 ```{r}
 # tmp = sim_trial(dLott=1, dFrac=1, dArb=1, sigmaLott = 0.001, sigmaFrac = 0.001, distortedEVDiff = .25, distortedQVDiff = -.1, probFractalDraw = 2, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE)
-tmp = sim_trial(dLott=.25, dFrac=.25, dArb=.25, sigmaLott = 0.05, sigmaFrac = 0.05, distortedEVDiff = .25, distortedQVDiff = -.1, probFractalDraw = 2, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE)
+
+tmp = sim_trial(dLott=.3, dFrac=.6, dArb=.7, sigmaLott = 0.05, sigmaFrac = 0.05, distortedEVDiff = .25, distortedQVDiff = -.1, probFractalDraw = 2, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE)
 
 annot_top = paste0("distorted EV difference = ", round(tmp$out$distortedEVDiff, 3), 
                     "\ndistorted QV difference = ", round(tmp$out$distortedQVDiff, 3),
@@ -320,7 +321,7 @@ tmp$debug_df %>%
 # tmp_fit = fit_trial(dLott=1, dFrac=1, dArb=1, sigmaLott = 0.001, sigmaFrac = 0.001, distortedEVDiff = .25, distortedQVDiff = -.1, probFractalDraw = 2, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA,
 #                     choice = tmp$out$choice, reactionTime = tmp$out$reactionTime, debug=TRUE)
 
-tmp_fit = fit_trial(dLott=.25, dFrac=.25, dArb=.25, sigmaLott = 0.05, sigmaFrac = 0.05, distortedEVDiff = .25, distortedEVDiff = .25, distortedQVDiff = -.1, probFractalDraw = 2, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA,
+tmp_fit = fit_trial(dLott=.3, dFrac=.6, dArb=.7, sigmaLott = 0.05, sigmaFrac = 0.05, distortedEVDiff = .25,  distortedQVDiff = -.1, probFractalDraw = 2, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA,
                     choice = tmp$out$choice, reactionTime = tmp$out$reactionTime, debug=TRUE)
 
 tmp_fit$prStatesArb %>%
@@ -330,17 +331,22 @@ tmp_fit$prStatesArb %>%
          timeStep = gsub("X", "", timeStep), 
          timeStep = as.numeric(timeStep)) %>%
   ggplot(aes(timeStep,states, fill=prob))+
-  geom_tile()
+  geom_tile()+
     theme(legend.position = "bottom",
           panel.grid = element_blank(),
           axis.ticks = element_blank(),
-          axis.text = element_blank())+
-  scale_fill_gradient2(midpoint=.5)
+          axis.text = element_blank())
 ```
 
 Is the most likely state the correct state at each time point?
 
 ```{r}
+stateBin = c()
+
+for(i in 1:nrow(tmp$debug_df)){
+  stateBin[i] = which.min(abs(states - tmp$debug_df$arbitratorRDV[i]))
+}
+
 tmp_fit$prStatesArb %>%
   mutate(stateBins = 1:n()) %>%
   gather(timeStep, prob, -stateBins) %>%
@@ -363,19 +369,22 @@ tmp_fit$prStatesArb %>%
 
 ```{r}
   
-stateBin = c()
-
-for(i in 1:nrow(tmp$debug_df)){
-  stateBin[i] = which.min(abs(states - tmp$debug_df$arbitratorRDV[i]))
-}
-
-tmp$debug_df %>%
-  select(arbitratorRDV, time) %>%
-  rename(timeStep = time) %>%
-  mutate(states = stateBin, 
-         data_type="true") %>%
-  select(-arbitratorRDV)
-  
+tmp_fit$prStatesArb %>%
+  mutate(stateBins = 1:n()) %>%
+  gather(timeStep, prob, -stateBins) %>%
+  # group_by(timeStep) %>%
+  # filter(prob == max(prob)) %>%
+  mutate(timeStep = gsub("X", "", timeStep), 
+         timeStep = as.numeric(timeStep),
+         data_type="est") %>%
+    # filter( timeStep<20) %>%
+  filter(timeStep %% 10 == 0) %>%
+  ggplot(aes(stateBins, prob))+
+  geom_bar(stat="identity")+
+  coord_flip()+
+  facet_grid(.~timeStep, scales="free")+
+  scale_x_continuous(breaks=seq(0,21,1))+
+  theme(panel.grid.minor = element_blank())
 ```
 
 ### Same trial

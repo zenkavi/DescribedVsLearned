@@ -16,6 +16,8 @@ library(here)
 cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 helpers_path = here('analysis/helpers/')
 
+source(paste0(helpers_path,'ddModels/sim_task.R'))
+source(paste0(helpers_path,'ddModels/fit_task.R'))
 source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 source(paste0(helpers_path, 'get_qvals.R'))
 fig_out_path = paste0(here(), '/outputs/fig/')
@@ -52,31 +54,41 @@ clean_beh_data = clean_beh_data %>%
 rm(fit, g_par_est, par_ests)
 ```
 
-Logit w EV and fractal value
+# Choice
+
+## Logit w EV and fractal value
 
 ```{r}
 
 ```
 
-Logit w EV, fractal value and QV
+## Logit w EV, fractal value and QV
 
 ```{r}
 
 ```
 
-Logit w EV, fractal value, QV and prob distortion correction
+## Logit w EV, fractal value, QV and prob distortion correction
 
 ```{r}
 
 ```
 
-RL model comparison
+## RL model comparison
 
 ```{r}
 
 ```
 
-RT by probFractalDraw
+## RL implied QVs across different models
+
+```{r}
+
+```
+
+# RT
+
+## RT by probFractalDraw
 
 ```{r}
 p = clean_beh_data %>%
@@ -96,7 +108,7 @@ ggsave(file=paste0(fig_out_path, 'labmeet_rt_by_pFrac.jpg'), p, height = 5, widt
 p
 ```
 
-RT by probfractaldraw split by EV difference level
+## RT by probfractaldraw split by EV difference level
 
 ```{r}
 p = clean_beh_data %>%
@@ -121,7 +133,7 @@ ggsave(file=paste0(fig_out_path, 'labmeet_rt_by_evdiff.jpg'), p, height = 5, wid
 p
 ```
 
-RT by probfractaldraw split by QV difference level
+## RT by probfractaldraw split by QV difference level
 
 ```{r}
 
@@ -149,7 +161,7 @@ ggsave(file=paste0(fig_out_path, 'labmeet_rt_by_qvdiff.jpg'), p, height = 5, wid
 p 
 ```
 
-RT for errors
+## RT for errors
 
 ```{r}
 p = clean_beh_data %>%
@@ -183,11 +195,98 @@ ggsave(file=paste0(fig_out_path, 'labmeet_rt_by_errors.jpg'), p, height = 5, wid
 p    
 ```
 
-Demo 1 integrator DDM
+# DDM
+
+## Demo 1 integrator DDM
+
+```{r}
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_oneIntegrator_sepProbDistortion.R'))
+```
+
+```{r}
+# tmp = sim_trial(dLott=1, dFrac=1, dArb=1, sigmaLott = 0.001, sigmaFrac = 0.001, distortedEVDiff = .25, distortedQVDiff = -.1, probFractalDraw = 2, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE)
+
+pFrac = .8
+theta = .4
+EVRight = .5
+EVLeft = .7
+distortedEVDiff = (1-theta)*(1-pFrac)*(EVLeft-EVRight)
+QVLeft = .1
+QVRight = .4
+distortedQVDiff = theta*pFrac*(QVLeft-QVRight)
+VLeft = theta*pFrac*(QVLeft) + (1-theta)*(1-pFrac)*(EVLeft)
+VRight = theta*pFrac*(QVRight) + (1-theta)*(1-pFrac)*(EVRight)
+
+tmp = sim_trial(d = .05, sigma = .03, distortedEVDiff = distortedEVDiff, distortedQVDiff = distortedQVDiff, probFractalDraw = NA, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE)
+
+annot_top = paste0("EVLeft = ", round(EVLeft, 3), ", EVRight = ", round(EVRight, 3), 
+                    "\nQVLeft = ", round(QVLeft, 3),", QVRight = ", round(QVRight, 3),
+                   "\nVLeft = ", round(VLeft, 3),", VRight = ", round(VRight, 3),
+                   "\np(Fractal) = ", round(pFrac, 3),", theta = ", round(theta, 3),
+                   "\nd = ", round(tmp$out$d, 3),", sigma = ", round(tmp$out$sigma, 3),
+                    "\nchoice = ", tmp$out$choice)
+
+p = tmp$debug_df %>%
+  select(RDV, time) %>%
+  gather(key, value, -time) %>%
+  ggplot(aes(time, value, color=key))+
+  # geom_point()+
+  geom_line(size=2)+
+  geom_hline(aes(yintercept=1))+
+  geom_hline(aes(yintercept=-1))+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  theme(legend.position = "none",
+        panel.grid = element_blank())+
+  labs(color="", x = "Timestep (in 10 ms)", y="RDV")+
+  annotate(geom="text", x=.25, y = .6, label = annot_top, hjust=0)
+
+ggsave(file=paste0(fig_out_path, 'labmeet_oneInt_demo.jpg'), p, height = 5, width=8, units="in")
+p 
+
+```
+
+```{r}
+p = tmp$debug_df %>%
+  select(RDV, time) %>%
+  gather(key, value, -time) %>%
+  ggplot(aes(time, value, color=key))+
+  # geom_point()+
+  geom_line(size=2)+
+  geom_hline(aes(yintercept=1))+
+  geom_hline(aes(yintercept=-1))+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  theme(legend.position = "none", panel.grid = element_blank())+
+  labs(color="", x = "Timestep (in 10 ms)", y="RDV")+
+  scale_y_continuous(minor_breaks = seq(-1,1,.1))+
+  scale_x_continuous(minor_breaks = seq(0, nrow(tmp$debug_df), 10))
+
+ggsave(file=paste0(fig_out_path, 'labmeet_oneInt_demo_nogrid.jpg'), p, height = 5, width=8, units="in")
+p 
+```
+
+```{r}
+p = tmp$debug_df %>%
+  select(RDV, time) %>%
+  gather(key, value, -time) %>%
+  ggplot(aes(time, value, color=key))+
+  # geom_point()+
+  geom_line(size=2)+
+  geom_hline(aes(yintercept=1))+
+  geom_hline(aes(yintercept=-1))+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  theme(legend.position = "none")+
+  labs(color="", x = "Timestep (in 10 ms)", y="RDV")+
+  scale_y_continuous(minor_breaks = seq(-1,1,.1))+
+  scale_x_continuous(minor_breaks = seq(0, nrow(tmp$debug_df), 10))
+
+ggsave(file=paste0(fig_out_path, 'labmeet_oneInt_demo_grid.jpg'), p, height = 5, width=8, units="in")
+p 
+```
 
 ```{r}
 
 ```
+
 
 Demo 3 integrator DDM
 

@@ -7,7 +7,7 @@ sim_trial = function(d, sigma, barrierDecay=0, barrier=1, nonDecisionTime=0, bia
   # maxIter: num max samples. if a barrier isn't hit by this sampling of evidence no decision is made. If time step is 10ms and maxIter is 1000 this would be a 10sec timeout maximum
   
   if (debug){
-    debug_df = data.frame()
+    debug_df = data.frame(time = 0, mu_mean =NA, mu =NA, RDV = 0, barrier = barrier)
   }
   
   RDV = bias
@@ -76,7 +76,7 @@ sim_trial = function(d, sigma, barrierDecay=0, barrier=1, nonDecisionTime=0, bia
     
     if (debug){
       debug_row = data.frame(time = time, mu_mean = mu_mean, mu = round(mu, 3), RDV = round(RDV, 3), barrier = round(barrier[time], 3))
-      debug_df = rbind.all.columns(debug_df, debug_row)
+      debug_df = rbind(debug_df, debug_row)
     }
     
     # Increment sampling iteration
@@ -102,7 +102,7 @@ sim_trial = function(d, sigma, barrierDecay=0, barrier=1, nonDecisionTime=0, bia
   out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, probFractalDraw = probFractalDraw, distortedEVDiff = distortedEVDiff, distortedQVDiff = distortedQVDiff, choice=choice, reactionTime = RT, timeOut = timeOut, d = d, sigma = sigma, barrierDecay = barrierDecay, barrier=barrier[time], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, maxIter=maxIter, epsilon = epsilon)
   
   if(debug){
-    return(list(out=out, debug_df = debug_df[-1,]))
+    return(list(out=out, debug_df = debug_df))
   } else {
     return(out)
   }

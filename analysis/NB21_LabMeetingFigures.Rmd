@@ -85,28 +85,30 @@ qv_mod = clean_beh_data %>%
 
 qv_theta_mod = clean_beh_data %>%
   mutate(probFractalDraw = as.factor(probFractalDraw),
-         fractal_qv_diff_theta = fractal_qv_diff * theta) %>%
+         fractal_qv_diff_theta = fractal_qv_diff * theta,
+         lottery_ev_diff_theta = lottery_ev_diff * (1-theta)) %>%
   nest(data = -probFractalDraw) %>% 
   mutate(
-    fit = map(data, ~ glm(choiceLeft ~ scale(lottery_ev_diff) + scale(fractal_qv_diff_theta), data = .x, family=binomial(link="logit"))),
+    fit = map(data, ~ glm(choiceLeft ~ scale(lottery_ev_diff_theta) + scale(fractal_qv_diff_theta), data = .x, family=binomial(link="logit"))),
     tidied = map(fit, tidy)
   ) %>% 
   unnest(tidied) %>%
-  filter(term == "scale(fractal_qv_diff_theta)") %>%
+  filter(term != "(Intercept)") %>%
   select(probFractalDraw, term, estimate, std.error)
 ```
 
 ```{r}
-p = rbind(truev_mod, qv_mod, qv_theta_mod) %>%
-  mutate(reg = ifelse(term == "scale(lottery_ev_diff)", "Lottery EV", ifelse(term == "scale(fractal_prob_diff)", "True Fractal P", ifelse(term == "scale(fractal_qv_diff)","Fractal QV", "Fractal QV * theta"))),
-         theta = ifelse(term %in% c("scale(fractal_qv_diff_theta)", "scale(fractal_qv_diff)"), 1, 0),
-         theta = as.factor(theta)) %>%
-  ggplot(aes(probFractalDraw, estimate, col=reg, group=reg,alpha=theta))+
+p = rbind(truev_mod, qv_mod) %>%
+  mutate(reg = ifelse(term %in% c("scale(lottery_ev_diff)", "scale(lottery_ev_diff_theta)"), "Lottery EV", ifelse(term == "scale(fractal_prob_diff)", "True Fractal P", ifelse(term %in% c("scale(fractal_qv_diff)","scale(fractal_qv_diff_theta)"),"Fractal QV", NA))),
+         reg = factor(reg, levels=c("True Fractal P", "Lottery EV", "Fractal QV")),
+         theta = grepl("theta", term),
+         fract = ifelse(reg == "Fractal QV", T, F)) %>%
+  ggplot(aes(probFractalDraw, estimate, col=reg, group=reg, alpha = fract))+
   geom_point()+
   geom_line()+
   geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
   geom_hline(aes(yintercept=0), linetype="dashed")+
-  scale_color_manual(values = c(cbbPalette[3], cbbPalette[3:1]))+
+  scale_color_manual(values = cbbPalette[1:3])+
   scale_alpha_manual(values = c(1, 0), guide="none")+
   theme(legend.position = "bottom", panel.grid = element_blank())+
   labs(color="", x= "p(Fractal)", y="Beta estimate")+
@@ -119,17 +121,17 @@ p
 ## Logit w EV, fractal value and QV
 
 ```{r}
-p = rbind(truev_mod, qv_mod, qv_theta_mod) %>%
-  mutate(reg = ifelse(term == "scale(lottery_ev_diff)", "Lottery EV", ifelse(term == "scale(fractal_prob_diff)", "True Fractal P", ifelse(term == "scale(fractal_qv_diff)","Fractal QV", "Fractal QV * theta"))),
-         theta = ifelse(term %in% c("scale(fractal_qv_diff_theta)"), 1, 0),
-         theta = as.factor(theta)) %>%
-  ggplot(aes(probFractalDraw, estimate, col=reg, group=reg,alpha=theta))+
+p = rbind(truev_mod, qv_mod) %>%
+  mutate(reg = ifelse(term %in% c("scale(lottery_ev_diff)", "scale(lottery_ev_diff_theta)"), "Lottery EV", ifelse(term == "scale(fractal_prob_diff)", "True Fractal P", ifelse(term %in% c("scale(fractal_qv_diff)","scale(fractal_qv_diff_theta)"),"Fractal QV", NA))),
+         reg = factor(reg, levels=c("True Fractal P", "Lottery EV", "Fractal QV")),
+         theta = grepl("theta", term),
+         fract = ifelse(reg == "Fractal QV", T, F)) %>%
+  ggplot(aes(probFractalDraw, estimate, col=reg, group=reg))+
   geom_point()+
   geom_line()+
   geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
   geom_hline(aes(yintercept=0), linetype="dashed")+
-  scale_color_manual(values = c(cbbPalette[3], cbbPalette[3:1]))+
-  scale_alpha_manual(values = c(1, 0), guide="none")+
+  scale_color_manual(values = cbbPalette[1:3])+
   theme(legend.position = "bottom", panel.grid = element_blank())+
   labs(color="", x= "p(Fractal)", y="Beta estimate")+
   guides(color=guide_legend(nrow=2,byrow=TRUE))
@@ -142,16 +144,17 @@ p
 
 ```{r}
 p = rbind(truev_mod, qv_mod, qv_theta_mod) %>%
-  mutate(reg = ifelse(term == "scale(lottery_ev_diff)", "Lottery EV", ifelse(term == "scale(fractal_prob_diff)", "True Fractal P", ifelse(term == "scale(fractal_qv_diff)","Fractal QV", "Fractal QV * theta"))),
-         theta = ifelse(term %in% c("scale(fractal_qv_diff_theta)"), 1, 0),
-         theta = as.factor(theta)) %>%
-  ggplot(aes(probFractalDraw, estimate, col=reg, group=reg,alpha=theta))+
+  mutate(reg = ifelse(term %in% c("scale(lottery_ev_diff)", "scale(lottery_ev_diff_theta)"), "Lottery EV", ifelse(term == "scale(fractal_prob_diff)", "True Fractal P", ifelse(term %in% c("scale(fractal_qv_diff)","scale(fractal_qv_diff_theta)"),"Fractal QV", NA))),
+         reg = factor(reg, levels=c("True Fractal P", "Lottery EV", "Fractal QV")),
+         theta = grepl("theta", term),
+         fract = ifelse(reg == "Fractal QV", T, F)) %>%
+  ggplot(aes(probFractalDraw, estimate, col=reg, group=term, alpha = theta))+
   geom_point()+
   geom_line()+
   geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
   geom_hline(aes(yintercept=0), linetype="dashed")+
-  scale_color_manual(values = c(cbbPalette[3], cbbPalette[3:1]))+
-  scale_alpha_manual(values = c(.4, 1), guide="none")+
+  scale_color_manual(values = cbbPalette[1:3])+
+  scale_alpha_manual(values = c(.3, 1))+
   theme(legend.position = "bottom", panel.grid = element_blank())+
   labs(color="", x= "p(Fractal)", y="Beta estimate")+
   guides(color=guide_legend(nrow=2,byrow=TRUE))

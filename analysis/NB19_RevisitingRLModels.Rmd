@@ -43,11 +43,12 @@ Motivation for modeling RL and DDM separately:
 
 Which model fits best? For group and for individuals?  
 
-[24 models - 2*2*2*3]  
+[25 models - 2*2*2*3 + 1]  
 - one vs two parameter probability/relevance distortion  
 - asymmetric (distort only the relevance of fractals) vs symmetric probability/relevance distortion  
 - linear vs non-linear probability/relevance distortion  
 - Update QV for both fractals on each trial (rpeBoth) vs update QV of the fractal of the chosen bundle (rpeChosenFractal) vs update QVs for both fractals only when the trial reward depended on fractals (rpeWhenFractalRewarded)  
+- Normalized single parameter distortion
 
 Probability distortion functions:
 
@@ -68,6 +69,7 @@ where $0 < \theta < 1$
 Two parameter non-linear unbounded  
 
 $$w(pFrac) = c + m * pFrac$$  
+
 Normalized single parameter distortion  
 
 $$w(pLott) = (1-\theta) * (1-pFrac)$$  
@@ -78,7 +80,7 @@ $$V_i = w(pLott)EV_{i} + w(pFrac)QV_{i}$$
 - count which model is best for each subject how many times
 2. posterior predictive data for whole sample with succinct summary 
 3. replicate logit pattern
-[eventually do this kind of comparison for ddms and possibly bayesian model averaging though unlikely for the poster]
+
 
 ```{r message=FALSE, warning=FALSE}
 numpar_names = c("oneParam", "twoParams")
@@ -86,7 +88,7 @@ symm_names = c("Asymm", "Symm")
 shape_names = c("LinearProbDistortion", "NonLinearProbDistortion")
 rpe_names = c("_rpeBoth", "_rpeChosenBundleFractal", "_rpeWhenFractalRewarded")
 
-model_names = c("oneParamDoubleSymmLinearProbDistortion_rpeBoth")
+model_names = c("oneParamDoubleSymmLinearProbDistortion_rpeBoth") #start with the name that doesn't fit in the rest
 model_info = data.frame(model_name = "oneParamDoubleSymmLinearProbDistortion_rpeBoth", numpar=  "oneParam", symm = "Symm", shape = "LinearProbDistortion", rpe="_rpeBoth", norm=1)
 
 for(i in 1:length(numpar_names)){
@@ -103,62 +105,105 @@ for(i in 1:length(numpar_names)){
 }
 
 rm(i, j, k, l, model_name, numpar_names, rpe_names, shape_names, symm_names, cur_row)
+```
 
-elpds = data.frame(Estimate = NA, SE = NA, model_name = NA, numpar=  NA, symm = NA, shape = NA, rpe=NA, norm=NA)
-sampled_logLiks = data.frame(subnum = NA, logLik = NA, model_name=NA)
-loaded_sampled_logLiks = FALSE
+Read in or compute the fit statistics.
 
-for(i in 1:length(model_names)){
+```{r}
+if(file.exists(paste0(helpers_path, 'rlModels/elpds.RDS')) & !exists("elpds")){
+  print("Reading in previously saved elpds...")
+  elpds = readRDS(paste0(helpers_path, 'rlModels/elpds.RDS'))
   
-  cur_model = model_names[i]
-  
-  source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_', cur_model, '.R'))
-  
-  logLik = extract(fit, "logLikelihood")$logLikelihood
-  cur_row = data.frame(loo::loo(logLik)$estimates)[1,]
-  cur_info = model_info %>% filter(model_name == cur_model)
-  cur_row = cbind(cur_row, cur_info)  
+} else{
+  for(i in 1:length(model_names)){
     
-  elpds = rbind(elpds, cur_row)
-  
-  rbind(elpds)
-  
-  if(file.exists(paste0(helpers_path, 'rlModels/sampled_logLiks.RDS')) & !loaded_sampled_logLiks){
-    readRDS(paste0(helpers_path, 'rlModels/sampled_logLiks.RDS'))
-    loaded_sampled_logLiks = TRUE
-  } else{
-   tmp = par_ests %>%
-    filter(par == "alpha") %>%
-    group_by(subnum) %>% 
-    mutate(iter = 1:n()) %>%
-    filter(iter > 2000) %>%
-    sample_n(100) %>%
-    select(subnum, logLik) %>%
-    mutate(model_name = cur_model)
-  
-  sampled_logLiks = rbind(sampled_logLiks, tmp) 
+    cur_model = model_names[i]
+    
+    if(i == 1){
+      elpds = data.frame(elpd_loo_cv = NA, elpd_loo_cv_se = NA, waic = NA, waic_se = NA, model_name = NA, numpar=  NA, symm = NA, shape = NA, rpe=NA, norm=NA)
+    }
+    
+    source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_', cur_model, '.R'))
+    
+    logLik = extract(fit, "logLikelihood")$logLikelihood
+    cur_loo_cv = data.frame(loo::loo(logLik)$estimates)[1,] #loo_cv elpd estimate
+    cur_waic = data.frame(loo::waic(logLik)$estimates)[3,] #waic estimate
+    
+    cur_row = model_info %>% filter(model_name == cur_model)
+    cur_row$elpd_loo_cv = cur_loo_cv$Estimate
+    cur_row$elpd_loo_cv_se = cur_loo_cv$SE
+    cur_row$waic = cur_waic$Estimate
+    cur_row$waic_se = cur_waic$SE
+    
+    elpds = rbind(elpds, cur_row)
+    
+    rbind(elpds)
+    
+    rm(logLik, cur_loo_cv, cur_waic, cur_row, fit, g_par_ests, par_ests)
   }
+  rm(i)
 }
 
-rm(i, tmp)
+
+if(file.exists(paste0(helpers_path, 'rlModels/sampled_logLiks.RDS')) & !exists("sampled_logLiks")){
+  sampled_logLiks = readRDS(paste0(helpers_path, 'rlModels/sampled_logLiks.RDS'))
+  print("Reading in previously saved samples of log likelihoods...")
+} else{
+  for(i in 1:length(model_names)){
+    
+    cur_model = model_names[i]
+    
+    if(i == 1){
+      sampled_logLiks = data.frame(subnum = NA, logLik = NA, model_name=NA)
+    }
+    
+    source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_', cur_model, '.R'))
+    
+    tmp = par_ests %>%
+      filter(par == "alpha") %>% #parameter name doesn't matter. Just get the likelihoods for the model, which are the same for the sampled parameters. This just happens to be a parameter that is common across all models.
+      group_by(subnum) %>% 
+      mutate(iter = 1:n()) %>%
+      filter(iter > 2000) %>% #sample only from post burn-in samples
+      sample_n(100) %>%
+      select(subnum, logLik) %>%
+      mutate(model_name = cur_model)
+    
+    sampled_logLiks = rbind(sampled_logLiks, tmp) 
+    
+    rm(tmp, fit, g_par_ests, par_ests)
+  }
+  rm(i)
+}
+
+
 
 elpds = elpds %>% drop_na()
 sampled_logLiks = sampled_logLiks %>% drop_na()
 
-if(!loaded_sampled_logLiks){
+if(!file.exists(paste0(helpers_path, 'rlModels/elpds.RDS'))){
+  saveRDS(elpds, paste0(helpers_path, 'rlModels/elpds.RDS'))
+}
+
+if(!file.exists(paste0(helpers_path, 'rlModels/sampled_logLiks.RDS'))){
   saveRDS(sampled_logLiks, paste0(helpers_path, 'rlModels/sampled_logLiks.RDS'))
 }
 
 ```
 
 ```{r}
-elpds %>%
-  mutate(model_name = reorder(model_name, Estimate)) %>%
-  ggplot(aes(model_name, Estimate))+
-  geom_point()+
-  geom_errorbar(aes(ymin=Estimate-SE, ymax=Estimate+SE), width=.2)+
-  theme(axis.text = element_blank())+
-  ylab("elpd")
+plot_opts = list(scale_alpha_manual(values=c(.6, 1), name="Distortion shape",
+                     breaks = c("LinearProbDistortion", "NonLinearProbDistortion"),
+                     labels = c("Linear", "NonLinear")),
+  scale_shape_manual(values = c(16, 17), name="Distorted attribute",
+                     breaks = c("Asymm", "Symm"),
+                     labels = c("Fractal Only", "Both")),
+  scale_color_manual(breaks=c("_rpeBoth", "_rpeChosenBundleFractal", "_rpeWhenFractalRewarded"),
+                     labels=c("Both", "Chosen", "Rewarded"),
+                     name="Learning",
+                     values=c(cbbPalette[5], cbbPalette[3], cbbPalette[7])),
+  scale_linetype_manual(values = c("solid", "dashed"), name="# distortion params",
+                        breaks = c("oneParam", "twoParams"),
+                        labels = c("1", "2")))
 ```
 
 ```{r}
@@ -180,33 +225,43 @@ tmp %>%
   geom_errorbar(aes(ymin=mean_logLik - sem_logLik, ymax=mean_logLik + sem_logLik, linetype=numpar))+
   theme(axis.text.x = element_blank(),
         legend.position = "bottom",
-        panel.grid = element_blank())+
+        panel.grid = element_blank(),
+        legend.box = "vertical",
+        legend.spacing.y = unit(-0.25, "cm"))+
   labs(x="Model", y="Mean Log likelihood")+
-  scale_alpha_manual(values=c(.6, 1), name="",
-                     breaks = c("LinearProbDistortion", "NonLinearProbDistortion"),
-                     labels = c("Linear", "NonLinear"))+
-  scale_shape_manual(values = c(16, 17), name="")+
-  scale_color_manual(breaks=c("_rpeBoth", "_rpeChosenBundleFractal", "_rpeWhenFractalRewarded"),
-                     labels=c("Both", "Chosen", "Rewarded"),
-                     name="Learning",
-                     values=c(cbbPalette[5], cbbPalette[3], cbbPalette[7]))+
-  scale_linetype_manual(values = c("solid", "dashed"), name="")
+  plot_opts
 
 ```
+Note that this difference isn't as large as the plot above suggests. The expected log prob densities for cross validation show a similar trend but are indistinguishable across the models.
 
 ```{r}
 elpds %>%
-  arrange(-Estimate) %>%
+  mutate(model_name = reorder(model_name, elpd_loo_cv)) %>%
+  ggplot(aes(model_name, elpd_loo_cv, col=rpe, shape = symm, alpha = shape))+
+  geom_point()+
+  geom_errorbar(aes(ymin=elpd_loo_cv-elpd_loo_cv_se, ymax=elpd_loo_cv+elpd_loo_cv_se, linetype=numpar), width=.2)+
+  theme(axis.text.x = element_blank(),
+        legend.position = "bottom",
+        panel.grid = element_blank(),
+        legend.box = "vertical",
+        legend.spacing.y = unit(-0.25, "cm"))+
+  labs(x="Model", y="LOO-CV elpd")+
+  plot_opts
+```
+
+
+```{r}
+elpds %>%
+  arrange(-elpd_loo_cv) %>%
   mutate(elpd_rank = 1:n()) %>%
   select(elpd_rank, model_name) %>%
-  remove_rownames() %>%
   left_join(tmp %>%
-  arrange(-mean_logLik) %>%
-  mutate(mean_logLik_rank = 1:n()) %>%
-  select(model_name, mean_logLik_rank), by="model_name") %>%
-  select(model_name, elpd_rank, mean_logLik_rank) %>%
-  mutate(rank_diff = elpd_rank - mean_logLik_rank)
+              arrange(-mean_logLik) %>%
+              mutate(mean_logLik_rank = 1:n()) %>%
+              select(model_name, mean_logLik_rank), by="model_name") %>%
+  select(model_name, elpd_rank, mean_logLik_rank)
 ```
+
 
 Which is the best model for each subject based on the 100 sampled log liks
 

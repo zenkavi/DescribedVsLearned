@@ -356,22 +356,6 @@ ggsave(file=paste0(fig_out_path, 'labmeet_rl_model_comparison_inddiff.jpg'), p, 
 p
 ```
 
-## RL implied QVs across different models
-
-"Sloppy models"
-
-```{r}
-
-```
-
-## RL implied learning rates
-
-From top and bottom three models
-
-```{r}
-
-```
-
 # RT
 
 ## RT by probFractalDraw
@@ -526,7 +510,7 @@ p = tmp$debug_df %>%
   labs(color="", x = "Timestep (in 10 ms)", y="RDV")+
   annotate(geom="text", x=.25, y = .6, label = annot_top, hjust=0)
 
-ggsave(file=paste0(fig_out_path, 'labmeet_oneInt_demo.jpg'), p, height = 5, width=8, units="in")
+# ggsave(file=paste0(fig_out_path, 'labmeet_oneInt_demo.jpg'), p, height = 5, width=8, units="in")
 p 
 
 ```
@@ -546,7 +530,7 @@ p = tmp$debug_df %>%
   scale_y_continuous(minor_breaks = seq(-1,1,.1))+
   scale_x_continuous(minor_breaks = seq(0, nrow(tmp$debug_df), 10))
 
-ggsave(file=paste0(fig_out_path, 'labmeet_oneInt_demo_nogrid.jpg'), p, height = 5, width=8, units="in")
+# ggsave(file=paste0(fig_out_path, 'labmeet_oneInt_demo_nogrid.jpg'), p, height = 5, width=8, units="in")
 p 
 ```
 
@@ -565,14 +549,117 @@ p = tmp$debug_df %>%
   scale_y_continuous(minor_breaks = seq(-1,1,.1))+
   scale_x_continuous(minor_breaks = seq(0, nrow(tmp$debug_df), 10))
 
-ggsave(file=paste0(fig_out_path, 'labmeet_oneInt_demo_grid.jpg'), p, height = 5, width=8, units="in")
+# ggsave(file=paste0(fig_out_path, 'labmeet_oneInt_demo_grid.jpg'), p, height = 5, width=8, units="in")
 p 
 ```
 
 ```{r}
+# tmp = sim_trial(dLott=1, dFrac=1, dArb=1, sigmaLott = 0.001, sigmaFrac = 0.001, distortedEVDiff = .25, distortedQVDiff = -.1, probFractalDraw = 2, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE)
 
+pFrac = .1
+theta = .5
+EVRight = .5
+EVLeft = 0
+distortedEVDiff = (1-theta)*(1-pFrac)*(EVLeft-EVRight)
+QVLeft = 0
+QVRight = .4
+distortedQVDiff = theta*pFrac*(QVLeft-QVRight)
+VLeft = theta*pFrac*(QVLeft) + (1-theta)*(1-pFrac)*(EVLeft)
+VRight = theta*pFrac*(QVRight) + (1-theta)*(1-pFrac)*(EVRight)
+sim_d = .5
+sim_sigma = .03
+
+tmp = sim_trial(d = sim_d, sigma = sim_sigma, distortedEVDiff = distortedEVDiff, distortedQVDiff = distortedQVDiff, probFractalDraw = NA, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE)
+
+annot_top = paste0("EVLeft = ", round(EVLeft, 3), ", EVRight = ", round(EVRight, 3), 
+                    "\nQVLeft = ", round(QVLeft, 3),", QVRight = ", round(QVRight, 3),
+                   "\nVLeft = ", round(VLeft, 3),", VRight = ", round(VRight, 3),
+                   "\np(Fractal) = ", round(pFrac, 3),", theta = ", round(theta, 3),
+                   "\nd = ", round(tmp$out$d, 3),", sigma = ", round(tmp$out$sigma, 3),
+                    "\nchoice = ", tmp$out$choice)
 ```
 
+
+```{r}
+p = tmp$debug_df %>%
+  select(RDV, time) %>%
+  gather(key, value, -time) %>%
+  ggplot(aes(time, value, color=key))+
+  # geom_point()+
+  geom_line(size=2)+
+  geom_hline(aes(yintercept=1))+
+  geom_hline(aes(yintercept=-1))+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  theme(legend.position = "none",
+        panel.grid.major.y = element_blank())+
+  labs(color="", x = "Timestep (in 10 ms)", y="RDV")+
+  annotate(geom="text", x=.25, y = .6, label = annot_top, hjust=0)+
+  scale_y_continuous(minor_breaks = seq(-1,1,.2))+
+  scale_x_continuous(minor_breaks = seq(0, nrow(tmp$debug_df), 1))
+
+ggsave(file=paste0(fig_out_path, 'labmeet_oneInt_coarse_demo.jpg'), p, height = 5, width=8, units="in")
+p 
+
+```
+```{r}
+limitRange <- function(fun, mu, sig, min, max) {
+  function(x) {
+    y <- fun(x, mu, sig)
+    y[x < min  |  x > max] <- NA
+    return(y)
+  }
+}
+```
+
+```{r}
+v = sim_d * (VLeft-VRight)
+
+annot_right = paste0("VDiff = ", round(VLeft-VRight, 3), 
+                    "\nv = d * VDiff = ", round(v, 3))
+
+p =ggplot(data.frame(x = c(-.4, .3)), aes(x = x))+
+  stat_function(fun = limitRange(dnorm, v, sim_sigma,NA, NA))+
+  geom_vline(aes(xintercept = v), linetype="dashed")+
+  annotate(geom="text", x=0, y = 6, label = annot_right, hjust=0)+
+  # stat_function(fun = limitRange(dnorm, v, sim_sigma, v, -0.1), geom = "area", fill = "blue", alpha = 0.2)+
+  theme(panel.grid = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())+
+  labs(y="", x="dRDV/dt")
+
+ggsave(file=paste0(fig_out_path, 'labmeet_oneInt_demo_driftdist.jpg'), p, height = 5, width=8, units="in")
+p 
+```
+
+```{r}
+p =ggplot(data.frame(x = c(-.4, .3)), aes(x = x))+
+  stat_function(fun = limitRange(dnorm, v, sim_sigma,NA, NA))+
+  geom_vline(aes(xintercept = v), linetype="dashed")+
+  annotate(geom="text", x=0, y = 6, label = annot_right, hjust=0)+
+  stat_function(fun = limitRange(dnorm, v, sim_sigma, NA, -0.18), geom = "area", fill = "blue", alpha = 0.2)+
+  theme(panel.grid = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())+
+  labs(y="", x="dRDV/dt")
+
+ggsave(file=paste0(fig_out_path, 'labmeet_oneInt_demo_driftdist_shaded.jpg'), p, height = 5, width=8, units="in")
+p 
+```
+
+```{r}
+p =ggplot(data.frame(x = c(-.4, .3)), aes(x = x))+
+  stat_function(fun = limitRange(dnorm, v, sim_sigma,NA, NA))+
+  geom_vline(aes(xintercept = v), linetype="dashed")+
+  annotate(geom="text", x=0, y = 6, label = annot_right, hjust=0)+
+  stat_function(fun = limitRange(dnorm, v, sim_sigma, NA, -0.05), geom = "area", fill = "blue", alpha = 0.2)+
+  theme(panel.grid = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())+
+  labs(y="", x="dRDV/dt")
+
+ggsave(file=paste0(fig_out_path, 'labmeet_oneInt_demo_driftdist_shaded2.jpg'), p, height = 5, width=8, units="in")
+p 
+```
 
 Demo 3 integrator DDM
 

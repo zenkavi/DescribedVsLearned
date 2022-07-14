@@ -19,6 +19,8 @@ library(here)
 cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 helpers_path = here('analysis/helpers/')
 source(paste0(helpers_path,'01_clean_behavioral_data.R'))
+source(paste0(helpers_path, 'get_qvals.R'))
+
 set.seed(2038573)
 ```
 
@@ -374,12 +376,12 @@ data.frame(cor(tmp))
 
 Does the preferred model's QVs account for choice data better than fractalprobdiff? Yes, it has a lower AIC.
 
-```{r message=FALSE}
+```{r eval=FALSE}
 model_name = 'fit_rl_hierarchical_oneParamSymmNonLinearProbDistortion_rpeBoth.R'
 source(paste0(helpers_path, 'rlModels/', model_name))
 ```
 
-```{r}
+```{r eval=FALSE}
 # Add mean posterior estimates to clean_beh_data
 clean_beh_data = par_ests %>%
   group_by(subnum, par) %>%
@@ -394,7 +396,7 @@ clean_beh_data = clean_beh_data %>%
   ungroup()
 ```
 
-```{r}
+```{r eval=FALSE}
 clean_beh_data = clean_beh_data %>%
   mutate(EVRight = referenceProb * referenceValue,
          EVLeft = lotteryValue * lotteryProb) %>%
@@ -405,30 +407,30 @@ clean_beh_data = clean_beh_data %>%
 ```
 
 
-```{r}
+```{r eval=FALSE}
 m1 = glm(choiceLeft ~ (EVDiff + fractalDiff) * probFractalDraw, data = clean_beh_data, family=binomial(link="logit"))
 m2 = glm(choiceLeft ~ (EVDiff + QVDiff) * probFractalDraw, data = clean_beh_data, family=binomial(link="logit"))
 ```
 
-```{r}
+```{r eval=FALSE}
 summary(m1)
 ```
 
-```{r}
+```{r eval=FALSE}
 summary(m2)
 ```
 
 
 # Non-parameteric probability distortion
 
-```{r}
+```{r eval=FALSE}
 model_name = 'fit_rl_hierarchical_nonParamSymmProbDistortion_rpeBoth.R'
 source(paste0(helpers_path, 'rlModels/', model_name))
 ```
 
 How does this model compare to the others in fit? It's much worse.
 
-```{r}
+```{r eval=FALSE}
 sampled_logLiks_nonParam  = par_ests %>%
   filter(par == "alpha") %>%
   group_by(subnum) %>% 
@@ -439,7 +441,7 @@ sampled_logLiks_nonParam  = par_ests %>%
   mutate(model_name = model_name)
 ```
 
-```{r}
+```{r eval=FALSE}
 sampled_logLiks_nonParam %>%
   group_by(model_name) %>%
   summarise(sem_logLik = sd(logLik)/sqrt(n()),
@@ -461,7 +463,7 @@ sampled_logLiks_nonParam %>%
   labs(x="Model", "Mean Log likelihood")
 ```
 
-```{r}
+```{r eval=FALSE}
 g_par_ests %>%
   group_by(key) %>%
   # mutate(iter = 1:n()) %>%
@@ -478,7 +480,7 @@ Why are weights for pFrac < .5 so close to .5?
 
 Are the weights for true fractal probabilities closer to pFractalDraw (are the qvalue weights so high because they reflect subjects' beliefs, even if distorted)? Fit model without learning and the weights (especially for pFractalDraw < .6) was basically the same.
 
-```{r}
+```{r eval=FALSE}
 g_par_ests %>%
   group_by(key) %>%
   summarise(mean_par = mean(value),
@@ -494,7 +496,7 @@ g_par_ests %>%
 # ylim(0,1)
 ```
 
-```{r}
+```{r eval=FALSE}
 par_ests %>%
   select(-logLik) %>%
   group_by(par, subnum) %>%

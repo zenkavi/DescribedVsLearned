@@ -232,6 +232,7 @@ tmp %>%
   plot_opts
 
 ```
+
 Note that this difference isn't as large as the plot above suggests. The expected log prob densities for loo-cv show a similar trend but are indistinguishable across the models.
 
 ```{r}
@@ -288,9 +289,90 @@ tmp %>%
 
 ```
 
+# Estimate comparison
+
+From top and bottom three models
+
+## Implied learning rates
+
+```{r}
+tmp = rankings %>%
+  arrange(mean_logLik_rank)
+
+comp_models = c(head(tmp$model_name, 3), tail(tmp$model_name, 3))
+
+rm(tmp)
+```
+
+```{r}
+learning_rates = data.frame()
+qvs = data.frame()
+
+for(i in 1:length(comp_models)){
+  
+  cur_model = comp_models[i]
+  cur_model_rpe = strsplit(cur_model, "_")[[1]][2]
+  source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_', cur_model, '.R'))
+  
+  cur_alphas = par_ests %>%
+    filter(par == "alpha") %>%
+    group_by(subnum) %>%
+    mutate(iter = 1:n()) %>%
+    filter(iter>2000) %>%
+    summarise(map_alpha = mean(value)) %>%
+    mutate(model_name = cur_model)
+  
+  learning_rates = rbind(learning_rates, cur_alphas)
+  
+  cur_qvs = par_ests %>%
+    group_by(subnum, par) %>%
+    summarise(est = mean(value), .groups='keep') %>%
+    spread(par, est) %>%
+    left_join(clean_beh_data, by='subnum') %>%
+    ungroup() %>% group_by(subnum) %>%
+    do(get_qvals(., model_name= cur_model_rpe)) %>%
+    mutate(trial = 1:n()) %>%
+    ungroup() %>%
+    select(subnum, trial, leftQValue, rightQValue) %>%
+    mutate(model_name = cur_model)
+  
+  qvs = rbind(qvs, cur_qvs)
+}
+rm(par_ests, g_par_ests, fit, cur_model, cur_model_rpe, cur_alphas, cur_qvs)
+```
+
+```{r}
+tmp = learning_rates %>%
+  group_by(subnum) %>%
+  spread(model_name, map_alpha) %>%
+  ungroup() %>%
+  select(-subnum)
+
+p = GGally::ggpairs(tmp, 
+                    diag = list("continuous"="blank"),
+                    columnLabels = gsub("_","\n",names(tmp)),
+                    labeller = label_wrap_gen(width=10))+
+  theme(panel.grid = element_blank())
+
+p
+
+```
+## Implied QVs
+
+```{r}
+tmp = qvs %>%
+  select(-rightQValue) %>%
+  group_by(subnum, trial) %>%
+  spread(model_name, leftQValue) %>%
+  ungroup() %>%
+  select(-subnum, -trial) 
+
+data.frame(cor(tmp))
+```
+
 # Evidence for learning
 
-Does the best fitting model's QVs account for choice data better than fractalprobdiff? Yes, it has a lower AIC.
+Does the preferred model's QVs account for choice data better than fractalprobdiff? Yes, it has a lower AIC.
 
 ```{r message=FALSE}
 model_name = 'fit_rl_hierarchical_oneParamSymmNonLinearProbDistortion_rpeBoth.R'
@@ -298,8 +380,6 @@ source(paste0(helpers_path, 'rlModels/', model_name))
 ```
 
 ```{r}
-source(paste0(helpers_path, 'get_qvals.R'))
-
 # Add mean posterior estimates to clean_beh_data
 clean_beh_data = par_ests %>%
   group_by(subnum, par) %>%
@@ -322,9 +402,15 @@ clean_beh_data = clean_beh_data %>%
          QVDiff = scale(leftQValue - rightQValue),
          fractalDiff = scale(fractalLeftProb - fractalRightProb))
 
+```
 
+
+```{r}
 m1 = glm(choiceLeft ~ (EVDiff + fractalDiff) * probFractalDraw, data = clean_beh_data, family=binomial(link="logit"))
 m2 = glm(choiceLeft ~ (EVDiff + QVDiff) * probFractalDraw, data = clean_beh_data, family=binomial(link="logit"))
+```
+
+```{r}
 summary(m1)
 ```
 
@@ -332,49 +418,6 @@ summary(m1)
 summary(m2)
 ```
 
-```{r}
-tmp1 = clean_beh_data %>%
-  nest(data = -probFractalDraw) %>% 
-  mutate(
-    fit = map(data, ~ glm(choiceLeft ~ EVDiff + fractalDiff, data = .x, family=binomial(link="logit"))),
-    tidied = map(fit, tidy)
-  ) %>% 
-  unnest(tidied) %>%
-  filter(term != "(Intercept)") %>%
-  select(probFractalDraw, term, estimate, std.error) %>%
-  mutate(model = "m1")
-
-tmp2 = clean_beh_data %>%
-  nest(data = -probFractalDraw) %>% 
-  mutate(
-    fit = map(data, ~ glm(choiceLeft ~ EVDiff + QVDiff, data = .x, family=binomial(link="logit"))),
-    tidied = map(fit, tidy)
-  ) %>% 
-  unnest(tidied) %>%
-  filter(term != "(Intercept)") %>%
-  select(probFractalDraw, term, estimate, std.error) %>%
-  mutate(model = "m2")
-
-# EVDiff estimates are almost identical with no systematic difference for the two models
-# rbind(tmp1, tmp2) %>%
-#   filter(term == "EVDiff") %>%
-#   select(-std.error) %>%
-#   spread(model, estimate) %>%
-#   ggplot(aes(m1, m2))+
-#   geom_point()+
-#   geom_abline(aes(intercept=0, slope=1))
-
-tmp2 %>%
-  rbind(tmp1 %>% filter(term == "fractalDiff")) %>%
-  ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
-  geom_point()+
-  geom_line()+
-  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.02)+
-  geom_hline(aes(yintercept=0), linetype="dashed")+
-  scale_color_manual(values = c(cbbPalette[2], cbbPalette[1], cbbPalette[3]) )+
-  theme(legend.position = "bottom")+
-  labs(color="", y="Logit slope estimate", x="p(Fractal)")
-```
 
 # Non-parameteric probability distortion
 

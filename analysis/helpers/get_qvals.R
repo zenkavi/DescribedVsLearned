@@ -1,11 +1,11 @@
-get_qvals = function(subj_data, model_name='original'){
+get_qvals = function(subj_data, model_name='rpeBoth'){
   
   subj_data$leftQValue = 0
   subj_data$rightQValue = 0
   subj_data$leftFractalRpe = 0
   subj_data$rightFractalRpe = 0
   
-  if(model_name == "original"){
+  if(model_name == "rpeBoth"){
     
     for (i in 2:nrow(subj_data)){
       subj_data$leftFractalRpe[i] = subj_data$leftFractalReward[i-1] - subj_data$leftQValue[i-1]

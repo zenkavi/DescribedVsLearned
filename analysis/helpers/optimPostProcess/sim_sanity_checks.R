@@ -1,7 +1,10 @@
 library(broom)
+library(here)
 sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 
-sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE, compare_logits = FALSE, true_data = sub_data, yrange_lim = 25){
+sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE, compare_logits = FALSE, true_data = sub_data, yrange_lim = 25, save_plots=F){
+  
+  fig_out_path = paste0(here(), '/outputs/fig/')
   
   if("choiceLeft" %in% names(true_data)){
     true_data = true_data %>%
@@ -84,7 +87,6 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
         mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
         ggplot(aes(reactionTime)) +
         geom_histogram(position="identity", bins=10) +
-        labs(title="RT long tail?")+
         facet_wrap(~probFractalDraw)+
         theme(panel.grid = element_blank())
     }
@@ -111,7 +113,9 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
         geom_point()+
         geom_errorbar(aes(ymin = mean_log_rt - sem_log_rt, ymax = mean_log_rt + sem_log_rt), width=.2)+
         labs(color="")+
-        theme(legend.position = "bottom", panel.grid = element_blank())
+        theme(legend.position = "bottom", panel.grid = element_blank())+
+        labs(y="Mean Log RT", x="p(Fractal)")
+        
     } else{
       p = sim_data %>%
         drop_na()%>%
@@ -123,7 +127,8 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
         ggplot(aes(probFractalDraw, mean_log_rt))+
         geom_point()+
         geom_errorbar(aes(ymin = mean_log_rt - sem_log_rt, ymax = mean_log_rt + sem_log_rt), width=.2)+
-        theme(panel.grid = element_blank())
+        theme(panel.grid = element_blank())+
+        labs(y="Mean Log RT", x="p(Fractal)")
     }
     print(p)
   }
@@ -154,7 +159,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       geom_hline(aes(yintercept=0), linetype="dashed")+
       scale_color_manual(values = cbbPalette[2:1])+
       theme(legend.position = "bottom", panel.grid = element_blank())+
-      labs(color="", title="Relevant attribute effect on choice")
+      labs(y="Beta Estimate", x="p(Fractal)")
     
     if(compare_logits){
       tmp_true = true_data %>%
@@ -183,7 +188,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
         facet_wrap(~data_type)+
         scale_color_manual(values = cbbPalette[2:1])+
         theme(legend.position = "bottom", panel.grid = element_blank())+
-        labs(color="", title="Relevant attribute effect on choice") 
+        labs(y="Beta Estimate", x="p(Fractal)")
       
     } 
     
@@ -348,7 +353,8 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       theme(legend.position = "bottom", panel.grid = element_blank())+
       scale_alpha_manual(values = c(1, .5))+
       scale_color_manual(values = c("blue", "red"))+
-      facet_wrap(~correctBasedOn)
+      facet_wrap(~correctBasedOn)+
+      labs(cy="Mean Log RT")
     
     if(length(unique(tmp$data_type))==1){
       p = p+

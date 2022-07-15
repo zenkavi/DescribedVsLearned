@@ -131,12 +131,22 @@ fit_trial = function(dArb, dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, bar
   
   ######################## HELPER FUNCTIONS ########################
   
+  erf = function(x){
+    return(2*pnorm(sqrt(2)*x) - 1)
+  }
+  
+  phi = function(x){
+    return((1/2) * (1+erf(x/sqrt(2))))
+  }
+  
   get_abs_dist_moments = function(mu, sigma){
     
     # Definitions of moments
     # https://en.wikipedia.org/wiki/Folded_normal_distribution
     
-    mu_y = sigma * sqrt(2/pi) * exp((-mu^2)/(2*sigma^2)) + mu * pracma::erf((mu)/(sqrt(2*sigma^2)))
+    # mu_y = sigma * sqrt(2/pi) * exp((-mu^2)/(2*sigma^2)) + mu * pracma::erf((mu)/(sqrt(2*sigma^2)))
+    
+    mu_y = sigma * sqrt(2/pi) * exp((-mu^2)/(2*sigma^2)) + mu * (1-2*phi(-mu/sigma))
     
     sigma_y = sqrt(mu^2 + sigma^2 - mu_y^2)
     

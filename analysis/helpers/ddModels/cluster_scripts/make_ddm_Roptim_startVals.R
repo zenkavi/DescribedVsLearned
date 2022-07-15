@@ -68,8 +68,28 @@ for(i in 1:n_datasets){
     out$start_d = runif(n_vals, 0.00001, 1)
   }
   
+  if("dLott" %in% par_names){
+    out$start_dLott = runif(n_vals, 0.00001, 1)
+  }
+  
+  if("dFrac" %in% par_names){
+    out$start_dFrac = runif(n_vals, 0.00001, 1)
+  }
+  
+  if("dArb" %in% par_names){
+    out$start_dArb = runif(n_vals, 0.00001, 1)
+  }
+  
   if("sigma" %in% par_names){
     out$start_sigma = runif(n_vals, 0.00001, 1)
+  }
+  
+  if("sigmaLott" %in% par_names){
+    out$start_sigmaLott = runif(n_vals, 0.00001, 1)
+  }
+  
+  if("sigmaFrac" %in% par_names){
+    out$start_sigmaFrac = runif(n_vals, 0.00001, 1)
   }
   
   if("delta" %in% par_names){

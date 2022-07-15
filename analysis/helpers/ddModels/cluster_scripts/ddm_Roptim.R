@@ -32,7 +32,7 @@ opt = parse_args(opt_parser)
 # Initialize parameters from input arguments
 #######################
 data_suffix = opt$data
-data_suffix = opt$data
+
 if(grepl('/',data_suffix)){
   data_suffix = strsplit(data_suffix, '/')[[1]][2]
 }

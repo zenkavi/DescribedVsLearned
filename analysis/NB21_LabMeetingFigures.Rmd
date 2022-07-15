@@ -661,9 +661,106 @@ ggsave(file=paste0(fig_out_path, 'labmeet_oneInt_demo_driftdist_shaded2.jpg'), p
 p 
 ```
 
-Demo 3 integrator DDM
+## Demo 3 integrator DDM
 
 ```{r}
+defcols = c("#F8766D", "#00BA38", "#619CFF")
+```
+
+```{r}
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_threeIntegrators_sepProbDistortion.R'))
+```
+
+
+```{r}
+# tmp = sim_trial(dLott=1, dFrac=1, dArb=1, sigmaLott = 0.001, sigmaFrac = 0.001, distortedEVDiff = .25, distortedQVDiff = -.1, probFractalDraw = 2, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE)
+
+pFrac = .4
+theta = .3
+EVLeft = 0
+EVRight = .8
+distortedEVDiff = (1-theta)*(1-pFrac)*(EVLeft-EVRight)
+QVLeft = .9
+QVRight = 0
+distortedQVDiff = theta*pFrac*(QVLeft-QVRight)
+
+sim_dLott = .02
+sim_dFrac = .06
+sim_dArb = .05
+sim_sigma = .03
+
+tmp = sim_trial(dLott=sim_dLott, dFrac=sim_dFrac, dArb=sim_dArb, sigmaLott = sim_sigma, sigmaFrac = sim_sigma, distortedEVDiff = distortedEVDiff , distortedQVDiff = distortedQVDiff , probFractalDraw = 2, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE)
+```
+
+```{r}
+annot_top = paste0("distortedQVDiff = ", round(distortedQVDiff, 3), ", distortedEVDiff = ", round(distortedEVDiff, 3),
+                   "\np(Fractal) = ", round(pFrac, 3),", theta = ", round(theta, 3),
+                   "\ndFrac = ", round(tmp$out$dFrac, 3),", dLott = ", round(tmp$out$dLott, 3))
+
+p = tmp$debug_df %>%
+  select(lotteryRDV, fractalRDV, time) %>%
+  gather(key, value, -time) %>%
+  ggplot(aes(time, value, color=key))+
+  # geom_point()+
+  geom_line(size=2)+
+  geom_hline(aes(yintercept=1))+
+  geom_hline(aes(yintercept=-1))+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  theme(legend.position = "bottom",
+        panel.grid = element_blank())+
+  labs(color="", x = "Timestep (in 10 ms)", y="RDV")+
+  annotate(geom="text", x=.25, y = .6, label = annot_top, hjust=0)+
+  scale_color_manual(values=defcols[2:3])
+
+ggsave(file=paste0(fig_out_path, 'labmeet_twoOfThreeInt_demo.jpg'), p, height = 5, width=8, units="in")
+p 
+
+```
+
+
+```{r}
+annot_top = paste0("distortedQVDiff = ", round(distortedQVDiff, 3), ", distortedEVDiff = ", round(distortedEVDiff, 3),
+                   "\np(Fractal) = ", round(pFrac, 3),", theta = ", round(theta, 3),
+                   "\ndFrac = ", round(tmp$out$dFrac, 3),", dLott = ", round(tmp$out$dLott, 3), ", dArb = ", round(tmp$out$dArb, 3),
+                    "\nchoice (based on) = ", tmp$out$choice, " (", tmp$out$arbitrator,")")
+
+p = tmp$debug_df %>%
+  select(lotteryRDV, fractalRDV, arbitratorRDV, time) %>%
+  gather(key, value, -time) %>%
+  ggplot(aes(time, value, color=key))+
+  # geom_point()+
+  geom_line(size=2)+
+  geom_hline(aes(yintercept=1))+
+  geom_hline(aes(yintercept=-1))+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  theme(legend.position = "bottom",
+        panel.grid = element_blank())+
+  labs(color="", x = "Timestep (in 10 ms)", y="RDV")+
+  annotate(geom="text", x=.25, y = .6, label = annot_top, hjust=0)
+
+ggsave(file=paste0(fig_out_path, 'labmeet_threeInt_demo.jpg'), p, height = 5, width=8, units="in")
+p 
+
+```
+
+```{r}
+p = tmp$debug_df %>%
+  select(lotteryRDV, fractalRDV, arbitratorRDV, time) %>%
+  gather(key, value, -time) %>%
+  ggplot(aes(time, value, color=key))+
+  # geom_point()+
+  geom_line(size=2)+
+  geom_hline(aes(yintercept=1))+
+  geom_hline(aes(yintercept=-1))+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  theme(legend.position = "bottom")+
+  labs(color="", x = "Timestep (in 10 ms)", y="RDV")+
+  # annotate(geom="text", x=.25, y = .6, label = annot_top, hjust=0)+
+  scale_y_continuous(minor_breaks = seq(-1,1,.1))+
+  scale_x_continuous(minor_breaks = seq(0, nrow(tmp$debug_df), 2))
+
+ggsave(file=paste0(fig_out_path, 'labmeet_threeInt_demo_grid.jpg'), p, height = 5, width=8, units="in")
+p 
 
 ```
 

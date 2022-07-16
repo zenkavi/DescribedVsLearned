@@ -361,6 +361,8 @@ p
 ```
 ## Implied QVs
 
+Correlation between implied QVs across the top and bottom three models.
+
 ```{r}
 tmp = qvs %>%
   select(-rightQValue) %>%
@@ -376,12 +378,13 @@ data.frame(cor(tmp))
 
 Does the preferred model's QVs account for choice data better than fractalprobdiff? Yes, it has a lower AIC.
 
-```{r eval=FALSE}
-model_name = 'fit_rl_hierarchical_oneParamSymmNonLinearProbDistortion_rpeBoth.R'
+```{r message=FALSE}
+model_name = 'fit_rl_hierarchical_oneParamAsymmLinearProbDistortion_rpeBoth.R' #preferred after lab meeting on 7/15/22
 source(paste0(helpers_path, 'rlModels/', model_name))
 ```
 
-```{r eval=FALSE}
+
+```{r}
 # Add mean posterior estimates to clean_beh_data
 clean_beh_data = par_ests %>%
   group_by(subnum, par) %>%
@@ -392,34 +395,174 @@ clean_beh_data = par_ests %>%
 ## Add Q values of fractals to each trial
 clean_beh_data = clean_beh_data %>%
   group_by(subnum) %>%
-  do(get_qvals(., model_name="original")) %>%
+  do(get_qvals(., model_name="rpeBoth")) %>%
   ungroup()
 ```
 
-```{r eval=FALSE}
+```{r}
 clean_beh_data = clean_beh_data %>%
   mutate(EVRight = referenceProb * referenceValue,
          EVLeft = lotteryValue * lotteryProb) %>%
-  mutate(EVDiff = scale(EVLeft - EVRight),
-         QVDiff = scale(leftQValue - rightQValue),
-         fractalDiff = scale(fractalLeftProb - fractalRightProb))
+   mutate(EVDiff = EVLeft - EVRight,
+         QVDiff = leftQValue - rightQValue,
+         fractalDiff = fractalLeftProb - fractalRightProb)
+  # mutate(EVDiff = scale(EVLeft - EVRight),
+  #        QVDiff = scale(leftQValue - rightQValue),
+  #        fractalDiff = scale(fractalLeftProb - fractalRightProb))
 
 ```
 
+Variance of the regressors  
 
-```{r eval=FALSE}
+Not standardized
+
+```{r}
+clean_beh_data %>%
+  select(EVDiff, QVDiff) %>%
+  gather(key, value) %>%
+  ggplot(aes(value, fill=key))+
+  geom_histogram(bins=30, alpha=.5, position = "identity")+
+  theme(legend.position = "bottom",
+        panel.grid = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())+
+  labs(y="", x="", fill = "")
+```
+Standardized
+
+```{r}
+clean_beh_data %>%
+  select(EVDiff, QVDiff) %>%
+  mutate(scaleEVDiff = scale(EVDiff),
+         scaleQVDiff = scale(QVDiff)) %>%
+  select(-EVDiff, -QVDiff)%>%
+  gather(key, value) %>%
+  ggplot(aes(value, fill=key))+
+  geom_histogram(bins=30, alpha=.5, position = "identity")+
+  theme(legend.position = "bottom",
+        panel.grid = element_blank(),
+        axis.text.y= element_blank(),
+        axis.ticks.y = element_blank())+
+  labs(y="", x="", fill = "")
+```
+
+```{r}
 m1 = glm(choiceLeft ~ (EVDiff + fractalDiff) * probFractalDraw, data = clean_beh_data, family=binomial(link="logit"))
 m2 = glm(choiceLeft ~ (EVDiff + QVDiff) * probFractalDraw, data = clean_beh_data, family=binomial(link="logit"))
 ```
 
-```{r eval=FALSE}
+```{r}
 summary(m1)
 ```
 
-```{r eval=FALSE}
+```{r}
 summary(m2)
 ```
 
+```{r}
+m1s = glm(choiceLeft ~ (scale(EVDiff) + scale(fractalDiff)) * probFractalDraw, data = clean_beh_data, family=binomial(link="logit"))
+m2s = glm(choiceLeft ~ (scale(EVDiff) + scale(QVDiff)) * probFractalDraw, data = clean_beh_data, family=binomial(link="logit"))
+```
+
+```{r}
+summary(m1s)
+```
+
+```{r}
+summary(m2s)
+```
+
+```{r}
+rm(m1, m1s, m2, m2s)
+```
+
+Plot with logits
+
+```{r}
+truev_mod = clean_beh_data %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
+  nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~EVDiff + fractalDiff, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(probFractalDraw, term, estimate, std.error)
+
+qv_mod = clean_beh_data %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw)) %>%
+  nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ EVDiff + QVDiff, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term == "QVDiff") %>%
+  select(probFractalDraw, term, estimate, std.error)
+
+qv_theta_mod = clean_beh_data %>%
+  mutate(probFractalDraw = as.factor(probFractalDraw),
+         QVDiff_theta = QVDiff * theta) %>%
+  nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ EVDiff + QVDiff_theta, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(probFractalDraw, term, estimate, std.error)
+```
+
+```{r}
+rbind(truev_mod, qv_mod) %>%
+  mutate(reg = ifelse(term=="EVDiff", "Lottery EV", ifelse(term == "fractalDiff", "True Fractal P", ifelse(term %in% c("QVDiff","QVDiff_theta"),"Fractal QV", NA))),
+         reg = factor(reg, levels=c("True Fractal P", "Lottery EV", "Fractal QV")),
+         theta = grepl("theta", term)) %>%
+  ggplot(aes(probFractalDraw, estimate, col=reg, group=reg))+
+  geom_point()+
+  geom_line()+
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  scale_color_manual(values = cbbPalette[1:3])+
+  theme(legend.position = "bottom", panel.grid = element_blank())+
+  labs(color="", x= "p(Fractal)", y="Beta estimate")+
+  guides(color=guide_legend(nrow=2,byrow=TRUE))
+```
+```{r}
+rbind(truev_mod, qv_mod) %>%
+  rbind(qv_theta_mod %>% filter(term != "EVDiff"))%>%
+  mutate(reg = ifelse(term=="EVDiff", "Lottery EV", ifelse(term == "fractalDiff", "True Fractal P", ifelse(term %in% c("QVDiff","QVDiff_theta"),"Fractal QV", NA))),
+         reg = factor(reg, levels=c("True Fractal P", "Lottery EV", "Fractal QV")),
+         theta = grepl("theta", term)) %>%
+  ggplot(aes(probFractalDraw, estimate, col=reg, group=term, alpha = theta))+
+  geom_point()+
+  geom_line()+
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  scale_color_manual(values = cbbPalette[1:3])+
+  scale_alpha_manual(values = c(.3, 1))+
+  theme(legend.position = "bottom", panel.grid = element_blank())+
+  labs(color="", x= "p(Fractal)", y="Beta estimate")+
+  guides(color=guide_legend(nrow=2,byrow=TRUE))
+```
+
+Distribution of thetas
+
+```{r}
+par_ests %>%
+  filter(par == "theta") %>%
+  mutate(iter = 1:n()) %>%
+  filter(iter>2000) %>%
+  ggplot(aes(value))+
+  geom_histogram(bins=30)+
+  facet_wrap(~subnum)+
+  theme(panel.grid = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())+
+  geom_vline(aes(xintercept=1), color="grey")+
+  labs(x="theta", y="")
+```
 
 # Non-parameteric probability distortion
 

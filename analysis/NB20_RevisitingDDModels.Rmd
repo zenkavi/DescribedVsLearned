@@ -52,7 +52,7 @@ clean_beh_data = clean_beh_data %>%
          distorted_ev_diff = (1-theta)*(1-probFractalDraw)*lottery_ev_diff,
          distorted_qv_diff = theta*probFractalDraw*fractal_qv_diff)
 
-rm(fit, g_par_est, par_ests)
+rm(fit, g_par_ests, par_ests)
 ```
 
 
@@ -71,6 +71,12 @@ Source trial simulating and fitting function three integrator model. The model o
 
 ```{r}
 sim_sanity_checks(sub_data, checks=c(1,3,4,5,6,7,8), compare_logits = F, compare_rts = F)
+```
+
+## Slow errors check
+
+```{r}
+
 ```
 
 # Recovery checks
@@ -247,36 +253,6 @@ tmp$debug_df %>%
 
 ```
 
-Potential issue: trials where the attribute integrators move slowly in the same directions would result in unlikely slow responses.
-
-```{r}
-tmp = sim_trial(dLott=0.03, dFrac=0.03, dArb=0.07, sigmaLott = 0.003, sigmaFrac = 0.003, distortedEVDiff = .09, distortedQVDiff =.09, probFractalDraw =.5, barrierDecay = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE)
-
-annot_top = paste0("distorted EV difference = ", round(tmp$out$distortedEVDiff, 3), 
-                    "\ndistorted QV difference = ", round(tmp$out$distortedQVDiff, 3),
-                   "\nprobFractalDraw = ", tmp$out$probFractalDraw,
-                    "\nchoice (based on) = ", tmp$out$choice, " (", tmp$out$arbitrator, ")")
-
-annot_bot = paste0("dLottery = ", tmp$out$dLott, 
-                    "\ndFractal = ", tmp$out$dFrac,
-                    "\ndArbitrator = ", tmp$out$dArb,
-                    "\nsigma = ", tmp$out$sigmaLott)
-
-tmp$debug_df %>%
-  select(arbitratorRDV, lotteryRDV, fractalRDV, time) %>%
-  gather(key, value, -time) %>%
-  ggplot(aes(time, value, color=key))+
-  geom_line()+
-  geom_hline(aes(yintercept=1))+
-  geom_hline(aes(yintercept=-1))+
-  geom_hline(aes(yintercept=0), linetype="dashed")+
-  theme(legend.position = "bottom",
-        panel.grid = element_blank())+
-  labs(color="", x = "Timestep (in 10 ms)", y="RDV")+
-  annotate(geom="text", x=10, y = .6, label = annot_top, hjust=0)+
-  annotate(geom="text", x=10, y = -.6, label = annot_bot, hjust=0)
-```
-
 **Potential problem** for 3 integrator model: The model would predict slower decisions because the difference in the absolute value of each attribute integrator RDV would be small.
 
 **BUT** by design there aren't trials that provide strong (distorted) evidence for a single side so for the current set of stimuli this should not be a concern.
@@ -318,9 +294,6 @@ tmp$debug_df %>%
 ```
 
 ```{r}
-# tmp_fit = fit_trial(dLott=1, dFrac=1, dArb=1, sigmaLott = 0.001, sigmaFrac = 0.001, distortedEVDiff = .25, distortedQVDiff = -.1, probFractalDraw = 2, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA,
-#                     choice = tmp$out$choice, reactionTime = tmp$out$reactionTime, debug=TRUE)
-
 tmp_fit = fit_trial(dLott=.3, dFrac=.6, dArb=.7, sigmaLott = 0.05, sigmaFrac = 0.05, distortedEVDiff = .25,  distortedQVDiff = -.1, probFractalDraw = 2, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA,
                     choice = tmp$out$choice, reactionTime = tmp$out$reactionTime, debug=TRUE)
 
@@ -636,6 +609,7 @@ for(i in 1:length(unique(oneIntEsts$subnum))){
 ```{r}
 sim_sanity_checks(oneIntPpc, checks=c(1,3,4,5,6,7,8), compare_logits = T, compare_rts = T, true_data = sub_stims)
 ```
+
 ## Three integrators
 
 ```{r}
@@ -659,7 +633,7 @@ Check if there is much variability in the converged values
 
 ```{r}
 ddm_fit_pars %>%
-  ggplot(aes(Param2))+
+  ggplot(aes(Param1))+
   geom_histogram(bins=10)+
   facet_wrap(~subnum)
 ```
@@ -702,18 +676,4 @@ for(i in 1:length(unique(threeIntEsts$subnum))){
 sim_sanity_checks(threeIntPpc, checks=c(1,3,4,5,6,7,8), compare_logits = T, compare_rts = T, true_data = sub_stims)
 ```
 
-### Demo sim
 
-```{r}
-threeIntDemo = sim_task(sub_stims, model_name = "model3", dLott=0.003, dFrac=0.006, dArb=0.007, sigmaLott = 0.03, sigmaFrac = 0.03)
-```
-
-```{r}
-sim_sanity_checks(threeIntDemo, checks=c(1,3,4,5,6,7,8), compare_logits = T, compare_rts = T, true_data = sub_stims)
-```
-
-## TBD
-
-- What do you with these for the neuroimaging analyses?
-- Model all subjects together? Individual MLEs? Or can you get hierarchical Bayesian posteriors?
-- Are the individual parameter needed for anything or is the more interesting question one of model comparison to explain the RT patterns?

@@ -30,7 +30,8 @@ Add distorted value estimates using the hierarchical RL fit.
 
 ```{r message=FALSE, warning=FALSE}
 
-source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamDoubleSymmLinearProbDistortion_rpeBoth.R'))
+# source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamDoubleSymmLinearProbDistortion_rpeBoth.R'))
+source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamAsymmLinearProbDistortion_rpeBoth.R'))
 
 clean_beh_data = par_ests %>%
   group_by(subnum, par) %>%
@@ -49,7 +50,7 @@ clean_beh_data = clean_beh_data %>%
          leftLotteryEV = lotteryValue * lotteryProb,
          lottery_ev_diff = leftLotteryEV - rightLotteryEV,
          fractal_qv_diff = leftQValue - rightQValue,
-         distorted_ev_diff = (1-theta)*(1-probFractalDraw)*lottery_ev_diff,
+         distorted_ev_diff = (1-probFractalDraw)*lottery_ev_diff, #Asymm distortion
          distorted_qv_diff = theta*probFractalDraw*fractal_qv_diff)
 
 rm(fit, g_par_ests, par_ests)
@@ -59,7 +60,7 @@ rm(fit, g_par_ests, par_ests)
 ```{r}
 # Extract set of stimuli that will be used for simulations
 sub_data = clean_beh_data %>%
-  filter(subnum  %in% c("01", "03", "05","07", "09", "11", "13", "15", "17", "19")) %>%
+  # filter(subnum  %in% c("01", "03", "05","07", "09", "11", "13", "15", "17", "19")) %>%
   select(leftLotteryEV, rightLotteryEV, leftQValue, rightQValue, probFractalDraw, reactionTime, choiceLeft, subnum, distorted_ev_diff, distorted_qv_diff) %>%
   rename(EVLeft = leftLotteryEV, EVRight = rightLotteryEV, QVLeft = leftQValue, QVRight = rightQValue, distortedEVDiff = distorted_ev_diff, distortedQVDiff = distorted_qv_diff)
 ```
@@ -68,7 +69,6 @@ sub_data = clean_beh_data %>%
 
 Source trial simulating and fitting function three integrator model. The model only had the ddm parameters as variables; choice parameters (learning rate and probability distortion) are fitted elsewhere and used to compute the distorted value differences fed into this model.
 
-
 ```{r}
 sim_sanity_checks(sub_data, checks=c(1,3,4,5,6,7,8), compare_logits = F, compare_rts = F)
 ```
@@ -76,18 +76,57 @@ sim_sanity_checks(sub_data, checks=c(1,3,4,5,6,7,8), compare_logits = F, compare
 ## Slow errors check
 
 ```{r}
+m_data = sub_data %>%
+  filter(probFractalDraw != .5) %>%
+  mutate(choice = ifelse(choiceLeft == 1, "left", "right"),
+         leftLotterySubjBetter = distortedEVDiff > 0,
+         leftFractSubjBetter = distortedQVDiff > 0,
+         choseBetterSubjLott = ifelse(choice == "left" & leftLotterySubjBetter, "correct", ifelse(choice == "right" & !leftLotterySubjBetter, "correct", "incorrect")),
+         choseBetterSubjFrac = ifelse(choice == "left" & leftFractSubjBetter, "correct", ifelse(choice == "right" & !leftFractSubjBetter, "correct", "incorrect")),
+         logRt = log(reactionTime),
+         fractalMoreRelevant = ifelse(probFractalDraw > .5, "fractal more relevant", "lottery more relevant"),
+         fractalMoreRelevant = factor(fractalMoreRelevant, levels=c("lottery more relevant", "fractal more relevant"))) %>%
+  select(fractalMoreRelevant, choseBetterSubjLott, choseBetterSubjFrac, logRt, subnum) %>%
+        gather(key, value, -fractalMoreRelevant, -logRt, -subnum)
+```
 
+Two models for each panel
+
+```{r}
+m1 = lme4::lmer(logRt ~ fractalMoreRelevant * value + (1|subnum), data=m_data %>% filter(key == "choseBetterSubjLott"))
+m2 = lme4::lmer(logRt ~ fractalMoreRelevant * value + (1|subnum), data=m_data %>% filter(key == "choseBetterSubjFrac"))
+```
+
+```{r}
+summary(m1)
+```
+
+```{r}
+summary(m2)
+```
+
+Single model looking only on choice based on relevant attribute
+
+```{r}
+sm_data = rbind(m_data %>%
+        filter(fractalMoreRelevant == "fractal more relevant" & key == "choseBetterSubjFrac"),
+      m_data %>%
+        filter(fractalMoreRelevant == "lottery more relevant" & key == "choseBetterSubjLott"))
+
+m3 = lme4::lmer(logRt ~ value + (1|subnum), data=sm_data)
+
+summary(m3)
 ```
 
 # Recovery checks
 
 ## States-space method
 
-Using Gabi's discrete time and state-space method
+Using Gabi's discrete time and state-space method  
 
-**Why might this not have been used previously? Some ideas:**  
-**The boundary in traditional DDM is not fixed at 1 and -1. Instead it is a parameter. It's not immediately apparent to me how to use the sum of random variables approach without assuming the boundaries at 1 and -1.**
-**The traditional DDM often models the whole of a response time distribution for correct vs incorrect.**
+**Why might this not have been used previously? Some ideas:**    
+**The boundary in traditional DDM is not fixed at 1 and -1. Instead it is a parameter. It's not immediately apparent to me how to use the sum of random variables approach without assuming the boundaries at 1 and -1.**  
+**The traditional DDM often models the whole of a response time distribution for correct vs incorrect.**  
 
 ## One integrator
 
@@ -520,6 +559,8 @@ Simulate data with a 3 integrator model using half the stimuli filtered earlier 
 
 ```{r}
 # m3_1 = sim_task(sub_data, model_name = "model3", dLott=0.03, dFrac=0.06, dArb=0.05, sigmaLott = 0.03, sigmaFrac = 0.03)
+sub_data = sub_data %>%
+  filter(subnum  %in% c("01", "03", "05","07", "09", "11", "13", "15", "17", "19")) %>%
 m3_1 = sim_task(sub_data, model_name = "model3", dLott=0.03, dFrac=0.06, dArb=0.07, sigmaLott = 0.03, sigmaFrac = 0.03)
 ```
 

@@ -159,7 +159,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       geom_hline(aes(yintercept=0), linetype="dashed")+
       scale_color_manual(values = cbbPalette[2:1])+
       theme(legend.position = "bottom", panel.grid = element_blank())+
-      labs(y="Beta Estimate", x="p(Fractal)")
+      labs(y="Beta Estimate", x="p(Fractal)", color="")
     
     if(compare_logits){
       tmp_true = true_data %>%
@@ -306,6 +306,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
   if(8 %in% checks){
     
     tmp = sim_data %>%
+      filter(probFractalDraw != 0.5) %>%
       mutate(leftLotterySubjBetter = distortedEVDiff > 0,
              leftFractSubjBetter = distortedQVDiff > 0,
              choseBetterSubjLott = ifelse(choice == "left" & leftLotterySubjBetter, "correct", ifelse(choice == "right" & !leftLotterySubjBetter, "correct", "incorrect")),
@@ -319,11 +320,12 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       summarise(.groups="keep",
                 meanLogRt = mean(logRt),
                 semLogRt = sd(logRt)/sqrt(n())) %>%
-      mutate(data_type="stim") 
+      mutate(data_type="sim") 
     
     if(compare_rts){
       
       tmp_true = true_data %>%
+        filter(probFractalDraw != 0.5) %>%
         mutate(leftLotterySubjBetter = distortedEVDiff > 0,
                leftFractSubjBetter = distortedQVDiff > 0,
                choseBetterSubjLott = ifelse(choice == "left" & leftLotterySubjBetter, "correct", ifelse(choice == "right" & !leftLotterySubjBetter, "correct", "incorrect")),
@@ -354,7 +356,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       scale_alpha_manual(values = c(1, .5))+
       scale_color_manual(values = c("blue", "red"))+
       facet_wrap(~correctBasedOn)+
-      labs(cy="Mean Log RT")
+      labs(y="Mean Log RT", color="")
     
     if(length(unique(tmp$data_type))==1){
       p = p+

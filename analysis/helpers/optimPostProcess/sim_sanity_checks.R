@@ -2,7 +2,7 @@ library(broom)
 library(here)
 sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 
-sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE, compare_logits = FALSE, true_data = sub_data, yrange_lim = 25, save_plots=F){
+sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE, compare_logits = FALSE, true_data = sub_data, yrange_lim = 25, scale_logits=F){
   
   fig_out_path = paste0(here(), '/outputs/fig/')
   
@@ -141,11 +141,23 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
              choiceLeft = ifelse(choice == "left", 1, ifelse(choice=="right", 0, NA)),
              EVDiff = EVLeft - EVRight, 
              QVDiff = QVLeft - QVRight) %>%
-      nest(data = -probFractalDraw) %>% 
-      mutate(
-        fit = map(data, ~ glm(choiceLeft ~ scale(EVDiff) + scale(QVDiff), data = .x, family=binomial(link="logit"))),
-        tidied = map(fit, tidy)
-      ) %>% 
+      nest(data = -probFractalDraw)
+    
+    if(scale_logits){
+      tmp = tmp %>%
+        mutate(
+          fit = map(data, ~ glm(choiceLeft ~ scale(EVDiff) + scale(QVDiff), data = .x, family=binomial(link="logit"))),
+          tidied = map(fit, tidy)
+        )
+    } else {
+      tmp = tmp %>%
+        mutate(
+          fit = map(data, ~ glm(choiceLeft ~ EVDiff + QVDiff, data = .x, family=binomial(link="logit"))),
+          tidied = map(fit, tidy)
+        )
+    }
+    
+    tmp = tmp %>%
       unnest(tidied) %>%
       filter(term != "(Intercept)") %>%
       select(probFractalDraw, term, estimate, std.error) %>%
@@ -168,11 +180,22 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
                choiceLeft = ifelse(choice == "left", 1, ifelse(choice=="right", 0, NA)),
                EVDiff = EVLeft - EVRight, 
                QVDiff = QVLeft - QVRight) %>%
-        nest(data = -probFractalDraw) %>% 
-        mutate(
-          fit = map(data, ~ glm(choiceLeft ~ scale(EVDiff) + scale(QVDiff), data = .x, family=binomial(link="logit"))),
-          tidied = map(fit, tidy)
-        ) %>% 
+        nest(data = -probFractalDraw)
+      
+      if(scale_logits){
+        tmp_true = tmp_true %>%
+          mutate(
+            fit = map(data, ~ glm(choiceLeft ~ scale(EVDiff) + scale(QVDiff), data = .x, family=binomial(link="logit"))),
+            tidied = map(fit, tidy)
+          )  
+      } else {
+        tmp_true = tmp_true %>%
+          mutate(
+            fit = map(data, ~ glm(choiceLeft ~ EVDiff + QVDiff, data = .x, family=binomial(link="logit"))),
+            tidied = map(fit, tidy))
+      }
+      
+      tmp_true = tmp_true %>% 
         unnest(tidied) %>%
         filter(term != "(Intercept)") %>%
         select(probFractalDraw, term, estimate, std.error)%>%

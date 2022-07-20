@@ -30,8 +30,8 @@ Add distorted value estimates using the hierarchical RL fit.
 
 ```{r message=FALSE, warning=FALSE}
 
-# source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamDoubleSymmLinearProbDistortion_rpeBoth.R'))
-source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamAsymmLinearProbDistortion_rpeBoth.R'))
+source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamDoubleSymmLinearProbDistortion_rpeBoth.R'))
+# source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamAsymmLinearProbDistortion_rpeBoth.R'))
 
 clean_beh_data = par_ests %>%
   group_by(subnum, par) %>%
@@ -50,7 +50,8 @@ clean_beh_data = clean_beh_data %>%
          leftLotteryEV = lotteryValue * lotteryProb,
          lottery_ev_diff = leftLotteryEV - rightLotteryEV,
          fractal_qv_diff = leftQValue - rightQValue,
-         distorted_ev_diff = (1-probFractalDraw)*lottery_ev_diff, #Asymm distortion
+         distorted_ev_diff = (1-theta)*(1-probFractalDraw)*lottery_ev_diff, #Normalized Symm distortion
+         # distorted_ev_diff = (1-probFractalDraw)*lottery_ev_diff, #Asymm distortion
          distorted_qv_diff = theta*probFractalDraw*fractal_qv_diff)
 
 rm(fit, g_par_ests, par_ests)

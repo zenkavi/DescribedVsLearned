@@ -1,4 +1,3 @@
-
 library(tidyverse)
 library(here)
 helpers_path = here('analysis/helpers/')
@@ -6,7 +5,8 @@ helpers_path = here('analysis/helpers/')
 source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 source(paste0(helpers_path, 'get_qvals.R'))
 
-source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamDoubleSymmLinearProbDistortion_rpeBoth.R'))
+# source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamDoubleSymmLinearProbDistortion_rpeBoth.R'))
+source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamAsymmLinearProbDistortion_rpeBoth.R'))
 
 clean_beh_data = par_ests %>%
   group_by(subnum, par) %>%
@@ -23,6 +23,7 @@ clean_beh_data = clean_beh_data %>%
   ungroup()
 
 clean_beh_data = clean_beh_data %>%
+  filter(probFractalDraw != 0 & probFractalDraw !=1) %>%
   mutate(EVRight = referenceProb * referenceValue,
          EVLeft = lotteryValue * lotteryProb,
          lottery_ev_diff = EVLeft - EVRight,
@@ -40,5 +41,5 @@ for(i in 1:length(subnums)){
   cur_data = clean_beh_data %>%
     filter(subnum == cur_sub)
   
-  write.csv(cur_data, paste0(helpers_path, 'ddModels/cluster_scripts/sub_data_distV/sub', cur_sub, "_data.csv"), row.names = F)
+  write.csv(cur_data, paste0(helpers_path, 'ddModels/cluster_scripts/sub_data_distV_noExt/sub', cur_sub, "_data.csv"), row.names = F)
 }

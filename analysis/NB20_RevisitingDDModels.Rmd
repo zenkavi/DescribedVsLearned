@@ -251,9 +251,14 @@ Simulate data with a 3 integrator model using half the stimuli filtered earlier 
 **Note: this selection of parameters provides a nice qualitative fit to data. It assumes integration is slower for lotteries than for fractals. This is one way of capturing the difference in processing lottery values, which can only be done after the stimulus presentation, as apposed to fractal values which are learned about trialwise. There are alternative ways of modeling this: e.g. integration for the fractal integrator might start before the stimulus presentation screen; ndt for the lottery integrator (or the arbitrator when the lottery is more relevant) might be longer etc. The way to determine which of these hypotheses is most supported by data would be a model comparison.**
 
 ```{r}
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_threeIntegrators_sepProbDistortion.R'))
+sim_trial_list[["model3"]] = sim_trial
+```
+
+```{r}
 # m3_1 = sim_task(sub_data, model_name = "model3", dLott=0.03, dFrac=0.06, dArb=0.05, sigmaLott = 0.03, sigmaFrac = 0.03)
 sub_data = sub_data %>%
-  filter(subnum  %in% c("01", "03", "05","07", "09", "11", "13", "15", "17", "19")) %>%
+  filter(subnum  %in% c("01", "03", "05","07", "09", "11", "13", "15", "17", "19"))
 m3_1 = sim_task(sub_data, model_name = "model3", dLott=0.03, dFrac=0.06, dArb=0.07, sigmaLott = 0.03, sigmaFrac = 0.03)
 ```
 
@@ -302,16 +307,7 @@ for(i in 1:length(subnums)){
 }
 ```
 
-Check if there is much variability in the converged values
-
-```{r}
-ddm_fit_pars %>%
-  ggplot(aes(Param2))+
-  geom_histogram(bins=10)+
-  facet_wrap(~subnum)
-```
-
-There isn't so summarise subject parameters as a mean
+Summarise subject parameters as a mean of the converged values from different starting points
 
 ```{r}
 oneIntEsts = ddm_fit_pars %>%
@@ -320,7 +316,7 @@ oneIntEsts = ddm_fit_pars %>%
             sigma = mean(Param2))
 ```
 
-Make posterior predictive data
+Simulate predicted data
 
 ```{r}
 source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_oneIntegrator_sepProbDistortion.R'))
@@ -336,6 +332,7 @@ for(i in 1:length(unique(oneIntEsts$subnum))){
   cur_stims =  sub_stims %>% filter(subnum == cur_sub)
   cur_pars = oneIntEsts %>% filter(subnum == cur_sub)
   sim_subj = sim_task(cur_stims, model_name = "model1", d=cur_pars$d, sigma=cur_pars$sigma)
+  sim_subj$subnum = cur_sub
   oneIntPpc = rbind(oneIntPpc, sim_subj)
 }
 
@@ -343,6 +340,10 @@ for(i in 1:length(unique(oneIntEsts$subnum))){
 
 ```{r}
 sim_sanity_checks(oneIntPpc, checks=c(1,3,4,5,6,7,8), compare_logits = T, compare_rts = T, true_data = sub_stims)
+```
+
+```{r}
+sim_sanity_checks(oneIntPpc %>% filter(!subnum %in% c("02", "09", "14")), checks=c(1,3,4,5,6,7,8), compare_logits = T, compare_rts = T, true_data = sub_stims %>% filter(!subnum %in% c("02", "09", "14")))
 ```
 
 ## One integrator without extreme cases
@@ -387,7 +388,7 @@ oneIntEsts %>%
   theme(panel.grid = element_blank())
 ```
 
-Make posterior predictive data
+Simulate predicted data
 
 ```{r}
 
@@ -398,6 +399,7 @@ for(i in 1:length(unique(oneIntEstsnoExt$subnum))){
   cur_stims =  sub_stims %>% filter(subnum == cur_sub)
   cur_pars = oneIntEstsnoExt %>% filter(subnum == cur_sub)
   sim_subj = sim_task(cur_stims, model_name = "model1", d=cur_pars$d, sigma=cur_pars$sigma)
+  sim_subj$subnum = cur_sub
   oneIntPpcnoExt = rbind(oneIntPpcnoExt, sim_subj)
 }
 
@@ -405,6 +407,233 @@ for(i in 1:length(unique(oneIntEstsnoExt$subnum))){
 
 ```{r}
 sim_sanity_checks(oneIntPpcnoExt, checks=c(1,3,4,5,6,7,8), compare_logits = T, compare_rts = T, true_data = sub_stims)
+```
+
+## Mystery to solve
+
+Why does predicted data look so much worse when you use non-normalized distorted ev diff? (which btw was used to estimate the parameters for the one integrator model without the extreme cases)
+
+```{r}
+rm(clean_beh_data)
+source(paste0(helpers_path,'01_clean_behavioral_data.R'))
+```
+
+```{r message=FALSE, warning=FALSE}
+source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamDoubleSymmLinearProbDistortion_rpeBoth.R'))
+
+clean_beh_data_norm = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = mean(value), .groups='keep') %>%
+  spread(par, est) %>%
+  left_join(clean_beh_data, by='subnum')
+
+## Add Q values of fractals to each trial
+clean_beh_data_norm = clean_beh_data_norm %>%
+  group_by(subnum) %>%
+  do(get_qvals(., model_name="rpeBoth")) %>%
+  ungroup()
+
+clean_beh_data_norm = clean_beh_data_norm %>%
+  mutate(rightLotteryEV = referenceProb * referenceValue,
+         leftLotteryEV = lotteryValue * lotteryProb,
+         lottery_ev_diff = leftLotteryEV - rightLotteryEV,
+         fractal_qv_diff = leftQValue - rightQValue,
+         distorted_ev_diff = (1-theta)*(1-probFractalDraw)*lottery_ev_diff, #Normalized Symm distortion
+         # distorted_ev_diff = (1-probFractalDraw)*lottery_ev_diff, #Asymm distortion
+         distorted_qv_diff = theta*probFractalDraw*fractal_qv_diff)
+
+par_ests_norm = par_ests
+rm(fit, g_par_ests, par_ests)
+```
+
+```{r message=FALSE, warning=FALSE}
+source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamAsymmLinearProbDistortion_rpeBoth.R'))
+
+clean_beh_data_nonorm = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = mean(value), .groups='keep') %>%
+  spread(par, est) %>%
+  left_join(clean_beh_data, by='subnum')
+
+## Add Q values of fractals to each trial
+clean_beh_data_nonorm = clean_beh_data_nonorm %>%
+  group_by(subnum) %>%
+  do(get_qvals(., model_name="rpeBoth")) %>%
+  ungroup()
+
+clean_beh_data_nonorm = clean_beh_data_nonorm %>%
+  mutate(rightLotteryEV = referenceProb * referenceValue,
+         leftLotteryEV = lotteryValue * lotteryProb,
+         lottery_ev_diff = leftLotteryEV - rightLotteryEV,
+         fractal_qv_diff = leftQValue - rightQValue,
+         # distorted_ev_diff = (1-theta)*(1-probFractalDraw)*lottery_ev_diff, #Normalized Symm distortion
+         distorted_ev_diff = (1-probFractalDraw)*lottery_ev_diff, #Asymm distortion
+         distorted_qv_diff = theta*probFractalDraw*fractal_qv_diff)
+
+par_ests_nonorm = par_ests
+rm(fit, g_par_ests, par_ests)
+
+
+```
+
+What do the theta's look like?
+
+```{r}
+thetas = par_ests_nonorm %>%
+  filter(par == "theta") %>%
+  group_by(subnum) %>%
+  mutate(iter = 1:n()) %>%
+  ungroup() %>%
+  filter(iter>2000) %>%
+  select(-logLik) %>%
+  mutate(model="Asymm") %>%
+  rbind(par_ests_norm %>%
+          filter(par == "theta") %>%
+          group_by(subnum) %>%
+          mutate(iter = 1:n()) %>%
+          ungroup() %>%
+          filter(iter>2000) %>%
+          select(-logLik) %>%
+          mutate(model="SymmNorm")) 
+```
+
+
+```{r}
+thetas %>%
+  ggplot(aes(value, fill=model))+
+  geom_histogram(alpha=.5, position="identity", bins=30)+
+  geom_vline(aes(xintercept = 1), color="#F8766D")+
+  geom_vline(aes(xintercept = .5), color="#00BFC4")+
+  facet_wrap(~subnum)+
+  theme(panel.grid = element_blank(),
+        legend.position = "bottom",
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())+
+  labs(y="", x="theta", fill="")
+```
+
+What do the QValues look like?
+
+```{r}
+clean_beh_data_norm %>%
+  select(leftQValue, subnum) %>%
+  mutate(model="SymmNorm") %>%
+  group_by(subnum) %>%
+  mutate(trialNum = 1:n()) %>%
+  rbind(clean_beh_data_nonorm %>%
+          select(leftQValue, subnum) %>%
+          mutate(model="Asymm") %>%
+          group_by(subnum) %>%
+          mutate(trialNum = 1:n())) %>%
+  group_by(subnum, trialNum) %>%
+  spread(model, leftQValue) %>%
+  ggplot(aes(Asymm, SymmNorm))+
+  geom_point()+
+  geom_abline(aes(intercept=0, slope=1))+
+  facet_wrap(~subnum)+
+  theme(panel.grid = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank())+
+  labs(title="left Q Value")
+
+```
+
+```{r}
+clean_beh_data_norm %>%
+  select(rightQValue, subnum) %>%
+  mutate(model="SymmNorm") %>%
+  group_by(subnum) %>%
+  mutate(trialNum = 1:n()) %>%
+  rbind(clean_beh_data_nonorm %>%
+          select(rightQValue, subnum) %>%
+          mutate(model="Asymm") %>%
+          group_by(subnum) %>%
+          mutate(trialNum = 1:n())) %>%
+  group_by(subnum, trialNum) %>%
+  spread(model, rightQValue) %>%
+  ggplot(aes(Asymm, SymmNorm))+
+  geom_point()+
+  geom_abline(aes(intercept=0, slope=1))+
+  facet_wrap(~subnum)+
+  theme(panel.grid = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank())+
+  labs(title="right Q Value")
+```
+
+What do the distorted EV and QV diffs look like?
+
+```{r}
+clean_beh_data_norm %>%
+  select(distorted_ev_diff, subnum) %>%
+  mutate(model="SymmNorm") %>%
+  group_by(subnum) %>%
+  mutate(trialNum = 1:n()) %>%
+  rbind(clean_beh_data_nonorm %>%
+          select(distorted_ev_diff, subnum) %>%
+          mutate(model="Asymm") %>%
+          group_by(subnum) %>%
+          mutate(trialNum = 1:n())) %>%
+  group_by(subnum, trialNum) %>%
+  spread(model, distorted_ev_diff) %>%
+  ggplot(aes(Asymm, SymmNorm))+
+  geom_point()+
+  geom_abline(aes(intercept=0, slope=1))+
+  facet_wrap(~subnum)+
+  theme(panel.grid = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank())+
+  labs(title="distorted EV Diff")
+```
+```{r}
+clean_beh_data_norm %>%
+  select(distorted_qv_diff, subnum) %>%
+  mutate(model="SymmNorm") %>%
+  group_by(subnum) %>%
+  mutate(trialNum = 1:n()) %>%
+  rbind(clean_beh_data_nonorm %>%
+          select(distorted_qv_diff, subnum) %>%
+          mutate(model="Asymm") %>%
+          group_by(subnum) %>%
+          mutate(trialNum = 1:n())) %>%
+  group_by(subnum, trialNum) %>%
+  spread(model, distorted_qv_diff) %>%
+  ggplot(aes(Asymm, SymmNorm))+
+  geom_point()+
+  geom_abline(aes(intercept=0, slope=1))+
+  facet_wrap(~subnum)+
+  theme(panel.grid = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank())+
+  labs(title="distorted QV Diff")
+```
+
+If you exclude the three subjects with difference between the QValues from the two models are the predicted data more sensible?
+
+```{r}
+sub_stims_excluded = sub_stims %>%
+  filter(!subnum %in% c("02","09", "14"))
+subs = unique(sub_stims_excluded$subnum)
+```
+
+
+```{r}
+
+oneIntPpc_exc = data.frame()
+
+for(i in 1:length(subs)){
+  cur_sub = subs[i]
+  cur_stims =  sub_stims %>% filter(subnum == cur_sub)
+  cur_pars = oneIntEsts %>% filter(subnum == cur_sub)
+  sim_subj = sim_task(cur_stims, model_name = "model1", d=cur_pars$d, sigma=cur_pars$sigma)
+  
+  oneIntPpc_exc = rbind(oneIntPpc_exc, sim_subj)
+}
+
+```
+
+```{r}
+sim_sanity_checks(oneIntPpc_exc, checks=c(1,3,4,5,6,7,8), compare_logits = T, compare_rts = T, true_data = sub_stims)
 ```
 
 ## Three integrators

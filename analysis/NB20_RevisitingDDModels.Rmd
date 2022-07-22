@@ -608,32 +608,31 @@ clean_beh_data_norm %>%
   labs(title="distorted QV Diff")
 ```
 
-If you exclude the three subjects with difference between the QValues from the two models are the predicted data more sensible?
+What would make choices faster? If the drift for an integrator is large, which depends on the scaling d and distorted value differences.
+
+For the non-normalized model, all decisions are faster but the pFrac<.5 seem most affected. Are the distorted EV diffs for those conditions much larger?
 
 ```{r}
-sub_stims_excluded = sub_stims %>%
-  filter(!subnum %in% c("02","09", "14"))
-subs = unique(sub_stims_excluded$subnum)
+clean_beh_data_norm %>%
+  select(distorted_ev_diff, subnum, probFractalDraw) %>%
+  mutate(model="SymmNorm") %>%
+  group_by(subnum) %>%
+  mutate(trialNum = 1:n()) %>%
+  rbind(clean_beh_data_nonorm %>%
+          select(distorted_ev_diff, subnum, probFractalDraw) %>%
+          mutate(model="Asymm") %>%
+          group_by(subnum) %>%
+          mutate(trialNum = 1:n())) %>%
+  ggplot(aes(distorted_ev_diff, fill=model))+
+  geom_histogram(bins=30, alpha=.5, position = "identity")+
+  theme(panel.grid = element_blank())+
+  facet_wrap(~probFractalDraw)
 ```
 
+So then, despite the similarity in parameter estimates are the oneIntegrator without extreme case fits that used the distorted values from the asymmetric model worse fits/have lower likelihoods?
 
 ```{r}
 
-oneIntPpc_exc = data.frame()
-
-for(i in 1:length(subs)){
-  cur_sub = subs[i]
-  cur_stims =  sub_stims %>% filter(subnum == cur_sub)
-  cur_pars = oneIntEsts %>% filter(subnum == cur_sub)
-  sim_subj = sim_task(cur_stims, model_name = "model1", d=cur_pars$d, sigma=cur_pars$sigma)
-  
-  oneIntPpc_exc = rbind(oneIntPpc_exc, sim_subj)
-}
-
-```
-
-```{r}
-sim_sanity_checks(oneIntPpc_exc, checks=c(1,3,4,5,6,7,8), compare_logits = T, compare_rts = T, true_data = sub_stims)
 ```
 
 ## Three integrators

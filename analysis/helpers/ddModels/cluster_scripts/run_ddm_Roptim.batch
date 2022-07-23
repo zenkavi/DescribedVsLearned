@@ -17,4 +17,4 @@ zenkavi/roptim:0.0.4 Rscript --vanilla /ddModels/cluster_scripts/ddm_Roptim.R --
 # upload to s3
 # aws s3 sync /shared/ddModels/cluster_scripts/optim_out s3://described-vs-experienced/ddModels/cluster_scripts/optim_out
 # dowload to local
-# docker run --rm -it -v ~/.aws:/root/.aws -v $(pwd):/cluster_scripts amazon/aws-cli s3 sync s3://described-vs-experienced/ddModels/cluster_scripts/optim_out /cluster_scripts/optim_out
+# docker run --rm -it -v ~/.aws:/root/.aws -v $(pwd):/cluster_scripts amazon/aws-cli s3 sync s3://described-vs-experienced/ddModels/cluster_scripts/optim_out /cluster_scripts/optim_out --exclude "*" --include "*optim_par*"

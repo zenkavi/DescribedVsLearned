@@ -379,7 +379,8 @@ data.frame(cor(tmp))
 Does the preferred model's QVs account for choice data better than fractalprobdiff? Yes, it has a lower AIC.
 
 ```{r message=FALSE}
-model_name = 'fit_rl_hierarchical_oneParamAsymmLinearProbDistortion_rpeBoth.R' #preferred after lab meeting on 7/15/22
+# model_name = 'fit_rl_hierarchical_oneParamAsymmLinearProbDistortion_rpeBoth.R' #suggested after lab meeting on 7/15/22
+model_name = 'fit_rl_hierarchical_oneParamSymmLinearProbDistortion_rpeBoth.R' #preferred after analyses
 source(paste0(helpers_path, 'rlModels/', model_name))
 ```
 
@@ -426,7 +427,8 @@ clean_beh_data %>%
         panel.grid = element_blank(),
         axis.text.y = element_blank(),
         axis.ticks.y = element_blank())+
-  labs(y="", x="", fill = "")
+  labs(y="", x="", fill = "")+
+  scale_fill_manual(values=cbbPalette[2:3])
 ```
 Standardized
 
@@ -443,7 +445,9 @@ clean_beh_data %>%
         panel.grid = element_blank(),
         axis.text.y= element_blank(),
         axis.ticks.y = element_blank())+
-  labs(y="", x="", fill = "")
+  labs(y="", x="", fill = "")+
+  scale_fill_manual(values=cbbPalette[2:3])+
+  scale_x_continuous(breaks=c(-4, -2, 0, 2, 4), limits=c(-4.5, 4.5))
 ```
 
 ```{r}

@@ -54,7 +54,7 @@ sim_trial = function(dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, barrier=1
   
   while (time<maxIter){
     
-    # If the arbitrator RDV hits one of the barriers make decision
+    # If the either RDV hits one of the barriers make decision
     if (lotteryRDV >= barrier[time] | lotteryRDV <= -barrier[time] | fractalRDV >= barrier[time] | fractalRDV <= -barrier[time]){
       
       # Convert ms back to secs
@@ -106,7 +106,7 @@ sim_trial = function(dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, barrier=1
   }
   
   #Organize output 
-  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, distortedEVDiff = distortedEVDiff, distortedQVDiff = distortedQVDiff, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, dLott=dLott, dFrac=dFrac, sigmaArb=sigmaArb, sigmaLott=sigmaLott, sigmaFrac=sigmaFrac, barrierDecay=barrierDecay, barrier=barrier[time], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, maxIter=maxIter)
+  out = data.frame(EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, distortedEVDiff = distortedEVDiff, distortedQVDiff = distortedQVDiff, probFractalDraw = probFractalDraw, choice=choice, reactionTime = RT, timeOut = timeOut, dLott=dLott, dFrac=dFrac, sigmaLott=sigmaLott, sigmaFrac=sigmaFrac, barrierDecay=barrierDecay, barrier=barrier[time], nonDecisionTime=nonDecisionTime, bias=bias, timeStep=timeStep, maxIter=maxIter)
   
   if(debug){
     # out = list(out=out, debug_df=debug_df[-1,])

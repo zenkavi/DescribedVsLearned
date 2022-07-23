@@ -217,7 +217,7 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
     
     yrange = layer_scales(p)$y$range$range
     large_range = abs(yrange) > yrange_lim
-    if(large_range){
+    if(sum(large_range)>0){
       p = p+ylim(-5, yrange_lim)
     }
     

@@ -1,0 +1,151 @@
+---
+title: 'Experience vs. description based decision-making project: DD model fitting methods and recovery checks'
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    code_folding: 'hide'
+  pdf_document:
+    toc: yes
+---
+
+```{r include=FALSE}
+library(tidyverse)
+theme_set(theme_bw())
+library(here)
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+helpers_path = here('analysis/helpers/')
+
+source(paste0(helpers_path,'ddModels/sim_task.R'))
+source(paste0(helpers_path,'ddModels/fit_task.R'))
+source(paste0(helpers_path,'01_clean_behavioral_data.R'))
+source(paste0(helpers_path, 'get_qvals.R'))
+source(paste0(helpers_path,'optimPostProcess/sim_sanity_checks.R'))
+
+
+set.seed(38573)
+```
+
+# Recovery checks
+
+## States-space method
+
+See `NB21_LabMeetingFigures.Rmd` for demo figures.
+
+Using Gabi's discrete time and state-space method  
+
+**Why might this not have been used previously? Some ideas:**    
+**The boundary in traditional DDM is not fixed at 1 and -1. Instead it is a parameter. It's not immediately apparent to me how to use the sum of random variables approach without assuming the boundaries at 1 and -1.**  
+**The traditional DDM often models the whole of a response time distribution for correct vs incorrect.**  
+
+## One integrator
+
+```{r}
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_oneIntegrator_sepProbDistortion.R'))
+```
+
+### Same trial
+
+```{r}
+d = 0.03
+distortedEVDiff = .3
+distortedQVDiff = .1
+sigma = .05
+n_particles = 250
+sim_data = data.frame()
+
+for(i in 1:n_particles){
+  tmp = sim_trial(d = d, sigma = sigma, distortedEVDiff =distortedEVDiff, distortedQVDiff =distortedQVDiff, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, probFractalDraw = NA)
+  tmp$iter = i
+  sim_data = rbind(sim_data, tmp)
+}
+```
+
+```{r}
+fit_trial_list = list(model1 = fit_trial)
+
+d_range = seq(.01, .1, .01)
+sigma_range = seq(.01, .1, .01)
+
+recovery_df = data.frame(test_d = NA, test_sigma = NA, nll = NA)
+
+for(i in 1:length(d_range)){
+  for(j in 1:length(sigma_range)){
+    test_d = d_range[i]
+    test_sigma = sigma_range[j]
+    test_nll = get_task_nll(data_ = sim_data, par = c(test_d, test_sigma), par_names_ = c("d", "sigma"), model_name = "model1", fix_pars_ = list())
+    recovery_df = rbind(recovery_df,
+                        data.frame(test_d = test_d, test_sigma = test_sigma, nll = test_nll))
+    
+  }
+}
+recovery_df = recovery_df %>% drop_na()
+```
+
+
+```{r}
+recovery_df %>%
+  mutate(test_d = as.factor(test_d),
+         test_sigma = as.factor(test_sigma)) %>%
+  ggplot(aes(test_d, test_sigma, fill=nll))+
+  geom_tile()
+
+#Zoom in
+recovery_df %>%
+  filter(test_sigma>.04 & test_d < .06)%>%
+  mutate(test_d = as.factor(test_d),
+         test_sigma = as.factor(test_sigma)) %>%
+  ggplot(aes(test_d, test_sigma, fill=nll))+
+  geom_tile()
+```
+
+### Different trials (~single subject)
+
+```{r}
+sim_trial_list = list()
+sim_trial_list[['model1']] = sim_trial
+```
+
+```{r}
+n_trials = 300
+stimuli = clean_beh_data[1:n_trials,] %>%
+  select(leftLotteryEV, rightLotteryEV, leftQValue, rightQValue, probFractalDraw, reactionTime, choiceLeft, subnum, distorted_ev_diff, distorted_qv_diff) %>%
+  rename(EVLeft = leftLotteryEV, EVRight = rightLotteryEV, QVLeft = leftQValue, QVRight = rightQValue, distortedEVDiff = distorted_ev_diff, distortedQVDiff = distorted_qv_diff)
+sim_subj = sim_task(stimuli, model_name = "model1", d=d, sigma=sigma)
+# sim_subj
+```
+
+```{r}
+d_range = seq(.01, .1, .02)
+sigma_range = seq(.01, .1, .02)
+
+recovery_df = data.frame(test_d = NA, test_sigma = NA, nll = NA)
+
+for(i in 1:length(d_range)){
+  for(j in 1:length(sigma_range)){
+    test_d = d_range[i]
+    test_sigma = sigma_range[j]
+    test_nll = get_task_nll(data_ = sim_subj, par = c(test_d, test_sigma), par_names_ = c("d", "sigma"), model_name = "model1", fix_pars_ = list())
+    recovery_df = rbind(recovery_df,
+                        data.frame(test_d = test_d, test_sigma = test_sigma, nll = test_nll))
+    
+  }
+}
+recovery_df = recovery_df %>% drop_na()
+
+```
+
+```{r}
+recovery_df %>%
+  mutate(test_d = as.factor(test_d),
+         test_sigma = as.factor(test_sigma)) %>%
+  ggplot(aes(test_d, test_sigma, fill=nll))+
+  geom_tile()
+
+recovery_df %>%
+  filter(test_sigma > .03) %>%
+  mutate(test_d = as.factor(test_d),
+         test_sigma = as.factor(test_sigma)) %>%
+  ggplot(aes(test_d, test_sigma, fill=nll))+
+  geom_tile()
+```

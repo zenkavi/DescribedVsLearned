@@ -29,7 +29,7 @@ set.seed(38573)
 Add distorted value estimates using the hierarchical RL fit.
 
 ```{r message=FALSE, warning=FALSE}
-
+# See NB19_RevisitingRLModels.Rmd before deciding on which model to import
 # source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamDoubleSymmLinearProbDistortion_rpeBoth.R'))
 source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamSymmLinearProbDistortion_rpeBoth.R'))
 
@@ -439,206 +439,13 @@ for(i in 1:length(unique(oneIntEstsnoExt$subnum))){
 sim_sanity_checks(oneIntPpcnoExt, checks=c(1,3,4,5,6,7,8), compare_logits = T, compare_rts = T, true_data = sub_stims)
 ```
 
-## Mystery to solve
+Despite the similarity in parameter estimates are the oneIntegrator without extreme case fits that used the *distorted values from the asymmetric model* worse fits/have lower likelihoods?
 
 ```{r}
-defcols = c("#F8766D", "#00BA38", "#619CFF")
-```
-
-Why does predicted data look so much worse when you use non-normalized distorted ev diff? (which btw was used to estimate the parameters for the one integrator model without the extreme cases)
-
-```{r}
-rm(clean_beh_data)
-source(paste0(helpers_path,'01_clean_behavioral_data.R'))
-```
-
-```{r message=FALSE, warning=FALSE}
-source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamDoubleSymmLinearProbDistortion_rpeBoth.R'))
-
-clean_beh_data_norm = par_ests %>%
-  group_by(subnum, par) %>%
-  summarise(est = mean(value), .groups='keep') %>%
-  spread(par, est) %>%
-  left_join(clean_beh_data, by='subnum')
-
-## Add Q values of fractals to each trial
-clean_beh_data_norm = clean_beh_data_norm %>%
-  group_by(subnum) %>%
-  do(get_qvals(., model_name="rpeBoth")) %>%
-  ungroup()
-
-clean_beh_data_norm = clean_beh_data_norm %>%
-  mutate(rightLotteryEV = referenceProb * referenceValue,
-         leftLotteryEV = lotteryValue * lotteryProb,
-         lottery_ev_diff = leftLotteryEV - rightLotteryEV,
-         fractal_qv_diff = leftQValue - rightQValue,
-         distorted_ev_diff = (1-theta)*(1-probFractalDraw)*lottery_ev_diff, #Normalized Symm distortion
-         # distorted_ev_diff = (1-probFractalDraw)*lottery_ev_diff, #Asymm distortion
-         distorted_qv_diff = theta*probFractalDraw*fractal_qv_diff)
-
-par_ests_norm = par_ests
-rm(fit, g_par_ests, par_ests)
-```
-
-```{r message=FALSE, warning=FALSE}
-source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamAsymmLinearProbDistortion_rpeBoth.R'))
-
-clean_beh_data_asymmnonorm = par_ests %>%
-  group_by(subnum, par) %>%
-  summarise(est = mean(value), .groups='keep') %>%
-  spread(par, est) %>%
-  left_join(clean_beh_data, by='subnum')
-
-## Add Q values of fractals to each trial
-clean_beh_data_asymmnonorm = clean_beh_data_asymmnonorm %>%
-  group_by(subnum) %>%
-  do(get_qvals(., model_name="rpeBoth")) %>%
-  ungroup()
-
-clean_beh_data_asymmnonorm = clean_beh_data_asymmnonorm %>%
-  mutate(rightLotteryEV = referenceProb * referenceValue,
-         leftLotteryEV = lotteryValue * lotteryProb,
-         lottery_ev_diff = leftLotteryEV - rightLotteryEV,
-         fractal_qv_diff = leftQValue - rightQValue,
-         # distorted_ev_diff = (1-theta)*(1-probFractalDraw)*lottery_ev_diff, #Normalized Symm distortion
-         distorted_ev_diff = (1-probFractalDraw)*lottery_ev_diff, #Asymm distortion
-         distorted_qv_diff = theta*probFractalDraw*fractal_qv_diff)
-
-par_ests_asymmnonorm = par_ests
-rm(fit, g_par_ests, par_ests)
-
 
 ```
 
-```{r message=FALSE, warning=FALSE}
-source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamSymmLinearProbDistortion_rpeBoth.R'))
-
-clean_beh_data_symmnonorm = par_ests %>%
-  group_by(subnum, par) %>%
-  summarise(est = mean(value), .groups='keep') %>%
-  spread(par, est) %>%
-  left_join(clean_beh_data, by='subnum')
-
-## Add Q values of fractals to each trial
-clean_beh_data_symmnonorm = clean_beh_data_symmnonorm %>%
-  group_by(subnum) %>%
-  do(get_qvals(., model_name="rpeBoth")) %>%
-  ungroup()
-
-clean_beh_data_symmnonorm = clean_beh_data_symmnonorm %>%
-  mutate(rightLotteryEV = referenceProb * referenceValue,
-         leftLotteryEV = lotteryValue * lotteryProb,
-         lottery_ev_diff = leftLotteryEV - rightLotteryEV,
-         fractal_qv_diff = leftQValue - rightQValue,
-         distorted_ev_diff = (1-(theta*probFractalDraw))*lottery_ev_diff, #Symm distortion
-         distorted_qv_diff = theta*probFractalDraw*fractal_qv_diff)
-
-par_ests_symmnonorm = par_ests
-rm(fit, g_par_ests, par_ests)
-
-
-```
-
-What do the theta's look like?
-
-```{r}
-thetas = par_ests_asymmnonorm %>%
-  filter(par == "theta") %>%
-  group_by(subnum) %>%
-  mutate(iter = 1:n()) %>%
-  ungroup() %>%
-  filter(iter>2000) %>%
-  select(-logLik) %>%
-  mutate(model="AsymmNoNorm") %>%
-  rbind(par_ests_norm %>%
-          filter(par == "theta") %>%
-          group_by(subnum) %>%
-          mutate(iter = 1:n()) %>%
-          ungroup() %>%
-          filter(iter>2000) %>%
-          select(-logLik) %>%
-          mutate(model="SymmNorm")) %>%
-  rbind(par_ests_symmnonorm %>%
-          filter(par == "theta") %>%
-          group_by(subnum) %>%
-          mutate(iter = 1:n()) %>%
-          ungroup() %>%
-          filter(iter>2000) %>%
-          select(-logLik) %>%
-          mutate(model="SymmNoNorm"))
-```
-
-
-```{r}
-thetas %>%
-  ggplot(aes(value, fill=model))+
-  geom_histogram(alpha=.5, position="identity", bins=30)+
-  geom_vline(aes(xintercept = 1))+
-  geom_vline(aes(xintercept = .5))+
-  facet_wrap(~subnum)+
-  theme(panel.grid = element_blank(),
-        legend.position = "bottom",
-        axis.text.y = element_blank(),
-        axis.ticks.y = element_blank())+
-  labs(y="", x="theta", fill="")
-```
-What would make choices faster? If the drift for an integrator is large, which depends on the scaling d and distorted value differences.
-
-For the non-normalized model, all decisions are faster but the pFrac<.5 seem most affected. Are the distorted EV diffs for those conditions much larger?
-
-```{r}
-clean_beh_data_norm %>%
-  select(distorted_ev_diff, subnum, probFractalDraw) %>%
-  mutate(model="SymmNorm") %>%
-  group_by(subnum) %>%
-  mutate(trialNum = 1:n()) %>%
-  rbind(clean_beh_data_asymmnonorm %>%
-          select(distorted_ev_diff, subnum, probFractalDraw) %>%
-          mutate(model="AsymmNoNorm") %>%
-          group_by(subnum) %>%
-          mutate(trialNum = 1:n())) %>%
-  rbind(clean_beh_data_symmnonorm %>%
-          select(distorted_ev_diff, subnum, probFractalDraw) %>%
-          mutate(model="SymmNoNorm") %>%
-          group_by(subnum) %>%
-          mutate(trialNum = 1:n())) %>%
-  ggplot(aes(distorted_ev_diff, fill=model))+
-  geom_histogram(bins=30, alpha=.5, position = "identity")+
-  theme(panel.grid = element_blank(), 
-        legend.position = c(1, 0),
-        legend.justification = c(1, 0))+
-  facet_wrap(~probFractalDraw)+
-  labs(y="", fill="")
-```
-
-
-distorted ev multiplier for the three models
-(1-pfrac)
-(1-(theta*pfrac))
-(1-pfrac)*(1-theta)
-
-```{r}
-thetas %>%
-  group_by(subnum, model) %>%
-  summarise(theta = mean(value), .groups='keep') %>%
-  left_join(data.frame(conditions = sort(rep(rep(seq(0,1,.1), 3), 25 )),
-                       subnum = rep(unique(clean_beh_data$subnum), 33),
-                       model = rep(c(rep("AsymmNoNorm",25), rep("SymmNoNorm",25), rep("SymmNorm",25) ), 11)  ),
-            by = c("subnum", "model")) %>%
-  mutate(multiplier = ifelse(model == "SymmNoNorm", (1-(theta*conditions)),
-                             ifelse(model == "SymmNorm", (1-theta)*(1-conditions),
-                                    ifelse(model == "AsymmNoNorm", (1-conditions), NA))),
-         conditions = paste0("p(Lott) = ", 1-conditions)) %>%
-  ggplot(aes(multiplier, fill=model))+
-  geom_histogram(bins=30, position = "identity", alpha=.5)+
-  facet_wrap(~conditions)+
-  theme(panel.grid=element_blank(), 
-        legend.position = c(1, 0),
-        legend.justification = c(1, 0))+
-  labs(fill="", y="", x="EV distortion")
-```
-
-So then, despite the similarity in parameter estimates are the oneIntegrator without extreme case fits that used the distorted values from the asymmetric model worse fits/have lower likelihoods?
+## Two integrator
 
 ```{r}
 

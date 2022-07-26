@@ -1,4 +1,4 @@
-sim_trial = function(dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, barrier=1, nonDecisionTime=0, bias=0.1, timeStep=10, maxIter=400, debug=FALSE,...){
+sim_trial = function(dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay=0, barrier=1, nonDecisionTime=0, bias=0.1, timeStep=10, maxIter=400, debug=FALSE,...){
   
   # d : drift rate
   # sigma: sd of the normal distribution 
@@ -31,13 +31,13 @@ sim_trial = function(dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, barrier=1
   
   distortedEVDiff = kwargs$distortedEVDiff
   distortedQVDiff = kwargs$distortedQVDiff
-  rawQVDiff = QVLeft - QVRight
+  # rawQVDiff = QVLeft - QVRight
   
   # pFrac == 1 bias
-  if(probFractalDraw == 1){
+  # if(probFractalDraw == 1){
     # fractalRDV = distortedQVDiff #when using distorted QV diff these choices were not as fast as true data
-    fractalRDV = rawQVDiff
-  }
+    # fractalRDV = rawQVDiff
+  # }
   
   nonDecIters = nonDecisionTime / timeStep
   
@@ -117,7 +117,7 @@ sim_trial = function(dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, barrier=1
 }
 
 
-fit_trial = function(dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, approxStateStep = 0.1, debug=FALSE, epsilon=0, ...){
+fit_trial = function(dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay=0, barrier=1, nonDecisionTime=0, bias=0, timeStep=10, approxStateStep = 0.1, debug=FALSE, epsilon=0, ...){
   
   
   kwargs = list(...)
@@ -163,7 +163,10 @@ fit_trial = function(dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, barrier=1
   
   # Initial probability for all states is zero, except the bias state,
   # for which the initial probability is one.
+  
+  #### !!!!!!!!!! IMPORTANT !!!!!!!!!! ####
   # p(bottom boundary) is the first value! Don't get confused by seeing it at the top 
+  #### !!!!!!!!!! IMPORTANT !!!!!!!!!! ####
   prStatesLott = matrix(data = 0, nrow = length(states), ncol = numTimeSteps)
   prStatesLott[biasState,1] = 1
   
@@ -190,10 +193,10 @@ fit_trial = function(dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, barrier=1
   
   muLott_mean = dLott * distortedEVDiff
   muFrac_mean = dFrac * distortedQVDiff
-  fracBias = 0
-  if (probFractalDraw == 1){
-    fracBias = QVLeft - QVRight
-  } 
+  # fracBias = 0
+  # if (probFractalDraw == 1){
+    # fracBias = QVLeft - QVRight
+  # } 
   
   # LOOP of state probability updating up to reaction time
   
@@ -224,18 +227,18 @@ fit_trial = function(dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, barrier=1
     prStatesLottNew = (stateStep * (dnorm(changeMatrix, muLott, sigmaLott) %*% prStatesLott[,curTime]) )
     prStatesLottNew[states >= barrier[nextTime] | states <= -barrier[nextTime]] = 0
     
-    prStatesFracNew = (stateStep * (dnorm(changeMatrix, muFrac, sigmaLott) %*% prStatesLott[,curTime]) )
+    prStatesFracNew = (stateStep * (dnorm(changeMatrix, muFrac, sigmaFrac) %*% prStatesLott[,curTime]) )
     prStatesFracNew[states >= barrier[nextTime] | states <= -barrier[nextTime]] = 0
     
     # Calculate the probabilities of crossing the up barrier and the
     # down barrier. This is given by the sum, over all states A, of the
     # probability of being in A at the previous timestep times the
     # probability of crossing the barrier if A is the previous state.
-    tempUpCrossLott = (prStatesLott[,curTime] %*% (1 - pnorm(changeUp[,nextTime], mu, sigmaLott)))[1]
-    tempDownCrossLott = (prStatesLott[,curTime] %*% (pnorm(changeDown[,nextTime], mu, sigmaLott)))[1]
+    tempUpCrossLott = (prStatesLott[,curTime] %*% (1 - pnorm(changeUp[,nextTime], muLott, sigmaLott)))[1]
+    tempDownCrossLott = (prStatesLott[,curTime] %*% (pnorm(changeDown[,nextTime], muLott, sigmaLott)))[1]
     
-    tempUpCrossFrac = (prStatesFrac[,curTime] %*% (1 - pnorm(changeUp[,nextTime], mu, sigmaFrac)))[1]
-    tempDownCrossFrac = (prStatesFrac[,curTime] %*% (pnorm(changeDown[,nextTime], mu, sigmaFrac)))[1]
+    tempUpCrossFrac = (prStatesFrac[,curTime] %*% (1 - pnorm(changeUp[,nextTime], muFrac, sigmaFrac)))[1]
+    tempDownCrossFrac = (prStatesFrac[,curTime] %*% (pnorm(changeDown[,nextTime], muFrac, sigmaFrac)))[1]
     
     # Renormalize to cope with numerical approximations.
     sumIn = sum(prStatesLott[,curTime])
@@ -271,15 +274,16 @@ fit_trial = function(dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay, barrier=1
     probUpCrossingLott[nextTime] = tempUpCrossLott
     probDownCrossingLott[nextTime] = tempDownCrossLott
     
-    prStatesLott[, nextTime] = prStatesLottNew
-    probUpCrossingLott[nextTime] = tempUpCrossLott
-    probDownCrossingLott[nextTime] = tempDownCrossLott
+    prStatesFrac[, nextTime] = prStatesFracNew
+    probUpCrossingFrac[nextTime] = tempUpCrossFrac
+    probDownCrossingFrac[nextTime] = tempDownCrossFrac
   }
   
   likelihood = 0
   if (choice == 1){ # Choice was left.
     
-    # p of left is ... need to think about normalizing the probabilities for boundary crossing using both integrators...
+    # p of left is the p of either the lottery OR (+) the fractal integrator crossing the top boundary
+    #... need to think about normalizing the probabilities for boundary crossing using both integrators...
     likelihood = probUpCrossingLott[numTimeSteps] + probUpCrossingFrac[numTimeSteps]
     
   } else if (choice == -1){

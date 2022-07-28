@@ -33,8 +33,15 @@ opt = parse_args(opt_parser)
 #######################
 data_suffix = opt$data
 
-if(grepl('/',data_suffix)){
-  data_suffix = strsplit(data_suffix, '/')[[1]][2]
+if(grepl('/', data_suffix)){
+  tmp_split = strsplit(data_suffix, '/')
+  p2 = tmp_split[[1]][2]
+  if(grepl('_', tmp_split[[1]][1])){
+  p1 = strsplit(tmp_split[[1]][1], '_')[[1]][3]
+  data_suffix = paste0(p1, '_', p2)
+  } else{
+    data_suffix = p2
+  }
 }
 data = read.csv(paste0(helpers_path, 'cluster_scripts/', opt$data, '.csv'))
 
@@ -96,7 +103,7 @@ if(num_optim_rounds>1){
 
 if(num_optim_rounds == 1){
   optim_out = optim_save(par = start_vals, get_task_nll, data_= data, par_names_ = par_names, model_name_ = model, fix_pars_ = fix_pars, control = list(maxit=max_iter))
-  
+
   optim_out$par$loglik = optim_out$iter$Result[nrow(optim_out$iter)]
 
   # This is too specific for two round only and fixing d and sigma together. Should extend to make more general.

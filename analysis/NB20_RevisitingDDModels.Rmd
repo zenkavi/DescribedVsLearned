@@ -571,8 +571,7 @@ for(i in 1:length(unique(twoIntsEstsAsymmLinear$subnum))){
   cur_sub = unique(twoIntsEstsAsymmLinear$subnum)[i]
   cur_stims =  sub_stims_asym %>% filter(subnum == cur_sub)
   cur_pars = twoIntsEstsAsymmLinear %>% filter(subnum == cur_sub)
-  # sim_subj = sim_task(cur_stims, model_name = "model2", dLott=cur_pars$dLott, dFrac=cur_pars$dFrac, sigmaLott=cur_pars$sigmaLott, sigmaFrac=cur_pars$sigmaFrac)
-  sim_subj = sim_task(cur_stims, model_name = "model2", dLott=cur_pars$dLott, dFrac=cur_pars$dLott, sigmaLott=cur_pars$sigmaLott, sigmaFrac=cur_pars$sigmaLott)
+  sim_subj = sim_task(cur_stims, model_name = "model2", dLott=cur_pars$dLott, dFrac=cur_pars$dFrac, sigmaLott=cur_pars$sigmaLott, sigmaFrac=cur_pars$sigmaFrac)
   sim_subj$subnum = cur_sub
   twoIntsPpcAsymmLinear = rbind(twoIntsPpcAsymmLinear, sim_subj)
 }
@@ -605,7 +604,7 @@ Summarise subject parameters as a mean of the converged values from different st
 ```{r}
 twoIntsEstsAsymmLinearnoExt = ddm_fit_pars %>%
   group_by(subnum) %>%
-  ummarise(dLott = mean(Param1),
+  summarise(dLott = mean(Param1),
             dFrac = mean(Param2),
             sigmaLott = mean(Param3),
             sigmaFrac = mean(Param4))
@@ -636,7 +635,7 @@ for(i in 1:length(unique(twoIntsEstsAsymmLinearnoExt$subnum))){
   cur_sub = unique(twoIntsEstsAsymmLinearnoExt$subnum)[i]
   cur_stims =  sub_stims_asym %>% filter(subnum == cur_sub) %>% filter(probFractalDraw != 0 & probFractalDraw != 1)
   cur_pars = twoIntsEstsAsymmLinearnoExt %>% filter(subnum == cur_sub)
-  sim_subj = sim_task(cur_stims, model_name = "model1", d=cur_pars$d, sigma=cur_pars$sigma)
+  sim_subj = sim_task(cur_stims, model_name = "model2", dLott=cur_pars$dLott, dFrac=cur_pars$dFrac, sigmaLott=cur_pars$sigmaLott, sigmaFrac=cur_pars$sigmaFrac)
   sim_subj$subnum = cur_sub
   twoIntsPpcAsymmLinearnoExt = rbind(twoIntsPpcAsymmLinearnoExt, sim_subj)
 }
@@ -671,7 +670,7 @@ Summarise subject parameters as a mean of the converged values from different st
 ```{r}
 twoIntsEstsSymmLinear = ddm_fit_pars %>%
   group_by(subnum) %>%
-  ummarise(dLott = mean(Param1),
+  summarise(dLott = mean(Param1),
             dFrac = mean(Param2),
             sigmaLott = mean(Param3),
             sigmaFrac = mean(Param4))
@@ -686,7 +685,7 @@ for(i in 1:length(unique(twoIntsEstsSymmLinear$subnum))){
   cur_sub = unique(twoIntsEstsSymmLinear$subnum)[i]
   cur_stims =  sub_stims_sym %>% filter(subnum == cur_sub)
   cur_pars = twoIntsEstsSymmLinear %>% filter(subnum == cur_sub)
-  sim_subj = sim_task(cur_stims, model_name = "model1", d=cur_pars$d, sigma=cur_pars$sigma)
+  sim_subj = sim_task(cur_stims, model_name = "model2", dLott=cur_pars$dLott, dFrac=cur_pars$dFrac, sigmaLott=cur_pars$sigmaLott, sigmaFrac=cur_pars$sigmaFrac)
   sim_subj$subnum = cur_sub
   twoIntsPpcSymmLinear = rbind(twoIntsPpcSymmLinear, sim_subj)
 }
@@ -719,7 +718,7 @@ Summarise subject parameters as a mean of the converged values from different st
 ```{r}
 twoIntsEstsSymmLinearnoExt = ddm_fit_pars %>%
   group_by(subnum) %>%
-  ummarise(dLott = mean(Param1),
+  summarise(dLott = mean(Param1),
             dFrac = mean(Param2),
             sigmaLott = mean(Param3),
             sigmaFrac = mean(Param4))
@@ -750,7 +749,7 @@ for(i in 1:length(unique(twoIntsEstsSymmLinearnoExt$subnum))){
   cur_sub = unique(twoIntsEstsSymmLinearnoExt$subnum)[i]
   cur_stims =  sub_stims_sym %>% filter(subnum == cur_sub) %>% filter(probFractalDraw != 0 & probFractalDraw != 1)
   cur_pars = twoIntsEstsSymmLinearnoExt %>% filter(subnum == cur_sub)
-  sim_subj = sim_task(cur_stims, model_name = "model1", d=cur_pars$d, sigma=cur_pars$sigma)
+  sim_subj = sim_task(cur_stims, model_name = "model2", dLott=cur_pars$dLott, dFrac=cur_pars$dFrac, sigmaLott=cur_pars$sigmaLott, sigmaFrac=cur_pars$sigmaFrac)
   sim_subj$subnum = cur_sub
   twoIntsPpcSymmLinearnoExt = rbind(twoIntsPpcSymmLinearnoExt, sim_subj)
 }

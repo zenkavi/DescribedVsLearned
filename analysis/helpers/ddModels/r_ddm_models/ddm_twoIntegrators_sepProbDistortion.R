@@ -227,7 +227,7 @@ fit_trial = function(dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay=0, barrier
     prStatesLottNew = (stateStep * (dnorm(changeMatrix, muLott, sigmaLott) %*% prStatesLott[,curTime]) )
     prStatesLottNew[states >= barrier[nextTime] | states <= -barrier[nextTime]] = 0
     
-    prStatesFracNew = (stateStep * (dnorm(changeMatrix, muFrac, sigmaFrac) %*% prStatesLott[,curTime]) )
+    prStatesFracNew = (stateStep * (dnorm(changeMatrix, muFrac, sigmaFrac) %*% prStatesFrac[,curTime]) )
     prStatesFracNew[states >= barrier[nextTime] | states <= -barrier[nextTime]] = 0
     
     # Calculate the probabilities of crossing the up barrier and the

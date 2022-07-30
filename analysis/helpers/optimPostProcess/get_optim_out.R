@@ -48,10 +48,17 @@ get_optim_out = function(model_, data_, optim_out_path_, iters_ = TRUE){
         tmp = read.csv(paste0(optim_out_path_, fns[i]))
         
         # This makes it independent of model parameters but the "Param" columns would need to be renamed
-        for(j in 1:nrow(tmp)){
-          tmp$key[j] = paste0("Param",j)
+        if(nrow(tmp)>1){
+          for(j in 1:nrow(tmp)){
+            tmp$key[j] = paste0("Param",j)
+            tmp = tmp %>% spread(key, x)
+          }
+        } else{
+          for(j in 1:ncol(tmp)){
+            names(tmp)[j] = paste0("Param", j)
+          }
         }
-        tmp = tmp %>% spread(key, x)
+        
         out = rbind.all.columns(out, tmp)  
       }
     } else{

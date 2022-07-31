@@ -30,8 +30,8 @@ Add distorted value estimates using the hierarchical RL fit.
 
 ```{r message=FALSE, warning=FALSE}
 # See NB19_RevisitingRLModels.Rmd before deciding on which model to import
-# source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamAsymmLinearProbDistortion_rpeBoth.R'))
-source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamSymmLinearProbDistortion_rpeBoth.R'))
+source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamAsymmLinearProbDistortion_rpeBoth.R'))
+# source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamSymmLinearProbDistortion_rpeBoth.R'))
 
 clean_beh_data = par_ests %>%
   group_by(subnum, par) %>%
@@ -50,8 +50,8 @@ clean_beh_data = clean_beh_data %>%
          leftLotteryEV = lotteryValue * lotteryProb,
          lottery_ev_diff = leftLotteryEV - rightLotteryEV,
          fractal_qv_diff = leftQValue - rightQValue,
-         # distorted_ev_diff = (1-probFractalDraw)*lottery_ev_diff, #Asymm distortion
-         distorted_ev_diff = (1 - (theta*probFractalDraw))*lottery_ev_diff, #Not normalized Symm distortion
+         distorted_ev_diff = (1-probFractalDraw)*lottery_ev_diff, #Asymm distortion
+         # distorted_ev_diff = (1 - (theta*probFractalDraw))*lottery_ev_diff, #Not normalized Symm distortion
          distorted_qv_diff = theta*probFractalDraw*fractal_qv_diff)
 
 rm(fit, g_par_ests, par_ests)
@@ -139,6 +139,28 @@ m1 = sim_task(sub_data, model_name = "model1", d=0.04, sigma = 0.06)
 sim_sanity_checks(m1, checks=c(1,3,4), compare_logits = TRUE)
 ```
 
+## One integrator with early integration
+
+```{r}
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_oneIntegrator_sepProbDistortion_earlyIntegration.R'))
+```
+
+```{r}
+sim_trial_list = list()
+sim_trial_list[['model1a']] = sim_trial
+```
+
+### Demo
+
+```{r}
+m1a = sim_task(sub_data, model_name = "model1a", d=0.04, sigma = 0.04, stimDelay = 600)
+```
+
+```{r}
+sim_sanity_checks(m1a, checks=c(1,3,4,5), compare_logits = TRUE)
+```
+
+
 ## Two integrators
 
 ### Demo
@@ -154,8 +176,14 @@ m2 = sim_task(sub_data, model_name = "model2", dLott=0.03, dFrac=0.05, sigmaLott
 # note that this parameter setting suggest slow but precise value integration for the lotteries versus fast but noisy value integration for the fractals
 ```
 
+
 ```{r}
 sim_sanity_checks(m2, checks=c(1,3,4,5), compare_logits = TRUE)
+```
+
+```{r}
+clean_beh_data %>%
+  
 ```
 
 Test fitting function
@@ -218,552 +246,6 @@ m3_1 = sim_task(sub_data, model_name = "model3", dLott=0.03, dFrac=0.06, dArb=0.
 sim_sanity_checks(m3_1, checks=c(1,3,4,5,6,7,8), compare_logits = TRUE)
 ```
 
-# Fits to data
-
-```{r}
-cpueaters_path = '/Users/zeynepenkavi/CpuEaters/DescribedVsLearned_beh/analysis/helpers/'
-source(paste0(helpers_path, 'optimPostProcess/get_optim_out.R'))
-```
-
-```{r}
-sim_trial_list = list()
-source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_oneIntegrator_sepProbDistortion.R'))
-sim_trial_list[['model1']] = sim_trial
-source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_twoIntegrators_sepProbDistortion.R'))
-sim_trial_list[['model2']] = sim_trial
-```
-
-```{r message=FALSE, warning=FALSE}
-source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamAsymmLinearProbDistortion_rpeBoth.R'))
-
-clean_beh_data_asymmnonorm = par_ests %>%
-  group_by(subnum, par) %>%
-  summarise(est = mean(value), .groups='keep') %>%
-  spread(par, est) %>%
-  left_join(clean_beh_data, by='subnum')
-
-## Add Q values of fractals to each trial
-clean_beh_data_asymmnonorm = clean_beh_data_asymmnonorm %>%
-  group_by(subnum) %>%
-  do(get_qvals(., model_name="rpeBoth")) %>%
-  ungroup()
-
-clean_beh_data_asymmnonorm = clean_beh_data_asymmnonorm %>%
-  mutate(rightLotteryEV = referenceProb * referenceValue,
-         leftLotteryEV = lotteryValue * lotteryProb,
-         lottery_ev_diff = leftLotteryEV - rightLotteryEV,
-         fractal_qv_diff = leftQValue - rightQValue,
-         # distorted_ev_diff = (1-theta)*(1-probFractalDraw)*lottery_ev_diff, #Normalized Symm distortion
-         distorted_ev_diff = (1-probFractalDraw)*lottery_ev_diff, #Asymm distortion
-         distorted_qv_diff = theta*probFractalDraw*fractal_qv_diff)
-
-
-rm(fit, g_par_ests, par_ests)
-
-
-```
-
-```{r message=FALSE, warning=FALSE}
-source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamSymmLinearProbDistortion_rpeBoth.R'))
-
-clean_beh_data_symmnonorm = par_ests %>%
-  group_by(subnum, par) %>%
-  summarise(est = mean(value), .groups='keep') %>%
-  spread(par, est) %>%
-  left_join(clean_beh_data, by='subnum')
-
-## Add Q values of fractals to each trial
-clean_beh_data_symmnonorm = clean_beh_data_symmnonorm %>%
-  group_by(subnum) %>%
-  do(get_qvals(., model_name="rpeBoth")) %>%
-  ungroup()
-
-clean_beh_data_symmnonorm = clean_beh_data_symmnonorm %>%
-  mutate(rightLotteryEV = referenceProb * referenceValue,
-         leftLotteryEV = lotteryValue * lotteryProb,
-         lottery_ev_diff = leftLotteryEV - rightLotteryEV,
-         fractal_qv_diff = leftQValue - rightQValue,
-         distorted_ev_diff = (1-(theta*probFractalDraw))*lottery_ev_diff, #Symm distortion
-         distorted_qv_diff = theta*probFractalDraw*fractal_qv_diff)
-
-rm(fit, g_par_ests, par_ests)
-
-
-```
-
-```{r}
-# Extract set of stimuli that will be used for simulations
-sub_stims_asym = clean_beh_data_asymmnonorm %>%
-  select(leftLotteryEV, rightLotteryEV, leftQValue, rightQValue, probFractalDraw, reactionTime, choiceLeft, subnum, distorted_ev_diff, distorted_qv_diff) %>%
-  rename(EVLeft = leftLotteryEV, EVRight = rightLotteryEV, QVLeft = leftQValue, QVRight = rightQValue, distortedEVDiff = distorted_ev_diff, distortedQVDiff = distorted_qv_diff)
-
-sub_stims_sym = clean_beh_data_symmnonorm %>%
-  select(leftLotteryEV, rightLotteryEV, leftQValue, rightQValue, probFractalDraw, reactionTime, choiceLeft, subnum, distorted_ev_diff, distorted_qv_diff) %>%
-  rename(EVLeft = leftLotteryEV, EVRight = rightLotteryEV, QVLeft = leftQValue, QVRight = rightQValue, distortedEVDiff = distorted_ev_diff, distortedQVDiff = distorted_qv_diff)
-```
-
-```{r}
-subnums = c("01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "22", "23", "24", "25", "27")
-data_prefix ="sub"
-data_suffix = "_data"
-```
-
-## One integrator
-
-### Asymm distortion
-
-#### With extreme cases
-
-```{r}
-optim_out_path = paste0(cpueaters_path, 'ddModels/cluster_scripts/optim_out/fitOneInt_oneParamAsymmLinear/')
-
-model = "oneIntegrator_sepProbDistortion"  
-
-ddm_fit_pars = data.frame()
-
-for(i in 1:length(subnums)){
-  cur_subnum = subnums[i]
-  tmp = get_optim_out(model_=model, data_=paste0(data_prefix, cur_subnum, data_suffix), optim_out_path_=optim_out_path, iters_ = F)
-  tmp$subnum = cur_subnum
-  ddm_fit_pars = rbind.all.columns(tmp, ddm_fit_pars)
-}
-```
-
-Summarise subject parameters as a mean of the converged values from different starting points
-
-```{r}
-oneIntEstsAsymmLinear = ddm_fit_pars %>%
-  group_by(subnum) %>%
-  summarise(d = mean(Param1),
-            sigma = mean(Param2))
-```
-
-Simulate predicted data
-
-```{r}
-oneIntPpcAsymmLinear = data.frame()
-
-for(i in 1:length(unique(oneIntEstsAsymmLinear$subnum))){
-  cur_sub = unique(oneIntEstsAsymmLinear$subnum)[i]
-  cur_stims =  sub_stims_asym %>% filter(subnum == cur_sub)
-  cur_pars = oneIntEstsAsymmLinear %>% filter(subnum == cur_sub)
-  sim_subj = sim_task(cur_stims, model_name = "model1", d=cur_pars$d, sigma=cur_pars$sigma)
-  sim_subj$subnum = cur_sub
-  oneIntPpcAsymmLinear = rbind(oneIntPpcAsymmLinear, sim_subj)
-}
-
-```
-
-```{r}
-sim_sanity_checks(oneIntPpcAsymmLinear, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
-```
-
-#### Without extreme cases
-
-```{r}
-optim_out_path = paste0(cpueaters_path, 'ddModels/cluster_scripts/optim_out/fitOneIntnoExt_oneParamAsymmLinear/')
-
-model = "oneIntegrator_sepProbDistortion"  
-
-ddm_fit_pars = data.frame()
-
-for(i in 1:length(subnums)){
-  cur_subnum = subnums[i]
-  tmp = get_optim_out(model_=model, data_=paste0(data_prefix, cur_subnum, data_suffix), optim_out_path_=optim_out_path, iters_ = F)
-  tmp$subnum = cur_subnum
-  ddm_fit_pars = rbind.all.columns(tmp, ddm_fit_pars)
-}
-```
-
-Summarise subject parameters as a mean of the converged values from different starting points
-
-```{r}
-oneIntEstsAsymmLinearnoExt = ddm_fit_pars %>%
-  group_by(subnum) %>%
-  summarise(d = mean(Param1),
-            sigma = mean(Param2))
-```
-
-Compare parameters from fits with and without the extreme cases
-
-```{r}
-oneIntEstsAsymmLinear %>%
-  mutate(fit = "wExt") %>%
-  rbind(oneIntEstsAsymmLinearnoExt %>% mutate(fit = "noExt")) %>%
-  gather(par, value, -subnum, -fit) %>%
-  group_by(par) %>%
-  spread(fit, value) %>%
-  ggplot(aes(noExt, wExt))+
-  geom_point()+
-  geom_abline(aes(slope=1, intercept=0), color="gray")+
-  facet_wrap(~par, scales="free")+
-  theme(panel.grid = element_blank())
-```
-
-Simulate predicted data
-
-```{r}
-oneIntPpcAsymmLinearnoExt = data.frame()
-
-for(i in 1:length(unique(oneIntEstsAsymmLinearnoExt$subnum))){
-  cur_sub = unique(oneIntEstsAsymmLinearnoExt$subnum)[i]
-  cur_stims =  sub_stims_asym %>% filter(subnum == cur_sub) %>% filter(probFractalDraw != 0 & probFractalDraw != 1)
-  cur_pars = oneIntEstsAsymmLinearnoExt %>% filter(subnum == cur_sub)
-  sim_subj = sim_task(cur_stims, model_name = "model1", d=cur_pars$d, sigma=cur_pars$sigma)
-  sim_subj$subnum = cur_sub
-  oneIntPpcAsymmLinearnoExt = rbind(oneIntPpcAsymmLinearnoExt, sim_subj)
-}
-
-```
-
-```{r}
-sim_sanity_checks(oneIntPpcAsymmLinearnoExt, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_asym %>% filter(probFractalDraw != 0 & probFractalDraw != 1))
-```
-
-### Symm distortion
-
-#### With extreme cases
-
-```{r}
-optim_out_path = paste0(cpueaters_path, 'ddModels/cluster_scripts/optim_out/fitOneInt_oneParamSymmLinear/')
-
-model = "oneIntegrator_sepProbDistortion"  
-
-ddm_fit_pars = data.frame()
-
-for(i in 1:length(subnums)){
-  cur_subnum = subnums[i]
-  tmp = get_optim_out(model_=model, data_=paste0(data_prefix, cur_subnum, data_suffix), optim_out_path_=optim_out_path, iters_ = F)
-  tmp$subnum = cur_subnum
-  ddm_fit_pars = rbind.all.columns(tmp, ddm_fit_pars)
-}
-```
-
-Summarise subject parameters as a mean of the converged values from different starting points
-
-```{r}
-oneIntEstsSymmLinear = ddm_fit_pars %>%
-  group_by(subnum) %>%
-  summarise(d = mean(Param1),
-            sigma = mean(Param2))
-```
-
-Simulate predicted data
-
-```{r}
-oneIntPpcSymmLinear = data.frame()
-
-for(i in 1:length(unique(oneIntEstsSymmLinear$subnum))){
-  cur_sub = unique(oneIntEstsSymmLinear$subnum)[i]
-  cur_stims =  sub_stims_sym %>% filter(subnum == cur_sub)
-  cur_pars = oneIntEstsSymmLinear %>% filter(subnum == cur_sub)
-  sim_subj = sim_task(cur_stims, model_name = "model1", d=cur_pars$d, sigma=cur_pars$sigma)
-  sim_subj$subnum = cur_sub
-  oneIntPpcSymmLinear = rbind(oneIntPpcSymmLinear, sim_subj)
-}
-
-```
-
-```{r}
-sim_sanity_checks(oneIntPpcSymmLinear, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_sym)
-```
-
-#### Without extreme cases
-
-```{r}
-optim_out_path = paste0(cpueaters_path, 'ddModels/cluster_scripts/optim_out/fitOneIntnoExt_oneParamSymmLinear/')
-
-model = "oneIntegrator_sepProbDistortion"  
-
-ddm_fit_pars = data.frame()
-
-for(i in 1:length(subnums)){
-  cur_subnum = subnums[i]
-  tmp = get_optim_out(model_=model, data_=paste0(data_prefix, cur_subnum, data_suffix), optim_out_path_=optim_out_path, iters_ = F)
-  tmp$subnum = cur_subnum
-  ddm_fit_pars = rbind.all.columns(tmp, ddm_fit_pars)
-}
-```
-
-Summarise subject parameters as a mean of the converged values from different starting points
-
-```{r}
-oneIntEstsSymmLinearnoExt = ddm_fit_pars %>%
-  group_by(subnum) %>%
-  summarise(d = mean(Param1),
-            sigma = mean(Param2))
-```
-
-Compare parameters from fits with and without the extreme cases
-
-```{r}
-oneIntEstsSymmLinear %>%
-  mutate(fit = "wExt") %>%
-  rbind(oneIntEstsSymmLinearnoExt %>% mutate(fit = "noExt")) %>%
-  gather(par, value, -subnum, -fit) %>%
-  group_by(par) %>%
-  spread(fit, value) %>%
-  ggplot(aes(noExt, wExt))+
-  geom_point()+
-  geom_abline(aes(slope=1, intercept=0), color="gray")+
-  facet_wrap(~par, scales="free")+
-  theme(panel.grid = element_blank())
-```
-
-Simulate predicted data
-
-```{r}
-oneIntPpcSymmLinearnoExt = data.frame()
-
-for(i in 1:length(unique(oneIntEstsSymmLinearnoExt$subnum))){
-  cur_sub = unique(oneIntEstsSymmLinearnoExt$subnum)[i]
-  cur_stims =  sub_stims_sym %>% filter(subnum == cur_sub) %>% filter(probFractalDraw != 0 & probFractalDraw != 1)
-  cur_pars = oneIntEstsSymmLinearnoExt %>% filter(subnum == cur_sub)
-  sim_subj = sim_task(cur_stims, model_name = "model1", d=cur_pars$d, sigma=cur_pars$sigma)
-  sim_subj$subnum = cur_sub
-  oneIntPpcSymmLinearnoExt = rbind(oneIntPpcSymmLinearnoExt, sim_subj)
-}
-
-```
-
-```{r}
-sim_sanity_checks(oneIntPpcSymmLinearnoExt, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_sym %>% filter(probFractalDraw != 0 & probFractalDraw != 1))
-```
-
-## Two integrators
-
-### Asymm distortion
-
-#### With extreme cases
-
-```{r}
-optim_out_path = paste0(cpueaters_path, 'ddModels/cluster_scripts/optim_out/fitTwoInts_oneParamAsymmLinear/')
-
-model = "twoIntegrators_sepProbDistortion"  
-
-ddm_fit_pars = data.frame()
-
-for(i in 1:length(subnums)){
-  cur_subnum = subnums[i]
-  tmp = get_optim_out(model_=model, data_=paste0(data_prefix, cur_subnum, data_suffix), optim_out_path_=optim_out_path, iters_ = F)
-  tmp$subnum = cur_subnum
-  ddm_fit_pars = rbind.all.columns(tmp, ddm_fit_pars)
-}
-```
-
-Summarise subject parameters as a mean of the converged values from different starting points
-
-```{r}
-twoIntsEstsAsymmLinear = ddm_fit_pars %>%
-  group_by(subnum) %>%
-  summarise(dLott = mean(Param1),
-            dFrac = mean(Param2),
-            sigmaLott = mean(Param3),
-            sigmaFrac = mean(Param4))
-```
-
-Simulate predicted data
-
-```{r}
-twoIntsPpcAsymmLinear = data.frame()
-
-for(i in 1:length(unique(twoIntsEstsAsymmLinear$subnum))){
-  cur_sub = unique(twoIntsEstsAsymmLinear$subnum)[i]
-  cur_stims =  sub_stims_asym %>% filter(subnum == cur_sub)
-  cur_pars = twoIntsEstsAsymmLinear %>% filter(subnum == cur_sub)
-  sim_subj = sim_task(cur_stims, model_name = "model2", dLott=cur_pars$dLott, dFrac=cur_pars$dFrac, sigmaLott=cur_pars$sigmaLott, sigmaFrac=cur_pars$sigmaFrac)
-  sim_subj$subnum = cur_sub
-  twoIntsPpcAsymmLinear = rbind(twoIntsPpcAsymmLinear, sim_subj)
-}
-
-```
-
-```{r}
-sim_sanity_checks(twoIntsPpcAsymmLinear, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
-```
-
-#### Without extreme cases
-
-```{r}
-optim_out_path = paste0(cpueaters_path, 'ddModels/cluster_scripts/optim_out/fitTwoIntsnoExt_oneParamAsymmLinear/')
-
-model = "twoIntegrators_sepProbDistortion"  
-
-ddm_fit_pars = data.frame()
-
-for(i in 1:length(subnums)){
-  cur_subnum = subnums[i]
-  tmp = get_optim_out(model_=model, data_=paste0(data_prefix, cur_subnum, data_suffix), optim_out_path_=optim_out_path, iters_ = F)
-  tmp$subnum = cur_subnum
-  ddm_fit_pars = rbind.all.columns(tmp, ddm_fit_pars)
-}
-```
-
-Summarise subject parameters as a mean of the converged values from different starting points
-
-```{r}
-twoIntsEstsAsymmLinearnoExt = ddm_fit_pars %>%
-  group_by(subnum) %>%
-  summarise(dLott = mean(Param1),
-            dFrac = mean(Param2),
-            sigmaLott = mean(Param3),
-            sigmaFrac = mean(Param4))
-```
-
-Compare parameters from fits with and without the extreme cases
-
-```{r}
-twoIntsEstsAsymmLinear %>%
-  mutate(fit = "wExt") %>%
-  rbind(twoIntsEstsAsymmLinearnoExt %>% mutate(fit = "noExt")) %>%
-  gather(par, value, -subnum, -fit) %>%
-  group_by(par) %>%
-  spread(fit, value) %>%
-  ggplot(aes(noExt, wExt))+
-  geom_point()+
-  geom_abline(aes(slope=1, intercept=0), color="gray")+
-  facet_wrap(~par, scales="free")+
-  theme(panel.grid = element_blank())
-```
-
-Simulate predicted data
-
-```{r}
-twoIntsPpcAsymmLinearnoExt = data.frame()
-
-for(i in 1:length(unique(twoIntsEstsAsymmLinearnoExt$subnum))){
-  cur_sub = unique(twoIntsEstsAsymmLinearnoExt$subnum)[i]
-  cur_stims =  sub_stims_asym %>% filter(subnum == cur_sub) %>% filter(probFractalDraw != 0 & probFractalDraw != 1)
-  cur_pars = twoIntsEstsAsymmLinearnoExt %>% filter(subnum == cur_sub)
-  sim_subj = sim_task(cur_stims, model_name = "model2", dLott=cur_pars$dLott, dFrac=cur_pars$dFrac, sigmaLott=cur_pars$sigmaLott, sigmaFrac=cur_pars$sigmaFrac)
-  sim_subj$subnum = cur_sub
-  twoIntsPpcAsymmLinearnoExt = rbind(twoIntsPpcAsymmLinearnoExt, sim_subj)
-}
-
-```
-
-```{r}
-sim_sanity_checks(twoIntsPpcAsymmLinearnoExt, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_asym %>% filter(probFractalDraw != 0 & probFractalDraw != 1))
-```
-
-### Symm distortion
-
-#### With extreme cases
-
-```{r}
-optim_out_path = paste0(cpueaters_path, 'ddModels/cluster_scripts/optim_out/fitTwoInts_oneParamSymmLinear/')
-
-model = "twoIntegrators_sepProbDistortion"  
-
-ddm_fit_pars = data.frame()
-
-for(i in 1:length(subnums)){
-  cur_subnum = subnums[i]
-  tmp = get_optim_out(model_=model, data_=paste0(data_prefix, cur_subnum, data_suffix), optim_out_path_=optim_out_path, iters_ = F)
-  tmp$subnum = cur_subnum
-  ddm_fit_pars = rbind.all.columns(tmp, ddm_fit_pars)
-}
-```
-
-Summarise subject parameters as a mean of the converged values from different starting points
-
-```{r}
-twoIntsEstsSymmLinear = ddm_fit_pars %>%
-  group_by(subnum) %>%
-  summarise(dLott = mean(Param1),
-            dFrac = mean(Param2),
-            sigmaLott = mean(Param3),
-            sigmaFrac = mean(Param4))
-```
-
-Simulate predicted data
-
-```{r}
-twoIntsPpcSymmLinear = data.frame()
-
-for(i in 1:length(unique(twoIntsEstsSymmLinear$subnum))){
-  cur_sub = unique(twoIntsEstsSymmLinear$subnum)[i]
-  cur_stims =  sub_stims_sym %>% filter(subnum == cur_sub)
-  cur_pars = twoIntsEstsSymmLinear %>% filter(subnum == cur_sub)
-  sim_subj = sim_task(cur_stims, model_name = "model2", dLott=cur_pars$dLott, dFrac=cur_pars$dFrac, sigmaLott=cur_pars$sigmaLott, sigmaFrac=cur_pars$sigmaFrac)
-  sim_subj$subnum = cur_sub
-  twoIntsPpcSymmLinear = rbind(twoIntsPpcSymmLinear, sim_subj)
-}
-
-```
-
-```{r}
-sim_sanity_checks(twoIntsPpcSymmLinear, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_sym)
-```
-
-#### Without extreme cases
-
-```{r}
-optim_out_path = paste0(cpueaters_path, 'ddModels/cluster_scripts/optim_out/fitTwoIntsnoExt_oneParamSymmLinear/')
-
-model = "twoIntegrators_sepProbDistortion"  
-
-ddm_fit_pars = data.frame()
-
-for(i in 1:length(subnums)){
-  cur_subnum = subnums[i]
-  tmp = get_optim_out(model_=model, data_=paste0(data_prefix, cur_subnum, data_suffix), optim_out_path_=optim_out_path, iters_ = F)
-  tmp$subnum = cur_subnum
-  ddm_fit_pars = rbind.all.columns(tmp, ddm_fit_pars)
-}
-```
-
-Summarise subject parameters as a mean of the converged values from different starting points
-
-```{r}
-twoIntsEstsSymmLinearnoExt = ddm_fit_pars %>%
-  group_by(subnum) %>%
-  summarise(dLott = mean(Param1),
-            dFrac = mean(Param2),
-            sigmaLott = mean(Param3),
-            sigmaFrac = mean(Param4))
-```
-
-Compare parameters from fits with and without the extreme cases
-
-```{r}
-twoIntsEstsSymmLinear %>%
-  mutate(fit = "wExt") %>%
-  rbind(twoIntsEstsSymmLinearnoExt %>% mutate(fit = "noExt")) %>%
-  gather(par, value, -subnum, -fit) %>%
-  group_by(par) %>%
-  spread(fit, value) %>%
-  ggplot(aes(noExt, wExt))+
-  geom_point()+
-  geom_abline(aes(slope=1, intercept=0), color="gray")+
-  facet_wrap(~par, scales="free")+
-  theme(panel.grid = element_blank())
-```
-
-Simulate predicted data
-
-```{r}
-twoIntsPpcSymmLinearnoExt = data.frame()
-
-for(i in 1:length(unique(twoIntsEstsSymmLinearnoExt$subnum))){
-  cur_sub = unique(twoIntsEstsSymmLinearnoExt$subnum)[i]
-  cur_stims =  sub_stims_sym %>% filter(subnum == cur_sub) %>% filter(probFractalDraw != 0 & probFractalDraw != 1)
-  cur_pars = twoIntsEstsSymmLinearnoExt %>% filter(subnum == cur_sub)
-  sim_subj = sim_task(cur_stims, model_name = "model2", dLott=cur_pars$dLott, dFrac=cur_pars$dFrac, sigmaLott=cur_pars$sigmaLott, sigmaFrac=cur_pars$sigmaFrac)
-  sim_subj$subnum = cur_sub
-  twoIntsPpcSymmLinearnoExt = rbind(twoIntsPpcSymmLinearnoExt, sim_subj)
-}
-
-```
-
-```{r}
-sim_sanity_checks(twoIntsPpcSymmLinearnoExt, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_sym %>% filter(probFractalDraw != 0 & probFractalDraw != 1))
-```
-
-
-## Three integrators
-
-Estimated drift rates are an order of magnitude larger than those needed to replicate patterns in the true data.
 
 
 

@@ -207,6 +207,7 @@ oneIntEstsAsymmLinear %>%
   facet_wrap(~par, scales="free")+
   theme(panel.grid = element_blank())
 ```
+
 ### Symm distortion
 
 #### With extreme cases
@@ -347,6 +348,45 @@ twoIntsEstsAsymmLinear = ddm_fit_pars %>%
             dFrac = mean(Param2),
             sigmaLott = mean(Param3),
             sigmaFrac = mean(Param4))
+```
+
+```{r fig.width=10, fig.height=2}
+oneIntEstsAsymmLinear %>%
+  select(subnum, d) %>%
+  gather(key, value, -subnum) %>%
+  rbind(twoIntsEstsAsymmLinear %>%
+          select(subnum, dLott, dFrac) %>%
+          gather(key, value, -subnum)) %>%
+  ggplot(aes(value, fill=key))+
+  geom_histogram(bins=20, position="identity", alpha=.3)+
+  facet_wrap(~key, scales="free")+
+  theme(panel.grid = element_blank(),
+        legend.position = "none",
+        strip.text = element_text(size=14),
+        axis.text = element_text(size=14),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())+
+  labs(x="", y="")
+```
+
+
+```{r fig.width=10, fig.height=2}
+oneIntEstsAsymmLinear %>%
+  select(subnum, sigma) %>%
+  gather(key, value, -subnum) %>%
+  rbind(twoIntsEstsAsymmLinear %>%
+          select(subnum, sigmaLott, sigmaFrac) %>%
+          gather(key, value, -subnum)) %>%
+  ggplot(aes(value, fill=key))+
+  geom_histogram(bins=20, position="identity", alpha=.3)+
+  facet_wrap(~key, scales="free")+
+  theme(panel.grid = element_blank(),
+        legend.position = "none",
+        strip.text = element_text(size=14),
+        axis.text = element_text(size=14),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())+
+  labs(x="", y="")
 ```
 
 Simulate predicted data

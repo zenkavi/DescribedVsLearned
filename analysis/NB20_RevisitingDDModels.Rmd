@@ -143,9 +143,6 @@ sim_sanity_checks(m1, checks=c(1,3,4), compare_logits = TRUE)
 
 ```{r}
 source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_oneIntegrator_sepProbDistortion_earlyIntegration.R'))
-```
-
-```{r}
 sim_trial_list = list()
 sim_trial_list[['model1a']] = sim_trial
 ```
@@ -167,23 +164,65 @@ sim_sanity_checks(m1a, checks=c(1,3,4,5), compare_logits = TRUE)
 
 ```{r}
 source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_twoIntegrators_sepProbDistortion.R'))
+sim_trial_list = list()
 sim_trial_list[['model2']] = sim_trial
 ```
 
 ```{r}
 # m2 = sim_task(sub_data, model_name = "model2", dLott=0.03, dFrac=0.06, sigmaLott = 0.03, sigmaFrac = 0.06) #nice rt patterns
-m2 = sim_task(sub_data, model_name = "model2", dLott=0.03, dFrac=0.05, sigmaLott = 0.03, sigmaFrac = 0.06)
+# m2_rt = sim_task(sub_data, model_name = "model2", dLott=0.032, dFrac=0.068, sigmaLott = 0.03, sigmaFrac = 0.06)
 # note that this parameter setting suggest slow but precise value integration for the lotteries versus fast but noisy value integration for the fractals
-```
-
-
-```{r}
-sim_sanity_checks(m2, checks=c(1,3,4,5), compare_logits = TRUE)
+# sim_sanity_checks(m2_rt, checks=c(1,4,5), compare_logits = TRUE)
 ```
 
 ```{r}
-clean_beh_data %>%
-  
+# m2_lg = sim_task(sub_data, model_name = "model2", dLott=0.02, dFrac=0.03, sigmaLott = 0.06, sigmaFrac = 0.06)
+# sim_sanity_checks(m2_lg, checks=c(1,4,5), compare_logits = TRUE)
+```
+
+```{r}
+m2_11 = sim_task(sub_data, model_name = "model2", dLott=0.022, dFrac=0.022, sigmaLott = 0.06, sigmaFrac = 0.06)
+sim_sanity_checks(m2_11, checks=c(1,4,5), compare_logits = TRUE)
+```
+
+```{r}
+m2_12 = sim_task(sub_data, model_name = "model2", dLott=0.044, dFrac=0.022, sigmaLott = 0.06, sigmaFrac = 0.06)
+sim_sanity_checks(m2_12, checks=c(1,4,5), compare_logits = TRUE)
+```
+
+```{r}
+m2_13 = sim_task(sub_data, model_name = "model2", dLott=0.022, dFrac=0.044, sigmaLott = 0.06, sigmaFrac = 0.06)
+sim_sanity_checks(m2_13, checks=c(1,4,5), compare_logits = TRUE)
+```
+ 
+```{r}
+m2_21 = sim_task(sub_data, model_name = "model2", dLott=0.022, dFrac=0.022, sigmaLott = 0.06, sigmaFrac = 0.08)
+sim_sanity_checks(m2_21, checks=c(1,4,5), compare_logits = TRUE)
+```
+
+```{r}
+m2_22 = sim_task(sub_data, model_name = "model2", dLott=0.044, dFrac=0.022, sigmaLott = 0.06, sigmaFrac = 0.08)
+sim_sanity_checks(m2_22, checks=c(1,4,5), compare_logits = TRUE)
+```
+
+```{r}
+m2_23 = sim_task(sub_data, model_name = "model2", dLott=0.022, dFrac=0.044, sigmaLott = 0.06, sigmaFrac = 0.08)
+sim_sanity_checks(m2_13, checks=c(1,4,5), compare_logits = TRUE)
+```
+
+```{r}
+m2_31 = sim_task(sub_data, model_name = "model2", dLott=0.022, dFrac=0.022, sigmaLott = 0.08, sigmaFrac = 0.06)
+sim_sanity_checks(m2_21, checks=c(1,4,5), compare_logits = TRUE)
+```
+
+```{r}
+m2_32 = sim_task(sub_data, model_name = "model2", dLott=0.044, dFrac=0.022, sigmaLott = 0.08, sigmaFrac = 0.06)
+sim_sanity_checks(m2_22, checks=c(1,4,5), compare_logits = TRUE)
+```
+
+```{r}
+m2_33 = sim_task(sub_data, model_name = "model2", dLott=0.022, dFrac=0.044, sigmaLott = 0.08, sigmaFrac = 0.06)
+sim_sanity_checks(m2_13, checks=c(1,4,5), compare_logits = TRUE)
 ```
 
 Test fitting function

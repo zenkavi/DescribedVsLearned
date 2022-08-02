@@ -2,9 +2,11 @@ library(broom)
 library(here)
 sem <- function(x) {sd(x, na.rm=T) / sqrt(length(x))}
 
-sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE, compare_logits = FALSE, true_data = sub_data, yrange_lim = 25, scale_logits=F){
+sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE, compare_logits = FALSE, true_data = sub_data, yrange_lim = 25, scale_logits=F, return_plot=F, logit_facets = T){
   
-  fig_out_path = paste0(here(), '/outputs/fig/')
+  if(return_plot){
+    plots = list()
+  }
   
   if("choiceLeft" %in% names(true_data)){
     true_data = true_data %>%
@@ -63,7 +65,13 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       geom_smooth(formula = 'y~x', method = "glm", method.args = list(family=binomial), fullrange=TRUE, alpha=.1)+
       facet_grid(key ~ probFractalDraw)+
       theme(panel.grid = element_blank())
-    print(p)
+    
+    
+    if(return_plot){
+      plots[[length(plots)+1]]=p
+    } else{
+      print(p)
+    }
   }
   
   
@@ -91,7 +99,11 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
         theme(panel.grid = element_blank())
     }
     
-    print(p)
+    if(return_plot){
+      plots[[length(plots)+1]]=p
+    } else{
+      print(p)
+    }
   }
   
   
@@ -130,7 +142,11 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
         theme(panel.grid = element_blank())+
         labs(y="Mean Log RT", x="p(Fractal)")
     }
-    print(p)
+    if(return_plot){
+      plots[[length(plots)+1]]=p
+    } else{
+      print(p)
+    }
   }
   
   # Check 5: Logit slopes
@@ -201,17 +217,35 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
         select(probFractalDraw, term, estimate, std.error)%>%
         mutate(data_type = "true")
       
-      p = tmp %>%
-        rbind(tmp_true) %>%
-        ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
-        geom_point()+
-        geom_line()+
-        geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
-        geom_hline(aes(yintercept=0), linetype="dashed")+
-        facet_wrap(~data_type)+
-        scale_color_manual(values = cbbPalette[2:1])+
-        theme(legend.position = "bottom", panel.grid = element_blank())+
-        labs(y="Beta Estimate", x="p(Fractal)")
+      if(logit_facets){
+        p = tmp %>%
+          rbind(tmp_true) %>%
+          ggplot(aes(probFractalDraw, estimate, col=term, group=term))+
+          geom_point()+
+          geom_line()+
+          geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
+          geom_hline(aes(yintercept=0), linetype="dashed")+
+          facet_wrap(~data_type)+
+          scale_color_manual(values = cbbPalette[2:1])+
+          theme(legend.position = "bottom", panel.grid = element_blank())+
+          labs(y="Beta Estimate", x="p(Fractal)")
+      } else{
+        p = tmp %>%
+          rbind(tmp_true) %>%
+          mutate(line_group = paste0(term,data_type)) %>%
+          ggplot(aes(probFractalDraw, estimate, col=term, group=line_group, alpha=data_type))+
+          geom_point()+
+          geom_line()+
+          geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2)+
+          geom_hline(aes(yintercept=0), linetype="dashed")+
+          # facet_wrap(~data_type)+
+          scale_color_manual(values = cbbPalette[2:1])+
+          scale_alpha_manual(values = c(1, .3), guide="none")+
+          theme(legend.position = "bottom", panel.grid = element_blank())+
+          labs(y="Beta Estimate", x="p(Fractal)")
+      }
+      
+      
       
     } 
     
@@ -221,7 +255,11 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
       p = p+ylim(-5, yrange_lim)
     }
     
-    print(p)
+    if(return_plot){
+      plots[[length(plots)+1]]=p
+    } else{
+      print(p)
+    }
   }
   
   # Check 6: EV difference effect on RT
@@ -270,7 +308,11 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
         guides(shape="none", alpha="none")
     }
     
-    print(p)
+    if(return_plot){
+      plots[[length(plots)+1]]=p
+    } else{
+      print(p)
+    }
   }
   
   # Check 7: QV difference effect on RT
@@ -321,7 +363,11 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
         guides(shape="none", alpha="none")
     }
     
-    print(p)
+    if(return_plot){
+      plots[[length(plots)+1]]=p
+    } else{
+      print(p)
+    }
     
   }
   
@@ -386,8 +432,16 @@ sim_sanity_checks = function(sim_data, checks = c(1,2,3,4,5), compare_rts = TRUE
         guides(shape="none", alpha="none")
     }
     
-    print(p)
+    if(return_plot){
+      plots[[length(plots)+1]]=p
+    } else{
+      print(p)
+    }
     
+  }
+  
+  if(return_plot){
+    return(plots)
   }
   
 }

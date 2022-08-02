@@ -22,6 +22,7 @@ source(paste0(helpers_path,'01_clean_behavioral_data.R'))
 source(paste0(helpers_path, 'get_qvals.R'))
 source(paste0(helpers_path,'optimPostProcess/sim_sanity_checks.R'))
 
+fig_out_path = paste0(here(), '/outputs/fig/')
 
 set.seed(38573)
 ```
@@ -182,47 +183,74 @@ sim_trial_list[['model2']] = sim_trial
 
 ```{r}
 m2_11 = sim_task(sub_data, model_name = "model2", dLott=0.022, dFrac=0.022, sigmaLott = 0.06, sigmaFrac = 0.06)
-sim_sanity_checks(m2_11, checks=c(1,4,5), compare_logits = TRUE)
 ```
 
 ```{r}
 m2_12 = sim_task(sub_data, model_name = "model2", dLott=0.044, dFrac=0.022, sigmaLott = 0.06, sigmaFrac = 0.06)
-sim_sanity_checks(m2_12, checks=c(1,4,5), compare_logits = TRUE)
 ```
 
 ```{r}
 m2_13 = sim_task(sub_data, model_name = "model2", dLott=0.022, dFrac=0.044, sigmaLott = 0.06, sigmaFrac = 0.06)
-sim_sanity_checks(m2_13, checks=c(1,4,5), compare_logits = TRUE)
 ```
  
 ```{r}
 m2_21 = sim_task(sub_data, model_name = "model2", dLott=0.022, dFrac=0.022, sigmaLott = 0.06, sigmaFrac = 0.08)
-sim_sanity_checks(m2_21, checks=c(1,4,5), compare_logits = TRUE)
 ```
 
 ```{r}
 m2_22 = sim_task(sub_data, model_name = "model2", dLott=0.044, dFrac=0.022, sigmaLott = 0.06, sigmaFrac = 0.08)
-sim_sanity_checks(m2_22, checks=c(1,4,5), compare_logits = TRUE)
 ```
 
 ```{r}
 m2_23 = sim_task(sub_data, model_name = "model2", dLott=0.022, dFrac=0.044, sigmaLott = 0.06, sigmaFrac = 0.08)
-sim_sanity_checks(m2_13, checks=c(1,4,5), compare_logits = TRUE)
 ```
 
 ```{r}
 m2_31 = sim_task(sub_data, model_name = "model2", dLott=0.022, dFrac=0.022, sigmaLott = 0.08, sigmaFrac = 0.06)
-sim_sanity_checks(m2_21, checks=c(1,4,5), compare_logits = TRUE)
 ```
 
 ```{r}
 m2_32 = sim_task(sub_data, model_name = "model2", dLott=0.044, dFrac=0.022, sigmaLott = 0.08, sigmaFrac = 0.06)
-sim_sanity_checks(m2_22, checks=c(1,4,5), compare_logits = TRUE)
 ```
 
 ```{r}
 m2_33 = sim_task(sub_data, model_name = "model2", dLott=0.022, dFrac=0.044, sigmaLott = 0.08, sigmaFrac = 0.06)
-sim_sanity_checks(m2_13, checks=c(1,4,5), compare_logits = TRUE)
+```
+
+
+```{r}
+datasets = list(m2_11, m2_12, m2_13, m2_21, m2_22, m2_23, m2_31, m2_32, m2_33)
+
+rt_plots = list()
+logit_plots = list()
+
+for(i in 1:length(datasets)){
+  cur_data = datasets[[i]]
+  cur_dFrac = unique(cur_data$dFrac)
+  cur_dLott = unique(cur_data$dLott)
+  cur_sigmaFrac = unique(cur_data$sigmaFrac)
+  cur_sigmaLott = unique(cur_data$sigmaLott)
+  
+  annot = paste0("dFrac = ", cur_dFrac, ", dLott = ", cur_dLott,
+                   "\nsigmaFrac = ", cur_sigmaFrac,", sigmaLott = ", cur_sigmaLott)
+
+  cur_plots = sim_sanity_checks(cur_data, checks=c(4,5), return_plot = T, logit_facets = F, compare_logits = T)
+  
+  rt_plots[[i]] = cur_plots[[1]]+labs(title=annot)+theme(title = element_text(size=9), legend.position = "none")
+  
+  logit_plots[[i]] = cur_plots[[2]]+labs(title=annot)+theme(title = element_text(size=9), legend.position = "none")
+  
+}
+
+
+```
+
+```{r}
+g = gridExtra::marrangeGrob(grobs = rt_plots, nrow=3, ncol=3, top="")
+ggsave(file=paste0(fig_out_path, 'twoIntDemoRtPlots.png'), g, height = 8, width=11, units="in")
+
+g = gridExtra::marrangeGrob(grobs = logit_plots, nrow=3, ncol=3, top="")
+ggsave(file=paste0(fig_out_path, 'twoIntDemoLogitPlots.png'), g, height = 8, width=11, units="in")
 ```
 
 Test fitting function

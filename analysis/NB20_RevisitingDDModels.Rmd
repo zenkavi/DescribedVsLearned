@@ -151,13 +151,17 @@ sim_trial_list[['model1a']] = sim_trial
 ### Demo
 
 ```{r}
-m1a = sim_task(sub_data, model_name = "model1a", d=0.04, sigma = 0.04, stimDelay = 600)
+m1a = sim_task(sub_data, model_name = "model1a", d=0.03, sigma = 0.066, stimDelay = 180)
 ```
 
 ```{r}
 sim_sanity_checks(m1a, checks=c(1,3,4,5), compare_logits = TRUE)
 ```
 
+```{r}
+m1a2 = sim_task(sub_data, model_name = "model1a", d=0.033, sigma = 0.06, stimDelay = 300)
+sim_sanity_checks(m1a2, checks=c(1,3,4,5), compare_logits = TRUE)
+```
 
 ## Two integrators
 

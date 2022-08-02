@@ -663,6 +663,66 @@ ggsave(file=paste0(fig_out_path, 'labmeet_oneInt_demo_driftdist_shaded2.jpg'), p
 p 
 ```
 
+## Demo 1 integrator with bias DDM
+
+```{r}
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_oneIntegrator_sepProbDistortion_earlyIntegration.R'))
+```
+
+```{r}
+demo_plots = list()
+
+pFrac_vals = seq(0,1,.1)
+
+for (i in 1:length(pFrac_vals)){
+  
+  pFrac = pFrac_vals[i]
+  theta = .4
+  EVRight = .5
+  EVLeft = .9
+  distortedEVDiff = (1-pFrac)*(EVLeft-EVRight)
+  QVLeft = .1
+  QVRight = .4
+  distortedQVDiff = theta*pFrac*(QVLeft-QVRight)
+  VLeft = theta*pFrac*(QVLeft) + (1-pFrac)*(EVLeft)
+  VRight = theta*pFrac*(QVRight) + (1-pFrac)*(EVRight)
+  stimDelay = 800
+  
+  tmp = sim_trial(d = .03, sigma = .06, distortedEVDiff = distortedEVDiff, distortedQVDiff = distortedQVDiff, probFractalDraw = pFrac, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE, stimDelay = stimDelay)
+  
+  annot_top = paste0("EVLeft = ", round(EVLeft, 3), ", EVRight = ", round(EVRight, 3), 
+                     "\nQVLeft = ", round(QVLeft, 3),", QVRight = ", round(QVRight, 3),
+                     "\nVLeft = ", round(VLeft, 3),", VRight = ", round(VRight, 3),
+                     "\np(Fractal) = ", round(pFrac, 3),", theta = ", round(theta, 3),
+                     "\nd = ", round(tmp$out$d, 3),", sigma = ", round(tmp$out$sigma, 3),
+                     "\nchoice = ", tmp$out$choice, ", stimDelay = ", stimDelay)
+  
+  demo_plots[[i]] = tmp$debug_df %>%
+    drop_na()%>%
+    select(RDV, time) %>%
+    gather(key, value, -time) %>%
+    ggplot(aes(time, value, color=key))+
+    # geom_point()+
+    geom_line(size=2)+
+    geom_hline(aes(yintercept=1))+
+    geom_hline(aes(yintercept=-1))+
+    geom_hline(aes(yintercept=0), linetype="dashed")+
+    geom_vline(aes(xintercept=0))+
+    theme(legend.position = "none",
+          panel.grid = element_blank())+
+    labs(color="", x = "Timestep (in 10 ms)", y="RDV")+
+    annotate(geom="text", x=5, y = .6, label = annot_top, hjust=0, size=2)
+  }
+
+
+```
+
+
+```{r}
+g = gridExtra::marrangeGrob(grobs = demo_plots, nrow=3, ncol=3)
+ggsave(file=paste0(fig_out_path, 'oneIntEarlyIntDemoRtPlots.pdf'), g, height = 8, width=11, units="in")
+```
+
 ## Demo 2 integrator DDM
 
 ```{r}

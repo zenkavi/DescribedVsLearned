@@ -44,13 +44,19 @@ sim_trial = function(d, sigma, barrierDecay=0, barrier=1, nonDecisionTime=0, bia
   # Integration before stimulus presentation if fractal is more relevant
   stimDelayIters = round(stimDelay/timeStep)
   elapsedEarlyInt = 0
-  # earlyIntMu = d*distortedQVDiff
-  earlyIntMu = d*distortedQVDiff*probFractalDraw
+  earlyIntMu = d*(QVLeft-QVRight)
+  # earlyIntMu = d*distortedQVDiff*probFractalDraw
   while(elapsedEarlyInt<stimDelayIters){
-    # if (probFractalDraw>.5){
+    if (probFractalDraw>.5){
     RDV = RDV + rnorm(1, earlyIntMu, sigma)
-    # }
+    }
     elapsedEarlyInt = elapsedEarlyInt + 1
+    
+    if(debug){
+      debug_row = data.frame(time = -1*(stimDelayIters-elapsedEarlyInt), mu_mean = earlyIntMu, mu = earlyIntMu, RDV = round(RDV, 3), barrier = round(barrier[time], 3))
+      debug_df = rbind(debug_df, debug_row)
+    }
+    
   }
   
   

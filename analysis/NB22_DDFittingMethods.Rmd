@@ -26,23 +26,33 @@ source(paste0(helpers_path,'optimPostProcess/sim_sanity_checks.R'))
 set.seed(38573)
 ```
 
-# Recovery checks
+# States-space method
 
-## States-space method
-
-See `NB21_LabMeetingFigures.Rmd` for demo figures.
-
-Using Gabi's discrete time and state-space method  
-
-**Why might this not have been used previously? Some ideas:**    
-**The boundary in traditional DDM is not fixed at 1 and -1. Instead it is a parameter. It's not immediately apparent to me how to use the sum of random variables approach without assuming the boundaries at 1 and -1.**  
-**The traditional DDM often models the whole of a response time distribution for correct vs incorrect.**  
-
-## One integrator
+Using one integrator model to demo how the likelihood is computed in the state-space method
 
 ```{r}
 source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_oneIntegrator_sepProbDistortion.R'))
 ```
+
+See `NB21_LabMeetingFigures.Rmd` for demo figures.
+
+## Particles
+
+Grid of number of particles in each state at each time point
+
+## Probability
+
+Grid of probability of being in each state at each time point
+
+
+## Multiple integrators
+
+Start with particles
+
+Visualize Antonio's suggestion of a 2D state space
+
+
+----------------------------------------------------------------------------------------------------
 
 ### Same trial
 
@@ -149,3 +159,4 @@ recovery_df %>%
   ggplot(aes(test_d, test_sigma, fill=nll))+
   geom_tile()
 ```
+

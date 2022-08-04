@@ -688,7 +688,7 @@ for (i in 1:length(pFrac_vals)){
   VRight = theta*pFrac*(QVRight) + (1-pFrac)*(EVRight)
   stimDelay = 800
   
-  tmp = sim_trial(d = .03, sigma = .06, distortedEVDiff = distortedEVDiff, distortedQVDiff = distortedQVDiff, probFractalDraw = pFrac, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE, stimDelay = stimDelay)
+  tmp = sim_trial(d = .03, sigma = .06, distortedEVDiff = distortedEVDiff, distortedQVDiff = distortedQVDiff, probFractalDraw = pFrac, barrierDecay = 0, bias = 0, EVLeft = EVLeft, EVRight = EVRight, QVLeft = QVLeft, QVRight = QVRight, debug=TRUE, stimDelay = stimDelay)
   
   annot_top = paste0("EVLeft = ", round(EVLeft, 3), ", EVRight = ", round(EVRight, 3), 
                      "\nQVLeft = ", round(QVLeft, 3),", QVRight = ", round(QVRight, 3),
@@ -711,7 +711,7 @@ for (i in 1:length(pFrac_vals)){
     theme(legend.position = "none",
           panel.grid = element_blank())+
     labs(color="", x = "Timestep (in 10 ms)", y="RDV")+
-    annotate(geom="text", x=5, y = .6, label = annot_top, hjust=0, size=2)
+    annotate(geom="text", x=-50, y = .6, label = annot_top, hjust=0, size=2)
   }
 
 

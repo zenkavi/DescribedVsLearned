@@ -104,7 +104,10 @@ if(num_optim_rounds>1){
 if(num_optim_rounds == 1){
   optim_out = optim_save(par = start_vals, get_task_nll, data_= data, par_names_ = par_names, model_name_ = model, fix_pars_ = fix_pars, control = list(maxit=max_iter))
 
-  optim_out$par$loglik = optim_out$iter$Result[nrow(optim_out$iter)]
+  optim_out$par = data.frame(vals = optim_out$par)
+  optim_out$par$par_names = par_names
+  optim_out$par = optim_out$par %>% spread(par_names, vals)
+  optim_out$par$loglik = optim_out$iterations_df$Result[nrow(optim_out$iterations_df)]
 
   # This is too specific for two round only and fixing d and sigma together. Should extend to make more general.
 } else if (num_optim_rounds == 2){

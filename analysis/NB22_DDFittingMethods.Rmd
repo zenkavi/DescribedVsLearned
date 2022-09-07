@@ -26,6 +26,34 @@ source(paste0(helpers_path,'optimPostProcess/sim_sanity_checks.R'))
 set.seed(38573)
 ```
 
+```{r message=FALSE, warning=FALSE}
+source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamSymmLinearProbDistortion_rpeBoth.R'))
+
+clean_beh_data_symmnonorm = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = mean(value), .groups='keep') %>%
+  spread(par, est) %>%
+  left_join(clean_beh_data, by='subnum')
+
+## Add Q values of fractals to each trial
+clean_beh_data_symmnonorm = clean_beh_data_symmnonorm %>%
+  group_by(subnum) %>%
+  do(get_qvals(., model_name="rpeBoth")) %>%
+  ungroup()
+
+clean_beh_data_symmnonorm = clean_beh_data_symmnonorm %>%
+  mutate(rightLotteryEV = referenceProb * referenceValue,
+         leftLotteryEV = lotteryValue * lotteryProb,
+         lottery_ev_diff = leftLotteryEV - rightLotteryEV,
+         fractal_qv_diff = leftQValue - rightQValue,
+         distorted_ev_diff = (1-(theta*probFractalDraw))*lottery_ev_diff, #Symm distortion
+         distorted_qv_diff = theta*probFractalDraw*fractal_qv_diff)
+
+rm(fit, g_par_ests, par_ests)
+
+
+```
+
 # States-space method
 
 Using one integrator model to demo how the likelihood is computed in the state-space method
@@ -168,6 +196,8 @@ recovery_df %>%
 
 ```{r}
 source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_twoIntegrators_sepProbDistortion.R'))
+fit_trial_list = list(model2 = fit_trial)
+sim_trial_list = list(model2 = sim_trial)
 ```
 
 ### Same trial
@@ -196,24 +226,17 @@ get_task_nll(data_ = sim_data, par = c(.03, .05, .03, .06), par_names_ = c("dLot
 ```
 
 ```{r}
-get_task_nll(data_ = sim_data, par = c(.01, .01, .01, .01), par_names_ = c("dLott", "dFrac", "sigmaLott", "sigmaFrac"), model_name = "model2", fix_pars_ = list())
-```
+d_range = seq(.01, .1, .02)
 
-```{r}
-fit_trial_list = list(model2 = fit_trial)
-
-d_range = seq(.01, .1, .01)
-sigma_range = seq(.01, .1, .01)
-
-recovery_df = data.frame(test_d = NA, test_sigma = NA, nll = NA)
+recovery_df = data.frame(test_dLott = NA, test_dFrac = NA, nll = NA)
 
 for(i in 1:length(d_range)){
-  for(j in 1:length(sigma_range)){
-    test_d = d_range[i]
-    test_sigma = sigma_range[j]
-    test_nll = get_task_nll(data_ = sim_data, par = c(test_d, test_sigma), par_names_ = c("dLott", "dFrac", "sigmaLott", "sigmaFrac"), model_name = "model2", fix_pars_ = list())
+  for(j in 1:length(d_range)){
+    test_dFrac = d_range[i]
+    test_dLott = d_range[j]
+    test_nll = get_task_nll(data_ = sim_data, par = c(test_dLott, test_dFrac, sigmaLott, sigmaFrac), par_names_ = c("dLott", "dFrac", "sigmaLott", "sigmaFrac"), model_name = "model2", fix_pars_ = list())
     recovery_df = rbind(recovery_df,
-                        data.frame(test_d = test_d, test_sigma = test_sigma, nll = test_nll))
+                        data.frame(test_dLott = test_dLott, test_dFrac = test_dFrac, nll = test_nll))
     
   }
 }
@@ -223,30 +246,47 @@ recovery_df = recovery_df %>% drop_na()
 
 ```{r}
 recovery_df %>%
-  mutate(test_d = as.factor(test_d),
-         test_sigma = as.factor(test_sigma)) %>%
-  ggplot(aes(test_d, test_sigma, fill=nll))+
-  geom_tile()
+  mutate(test_dLott = as.factor(test_dLott),
+         test_dFrac = as.factor(test_dFrac)) %>%
+  ggplot(aes(test_dLott, test_dFrac, fill=nll))+
+  geom_tile()+
+  labs(title = paste0('dLott = ', dLott, ', dFrac = ', dFrac))
+```
 
-#Zoom in
+```{r}
+sigma_range = seq(.01, .1, .02)
+
+recovery_df = data.frame(test_sigmaLott = NA, test_sigmaFrac = NA, nll = NA)
+
+for(i in 1:length(sigma_range)){
+  for(j in 1:length(sigma_range)){
+    test_sigmaFrac = sigma_range[i]
+    test_sigmaLott = sigma_range[j]
+    test_nll = get_task_nll(data_ = sim_data, par = c(dLott, dFrac, test_sigmaLott, test_sigmaFrac), par_names_ = c("dLott", "dFrac", "sigmaLott", "sigmaFrac"), model_name = "model2", fix_pars_ = list())
+    recovery_df = rbind(recovery_df,
+                        data.frame(test_sigmaLott = test_sigmaLott, test_sigmaFrac = test_sigmaFrac, nll = test_nll))
+    
+  }
+}
+recovery_df = recovery_df %>% drop_na()
+```
+
+
+```{r}
 recovery_df %>%
-  filter(test_sigma>.04 & test_d < .06)%>%
-  mutate(test_d = as.factor(test_d),
-         test_sigma = as.factor(test_sigma)) %>%
-  ggplot(aes(test_d, test_sigma, fill=nll))+
-  geom_tile()
+  # filter(test_sigmaLott > .01 & test_sigmaFrac > .03) %>%
+  mutate(test_sigmaLott = as.factor(test_sigmaLott),
+         test_sigmaFrac = as.factor(test_sigmaFrac)) %>%
+  ggplot(aes(test_sigmaLott, test_sigmaFrac, fill=nll))+
+  geom_tile()+
+  labs(title = paste0('sigmaLott = ', sigmaLott, ', sigmaFrac = ', sigmaFrac))
 ```
 
 ### Different trials (~single subject)
 
 ```{r}
-sim_trial_list = list()
-sim_trial_list[['model2']] = sim_trial
-```
-
-```{r}
 n_trials = 300
-stimuli = clean_beh_data[1:n_trials,] %>%
+stimuli = clean_beh_data_symmnonorm[1:n_trials,] %>%
   select(leftLotteryEV, rightLotteryEV, leftQValue, rightQValue, probFractalDraw, reactionTime, choiceLeft, subnum, distorted_ev_diff, distorted_qv_diff) %>%
   rename(EVLeft = leftLotteryEV, EVRight = rightLotteryEV, QVLeft = leftQValue, QVRight = rightQValue, distortedEVDiff = distorted_ev_diff, distortedQVDiff = distorted_qv_diff)
 sim_subj = sim_task(stimuli, model_name = "model2", dLott=dLott, dFrac = dFrac, sigmaLott=sigmaLott, sigmaFrac = sigmaFrac)
@@ -255,36 +295,56 @@ sim_subj = sim_task(stimuli, model_name = "model2", dLott=dLott, dFrac = dFrac, 
 
 ```{r}
 d_range = seq(.01, .1, .02)
-sigma_range = seq(.01, .1, .02)
 
-recovery_df = data.frame(test_d = NA, test_sigma = NA, nll = NA)
+recovery_df = data.frame(test_dLott = NA, test_dFrac = NA, nll = NA)
 
 for(i in 1:length(d_range)){
-  for(j in 1:length(sigma_range)){
-    test_d = d_range[i]
-    test_sigma = sigma_range[j]
-    test_nll = get_task_nll(data_ = sim_subj, par = c(test_d, test_sigma), par_names_ = c("d", "sigma"), model_name = "model1", fix_pars_ = list())
+  for(j in 1:length(d_range)){
+    test_dFrac = d_range[i]
+    test_dLott = d_range[j]
+    test_nll = get_task_nll(data_ = sim_subj, par = c(test_dLott, test_dFrac, sigmaLott, sigmaFrac), par_names_ = c("dLott", "dFrac", "sigmaLott", "sigmaFrac"), model_name = "model2", fix_pars_ = list())
     recovery_df = rbind(recovery_df,
-                        data.frame(test_d = test_d, test_sigma = test_sigma, nll = test_nll))
+                        data.frame(test_dLott = test_dLott, test_dFrac = test_dFrac, nll = test_nll))
     
   }
 }
 recovery_df = recovery_df %>% drop_na()
-
 ```
 
 ```{r}
 recovery_df %>%
-  mutate(test_d = as.factor(test_d),
-         test_sigma = as.factor(test_sigma)) %>%
-  ggplot(aes(test_d, test_sigma, fill=nll))+
-  geom_tile()
-
-recovery_df %>%
-  filter(test_sigma > .03) %>%
-  mutate(test_d = as.factor(test_d),
-         test_sigma = as.factor(test_sigma)) %>%
-  ggplot(aes(test_d, test_sigma, fill=nll))+
-  geom_tile()
+  mutate(test_dLott = as.factor(test_dLott),
+         test_dFrac = as.factor(test_dFrac)) %>%
+  ggplot(aes(test_dLott, test_dFrac, fill=nll))+
+  geom_tile()+
+  labs(title = paste0('dLott = ', dLott, ', dFrac = ', dFrac))
 ```
 
+```{r}
+sigma_range = seq(.01, .1, .02)
+
+recovery_df = data.frame(test_sigmaLott = NA, test_sigmaFrac = NA, nll = NA)
+
+for(i in 1:length(sigma_range)){
+  for(j in 1:length(sigma_range)){
+    test_sigmaFrac = sigma_range[i]
+    test_sigmaLott = sigma_range[j]
+    test_nll = get_task_nll(data_ = sim_subj, par = c(dLott, dFrac, test_sigmaLott, test_sigmaFrac), par_names_ = c("dLott", "dFrac", "sigmaLott", "sigmaFrac"), model_name = "model2", fix_pars_ = list())
+    recovery_df = rbind(recovery_df,
+                        data.frame(test_sigmaLott = test_sigmaLott, test_sigmaFrac = test_sigmaFrac, nll = test_nll))
+    
+  }
+}
+recovery_df = recovery_df %>% drop_na()
+```
+
+
+```{r}
+recovery_df %>%
+  # filter(test_sigmaLott > .01 & test_sigmaFrac > .03) %>%
+  mutate(test_sigmaLott = as.factor(test_sigmaLott),
+         test_sigmaFrac = as.factor(test_sigmaFrac)) %>%
+  ggplot(aes(test_sigmaLott, test_sigmaFrac, fill=nll))+
+  geom_tile()+
+  labs(title = paste0('sigmaLott = ', sigmaLott, ', sigmaFrac = ', sigmaFrac))
+```

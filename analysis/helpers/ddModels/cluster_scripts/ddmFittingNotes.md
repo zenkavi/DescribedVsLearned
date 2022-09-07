@@ -3,13 +3,17 @@
 ```
 docker run --rm -it -v $DATA_PATH:/ddModels zenkavi/roptim:0.0.4 bash
 
-Rscript --vanilla /ddModels/cluster_scripts/ddm_Roptim.R --model oneIntegrator_sepProbDistortion --start_vals=0.353243110299734,0.550765508242755 --data=sub_data_distV_noExt/sub01_data --par_names=d,sigma --out_path=fitOneIntnoExt --num_optim_rounds 1 --fix_par_names=none --fix_par_vals none
+Rscript --vanilla /ddModels/cluster_scripts/ddm_Roptim.R --model oneIntegrator_sepProbDistortion --start_vals=0.353243110299734,0.550765508242755 --data=sub_data_oneParamAsymmLinear/sub01_data --par_names=d,sigma --out_path=fitOneInt_oneParamAsymmLinear --num_optim_rounds 1 --fix_par_names=none --fix_par_vals none
+
+Rscript --vanilla /ddModels/cluster_scripts/ddm_Roptim.R --model twoIntegrators_sepProbDistortion --start_vals=0.932282596703016,0.0299321074307384,0.957637683131231,0.196293133611851 --data=sub_data_oneParamAsymmLinear/sub01_data --par_names=dLott,dFrac,sigmaLott,sigmaFrac --out_path=fitTwoInts_oneParamAsymmLinear --num_optim_rounds 1 --fix_par_names=none --fix_par_vals none
 ```
 
 # Move files from s3 to cluster
 
 ```
 aws s3 sync s3://described-vs-experienced/ddModels/cluster_scripts/start_vals /shared/ddModels/cluster_scripts/start_vals
+
+aws s3 sync s3://described-vs-experienced/ddModels/r_ddm_models /shared/ddModels/r_ddm_models
 ```
 
 # Move files from cluster to s3

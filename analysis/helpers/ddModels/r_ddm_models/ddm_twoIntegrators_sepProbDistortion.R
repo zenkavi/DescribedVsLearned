@@ -280,15 +280,21 @@ fit_trial = function(dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay=0, barrier
   }
   
   likelihood = 0
+  
+  probNotCrossedLott = pnorm(1, mean = muLott*numTimeSteps, sd = sqrt(sigmaLott^2*numTimeSteps)) - pnorm(-1, mean = muLott*numTimeSteps, sd = sqrt(sigmaLott^2*numTimeSteps))
+  
+  probNotCrossedFrac = pnorm(1, mean = muFrac*numTimeSteps, sd = sqrt(sigmaFrac^2*numTimeSteps)) - pnorm(-1, mean = muFrac*numTimeSteps, sd = sqrt(sigmaFrac^2*numTimeSteps))
+  
+  
   if (choice == 1){ # Choice was left.
     
     # p of left is the p of either the lottery OR (+) the fractal integrator crossing the top boundary
     #... need to think about normalizing the probabilities for boundary crossing using both integrators...
-    likelihood = probUpCrossingLott[numTimeSteps] + probUpCrossingFrac[numTimeSteps]
+    likelihood = (probUpCrossingLott[numTimeSteps]*probNotCrossedFrac) + (probUpCrossingFrac[numTimeSteps]*probNotCrossedLott) + (probUpCrossingLott[numTimeSteps]*probUpCrossingFrac[numTimeSteps])
     
   } else if (choice == -1){
     
-    likelihood = probDownCrossingLott[numTimeSteps] + probDownCrossingFrac[numTimeSteps]
+    likelihood = (probDownCrossingLott[numTimeSteps]*probNotCrossedFrac) + (probDownCrossingFrac[numTimeSteps]*probNotCrossedLott)+ (probDownCrossingLott[numTimeSteps]*probDownCrossingFrac[numTimeSteps])
     
   }
   

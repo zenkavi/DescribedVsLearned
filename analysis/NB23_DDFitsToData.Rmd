@@ -445,7 +445,7 @@ sim_sanity_checks(twoIntsPpcAsymmLinear_fixSigma, checks=c(1,3,4,5,6,8), compare
 
 ```{r}
 twoIntsPpcAsymmLinear_fixSigma_fixRt = twoIntsPpcAsymmLinear_fixSigma %>%
-  mutate(reactionTime = ifelse(probFractalDraw>.5, reactionTime-(abs(log(probFractalDraw))*.5), reactionTime))
+  mutate(reactionTime = ifelse(probFractalDraw>.5, reactionTime-(probFractalDraw^8), reactionTime))
   
 
 sim_sanity_checks(twoIntsPpcAsymmLinear_fixSigma_fixRt, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)

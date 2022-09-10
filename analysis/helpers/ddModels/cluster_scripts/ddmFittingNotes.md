@@ -6,6 +6,8 @@ docker run --rm -it -v $DATA_PATH:/ddModels zenkavi/roptim:0.0.4 bash
 Rscript --vanilla /ddModels/cluster_scripts/ddm_Roptim.R --model oneIntegrator_sepProbDistortion --start_vals=0.353243110299734,0.550765508242755 --data=sub_data_oneParamAsymmLinear/sub01_data --par_names=d,sigma --out_path=fitOneInt_oneParamAsymmLinear --num_optim_rounds 1 --fix_par_names=none --fix_par_vals none
 
 Rscript --vanilla /ddModels/cluster_scripts/ddm_Roptim.R --model twoIntegrators_sepProbDistortion --start_vals=0.932282596703016,0.0299321074307384,0.957637683131231,0.196293133611851 --data=sub_data_oneParamAsymmLinear/sub01_data --par_names=dLott,dFrac,sigmaLott,sigmaFrac --out_path=fitTwoInts_oneParamAsymmLinear --num_optim_rounds 1 --fix_par_names=none --fix_par_vals none
+
+Rscript --vanilla /ddModels/cluster_scripts/ddm_Roptim.R --model twoIntegrators_sepProbDistortion --start_vals=0.932282596703016,0.0299321074307384 --data=sub_data_oneParamAsymmLinear/sub01_data --par_names=dLott,dFrac --out_path=fitTwoInts_oneParamAsymmLinear_fixSigma --num_optim_rounds 1 --fix_par_names=sigmaLott,sigmaFrac --fix_par_vals .05,.05
 ```
 
 # Move files from s3 to cluster

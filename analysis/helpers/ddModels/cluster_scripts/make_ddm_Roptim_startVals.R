@@ -5,9 +5,10 @@
 # Rscript --vanilla make_ddm_Roptim_startVals.R --n_vals 1000 --n_datasets 25 --count_start 20
 # Rscript --vanilla make_ddm_Roptim_startVals.R --n_vals 500 --n_datasets 36 --count_start 45 --par_names d,sigma,delta
 # Rscript --vanilla make_ddm_Roptim_startVals.R --n_vals 250 --n_datasets 25 --count_start 0 --par_names d,sigma,delta --fn_prefix sub_start_vals
+# Rscript --vanilla make_ddm_Roptim_startVals.R --n_vals 100 --n_datasets 25 --count_start 0 --par_names dFrac,dLott --fn_prefix sub_sv_twoInts_fixSigma
 
 # Push these back to s3
-# docker run --rm -it -v ~/.aws:/root/.aws -v $(pwd):/cluster_scripts amazon/aws-cli s3 sync /cluster_scripts s3://described-vs-experienced/ddModels/cluster_scripts 
+# docker run --rm -it -v ~/.aws:/root/.aws -v $(pwd):/start_vals amazon/aws-cli s3 sync /start_vals s3://described-vs-experienced/ddModels/cluster_scripts/start_vals 
 
 #######################
 # Setup

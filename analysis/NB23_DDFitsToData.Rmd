@@ -339,6 +339,16 @@ for(i in 1:length(subnums)){
 }
 ```
 
+```{r}
+ddm_fit_pars %>%
+  rename(dLott = Param1, dFrac = Param2, sigmaLott = Param3, sigmaFrac = Param4, nll = Param5) %>%
+  select(-nll) %>%
+  gather(key, value, -subnum) %>%
+  ggplot(aes(value))+
+  geom_histogram(bins=30, position = "identity", alpha=.5)+
+  facet_grid(subnum~key, scales="free")
+```
+
 Summarise subject parameters as a mean of the converged values from different starting points
 
 ```{r}
@@ -350,43 +360,48 @@ twoIntsEstsAsymmLinear = ddm_fit_pars %>%
             sigmaFrac = mean(Param4))
 ```
 
-```{r fig.width=10, fig.height=2}
-oneIntEstsAsymmLinear %>%
-  select(subnum, d) %>%
-  gather(key, value, -subnum) %>%
-  rbind(twoIntsEstsAsymmLinear %>%
-          select(subnum, dLott, dFrac) %>%
-          gather(key, value, -subnum)) %>%
-  ggplot(aes(value, fill=key))+
-  geom_histogram(bins=20, position="identity", alpha=.3)+
+Distributions of estimated parameters
+
+```{r}
+twoIntsEstsAsymmLinear %>%
+  select(-subnum) %>%
+  gather(key, value) %>%
+  ggplot(aes(value))+
+  geom_histogram(bins=20, alpha=.5)+
+  theme(panel.grid = element_blank())+
   facet_wrap(~key, scales="free")+
-  theme(panel.grid = element_blank(),
-        legend.position = "none",
-        strip.text = element_text(size=14),
-        axis.text = element_text(size=14),
-        axis.text.y = element_blank(),
-        axis.ticks.y = element_blank())+
   labs(x="", y="")
 ```
 
+Is there any correlation between the estimated drift rate and the noise?
 
-```{r fig.width=10, fig.height=2}
-oneIntEstsAsymmLinear %>%
-  select(subnum, sigma) %>%
+```{r}
+twoIntsEstsAsymmLinear %>%
   gather(key, value, -subnum) %>%
-  rbind(twoIntsEstsAsymmLinear %>%
-          select(subnum, sigmaLott, sigmaFrac) %>%
-          gather(key, value, -subnum)) %>%
-  ggplot(aes(value, fill=key))+
-  geom_histogram(bins=20, position="identity", alpha=.3)+
-  facet_wrap(~key, scales="free")+
-  theme(panel.grid = element_blank(),
-        legend.position = "none",
-        strip.text = element_text(size=14),
-        axis.text = element_text(size=14),
-        axis.text.y = element_blank(),
-        axis.ticks.y = element_blank())+
-  labs(x="", y="")
+  mutate(par = ifelse(grepl("sigma", key), "sigma", "d"),
+         attr= ifelse(grepl("Frac", key), "Frac", "Lott")) %>% 
+  select(-key) %>%
+  group_by(attr) %>%
+  spread(par, value) %>%
+  ggplot(aes(d, sigma)) +
+  geom_point()+
+  theme(panel.grid = element_blank())+
+  facet_wrap(~attr)
+```
+
+```{r}
+twoIntsEstsAsymmLinear %>%
+  gather(key, value, -subnum) %>%
+  mutate(par = ifelse(grepl("sigma", key), "sigma", "d"),
+         attr= ifelse(grepl("Frac", key), "Frac", "Lott")) %>% 
+  select(-key) %>%
+  group_by(par) %>%
+  spread(attr, value) %>%
+  ggplot(aes(Frac, Lott))+
+  geom_point()+
+  geom_abline(aes(slope=1, intercept=0))+
+  theme(panel.grid = element_blank())+
+  facet_wrap(~par)
 ```
 
 Simulate predicted data
@@ -407,6 +422,33 @@ for(i in 1:length(unique(twoIntsEstsAsymmLinear$subnum))){
 
 ```{r}
 sim_sanity_checks(twoIntsPpcAsymmLinear, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
+```
+Simulate predicted data fixing the noise at the same level for both attributes and a lower level than the estimate parameters
+
+```{r}
+twoIntsPpcAsymmLinear_fixSigma = data.frame()
+
+for(i in 1:length(unique(twoIntsEstsAsymmLinear$subnum))){
+  cur_sub = unique(twoIntsEstsAsymmLinear$subnum)[i]
+  cur_stims =  sub_stims_asym %>% filter(subnum == cur_sub)
+  cur_pars = twoIntsEstsAsymmLinear %>% filter(subnum == cur_sub)
+  sim_subj = sim_task(cur_stims, model_name = "model2", dLott=abs(cur_pars$dLott), dFrac=cur_pars$dFrac, sigmaLott=.05, sigmaFrac=.05)
+  sim_subj$subnum = cur_sub
+  twoIntsPpcAsymmLinear_fixSigma = rbind(twoIntsPpcAsymmLinear_fixSigma, sim_subj)
+}
+
+```
+
+```{r}
+sim_sanity_checks(twoIntsPpcAsymmLinear_fixSigma, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
+```
+
+```{r}
+twoIntsPpcAsymmLinear_fixSigma_fixRt = twoIntsPpcAsymmLinear_fixSigma %>%
+  mutate(reactionTime = ifelse(probFractalDraw>.5, reactionTime-(abs(log(probFractalDraw))*.5), reactionTime))
+  
+
+sim_sanity_checks(twoIntsPpcAsymmLinear_fixSigma_fixRt, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
 ```
 
 #### Without extreme cases
@@ -501,6 +543,19 @@ twoIntsEstsSymmLinear = ddm_fit_pars %>%
             dFrac = mean(Param2),
             sigmaLott = mean(Param3),
             sigmaFrac = mean(Param4))
+```
+
+Distributions of estimated parameters
+
+```{r}
+twoIntsEstsSymmLinear %>%
+  select(-subnum) %>%
+  gather(key, value) %>%
+  ggplot(aes(value))+
+  geom_histogram(bins=20, alpha=.5)+
+  theme(panel.grid = element_blank())+
+  facet_wrap(~key, scales="free")+
+  labs(x="", y="")
 ```
 
 Simulate predicted data

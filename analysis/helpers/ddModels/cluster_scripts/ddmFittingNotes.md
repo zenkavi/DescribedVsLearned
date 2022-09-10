@@ -19,13 +19,13 @@ aws s3 sync s3://described-vs-experienced/ddModels/r_ddm_models /shared/ddModels
 # Move files from cluster to s3
 
 ```
-aws s3 sync /shared/ddModels/cluster_scripts/optim_out/fitOneIntnoExt s3://described-vs-experienced/ddModels/cluster_scripts/optim_out/fitOneIntnoExt
+aws s3 sync /shared/ddModels/cluster_scripts/optim_out/fitTwoInts_oneParamAsymmLinear s3://described-vs-experienced/ddModels/cluster_scripts/optim_out/fitTwoInts_oneParamAsymmLinear
 ```
 
 # Move files from s3 to local (this is only converged parameter values)
 
 ```
-docker run --rm -it -v ~/.aws:/root/.aws -v $(pwd):/fitOneIntnoExt amazon/aws-cli s3 sync s3://described-vs-experienced/ddModels/cluster_scripts/optim_out/fitOneIntnoExt /fitOneIntnoExt --exclude "*" --include "*optim_par*"
+docker run --rm -it -v ~/.aws:/root/.aws -v $(pwd):/fitTwoInts_oneParamAsymmLinear amazon/aws-cli s3 sync s3://described-vs-experienced/ddModels/cluster_scripts/optim_out/fitTwoInts_oneParamAsymmLinear /fitTwoInts_oneParamAsymmLinear --exclude "*" --include "*optim_par*"
 ```
 
 # Job submission commands
@@ -49,8 +49,22 @@ sh run_ddm_Roptim.sh -m twoIntegrators_sepProbDistortion -d sub_data_oneParamSym
 ## Loop to submit for more subjects
 
 ```
-for subnum in 04 05 06 07 08 09 10
+for subnum in 03 04 05 06 07 08 09 10
 do
 sh run_ddm_Roptim.sh -m oneIntegrator_sepProbDistortion -d sub_data_oneParamAsymmLinear/sub$subnum\_data -s sub_sv_oneInt$subnum.csv -o fitOneInt_oneParamAsymmLinear -p d,sigma
+done
+```
+
+```
+for subnum in 11 12 13 14 15 16 17 18 19 20 22 23 24 25 27
+do
+sh run_ddm_Roptim.sh -m twoIntegrators_sepProbDistortion -d sub_data_oneParamAsymmLinear/sub$subnum\_data -s sub_sv_twoInts$subnum.csv -o fitTwoInts_oneParamAsymmLinear -p dLott,dFrac,sigmaLott,sigmaFrac
+done
+```
+
+```
+for subnum in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 22 23 24 25 27
+do
+sh run_ddm_Roptim.sh -m twoIntegrators_sepProbDistortion -d sub_data_oneParamSymmLinear/sub$subnum\_data -s sub_sv_twoInts$subnum.csv -o fitTwoInts_oneParamSymmLinear -p dLott,dFrac,sigmaLott,sigmaFrac
 done
 ```

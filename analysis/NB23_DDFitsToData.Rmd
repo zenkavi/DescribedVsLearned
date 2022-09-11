@@ -166,6 +166,69 @@ for(i in 1:length(unique(oneIntEstsAsymmLinear$subnum))){
 sim_sanity_checks(oneIntPpcAsymmLinear, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
 ```
 
+Simulated data with fitted parameters looks good for the logits. It also looks good for most levels of pFractalDraw except for very high levels. So the drift rates combined with the learning rate and prob distortion captures the weight placed on each attribute reasonably well. The mystery is why the predicted choices are so much slower at higher levels of probFractalDraw.  
+
+To understand this we examine the varying part of the drift rate (d*(distorted_ev_diff+distorted_qv_diff)) at each probFractalDraw level. Even though the average of the trialwise varying drift rate is similar across the different levels the distributions are very different, such that more of the drift rates are closer to zero for higher levels of probFractalDraw.
+
+So for decisions to be happening as fast as they do empirically they would need a lot longer to integrate with this drift rate, which is possible during the period between the probFractalDraw and stimulus presentation.
+
+```{r}
+clean_beh_data_asymmnonorm %>%
+  mutate(distorted_val_diff = distorted_ev_diff+distorted_qv_diff,
+         probFractalDraw = as.factor(probFractalDraw)) %>%
+  ggplot(aes(distorted_val_diff))+
+  geom_histogram(alpha=.5, bins=30)+
+  facet_grid(probFractalDraw~.)+
+  theme(panel.grid = element_blank())
+```
+
+
+```{r}
+clean_beh_data_asymmnonorm %>%
+  mutate(distorted_val_diff = distorted_ev_diff+distorted_qv_diff,
+         probFractalDraw = as.factor(probFractalDraw)) %>%
+  ggplot(aes(probFractalDraw, distorted_val_diff))+
+  geom_violin()+
+  theme(panel.grid = element_blank())
+```
+
+Proof of concept: If we add early integration for trials where fractals matter proprotional to how much they matter would we get choices as fast as empirically observed? 
+
+
+```{r}
+oneIntPpcAsymmLinear_fixRt = oneIntPpcAsymmLinear %>%
+  mutate(reactionTime = ifelse(probFractalDraw>.5, reactionTime-(probFractalDraw^16)/2, reactionTime))
+
+sim_sanity_checks(oneIntPpcAsymmLinear_fixRt, checks=c(4), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
+
+```
+#### Early integration demo
+
+Simulate data using the early integration model pluggin in parameters estimated from the non early integration model with single integrator
+
+```{r}
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_oneIntegrator_sepProbDistortion_earlyIntegration.R'))
+sim_trial_list[['model1ea']] = sim_trial
+```
+
+```{r}
+oneIntPpcAsymmLinear_earlyInt = data.frame()
+
+for(i in 1:length(unique(oneIntEstsAsymmLinear$subnum))){
+  cur_sub = unique(oneIntEstsAsymmLinear$subnum)[i]
+  cur_stims =  sub_stims_asym %>% filter(subnum == cur_sub)
+  cur_pars = oneIntEstsAsymmLinear %>% filter(subnum == cur_sub)
+  sim_subj = sim_task(cur_stims, model_name = "model1ea", d=cur_pars$d, sigma=cur_pars$sigma)
+  sim_subj$subnum = cur_sub
+  oneIntPpcAsymmLinear_earlyInt = rbind(oneIntPpcAsymmLinear_earlyInt, sim_subj)
+}
+
+```
+
+```{r}
+sim_sanity_checks(oneIntPpcAsymmLinear_earlyInt, checks=c(1,3,4,5), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
+```
+
 #### Without extreme cases
 
 ```{r}
@@ -423,6 +486,7 @@ for(i in 1:length(unique(twoIntsEstsAsymmLinear$subnum))){
 ```{r}
 sim_sanity_checks(twoIntsPpcAsymmLinear, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
 ```
+
 Simulate predicted data fixing the noise at the same level for both attributes and a lower level than the estimate parameters
 
 ```{r}
@@ -449,6 +513,77 @@ twoIntsPpcAsymmLinear_fixSigma_fixRt = twoIntsPpcAsymmLinear_fixSigma %>%
   
 
 sim_sanity_checks(twoIntsPpcAsymmLinear_fixSigma_fixRt, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
+```
+
+#### Fixed noise level
+
+```{r}
+optim_out_path = paste0(cpueaters_path, 'ddModels/cluster_scripts/optim_out/fitTwoInts_oneParamAsymmLinear_fixSigma/')
+
+model = "twoIntegrators_sepProbDistortion"  
+
+ddm_fit_pars = data.frame()
+
+for(i in 1:length(subnums)){
+  cur_subnum = subnums[i]
+  tmp = get_optim_out(model_=model, data_=paste0(data_prefix, cur_subnum, data_suffix), optim_out_path_=optim_out_path, iters_ = F)
+  tmp$subnum = cur_subnum
+  ddm_fit_pars = rbind.all.columns(tmp, ddm_fit_pars)
+}
+```
+
+Summarise subject parameters as a mean of the converged values from different starting points
+
+```{r}
+# ddm_fit_pars %>%
+#   select(-Param3) %>%
+#   gather(key, value, -subnum) %>%
+#   ggplot(aes(value,fill=key))+
+#   geom_histogram(bins=30, alpha=.5, position="identity")+
+#   theme(panel.grid = element_blank())+
+#   facet_wrap(~subnum)
+
+twoIntsEstsAsymmLinearfixSigma = ddm_fit_pars %>%
+  group_by(subnum) %>%
+  summarise(dLott = mean(Param1),
+            dFrac = mean(Param2))
+```
+
+Compare parameters from fits with and without the extreme cases
+
+```{r}
+twoIntsEstsAsymmLinear %>% 
+  select(-sigmaLott, -sigmaFrac) %>%
+  mutate(fit = "wSigma") %>%
+  rbind(twoIntsEstsAsymmLinearfixSigma %>% mutate(fit = "fixSigma")) %>%
+  gather(par, value, -subnum, -fit) %>%
+  group_by(par) %>%
+  spread(fit, value) %>%
+  ggplot(aes(wSigma, fixSigma))+
+  geom_point()+
+  geom_abline(aes(slope=1, intercept=0), color="gray")+
+  facet_wrap(~par, scales="free")+
+  theme(panel.grid = element_blank())
+```
+
+Simulate predicted data
+
+```{r}
+twoIntsPpcAsymmLinearfixSigma= data.frame()
+
+for(i in 1:length(unique(twoIntsEstsAsymmLinearfixSigma$subnum))){
+  cur_sub = unique(twoIntsEstsAsymmLinearfixSigma$subnum)[i]
+  cur_stims =  sub_stims_asym %>% filter(subnum == cur_sub) 
+  cur_pars = twoIntsEstsAsymmLinearfixSigma %>% filter(subnum == cur_sub)
+  sim_subj = sim_task(cur_stims, model_name = "model2", dLott=cur_pars$dLott, dFrac=cur_pars$dFrac, sigmaLott=.05, sigmaFrac=.05)
+  sim_subj$subnum = cur_sub
+  twoIntsPpcAsymmLinearfixSigma = rbind(twoIntsPpcAsymmLinearfixSigma, sim_subj)
+}
+
+```
+
+```{r}
+sim_sanity_checks(twoIntsPpcAsymmLinearfixSigma, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
 ```
 
 #### Without extreme cases

@@ -194,7 +194,6 @@ clean_beh_data_asymmnonorm %>%
 
 Proof of concept: If we add early integration for trials where fractals matter proprotional to how much they matter would we get choices as fast as empirically observed? 
 
-
 ```{r}
 oneIntPpcAsymmLinear_fixRt = oneIntPpcAsymmLinear %>%
   mutate(reactionTime = ifelse(probFractalDraw>.5, reactionTime-(probFractalDraw^16)/2, reactionTime))
@@ -202,23 +201,52 @@ oneIntPpcAsymmLinear_fixRt = oneIntPpcAsymmLinear %>%
 sim_sanity_checks(oneIntPpcAsymmLinear_fixRt, checks=c(4), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
 
 ```
+
 #### Early integration demo
+
+```{r}
+stimDelay = 250
+timeStep = 10
+pFracs = seq(0.6, 1, .1)
+
+pFracScaler = function(x) {x^2}
+scaledpFracs = unlist(map(pFracs, pFracScaler))
+earlyIntSteps = round(rep(stimDelay/timeStep, length(pFracs)) * scaledpFracs)
+earlyIntSteps
+```
+
+```{r}
+clean_beh_data_asymmnonorm %>%
+  select(subnum, theta) %>%
+  distinct() %>%
+  mutate(steps.6 = round((100)*(.6*theta)),
+         steps.7 = round((100)*(.7*theta)),
+         steps.8 = round((100)*(.8*theta)),
+         steps.9 = round((100)*(.9*theta)),
+         steps.10 = round((100)*(theta)))
+```
 
 Simulate data using the early integration model pluggin in parameters estimated from the non early integration model with single integrator
 
 ```{r}
 source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_oneIntegrator_sepProbDistortion_earlyIntegration.R'))
 sim_trial_list[['model1ea']] = sim_trial
+fit_trial_list = list(model1ea = fit_trial)
 ```
 
 ```{r}
 oneIntPpcAsymmLinear_earlyInt = data.frame()
 
+thetas = clean_beh_data_asymmnonorm %>%
+  select(subnum, theta) %>% 
+  distinct()
+
 for(i in 1:length(unique(oneIntEstsAsymmLinear$subnum))){
   cur_sub = unique(oneIntEstsAsymmLinear$subnum)[i]
   cur_stims =  sub_stims_asym %>% filter(subnum == cur_sub)
   cur_pars = oneIntEstsAsymmLinear %>% filter(subnum == cur_sub)
-  sim_subj = sim_task(cur_stims, model_name = "model1ea", d=cur_pars$d, sigma=cur_pars$sigma)
+  cur_theta = thetas %>% filter(subnum == cur_sub)
+  sim_subj = sim_task(cur_stims, model_name = "model1ea", d=cur_pars$d, sigma=cur_pars$sigma, theta=cur_theta$theta, stimDelay = 250)
   sim_subj$subnum = cur_sub
   oneIntPpcAsymmLinear_earlyInt = rbind(oneIntPpcAsymmLinear_earlyInt, sim_subj)
 }
@@ -227,6 +255,20 @@ for(i in 1:length(unique(oneIntEstsAsymmLinear$subnum))){
 
 ```{r}
 sim_sanity_checks(oneIntPpcAsymmLinear_earlyInt, checks=c(1,3,4,5), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
+```
+Test fitting function for early integration model
+
+```{r}
+tmp = oneIntPpcAsymmLinear_earlyInt[1:300,]
+tmp$theta = thetas$theta[1]
+# fit_task(data_ = tmp, model_name_ = "model1ea", pars_ = list(d=cur_pars$d, sigma=cur_pars$sigma, theta=cur_theta$theta, stimDelay = 250))
+fit_task(data_ = tmp, model_name_ = "model1ea", pars_ = list(d=cur_pars$d, sigma=cur_pars$sigma, stimDelay = 250))
+
+# for(i in 1:nrow(tmp)){
+#   fit_trial(d=cur_pars$d, sigma=cur_pars$sigma, choice = tmp$choice[i], reactionTime = tmp$reactionTime[i], probFractalDraw = tmp$probFractalDraw[i], EVLeft=tmp$EVLeft[i], EVRight=tmp$EVRight[i], QVLeft=tmp$QVLeft[i], QVRight=tmp$QVRight[i], distortedEVDiff = tmp$distortedEVDiff[i], distortedQVDiff = tmp$distortedQVDiff[i])
+# }
+
+
 ```
 
 #### Without extreme cases

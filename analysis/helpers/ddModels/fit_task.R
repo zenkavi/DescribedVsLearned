@@ -48,8 +48,11 @@ fit_task = function(data_, model_name_, pars_, fix_pars_ = list(), fit_trial_lis
   if (!("sigmaFrac" %in% names(pars_))){
     pars_$sigmaFrac = 1e-9
   }
-  if (!("theta" %in% names(pars_))){
+  if (!("theta" %in% names(pars_)) & !("theta" %in% names(data_))){
     pars_$theta = 0
+  }
+  if ( "theta" %in% names(data_) ){ #hack to fix theta to separately fitted parameter
+    pars_$theta = unique(data_$theta)
   }
   if (!("delta" %in% names(pars_))){
     pars_$delta = 1

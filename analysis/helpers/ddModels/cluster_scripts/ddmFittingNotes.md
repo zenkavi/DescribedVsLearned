@@ -48,6 +48,10 @@ sh run_ddm_Roptim.sh -m twoIntegrators_sepProbDistortion -d sub_data_oneParamSym
 sh run_ddm_Roptim.sh -m twoIntegrators_sepProbDistortion -d sub_data_oneParamSymmLinear_noExt/sub01_data -s sub_sv_twoInts01.csv -o fitTwoIntsnoExt_oneParamSymmLinear -p dLott,dFrac,sigmaLott,sigmaFrac
 ```
 
+```
+sh run_ddm_Roptim.sh -m twoIntegrators_sepProbDistortion -d sub_data_oneParamAsymmLinear/sub01_data -s sub_sv_twoInts_fixSigma01.csv -o fitTwoInts_oneParamAsymmLinear_fixSigma -p dLott,dFrac -f sigmaLott,sigmaFrac -v .5,.5
+```
+
 ## Loop to submit for more subjects
 
 ```
@@ -68,5 +72,19 @@ done
 for subnum in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 22 23 24 25 27
 do
 sh run_ddm_Roptim.sh -m twoIntegrators_sepProbDistortion -d sub_data_oneParamSymmLinear/sub$subnum\_data -s sub_sv_twoInts$subnum.csv -o fitTwoInts_oneParamSymmLinear -p dLott,dFrac,sigmaLott,sigmaFrac
+done
+```
+
+```
+for subnum in 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 22 23 24 25 27
+do
+sh run_ddm_Roptim.sh -m twoIntegrators_sepProbDistortion -d sub_data_oneParamAsymmLinear/sub$subnum\_data -s sub_sv_twoInts_fixSigma$subnum.csv -o fitTwoInts_oneParamAsymmLinear_fixSigma -p dLott,dFrac -f sigmaLott,sigmaFrac -v .5,.5
+done
+```
+
+```
+for subnum in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 22 23 24 25 27
+do
+sh run_ddm_Roptim.sh -m twoIntegrators_sepProbDistortion -d sub_data_oneParamSymmLinear/sub$subnum\_data -s sub_sv_twoInts_fixSigma$subnum.csv -o fitTwoInts_oneParamSymmLinear_fixSigma -p dLott,dFrac -f sigmaLott,sigmaFrac -v .5,.5
 done
 ```

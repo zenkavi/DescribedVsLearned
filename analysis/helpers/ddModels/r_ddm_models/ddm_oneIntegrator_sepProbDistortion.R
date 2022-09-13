@@ -115,9 +115,9 @@ fit_trial = function(d, sigma, barrierDecay=0, barrier=1, nonDecisionTime=0, bia
   kwargs = list(...)
   
   choice=kwargs$choice #must be 1 for left and -1 for left
-  if(choice == "left"){
+  if(choice == "left" | choice == 1){
     choice = 1
-  } else if (choice == "right"){
+  } else if (choice == "right" | choice == 0){
     choice = -1
   }
   reactionTime=kwargs$reactionTime #in ms
@@ -135,7 +135,7 @@ fit_trial = function(d, sigma, barrierDecay=0, barrier=1, nonDecisionTime=0, bia
 
   nonDecIters = nonDecisionTime / timeStep
   
-  numTimeSteps = round(reactionTime / timeStep)
+  numTimeSteps = floor(reactionTime / timeStep)
   
   initialBarrier = barrier
   barrier = rep(initialBarrier, numTimeSteps)

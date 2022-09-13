@@ -140,9 +140,9 @@ fit_trial = function(d, sigma, barrierDecay=0, barrier=1, nonDecisionTime=0, bia
   kwargs = list(...)
   
   choice=kwargs$choice #must be 1 for left and -1 for left
-  if(choice == "left"){
+  if(choice == "left" | choice == 1){
     choice = 1
-  } else if (choice == "right"){
+  } else if (choice == "right" | choice == 0){
     choice = -1
   }
   reactionTime=kwargs$reactionTime #in ms
@@ -161,7 +161,7 @@ fit_trial = function(d, sigma, barrierDecay=0, barrier=1, nonDecisionTime=0, bia
   
   nonDecIters = nonDecisionTime / timeStep
   
-  numTimeSteps = round(reactionTime / timeStep)
+  numTimeSteps = floor(reactionTime / timeStep)
   if(numTimeSteps<2){
     numTimeSteps = 2
   }
@@ -218,11 +218,13 @@ fit_trial = function(d, sigma, barrierDecay=0, barrier=1, nonDecisionTime=0, bia
     
     stimDelayIters = round(round(stimDelay/timeStep)*pFracScaler)
     
+    barrierEarly = rep(initialBarrier, stimDelayIters)
+    
     prStatesEarly = matrix(data = 0, nrow = length(states), ncol = stimDelayIters)
     prStatesEarly[biasState,1] = 1
     
-    changeUpEarly = matrix(data = barrier, ncol=stimDelayIters, nrow=length(states), byrow=TRUE) - matrix(data = states, ncol=stimDelayIters, nrow=length(states), byrow=FALSE)
-    changeDownEarly = matrix(data = -barrier, ncol=stimDelayIters, nrow=length(states), byrow=TRUE) - matrix(data = states, ncol=stimDelayIters, nrow=length(states), byrow=FALSE)
+    changeUpEarly = matrix(data = barrierEarly, ncol=stimDelayIters, nrow=length(states), byrow=TRUE) - matrix(data = states, ncol=stimDelayIters, nrow=length(states), byrow=FALSE)
+    changeDownEarly = matrix(data = -barrierEarly, ncol=stimDelayIters, nrow=length(states), byrow=TRUE) - matrix(data = states, ncol=stimDelayIters, nrow=length(states), byrow=FALSE)
     
     for(nextTime in 2:stimDelayIters){
       curTime = nextTime - 1
@@ -236,12 +238,8 @@ fit_trial = function(d, sigma, barrierDecay=0, barrier=1, nonDecisionTime=0, bia
       tempDownCrossEarly = (prStatesEarly[,curTime] %*% (pnorm(changeDownEarly[,nextTime], mu, sigma)))[1]
       
       # Avoid NAs for likelihood conditional statements
-      if (is.na(tempUpCrossEarly)){
-        tempUpCrossEarly = 0
-      }
-      if (is.na(tempDownCrossEarly)){
-        tempDownCrossEarly = 0
-      }
+      tempUpCrossEarly = ifelse(is.na(tempUpCrossEarly),0,tempUpCrossEarly)
+      tempDownCrossEarly = ifelse(is.na(tempDownCrossEarly),0,tempDownCrossEarly)
       
       # Renormalize to cope with numerical approximations.
       sumIn = sum(prStatesEarly[,curTime])
@@ -294,12 +292,8 @@ fit_trial = function(d, sigma, barrierDecay=0, barrier=1, nonDecisionTime=0, bia
     tempDownCross = (prStates[,curTime] %*% (pnorm(changeDown[,nextTime], mu, sigma)))[1]
     
     # Avoid NAs for likelihood conditional statements
-    if (is.na(tempUpCross)){
-      tempUpCross = 0
-    }
-    if (is.na(tempDownCross)){
-      tempDownCross = 0
-    }
+    tempUpCross = ifelse(is.na(tempUpCross),0,tempUpCross)
+    tempDownCross = ifelse(is.na(tempDownCross),0,tempDownCross)
     
     # Renormalize to cope with numerical approximations.
     sumIn = sum(prStates[,curTime])

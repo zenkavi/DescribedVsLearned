@@ -123,9 +123,9 @@ fit_trial = function(dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay=0, barrier
   kwargs = list(...)
   
   choice=kwargs$choice #must be 1 for left and -1 for left
-  if(choice == "left"){
+  if(choice == "left" | choice == 1){
     choice = 1
-  } else if (choice == "right"){
+  } else if (choice == "right" | choice == 0){
     choice = -1
   }
   reactionTime=kwargs$reactionTime #in ms
@@ -140,7 +140,7 @@ fit_trial = function(dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay=0, barrier
   
   nonDecIters = nonDecisionTime / timeStep
   
-  numTimeSteps = round(reactionTime / timeStep)
+  numTimeSteps = floor(reactionTime / timeStep)
   numTimeSteps = numTimeSteps - nonDecIters
   
   initialBarrier = barrier

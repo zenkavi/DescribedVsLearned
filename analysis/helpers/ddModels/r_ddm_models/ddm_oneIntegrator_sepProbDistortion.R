@@ -218,10 +218,21 @@ fit_trial = function(d, sigma, barrierDecay=0, barrier=1, nonDecisionTime=0, bia
     
     # Renormalize to cope with numerical approximations.
     sumIn = sum(prStates[,curTime])
+    sumIn = ifelse(is.numeric(sumIn), sumIn, 0)
+    sumIn = ifelse(is.nan(sumIn), 0, sumIn)
     sumCurrent = sum(prStatesNew) + tempUpCross + tempDownCross
-    prStatesNew = prStatesNew * sumIn / sumCurrent
-    tempUpCross = tempUpCross * sumIn / sumCurrent
-    tempDownCross = tempDownCross * sumIn / sumCurrent
+    sumCurrent = ifelse(is.numeric(sumCurrent), sumCurrent, 0)
+    sumCurrent = ifelse(is.nan(sumCurrent), 0, sumCurrent)
+    
+    if( (sumIn>0) && (sumCurrent>0) ){ #to avoid division by 0 and following NaNs
+      prStatesNew = prStatesNew * sumIn / sumCurrent
+      tempUpCross = tempUpCross * sumIn / sumCurrent
+      tempDownCross = tempDownCross * sumIn / sumCurrent
+    } else{
+      prStatesNew = rep(0, length(states))
+      tempUpCross = 0
+      tempDownCross = 0
+    }
     
     # Avoid NAs for likelihood conditional statements
     if (is.na(tempUpCross)){

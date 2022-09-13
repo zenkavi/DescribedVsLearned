@@ -12,8 +12,8 @@ output:
 ```{r include=FALSE}
 library(tidyverse)
 theme_set(theme_bw())
-library(here)
 cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+library(here)
 helpers_path = here('analysis/helpers/')
 
 source(paste0(helpers_path,'ddModels/sim_task.R'))
@@ -260,29 +260,38 @@ sim_sanity_checks(oneIntPpcAsymmLinear_earlyInt, checks=c(1,3,4,5), compare_logi
 Test fitting function for early integration model
 
 ```{r}
-tmp = read.csv('/Users/zeynepenkavi/Documents/RangelLab/DescribedVsLearned_beh/analysis/helpers/ddModels/cluster_scripts/sub_data_oneParamAsymmLinear_wTheta/sub01_data.csv')
+library(here)
+helpers_path = here('analysis/helpers/')
+source(paste0(helpers_path,'ddModels/fit_task.R'))
+
+# tmp = read.csv('/Users/zeynepenkavi/Documents/RangelLab/DescribedVsLearned_beh/analysis/helpers/ddModels/cluster_scripts/sub_data_oneParamAsymmLinear_wTheta/sub01_data.csv')
+tmp = read.csv('/Users/zeynepenkavi/Documents/RangelLab/DescribedVsLearned_beh/analysis/helpers/ddModels/cluster_scripts/sub_data_oneParamAsymmLinear_wTheta/sub10_data.csv')
 # fit_task(data_ = tmp, model_name_ = "model1ea", pars_ = list(d=cur_pars$d, sigma=cur_pars$sigma, theta=cur_theta$theta, stimDelay = 250))
 # fit_task(data_ = tmp, model_name_ = "model1ea", pars_ = list(d=cur_pars$d, sigma=cur_pars$sigma, stimDelay = 250))
 
 start_vals = c(0.932282596703016,0.0299321074307384)
-i= 3
+
 model='oneIntegrator_sepProbDistortion_earlyIntegration'
 source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_', model,'.R'))
-
 fit_trial_list = list()
 fit_trial_list[[model]] = fit_trial
 
-out=data.frame()
-for (i in 1:5){
-  out = rbind(out, fit_trial(d=start_vals[1], start_vals[1], choice = tmp$choice[i], reactionTime = tmp$reactionTime[i], probFractalDraw = tmp$probFractalDraw[i], EVLeft=tmp$EVLeft[i], EVRight=tmp$EVRight[i], QVLeft=tmp$QVLeft[i], QVRight=tmp$QVRight[i], distortedEVDiff = tmp$distortedEVDiff[i], distortedQVDiff = tmp$distortedQVDiff[i], theta=tmp$theta[i]))
-}
-out
+# out=data.frame()
+# for (i in 1:nrow(tmp)){
+#   out = rbind(out, fit_trial(d=start_vals[1], sigma=start_vals[2], choice = tmp$choice[i], reactionTime = tmp$reactionTime[i], probFractalDraw = tmp$probFractalDraw[i], EVLeft=tmp$EVLeft[i], EVRight=tmp$EVRight[i], QVLeft=tmp$QVLeft[i], QVRight=tmp$QVRight[i], distortedEVDiff = tmp$distortedEVDiff[i], distortedQVDiff = tmp$distortedQVDiff[i], theta=tmp$theta[i]))
+# }
+# out
+# 
+
+# i=11
+# fit_trial(d=start_vals[1], sigma=start_vals[2], choice = tmp$choice[i], reactionTime = tmp$reactionTime[i], probFractalDraw = tmp$probFractalDraw[i], EVLeft=tmp$EVLeft[i], EVRight=tmp$EVRight[i], QVLeft=tmp$QVLeft[i], QVRight=tmp$QVRight[i], distortedEVDiff = tmp$distortedEVDiff[i], distortedQVDiff = tmp$distortedQVDiff[i], theta=tmp$theta[i])
 
 fit_task(data_=tmp, model_name_=model, pars_=list(d=start_vals[1], sigma=start_vals[2]), fix_pars_ = list(), fit_trial_list_ = fit_trial_list, debug=FALSE)
 
 ```
 
 ```{r}
+i=13
 choice = tmp$choice[i]
 reactionTime = tmp$reactionTime[i]
 probFractalDraw = tmp$probFractalDraw[i]
@@ -293,6 +302,16 @@ QVRight=tmp$QVRight[i]
 distortedEVDiff = tmp$distortedEVDiff[i]
 distortedQVDiff = tmp$distortedQVDiff[i]
 theta = tmp$theta[i]
+
+barrierDecay=0
+barrier=1
+nonDecisionTime=0
+bias=0
+timeStep=10
+epsilon = 0
+approxStateStep = 0.1
+debug=FALSE
+stimDelay = 1000
 ```
 
 #### Without extreme cases

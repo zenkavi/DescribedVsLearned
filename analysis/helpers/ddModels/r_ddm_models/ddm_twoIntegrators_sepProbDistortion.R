@@ -241,33 +241,48 @@ fit_trial = function(dLott, dFrac, sigmaLott, sigmaFrac, barrierDecay=0, barrier
     tempDownCrossFrac = (prStatesFrac[,curTime] %*% (pnorm(changeDown[,nextTime], muFrac, sigmaFrac)))[1]
     
     # Renormalize to cope with numerical approximations.
+    
     sumIn = sum(prStatesLott[,curTime])
+    sumIn = ifelse(is.numeric(sumIn), sumIn, 0)
+    sumIn = ifelse(is.nan(sumIn), 0, sumIn)
     sumCurrent = sum(prStatesLottNew) + tempUpCrossLott + tempDownCrossLott
-    prStatesLottNew = prStatesLottNew * sumIn / sumCurrent
-    tempUpCrossLott = tempUpCrossLott * sumIn / sumCurrent
-    tempDownCrossLott = tempDownCrossLott * sumIn / sumCurrent
+    sumCurrent = ifelse(is.numeric(sumCurrent), sumCurrent, 0)
+    sumCurrent = ifelse(is.nan(sumCurrent), 0, sumCurrent)
     
-    sumIn = sum(prStatesFrac[,curTime])
-    sumCurrent = sum(prStatesFracNew) + tempUpCrossFrac + tempDownCrossFrac
-    prStatesFracNew = prStatesFracNew * sumIn / sumCurrent
-    tempUpCrossFrac = tempUpCrossFrac * sumIn / sumCurrent
-    tempDownCrossFrac = tempDownCrossFrac * sumIn / sumCurrent
-    
-    
-    # Avoid NAs for likelihood conditional statements
-    if (is.na(tempUpCrossLott)){
+    if( (sumIn>0) && (sumCurrent>0) ){ #to avoid division by 0 and following NaNs
+      prStatesLottNew = prStatesLottNew * sumIn / sumCurrent
+      tempUpCrossLott = tempUpCrossLott * sumIn / sumCurrent
+      tempDownCrossLott = tempDownCrossLott * sumIn / sumCurrent
+    } else{
+      prStatesLottNew = rep(0, length(states))
       tempUpCrossLott = 0
-    }
-    if (is.na(tempDownCrossLott)){
       tempDownCrossLott = 0
     }
-    if (is.na(tempUpCrossFrac)){
+    
+    sumIn = sum(prStatesFrac[,curTime])
+    sumIn = ifelse(is.numeric(sumIn), sumIn, 0)
+    sumIn = ifelse(is.nan(sumIn), 0, sumIn)
+    sumCurrent = sum(prStatesFracNew) + tempUpCrossFrac + tempDownCrossFrac
+    sumCurrent = ifelse(is.numeric(sumCurrent), sumCurrent, 0)
+    sumCurrent = ifelse(is.nan(sumCurrent), 0, sumCurrent)
+    
+    if( (sumIn>0) && (sumCurrent>0) ){ #to avoid division by 0 and following NaNs
+      prStatesFracNew = prStatesFracNew * sumIn / sumCurrent
+      tempUpCrossFrac = tempUpCrossFrac * sumIn / sumCurrent
+      tempDownCrossFrac = tempDownCrossFrac * sumIn / sumCurrent
+    } else{
+      prStatesFracNew = rep(0, length(states))
       tempUpCrossFrac = 0
-    }
-    if (is.na(tempDownCrossFrac)){
       tempDownCrossFrac = 0
     }
     
+    
+    # Avoid NAs for likelihood conditional statements
+    tempUpCrossLott = ifelse(is.na(tempUpCrossLott), 0, tempUpCrossLott)
+    tempDownCrossLott = ifelse(is.na(tempDownCrossLott), 0, tempDownCrossLott)
+    tempUpCrossFrac = ifelse(is.na(tempUpCrossFrac), 0, tempUpCrossFrac)
+    tempDownCrossFrac = ifelse(is.na(tempDownCrossFrac), 0, tempDownCrossFrac)
+
     # Update the probabilities of each state and the probabilities of
     # crossing each barrier at this timestep.
     prStatesLott[, nextTime] = prStatesLottNew

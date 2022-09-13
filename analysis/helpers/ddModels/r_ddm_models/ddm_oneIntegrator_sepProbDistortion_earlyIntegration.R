@@ -140,9 +140,9 @@ fit_trial = function(d, sigma, barrierDecay=0, barrier=1, nonDecisionTime=0, bia
   kwargs = list(...)
   
   choice=kwargs$choice #must be 1 for left and -1 for left
-  if(choice == "left" | choice == 1){
+  if( (choice == "left") || (choice == 1) ){
     choice = 1
-  } else if (choice == "right" | choice == 0){
+  } else if ( (choice == "right") || (choice == 0) ){
     choice = -1
   }
   reactionTime=kwargs$reactionTime #in ms
@@ -216,7 +216,7 @@ fit_trial = function(d, sigma, barrierDecay=0, barrier=1, nonDecisionTime=0, bia
       pFracScaler = 1
     }
     
-    stimDelayIters = round(round(stimDelay/timeStep)*pFracScaler)
+    stimDelayIters = floor(floor(stimDelay/timeStep)*pFracScaler)
     
     barrierEarly = rep(initialBarrier, stimDelayIters)
     
@@ -297,10 +297,21 @@ fit_trial = function(d, sigma, barrierDecay=0, barrier=1, nonDecisionTime=0, bia
     
     # Renormalize to cope with numerical approximations.
     sumIn = sum(prStates[,curTime])
+    sumIn = ifelse(is.numeric(sumIn), sumIn, 0)
+    sumIn = ifelse(is.nan(sumIn), 0, sumIn)
     sumCurrent = sum(prStatesNew) + tempUpCross + tempDownCross
-    prStatesNew = prStatesNew * sumIn / sumCurrent
-    tempUpCross = tempUpCross * sumIn / sumCurrent
-    tempDownCross = tempDownCross * sumIn / sumCurrent
+    sumCurrent = ifelse(is.numeric(sumCurrent), sumCurrent, 0)
+    sumCurrent = ifelse(is.nan(sumCurrent), 0, sumCurrent)
+    
+    if( (sumIn>0) && (sumCurrent>0) ){ #to avoid division by 0 and following NaNs
+      prStatesNew = prStatesNew * sumIn / sumCurrent
+      tempUpCross = tempUpCross * sumIn / sumCurrent
+      tempDownCross = tempDownCross * sumIn / sumCurrent
+    } else{
+      prStatesNew = rep(0, length(states))
+      tempUpCross = 0
+      tempDownCross = 0
+    }
     
     # Update the probabilities of each state and the probabilities of
     # crossing each barrier at this timestep.

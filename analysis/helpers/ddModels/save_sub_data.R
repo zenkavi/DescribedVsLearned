@@ -1,5 +1,6 @@
 # Usage
-# Rscript --vanilla save_sub_data.R --rl_model oneParamSymmLinear --no_ext F
+# Rscript --vanilla save_sub_data.R --rl_model oneParamSymmLinear --no_ext F --add_theta F
+# Rscript --vanilla save_sub_data.R --rl_model oneParamAsymmLinear --no_ext F --add_theta T
 
 library(tidyverse)
 library(here)
@@ -14,7 +15,8 @@ source(paste0(helpers_path, 'get_qvals.R'))
 #######################
 option_list = list(
   make_option("--rl_model", type="character"),
-  make_option("--no_ext", type="character")
+  make_option("--no_ext", type="character"),
+  make_option("--add_theta", type="character")
 ) 
 
 opt_parser = OptionParser(option_list=option_list)
@@ -22,6 +24,7 @@ opt = parse_args(opt_parser)
 
 rl_model = opt$rl_model
 no_ext = ifelse(opt$no_ext == "T", T, F)
+add_theta = ifelse(opt$add_theta == "T", T, F)
 
 out_dir = paste0(helpers_path, 'ddModels/cluster_scripts/sub_data_',rl_model)
 
@@ -67,8 +70,14 @@ if(grepl("Asymm", rl_model)){
     mutate(distortedEVDiff = (1-probFractalDraw)*lottery_ev_diff)
 }
   
-clean_beh_data = clean_beh_data %>%
-  select(subnum, EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, distortedEVDiff, distortedQVDiff)
+if(add_theta){
+  clean_beh_data = clean_beh_data %>%
+    select(subnum, EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, distortedEVDiff, distortedQVDiff, theta)
+  out_dir = paste0(out_dir, '_wTheta')
+} else{
+  clean_beh_data = clean_beh_data %>%
+    select(subnum, EVLeft, EVRight, QVLeft, QVRight, probFractalDraw, choice, reactionTime, distortedEVDiff, distortedQVDiff)
+}
 
 subnums = unique(clean_beh_data$subnum)
 

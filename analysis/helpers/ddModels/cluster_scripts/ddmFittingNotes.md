@@ -24,6 +24,10 @@ aws s3 sync s3://described-vs-experienced/ddModels/r_ddm_models /shared/ddModels
 aws s3 sync /shared/ddModels/cluster_scripts/optim_out/fitTwoInts_oneParamAsymmLinear s3://described-vs-experienced/ddModels/cluster_scripts/optim_out/fitTwoInts_oneParamAsymmLinear
 ```
 
+```
+aws s3 sync /shared/ddModels/cluster_scripts/optim_out/fitOneInt_oneParamAsymmLinear_earlyIntegration s3://described-vs-experienced/ddModels/cluster_scripts/optim_out/fitOneInt_oneParamAsymmLinear_earlyIntegration
+```
+
 # Move files from s3 to local (this is only converged parameter values)
 
 ```
@@ -59,14 +63,14 @@ sh run_ddm_Roptim.sh -m oneIntegrator_sepProbDistortion_earlyIntegration -d sub_
 ## Loop to submit for more subjects
 
 ```
-for subnum in 03 04 05 06 07 08 09 10
+for subnum in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 22 23 24 25 27
 do
 sh run_ddm_Roptim.sh -m oneIntegrator_sepProbDistortion -d sub_data_oneParamAsymmLinear/sub$subnum\_data -s sub_sv_oneInt$subnum.csv -o fitOneInt_oneParamAsymmLinear -p d,sigma
 done
 ```
 
 ```
-for subnum in 11 12 13 14 15 16 17 18 19 20 22 23 24 25 27
+for subnum in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 22 23 24 25 27
 do
 sh run_ddm_Roptim.sh -m twoIntegrators_sepProbDistortion -d sub_data_oneParamAsymmLinear/sub$subnum\_data -s sub_sv_twoInts$subnum.csv -o fitTwoInts_oneParamAsymmLinear -p dLott,dFrac,sigmaLott,sigmaFrac
 done
@@ -94,7 +98,7 @@ done
 ```
 
 ```
-for subnum in 03 04 05 06 07 08 09 10
+for subnum in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 22 23 24 25 27
 do
 sh run_ddm_Roptim.sh -m oneIntegrator_sepProbDistortion_earlyIntegration -d sub_data_oneParamAsymmLinear_wTheta/sub$subnum\_data -s sub_sv_oneInt$subnum.csv -o fitOneInt_oneParamAsymmLinear_earlyIntegration -p d,sigma
 done

@@ -166,8 +166,10 @@ for(i in 1:length(unique(oneIntEstsAsymmLinear$subnum))){
 ```
 
 ```{r}
-sim_sanity_checks(oneIntPpcAsymmLinear, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
+sim_sanity_checks(oneIntPpcAsymmLinear, checks=c(1,4,5), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
 ```
+
+##### Fractal relevant trials
 
 Simulated data with fitted parameters looks good for the logits. It also looks good for most levels of pFractalDraw except for very high levels. So the drift rates combined with the learning rate and prob distortion captures the weight placed on each attribute reasonably well. The mystery is why the predicted choices are so much slower at higher levels of probFractalDraw.  
 
@@ -260,6 +262,23 @@ oneIntEstsAsymmLinear_earlyInt = ddm_fit_pars %>%
             sigma = mean(Param2))
 ```
 
+Comparison of parameters from fits with and without early integration
+
+```{r}
+oneIntEstsAsymmLinear %>%
+  mutate(model= "noEarlyInt") %>%
+  rbind(oneIntEstsAsymmLinear_earlyInt %>%
+          mutate(model="EarlyInt")) %>%
+  gather(par, value, -subnum, -model) %>%
+  group_by(par) %>%
+  spread(model, value) %>%
+  ggplot(aes(EarlyInt, noEarlyInt))+
+  geom_point()+
+  facet_wrap(~par, scales="free")+
+  geom_abline(aes(slope=1, intercept=0))+
+  theme(panel.grid = element_blank())
+```
+
 Simulate predicted data
 
 ```{r}
@@ -269,7 +288,7 @@ for(i in 1:length(unique(oneIntEstsAsymmLinear_earlyInt$subnum))){
   cur_sub = unique(oneIntEstsAsymmLinear_earlyInt$subnum)[i]
   cur_stims =  sub_stims_asym %>% filter(subnum == cur_sub)
   cur_pars = oneIntEstsAsymmLinear_earlyInt %>% filter(subnum == cur_sub)
-  sim_subj = sim_task(cur_stims, model_name = "model1ea", d=cur_pars$d, sigma=cur_pars$sigma, theta=unique(cur_stims$theta))
+  sim_subj = sim_task(cur_stims, model_name = "model1ea", d=cur_pars$d, sigma=cur_pars$sigma, theta=unique(cur_stims$theta), stimDelay=500)
   sim_subj$subnum = cur_sub
   oneIntPpcAsymmLinear_earlyInt = rbind(oneIntPpcAsymmLinear_earlyInt, sim_subj)
 }
@@ -277,7 +296,7 @@ for(i in 1:length(unique(oneIntEstsAsymmLinear_earlyInt$subnum))){
 ```
 
 ```{r}
-sim_sanity_checks(oneIntPpcAsymmLinear_earlyInt, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
+sim_sanity_checks(oneIntPpcAsymmLinear_earlyInt, checks=c(1,4,5), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
 ```
 
 #### Without extreme cases
@@ -453,6 +472,8 @@ for(i in 1:length(subnums)){
 }
 ```
 
+Check variability in recovered parameters
+
 ```{r}
 ddm_fit_pars %>%
   rename(dLott = Param1, dFrac = Param2, sigmaLott = Param3, sigmaFrac = Param4, nll = Param5) %>%
@@ -535,8 +556,14 @@ for(i in 1:length(unique(twoIntsEstsAsymmLinear$subnum))){
 ```
 
 ```{r}
-sim_sanity_checks(twoIntsPpcAsymmLinear, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
+sim_sanity_checks(twoIntsPpcAsymmLinear, checks=c(1,4,5), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
 ```
+
+
+
+#### Fixed noise level
+
+##### Demo
 
 Simulate predicted data fixing the noise at the same level for both attributes and a lower level than the estimate parameters
 
@@ -555,18 +582,19 @@ for(i in 1:length(unique(twoIntsEstsAsymmLinear$subnum))){
 ```
 
 ```{r}
-sim_sanity_checks(twoIntsPpcAsymmLinear_fixSigma, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
+sim_sanity_checks(twoIntsPpcAsymmLinear_fixSigma, checks=c(1,4,5), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
 ```
+Fixed noise + early integration
 
 ```{r}
 twoIntsPpcAsymmLinear_fixSigma_fixRt = twoIntsPpcAsymmLinear_fixSigma %>%
   mutate(reactionTime = ifelse(probFractalDraw>.5, reactionTime-(probFractalDraw^8), reactionTime))
   
 
-sim_sanity_checks(twoIntsPpcAsymmLinear_fixSigma_fixRt, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
+sim_sanity_checks(twoIntsPpcAsymmLinear_fixSigma_fixRt, checks=c(1,4,5), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
 ```
 
-#### Fixed noise level
+##### Fits
 
 ```{r}
 optim_out_path = paste0(cpueaters_path, 'ddModels/cluster_scripts/optim_out/fitTwoInts_oneParamAsymmLinear_fixSigma/')
@@ -575,7 +603,7 @@ model = "twoIntegrators_sepProbDistortion"
 
 ddm_fit_pars = data.frame()
 
-for(i in 1:length(subnums)){
+for(i in 2:length(subnums)){
   cur_subnum = subnums[i]
   tmp = get_optim_out(model_=model, data_=paste0(data_prefix, cur_subnum, data_suffix), optim_out_path_=optim_out_path, iters_ = F)
   tmp$subnum = cur_subnum
@@ -634,7 +662,7 @@ for(i in 1:length(unique(twoIntsEstsAsymmLinearfixSigma$subnum))){
 ```
 
 ```{r}
-sim_sanity_checks(twoIntsPpcAsymmLinearfixSigma, checks=c(1,3,4,5,6,8), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
+sim_sanity_checks(twoIntsPpcAsymmLinearfixSigma, checks=c(1,4,5), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
 ```
 
 #### Without extreme cases

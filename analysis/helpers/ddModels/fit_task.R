@@ -85,7 +85,7 @@ fit_task = function(data_, model_name_, pars_, fix_pars_ = list(), fit_trial_lis
     pars_$epsilon = 0
   }
   if (!("stimDelay" %in% names(pars_))){
-    pars_$stimDelay = 2000
+    pars_$stimDelay = 1000
   }
   
   # Extract the correct trial simulator for the model_name

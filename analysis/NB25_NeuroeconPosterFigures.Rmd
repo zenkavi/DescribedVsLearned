@@ -1,0 +1,168 @@
+---
+title: 'Experience vs. description based decision-making project: Figure for Arrowhead poster'
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    code_folding: 'hide'
+  pdf_document:
+    toc: yes
+---
+
+
+
+```{r include=FALSE}
+library(broom)
+library(tidyverse)
+library(here)
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+helpers_path = here('analysis/helpers/')
+source(paste0(helpers_path,'01_clean_behavioral_data.R'))
+source(paste0(helpers_path, 'get_qvals.R'))
+fig_out_path = paste0(here(), '/outputs/fig/')
+theme_set(theme_bw())
+```
+
+# Choice logit with EV, true V, QV
+
+```{r message=FALSE, warning=FALSE}
+
+source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamAsymmLinearProbDistortion_rpeBoth.R'))
+
+clean_beh_data = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = mean(value), .groups='keep') %>%
+  spread(par, est) %>%
+  left_join(clean_beh_data, by='subnum')
+
+## Add Q values of fractals to each trial
+clean_beh_data = clean_beh_data %>%
+  group_by(subnum) %>%
+  do(get_qvals(., model_name="rpeBoth")) %>%
+  ungroup()
+
+clean_beh_data = clean_beh_data %>%
+  mutate(rightLotteryEV = referenceProb * referenceValue,
+         leftLotteryEV = lotteryValue * lotteryProb,
+         lottery_ev_diff = leftLotteryEV - rightLotteryEV,
+         fractal_qv_diff = leftQValue - rightQValue,
+         distorted_ev_diff = (1-probFractalDraw)*lottery_ev_diff,
+         distorted_qv_diff = theta*probFractalDraw*fractal_qv_diff,
+         probFractalDraw = as.factor(probFractalDraw),
+         fractal_prob_diff = fractalLeftProb - fractalRightProb)
+
+rm(fit, g_par_est, par_ests)
+```
+
+```{r}
+truev_mod = clean_beh_data %>%
+  nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ lottery_ev_diff + fractal_prob_diff, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term != "(Intercept)") %>%
+  select(probFractalDraw, term, estimate, std.error)
+
+qv_mod = clean_beh_data %>%
+  nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ lottery_ev_diff + fractal_qv_diff, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+  filter(term == "fractal_qv_diff") %>%
+  select(probFractalDraw, term, estimate, std.error)
+
+qv_theta_mod = clean_beh_data %>%
+  mutate(fractal_qv_diff_theta = fractal_qv_diff * theta) %>%
+  nest(data = -probFractalDraw) %>% 
+  mutate(
+    fit = map(data, ~ glm(choiceLeft ~ lottery_ev_diff + fractal_qv_diff_theta, data = .x, family=binomial(link="logit"))),
+    tidied = map(fit, tidy)
+  ) %>% 
+  unnest(tidied) %>%
+   filter(term == "fractal_qv_diff_theta") %>%
+  select(probFractalDraw, term, estimate, std.error)
+```
+
+```{r}
+p = rbind(truev_mod, qv_mod) %>%
+  mutate(reg = ifelse(term %in% c("lottery_ev_diff", "lottery_ev_diff_theta"), "Lottery EV", ifelse(term == "fractal_prob_diff", "True Fractal P", ifelse(term %in% c("fractal_qv_diff","fractal_qv_diff_theta"),"Fractal QV", NA))),
+         reg = factor(reg, levels=c("True Fractal P", "Lottery EV", "Fractal QV")),
+         theta = grepl("theta", term),
+         fract = ifelse(reg == "Fractal QV", T, F)) %>%
+  ggplot(aes(probFractalDraw, estimate, col=reg, group=reg))+
+  geom_point(size=3)+
+  geom_line(size=3)+
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2, size=3)+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  scale_color_manual(values = cbbPalette[3:1])+
+  geom_rect(aes(xmin=.5, xmax=1.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01)+
+  geom_rect(aes(xmin=5.5, xmax=6.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01)+
+  geom_rect(aes(xmin=10.5, xmax=11.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01)+
+  theme(legend.position = "bottom",
+        legend.background = element_blank(),
+        panel.grid = element_blank(),
+        axis.text = element_text(size=24),
+        axis.title = element_text(size=24),
+        legend.text = element_text(size=20))+
+  labs(color="", x= "p(Fractal)", y="Beta estimate")+
+  expand_limits(y=11)+
+  scale_y_continuous(breaks=seq(0, 10, 2.5))
+
+ggsave(file=paste0(fig_out_path, 'neuroecon_logit_build1.jpg'), p, height = 5, width=8, units="in")
+p
+```
+# Choice logit with theta corrected QV
+
+```{r}
+p = rbind(truev_mod %>% filter(term == "lottery_ev_diff"), qv_mod, qv_theta_mod) %>%
+  mutate(reg = ifelse(term %in% c("lottery_ev_diff", "lottery_ev_diff_theta"), "Lottery EV", ifelse(term == "fractal_prob_diff", "True Fractal P", ifelse(term %in% c("fractal_qv_diff","fractal_qv_diff_theta"),"Fractal QV", NA))),
+         reg = factor(reg, levels=c("True Fractal P", "Lottery EV", "Fractal QV")),
+         theta = grepl("theta", term),
+         fract = ifelse(reg == "Fractal QV", T, F)) %>%
+  ggplot(aes(probFractalDraw, estimate, col=reg, group=term, alpha = theta))+
+  geom_point(size=3)+
+  geom_line(size=3)+
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2, size=3)+
+  geom_hline(aes(yintercept=0), linetype="dashed")+
+  scale_color_manual(values = cbbPalette[2:1])+
+  scale_alpha_manual(guide = "none", values=c(.5, 1))+
+  geom_rect(aes(xmin=.5, xmax=1.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01)+
+  geom_rect(aes(xmin=5.5, xmax=6.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01)+
+  geom_rect(aes(xmin=10.5, xmax=11.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01)+
+  theme(legend.position = "bottom",
+        legend.background = element_blank(),
+        panel.grid = element_blank(),
+        axis.text = element_text(size=24),
+        axis.title = element_text(size=24),
+        legend.text = element_text(size=20))+
+  labs(color="", x= "p(Fractal)", y="Beta estimate")+
+  expand_limits(y=11)+
+  scale_y_continuous(breaks=seq(0, 10, 2.5))
+
+# ggsave(file=paste0(fig_out_path, 'neuroecon_logit_build2.jpg'), p, height = 5, width=8, units="in")
+p
+```
+
+
+
+# Plain RT inverse U
+
+# DDM demo plots
+
+## Single integrator
+
+## Two integrators
+
+## Single integrator with early integration
+
+# DDM fits
+
+## Single integrator
+
+## Two integrators
+
+## Single integrator with early integration

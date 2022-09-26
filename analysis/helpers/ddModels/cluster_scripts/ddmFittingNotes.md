@@ -34,6 +34,19 @@ aws s3 sync /shared/ddModels/cluster_scripts/optim_out/fitOneInt_oneParamAsymmLi
 docker run --rm -it -v ~/.aws:/root/.aws -v $(pwd):/fitTwoInts_oneParamAsymmLinear amazon/aws-cli s3 sync s3://described-vs-experienced/ddModels/cluster_scripts/optim_out/fitTwoInts_oneParamAsymmLinear /fitTwoInts_oneParamAsymmLinear --exclude "*" --include "*optim_par*"
 ```
 
+```
+docker run --rm -it -v ~/.aws:/root/.aws -v $(pwd):/fitOneInt_oneParamAsymmLinear_earlyIntegration amazon/aws-cli s3 sync s3://described-vs-experienced/ddModels/cluster_scripts/optim_out/fitOneInt_oneParamAsymmLinear_earlyIntegration /fitOneInt_oneParamAsymmLinear_earlyIntegration --exclude "*" --include "*optim_par*"
+```
+
+```
+docker run --rm -it -v ~/.aws:/root/.aws -v $(pwd):/fitOneInt_oneParamAsymmLinear amazon/aws-cli s3 sync s3://described-vs-experienced/ddModels/cluster_scripts/optim_out/fitOneInt_oneParamAsymmLinear /fitOneInt_oneParamAsymmLinear --exclude "*" --include "*optim_par*"
+```
+
+```
+docker run --rm -it -v ~/.aws:/root/.aws -v $(pwd):/fitTwoInts_oneParamAsymmLinear_fixSigma amazon/aws-cli s3 sync s3://described-vs-experienced/ddModels/cluster_scripts/optim_out/fitTwoInts_oneParamAsymmLinear_fixSigma /fitTwoInts_oneParamAsymmLinear_fixSigma --exclude "*" --include "*optim_par*"
+```
+
+
 # Job submission commands
 
 ## Examples for one subjets
@@ -53,7 +66,7 @@ sh run_ddm_Roptim.sh -m twoIntegrators_sepProbDistortion -d sub_data_oneParamSym
 ```
 
 ```
-sh run_ddm_Roptim.sh -m twoIntegrators_sepProbDistortion -d sub_data_oneParamAsymmLinear/sub01_data -s sub_sv_twoInts_fixSigma01.csv -o fitTwoInts_oneParamAsymmLinear_fixSigma -p dLott,dFrac -f sigmaLott,sigmaFrac -v .5,.5
+sh run_ddm_Roptim.sh -m twoIntegrators_sepProbDistortion -d sub_data_oneParamAsymmLinear/sub01_data -s sub_sv_twoInts_fixSigma01.csv -o fitTwoInts_oneParamAsymmLinear_fixSigma -p dLott,dFrac -f sigmaLott,sigmaFrac -v .05,.05
 ```
 
 ```
@@ -86,14 +99,14 @@ done
 ```
 for subnum in 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 22 23 24 25 27
 do
-sh run_ddm_Roptim.sh -m twoIntegrators_sepProbDistortion -d sub_data_oneParamAsymmLinear/sub$subnum\_data -s sub_sv_twoInts_fixSigma$subnum.csv -o fitTwoInts_oneParamAsymmLinear_fixSigma -p dLott,dFrac -f sigmaLott,sigmaFrac -v .5,.5
+sh run_ddm_Roptim.sh -m twoIntegrators_sepProbDistortion -d sub_data_oneParamAsymmLinear/sub$subnum\_data -s sub_sv_twoInts_fixSigma$subnum.csv -o fitTwoInts_oneParamAsymmLinear_fixSigma -p dLott,dFrac -f sigmaLott,sigmaFrac -v .05,.05
 done
 ```
 
 ```
 for subnum in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 22 23 24 25 27
 do
-sh run_ddm_Roptim.sh -m twoIntegrators_sepProbDistortion -d sub_data_oneParamSymmLinear/sub$subnum\_data -s sub_sv_twoInts_fixSigma$subnum.csv -o fitTwoInts_oneParamSymmLinear_fixSigma -p dLott,dFrac -f sigmaLott,sigmaFrac -v .5,.5
+sh run_ddm_Roptim.sh -m twoIntegrators_sepProbDistortion -d sub_data_oneParamSymmLinear/sub$subnum\_data -s sub_sv_twoInts_fixSigma$subnum.csv -o fitTwoInts_oneParamSymmLinear_fixSigma -p dLott,dFrac -f sigmaLott,sigmaFrac -v .05,.05
 done
 ```
 

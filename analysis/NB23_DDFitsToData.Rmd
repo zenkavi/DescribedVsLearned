@@ -35,12 +35,15 @@ source(paste0(helpers_path, 'optimPostProcess/get_optim_out.R'))
 
 ```{r}
 sim_trial_list = list()
+fit_trial_list = list()
 source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_oneIntegrator_sepProbDistortion.R'))
 sim_trial_list[['model1']] = sim_trial
+fit_trial_list[['model1']] = fit_trial
 source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_twoIntegrators_sepProbDistortion.R'))
 sim_trial_list[['model2']] = sim_trial
 source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_oneIntegrator_sepProbDistortion_earlyIntegration.R'))
 sim_trial_list[['model1ea']] = sim_trial
+fit_trial_list[['model1ea']] = fit_trial
 
 ```
 
@@ -231,7 +234,7 @@ for(i in 1:length(unique(oneIntEstsAsymmLinear$subnum))){
 ```
 
 ```{r}
-sim_sanity_checks(oneIntPpcAsymmLinear_earlyInt, checks=c(1,3,4,5), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
+sim_sanity_checks(oneIntPpcAsymmLinear_earlyInt, checks=c(1,4,5), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
 ```
 
 ##### Fits
@@ -279,6 +282,23 @@ oneIntEstsAsymmLinear %>%
   theme(panel.grid = element_blank())
 ```
 
+Distribution of difference between the parameter estimates with and without early integration
+
+```{r}
+oneIntEstsAsymmLinear %>%
+  mutate(model= "noEarlyInt") %>%
+  rbind(oneIntEstsAsymmLinear_earlyInt %>%
+          mutate(model="EarlyInt")) %>%
+  gather(par, value, -subnum, -model) %>%
+  group_by(par) %>%
+  spread(model, value) %>%
+  mutate(diff = EarlyInt - noEarlyInt) %>%
+  ggplot(aes(diff))+
+  geom_histogram(bins=20, alpha=.5)+
+  facet_wrap(~par, scales="free")+
+  theme(panel.grid = element_blank())
+```
+
 Simulate predicted data
 
 ```{r}
@@ -297,6 +317,118 @@ for(i in 1:length(unique(oneIntEstsAsymmLinear_earlyInt$subnum))){
 
 ```{r}
 sim_sanity_checks(oneIntPpcAsymmLinear_earlyInt, checks=c(1,4,5), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
+```
+```{r}
+oneIntPpcAsymmLinear_earlyInt = data.frame()
+
+for(i in 1:length(unique(oneIntEstsAsymmLinear_earlyInt$subnum))){
+  cur_sub = unique(oneIntEstsAsymmLinear_earlyInt$subnum)[i]
+  cur_stims =  sub_stims_asym %>% filter(subnum == cur_sub)
+  cur_pars = oneIntEstsAsymmLinear_earlyInt %>% filter(subnum == cur_sub)
+  sim_subj = sim_task(cur_stims, model_name = "model1ea", d=cur_pars$d, sigma=cur_pars$sigma, theta=unique(cur_stims$theta), stimDelay=1000)
+  sim_subj$subnum = cur_sub
+  oneIntPpcAsymmLinear_earlyInt = rbind(oneIntPpcAsymmLinear_earlyInt, sim_subj)
+}
+
+```
+
+```{r}
+sim_sanity_checks(oneIntPpcAsymmLinear_earlyInt, checks=c(1,4,5), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
+```
+
+```{r}
+oneIntPpcAsymmLinear_earlyInt = data.frame()
+
+for(i in 1:length(unique(oneIntEstsAsymmLinear_earlyInt$subnum))){
+  cur_sub = unique(oneIntEstsAsymmLinear_earlyInt$subnum)[i]
+  cur_stims =  sub_stims_asym %>% filter(subnum == cur_sub)
+  cur_pars = oneIntEstsAsymmLinear_earlyInt %>% filter(subnum == cur_sub)
+  sim_subj = sim_task(cur_stims, model_name = "model1ea", d=rnorm(1, cur_pars$d, 0.003), sigma=rnorm(1, cur_pars$sigma, 0.0015), theta=unique(cur_stims$theta), stimDelay=runif(1, 350, 500))
+  sim_subj$subnum = cur_sub
+  oneIntPpcAsymmLinear_earlyInt = rbind(oneIntPpcAsymmLinear_earlyInt, sim_subj)
+}
+
+```
+
+```{r}
+sim_sanity_checks(oneIntPpcAsymmLinear_earlyInt, checks=c(1,4,5), compare_logits = T, compare_rts = T, true_data = sub_stims_asym)
+```
+
+##### Debug slowness
+
+Examine likelihoods
+
+```{r}
+lik_oneIntPpcAsymmLinear_earlyInt = data.frame()
+
+for(i in 1:length(unique(oneIntEstsAsymmLinear_earlyInt$subnum))){
+  cur_sub = unique(oneIntEstsAsymmLinear_earlyInt$subnum)[i]
+  cur_stims =  sub_stims_asym %>% filter(subnum == cur_sub) %>% mutate(choice = ifelse(choiceLeft==1, "left", "right"))
+  cur_pars = oneIntEstsAsymmLinear_earlyInt %>% filter(subnum == cur_sub)
+  sim_subj = fit_task(cur_stims, model_name = "model1ea", pars = list(d= cur_pars$d, sigma= cur_pars$sigma, theta=unique(cur_stims$theta), stimDelay=500) )
+  sim_subj$subnum = cur_sub
+  lik_oneIntPpcAsymmLinear_earlyInt = rbind(lik_oneIntPpcAsymmLinear_earlyInt, sim_subj)
+}
+
+```
+
+```{r}
+lik_oneIntPpcAsymmLinear = data.frame()
+
+for(i in 1:length(unique(oneIntEstsAsymmLinear$subnum))){
+  cur_sub = unique(oneIntEstsAsymmLinear$subnum)[i]
+  cur_stims =  sub_stims_asym %>% filter(subnum == cur_sub) %>% mutate(choice = ifelse(choiceLeft==1, "left", "right"))
+  cur_pars = oneIntEstsAsymmLinear %>% filter(subnum == cur_sub)
+  sim_subj = fit_task(cur_stims, model_name = "model1", pars = list(d= cur_pars$d, sigma= cur_pars$sigma))
+  sim_subj$subnum = cur_sub
+  lik_oneIntPpcAsymmLinear = rbind(lik_oneIntPpcAsymmLinear, sim_subj)
+}
+
+```
+
+```{r}
+lik_oneIntPpcAsymmLinear_earlyInt %>%
+  mutate(model = "earlyInt") %>%
+  select(-theta) %>%
+  group_by(subnum) %>%
+  mutate(trialNum = 1:n()) %>%
+  rbind(lik_oneIntPpcAsymmLinear %>%
+          mutate(model = "noEarlyInt") %>%
+            group_by(subnum) %>%
+          mutate(trialNum = 1:n())) %>%
+  select(likelihood, model, subnum, trialNum, probFractalDraw) %>%
+  # spread(model, likelihood) %>%
+  ggplot(aes(likelihood, fill=model))+
+  geom_histogram(alpha=.5, bins=30, position="identity")+
+  theme(panel.grid = element_blank(),
+        legend.position="bottomr")
+```
+
+
+```{r}
+lik_oneIntPpcAsymmLinear_earlyInt %>%
+  mutate(model = "earlyInt") %>%
+  select(-theta) %>%
+  group_by(subnum) %>%
+  mutate(trialNum = 1:n()) %>%
+  rbind(lik_oneIntPpcAsymmLinear %>%
+          mutate(model = "noEarlyInt") %>%
+            group_by(subnum) %>%
+          mutate(trialNum = 1:n())) %>%
+  select(likelihood, model, subnum, trialNum, probFractalDraw) %>%
+  spread(model, likelihood) %>%
+  ggplot(aes(earlyInt, noEarlyInt))+
+  geom_point()+
+  geom_abline(aes(slope=1, intercept=0))+
+  facet_grid(subnum~probFractalDraw)+
+  theme(panel.grid = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text = element_blank())
+
+```
+
+```{r}
+
 ```
 
 #### Without extreme cases

@@ -1,0 +1,165 @@
+---
+title: 'Experience vs. description based decision-making project: Examine behavioral regressors for fmri GLMs'
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    code_folding: 'hide'
+  pdf_document:
+    toc: yes
+---
+
+```{r include=FALSE}
+library(tidyverse)
+theme_set(theme_bw())
+library(here)
+library(GGally)
+cbbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+helpers_path = here('analysis/helpers/')
+
+source(paste0(helpers_path,'01_clean_behavioral_data.R'))
+source(paste0(helpers_path, 'get_qvals.R'))
+
+set.seed(38573)
+```
+
+Which value regressor best captures activity in value regions?
+
+Chosen RL model: One parameter prob distortion parameter (theta) asymmetrically distorting fractal value
+
+```{r message=FALSE, warning=FALSE}
+source(paste0(helpers_path, 'rlModels/fit_rl_hierarchical_oneParamAsymmLinearProbDistortion_rpeBoth.R'))
+
+clean_beh_data_asymmnonorm = par_ests %>%
+  group_by(subnum, par) %>%
+  summarise(est = mean(value), .groups='keep') %>%
+  spread(par, est) %>%
+  left_join(clean_beh_data, by='subnum')
+
+## Add Q values of fractals to each trial
+clean_beh_data_asymmnonorm = clean_beh_data_asymmnonorm %>%
+  group_by(subnum) %>%
+  do(get_qvals(., model_name="rpeBoth")) %>%
+  ungroup()
+
+rm(fit, g_par_ests, par_ests)
+
+```
+
+true value * prob fractal draw (left_tv_pfrac, right_tv_pfrac)
+true value * distorted prob fractal draw (left_tv_wpfrac, right_tv_wpfrac)
+qv * prob fractal draw (left_qv_pfrac, right_qv_pfrac)
+qv * distorted prob fractal draw (left_qv_wpfrac, right_qv_wpfrac)
+
+```{r}
+clean_beh_data_asymmnonorm = clean_beh_data_asymmnonorm %>%
+  mutate(rightLotteryEV = referenceProb * referenceValue,
+         leftLotteryEV = lotteryValue * lotteryProb,
+         wpFrac = theta*probFractalDraw, 
+         left_tv_pFrac = fractalLeftProb * probFractalDraw,
+         right_tv_pFrac = fractalRightProb * probFractalDraw,
+         left_tv_wpFrac = fractalLeftProb * wpFrac,
+         right_tv_wpFrac = fractalRightProb * wpFrac,
+         left_qv_pFrac = leftQValue * probFractalDraw,
+         right_qv_pFrac = rightQValue * probFractalDraw,
+         left_qv_wpFrac = leftQValue * wpFrac,
+         right_qv_wpFrac = rightQValue * wpFrac,
+         left_ev_pLott = leftLotteryEV * (1-probFractalDraw),
+         right_ev_pLott = rightLotteryEV * (1-probFractalDraw))
+```
+
+value sum = left frac + left lott + right frac + right lott
+
+```{r}
+tmp = clean_beh_data_asymmnonorm %>%
+  mutate(vsum_tv_pFrac = left_ev_pLott + right_ev_pLott + left_tv_pFrac + right_tv_pFrac,
+         vsum_tv_wpFrac = left_ev_pLott + right_ev_pLott + left_tv_wpFrac + right_tv_wpFrac,
+         vsum_qv_pFrac = left_ev_pLott + right_ev_pLott + left_qv_pFrac + right_qv_pFrac,
+         vsum_qv_wpFrac = left_ev_pLott + right_ev_pLott + left_qv_wpFrac + right_qv_wpFrac) %>%
+  select(vsum_tv_pFrac, vsum_tv_wpFrac, vsum_qv_pFrac, vsum_qv_wpFrac)
+
+# ggpairs(tmp)
+```
+
+non distorted versus distorted value sum by runs
+
+is the distorted value weak bc there are a bunch of 0's in the beginning?
+
+```{r}
+clean_beh_data_asymmnonorm %>%
+  mutate(vsum_tv_pFrac = left_ev_pLott + right_ev_pLott + left_tv_pFrac + right_tv_pFrac,
+         vsum_tv_wpFrac = left_ev_pLott + right_ev_pLott + left_tv_wpFrac + right_tv_wpFrac,
+         vsum_qv_pFrac = left_ev_pLott + right_ev_pLott + left_qv_pFrac + right_qv_pFrac,
+         vsum_qv_wpFrac = left_ev_pLott + right_ev_pLott + left_qv_wpFrac + right_qv_wpFrac) %>%
+  select(vsum_tv_pFrac, vsum_qv_wpFrac, session, subnum) %>%
+  group_by(subnum, session) %>%
+  mutate(vsum_tv_pFrac_demean = vsum_tv_pFrac-mean(vsum_tv_pFrac),
+         vsum_qv_wpFrac_demean = vsum_qv_wpFrac-mean(vsum_qv_wpFrac))%>%
+  ungroup()%>%
+  select(-subnum) %>%
+  gather(key, value, -session) %>%
+  mutate(demeaned = ifelse(grepl("demean", key), "demeaned", "raw")) %>%
+  ggplot(aes(value, fill=key)) +
+  geom_histogram(alpha=.5, position="identity", bins=30)+
+  facet_grid(demeaned~session)+
+  geom_abline(aes(slope=1, intercept=0))+
+  theme(panel.grid = element_blank(),
+        legend.position = "bottom", 
+        legend.title = element_blank())+
+  labs(x="",y="")
+
+```
+```{r}
+clean_beh_data_asymmnonorm %>%
+  mutate(vsum_tv_pFrac = left_ev_pLott + right_ev_pLott + left_tv_pFrac + right_tv_pFrac,
+         vsum_tv_wpFrac = left_ev_pLott + right_ev_pLott + left_tv_wpFrac + right_tv_wpFrac,
+         vsum_qv_pFrac = left_ev_pLott + right_ev_pLott + left_qv_pFrac + right_qv_pFrac,
+         vsum_qv_wpFrac = left_ev_pLott + right_ev_pLott + left_qv_wpFrac + right_qv_wpFrac) %>%
+  select(vsum_tv_pFrac, vsum_qv_wpFrac, session, subnum, trialNum) %>%
+  filter(trialNum>20) %>%
+  group_by(subnum, session) %>%
+  mutate(vsum_tv_pFrac_demean = vsum_tv_pFrac-mean(vsum_tv_pFrac),
+         vsum_qv_wpFrac_demean = vsum_qv_wpFrac-mean(vsum_qv_wpFrac))%>%
+  ggplot(aes(vsum_tv_pFrac_demean, vsum_qv_wpFrac_demean)) +
+  geom_point()+
+  facet_wrap(~session)+
+  geom_abline(aes(slope=1, intercept=0))+
+  theme(panel.grid = element_blank())
+
+```
+
+value diff = (left frac + left lott) - (right frac + right lott)
+
+```{r}
+tmp = clean_beh_data_asymmnonorm %>%
+  mutate(vdiff_tv_pFrac = abs((left_ev_pLott + left_tv_pFrac) - (right_ev_pLott + right_tv_pFrac)),
+         vdiff_tv_wpFrac = abs((left_ev_pLott + left_tv_wpFrac) - (right_ev_pLott + right_tv_wpFrac)),
+         vdiff_qv_pFrac = abs((left_ev_pLott + left_qv_pFrac) - (right_ev_pLott + right_qv_pFrac)),
+         vdiff_qv_wpFrac = abs((left_ev_pLott + left_qv_wpFrac) - (right_ev_pLott + right_qv_wpFrac))) %>%
+  select(vdiff_tv_pFrac, vdiff_tv_wpFrac, vdiff_qv_pFrac, vdiff_qv_wpFrac)
+
+ggpairs(tmp)
+```
+
+value chosen - unchosen = (chosen frac + chosen lott) - (unchosen frac + unchosen lott)
+
+```{r}
+tmp = clean_beh_data_asymmnonorm %>%
+  mutate(chosen_ev_pLott = ifelse(choiceLeft == 1, left_ev_pLott, right_ev_pLott),
+         unchosen_ev_pLott = ifelse(choiceLeft == 0, left_ev_pLott, right_ev_pLott),
+         chosen_tv_pFrac = ifelse(choiceLeft == 1, left_tv_pFrac, right_tv_pFrac),
+         chosen_tv_wpFrac = ifelse(choiceLeft == 1, left_tv_wpFrac, right_tv_wpFrac),
+         chosen_qv_pFrac = ifelse(choiceLeft == 1, left_qv_pFrac, right_qv_pFrac),
+         chosen_qv_wpFrac = ifelse(choiceLeft == 1, left_qv_wpFrac, right_qv_wpFrac),
+         unchosen_tv_pFrac = ifelse(choiceLeft == 0, left_tv_pFrac, right_tv_pFrac),
+         unchosen_tv_wpFrac = ifelse(choiceLeft == 0, left_tv_wpFrac, right_tv_wpFrac),
+         unchosen_qv_pFrac  = ifelse(choiceLeft == 0, left_qv_pFrac, right_qv_pFrac),
+         unchosen_qv_wpFrac = ifelse(choiceLeft == 0, left_qv_wpFrac, right_qv_wpFrac),
+         vchosendiff_tv_pFrac = (chosen_ev_pLott + chosen_tv_pFrac) - (unchosen_ev_pLott + unchosen_tv_pFrac),
+         vchosendiff_tv_wpFrac = (chosen_ev_pLott + chosen_tv_wpFrac) - (unchosen_ev_pLott + unchosen_tv_wpFrac),
+         vchosendiff_qv_pFrac = (chosen_ev_pLott + chosen_qv_pFrac) - (unchosen_ev_pLott + unchosen_qv_pFrac),
+         vchosendiff_qv_wpFrac = (chosen_ev_pLott + chosen_qv_wpFrac) - (unchosen_ev_pLott + unchosen_qv_wpFrac)) %>%
+  select(vchosendiff_tv_pFrac, vchosendiff_tv_wpFrac, vchosendiff_qv_pFrac, vchosendiff_qv_wpFrac)
+
+ggpairs(tmp)
+```

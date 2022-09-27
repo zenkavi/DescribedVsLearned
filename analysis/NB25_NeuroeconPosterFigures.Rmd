@@ -88,41 +88,54 @@ qv_theta_mod = clean_beh_data %>%
 ```
 
 ```{r}
-p = rbind(truev_mod, qv_mod) %>%
-  mutate(reg = ifelse(term %in% c("lottery_ev_diff", "lottery_ev_diff_theta"), "Lottery EV", ifelse(term == "fractal_prob_diff", "True Fractal P", ifelse(term %in% c("fractal_qv_diff","fractal_qv_diff_theta"),"Fractal QV", NA))),
-         reg = factor(reg, levels=c("True Fractal P", "Lottery EV", "Fractal QV")),
+p = rbind(truev_mod, qv_mod, qv_theta_mod) %>%
+  mutate(reg = ifelse(term %in% c("lottery_ev_diff", "lottery_ev_diff_theta"), "Lottery EV Difference", ifelse(term == "fractal_prob_diff", "True Fractal Value Difference", ifelse(term %in% c("fractal_qv_diff"),"Fractal QV Difference", NA))),
+         reg = factor(reg, levels=c("True Fractal Value Difference", "Lottery EV Difference", "Fractal QV Difference")),
          theta = grepl("theta", term),
-         fract = ifelse(reg == "Fractal QV", T, F)) %>%
-  ggplot(aes(probFractalDraw, estimate, col=reg, group=reg))+
+         fract = ifelse(reg == "Fractal QV Difference", T, F)) %>%
+  ggplot(aes(probFractalDraw, estimate, col=reg, group=reg, alpha=theta))+
   geom_point(size=3)+
   geom_line(size=3)+
   geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2, size=3)+
   geom_hline(aes(yintercept=0), linetype="dashed")+
   scale_color_manual(values = cbbPalette[3:1])+
+  scale_alpha_manual(guide = "none", values=c(1,0))+
   geom_rect(aes(xmin=.5, xmax=1.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01)+
   geom_rect(aes(xmin=5.5, xmax=6.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01)+
   geom_rect(aes(xmin=10.5, xmax=11.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01)+
   theme(legend.position = "bottom",
         legend.background = element_blank(),
+        legend.box = "vertical",
         panel.grid = element_blank(),
         axis.text = element_text(size=24),
         axis.title = element_text(size=24),
         legend.text = element_text(size=20))+
-  labs(color="", x= "p(Fractal)", y="Beta estimate")+
-  expand_limits(y=11)+
-  scale_y_continuous(breaks=seq(0, 10, 2.5))
+  labs(color="", x= "p(FD)", y="Beta estimate")+
+  expand_limits(y=c(-1,11))+
+  scale_y_continuous(breaks=seq(0, 10, 2.5))+
+  guides(col = guide_legend(nrow = 1))
 
-ggsave(file=paste0(fig_out_path, 'neuroecon_logit_build1.jpg'), p, height = 5, width=8, units="in")
+#grab legend before removing it
+legend <- cowplot::get_legend(p)
+
+p =p + theme(legend.position = "none")
 p
+
+# ggsave(file=paste0(fig_out_path, 'neuroecon_logit_build1.jpg'), p, height = 5, width=8, units="in")
 ```
+
+```{r}
+ggsave(file=paste0(fig_out_path, 'neuroecon_logit_legend.jpg'), legend, height = 2, width=11, units="in")
+```
+
 # Choice logit with theta corrected QV
 
 ```{r}
 p = rbind(truev_mod %>% filter(term == "lottery_ev_diff"), qv_mod, qv_theta_mod) %>%
-  mutate(reg = ifelse(term %in% c("lottery_ev_diff", "lottery_ev_diff_theta"), "Lottery EV", ifelse(term == "fractal_prob_diff", "True Fractal P", ifelse(term %in% c("fractal_qv_diff","fractal_qv_diff_theta"),"Fractal QV", NA))),
-         reg = factor(reg, levels=c("True Fractal P", "Lottery EV", "Fractal QV")),
+  mutate(reg = ifelse(term %in% c("lottery_ev_diff", "lottery_ev_diff_theta"), "Lottery EV Difference", ifelse(term == "fractal_prob_diff", "True Fractal Value Difference", ifelse(term %in% c("fractal_qv_diff","fractal_qv_diff_theta"),"Fractal QV Difference", NA))),
+         reg = factor(reg, levels=c("True Fractal Value Difference", "Lottery EV Difference", "Fractal QV Difference")),
          theta = grepl("theta", term),
-         fract = ifelse(reg == "Fractal QV", T, F)) %>%
+         fract = ifelse(reg == "Fractal QV Difference", T, F)) %>%
   ggplot(aes(probFractalDraw, estimate, col=reg, group=term, alpha = theta))+
   geom_point(size=3)+
   geom_line(size=3)+
@@ -130,39 +143,471 @@ p = rbind(truev_mod %>% filter(term == "lottery_ev_diff"), qv_mod, qv_theta_mod)
   geom_hline(aes(yintercept=0), linetype="dashed")+
   scale_color_manual(values = cbbPalette[2:1])+
   scale_alpha_manual(guide = "none", values=c(.5, 1))+
-  geom_rect(aes(xmin=.5, xmax=1.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01)+
-  geom_rect(aes(xmin=5.5, xmax=6.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01)+
-  geom_rect(aes(xmin=10.5, xmax=11.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01)+
-  theme(legend.position = "bottom",
-        legend.background = element_blank(),
+  geom_rect(aes(xmin=.5, xmax=1.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.03, inherit.aes = F)+
+  geom_rect(aes(xmin=5.5, xmax=6.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.03, inherit.aes = F)+
+  geom_rect(aes(xmin=10.5, xmax=11.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.03, inherit.aes = F)+
+  theme(legend.position = "none",
         panel.grid = element_blank(),
         axis.text = element_text(size=24),
-        axis.title = element_text(size=24),
-        legend.text = element_text(size=20))+
-  labs(color="", x= "p(Fractal)", y="Beta estimate")+
-  expand_limits(y=11)+
+        axis.title = element_text(size=24))+
+  labs(color="", x= "p(FD)", y="Beta estimate")+
+  expand_limits(y=c(-1,11))+
   scale_y_continuous(breaks=seq(0, 10, 2.5))
 
-# ggsave(file=paste0(fig_out_path, 'neuroecon_logit_build2.jpg'), p, height = 5, width=8, units="in")
+ggsave(file=paste0(fig_out_path, 'neuroecon_logit_build2.jpg'), p, height = 5, width=8, units="in")
 p
 ```
 
-
-
 # Plain RT inverse U
+
+```{r}
+p = clean_beh_data %>%
+  mutate(logRt = log(reactionTime)) %>%
+  group_by(probFractalDraw) %>%
+  summarise(.groups = "keep",
+            mean_logRt = mean(logRt),
+            sem_logRt = sd(logRt)/sqrt(n())) %>%
+  ggplot(aes(probFractalDraw, mean_logRt))+
+  geom_point(position=position_dodge(width=.5), size=3)+
+  geom_errorbar(aes(ymin = mean_logRt - sem_logRt, ymax = mean_logRt + sem_logRt), width=.2,position=position_dodge(width=.5), size=2)+
+  labs(y="Mean Log RT", x="p(FD)")+
+  scale_color_manual(values = c(cbbPalette[3], cbbPalette[5:6]))+
+   theme(panel.grid = element_blank(),
+        axis.text = element_text(size=24),
+        axis.title = element_text(size=24),
+        legend.text = element_text(size=18),
+        legend.title = element_text(size=20))+
+  geom_rect(aes(xmin=.5, xmax=1.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.05)+
+  geom_rect(aes(xmin=5.5, xmax=6.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.05)+
+  geom_rect(aes(xmin=10.5, xmax=11.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.05)+
+  scale_y_continuous(breaks = c(-.3, 0, .3), limits=c(-.43, .43))
+  
+
+ggsave(file=paste0(fig_out_path, 'neuroecon_rt_by_pFrac.jpg'), p, height = 5, width=8, units="in")
+p
+```
 
 # DDM demo plots
 
+```{r}
+sim_trial_list = list()
+fit_trial_list = list()
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_oneIntegrator_sepProbDistortion.R'))
+sim_trial_list[['model1']] = sim_trial
+fit_trial_list[['model1']] = fit_trial
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_twoIntegrators_sepProbDistortion.R'))
+sim_trial_list[['model2']] = sim_trial
+source(paste0(helpers_path, 'ddModels/r_ddm_models/ddm_oneIntegrator_sepProbDistortion_earlyIntegration.R'))
+sim_trial_list[['model1ea']] = sim_trial
+fit_trial_list[['model1ea']] = fit_trial
+```
+
 ## Single integrator
+
+```{r}
+pFrac = .3
+theta = .7
+EVLeft = .7
+EVRight = .5
+distortedEVDiff = (1-pFrac)*(EVLeft-EVRight)
+QVLeft = .1
+QVRight = .4
+distortedQVDiff = theta*pFrac*(QVLeft-QVRight)
+
+tmp = sim_trial_list[['model1']](d = .05, sigma = .03, distortedEVDiff = distortedEVDiff, distortedQVDiff = distortedQVDiff, probFractalDraw = NA, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE)
+
+p = tmp$debug_df %>%
+  select(RDV, time) %>%
+  gather(key, value, -time) %>%
+  ggplot(aes(time, value, color=key))+
+  geom_line(size=3)+
+  geom_vline(aes(xintercept=0), size=1)+
+  geom_hline(aes(yintercept=1), size=2)+
+  geom_hline(aes(yintercept=-1), size=2)+
+  annotate(geom="segment", x=0, xend=max(tmp$debug_df$time), y=0, yend=0, size=2, linetype="dashed")+
+  theme(legend.position = "none",
+        panel.grid = element_blank(),
+        panel.border = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text = element_text(size=24),
+        axis.title = element_text(size=24))+
+  labs(color="", x = "Time", y="RDV")+
+  scale_y_continuous(breaks=c(-1,0,1))+
+  annotate(geom="text", x=.5, y = .85, label = "Left", hjust=0, size = 11)+
+  annotate(geom="text", x=.5, y = -.85, label = "Right", hjust=0, size = 11)+
+  annotate(geom="text", x=-7, y = -.85, label = "Stimulus presentation", hjust=0, size = 8, angle=90)
+
+p
+ggsave(file=paste0(fig_out_path, 'neuroecon_oneInt_demo.jpg'), p, height = 5, width=8, units="in")
+```
 
 ## Two integrators
 
+```{r}
+pFrac = .3
+theta = .7
+EVLeft = .7
+EVRight = .5
+distortedEVDiff = (1-pFrac)*(EVLeft-EVRight)
+QVLeft = .1
+QVRight = .4
+distortedQVDiff = theta*pFrac*(QVLeft-QVRight)
+
+sim_dLott = .02
+sim_dFrac = .06
+sim_sigma = .03
+
+tmp = sim_trial_list[['model2']](dLott=sim_dLott, dFrac=sim_dFrac,  sigmaLott = sim_sigma, sigmaFrac = sim_sigma, distortedEVDiff = distortedEVDiff , distortedQVDiff = distortedQVDiff , probFractalDraw = 2, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE)
+
+p = tmp$debug_df %>%
+  select(lotteryRDV, fractalRDV, time) %>%
+  gather(key, value, -time) %>%
+  ggplot(aes(time, value, color=key))+
+  geom_line(size=3)+
+  geom_vline(aes(xintercept=0), size=1)+
+  geom_hline(aes(yintercept=1), size=2)+
+  geom_hline(aes(yintercept=-1), size=2)+
+  annotate(geom="segment", x=0, xend=max(tmp$debug_df$time), y=0, yend=0, size=2, linetype="dashed")+
+  theme(legend.position = "none",
+        panel.grid = element_blank(),
+        panel.border = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text = element_text(size=24),
+        axis.title = element_text(size=24))+
+  labs(color="", x = "Time", y="RDV")+
+  scale_y_continuous(breaks=c(-1,0,1))+
+  annotate(geom="text", x=.5, y = .85, label = "Left", hjust=0, size = 11)+
+  annotate(geom="text", x=.5, y = -.85, label = "Right", hjust=0, size = 11)+
+  annotate(geom="text", x=-10, y = -.85, label = "Stimulus presentation", hjust=0, size = 8, angle=90)+
+  scale_color_manual(values=cbbPalette[1:2])
+
+ggsave(file=paste0(fig_out_path, 'neuroecon_twoInt_demo.jpg'), p, height = 5, width=8, units="in")
+p
+```
+
 ## Single integrator with early integration
+
+
+```{r}
+pFrac = .8
+theta = .9
+EVLeft = .7
+EVRight = .5
+distortedEVDiff = (1-pFrac)*(EVLeft-EVRight)
+QVLeft = .1
+QVRight = .4
+distortedQVDiff = theta*pFrac*(QVLeft-QVRight)
+
+tmp = sim_trial_list[['model1ea']](d = .05, sigma = .03, distortedEVDiff = distortedEVDiff, distortedQVDiff = distortedQVDiff, probFractalDraw = pFrac, barrierDecay = 0, bias = 0, EVLeft = NA, EVRight = NA, QVLeft = NA, QVRight = NA, debug=TRUE, theta=theta, stimDelay = 500)
+
+p = tmp$debug_df %>%
+  drop_na() %>%
+  select(RDV, time) %>%
+  gather(key, value, -time) %>%
+  ggplot(aes(time, value, color=key))+
+  geom_line(size=3)+
+  geom_vline(aes(xintercept=0), size=1)+
+  geom_hline(aes(yintercept=1), size=2)+
+  geom_hline(aes(yintercept=-1), size=2)+
+  geom_hline(aes(yintercept=0), size=2, linetype="dashed")+
+  # annotate(geom="segment", x=0, xend=max(tmp$debug_df$time), y=0, yend=0, size=2, linetype="dashed")+
+  theme(legend.position = "none",
+        panel.grid = element_blank(),
+        panel.border = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text = element_text(size=24),
+        axis.title = element_text(size=24))+
+  labs(color="", x = "Time", y="RDV")+
+  scale_y_continuous(breaks=c(-1,0,1))+
+  annotate(geom="text", x=.5, y = .85, label = "Left", hjust=0, size = 11)+
+  annotate(geom="text", x=.5, y = -.85, label = "Right", hjust=0, size = 11)+
+  annotate(geom="text", x=-7, y = -.85, label = "Stimulus presentation", hjust=0, size = 8, angle=90)+
+  annotate(geom="text", x=30, y = 0.25, label = "If p(FD)>0.5", hjust=0, size = 8)
+
+p
+ggsave(file=paste0(fig_out_path, 'neuroecon_oneIntEarlyInt_demo.jpg'), p, height = 5, width=8, units="in")
+```
 
 # DDM fits
 
+```{r}
+cpueaters_path = '/Users/zeynepenkavi/CpuEaters/DescribedVsLearned_beh/analysis/helpers/'
+source(paste0(helpers_path, 'optimPostProcess/get_optim_out.R'))
+source(paste0(helpers_path,'ddModels/sim_task.R'))
+source(paste0(helpers_path,'optimPostProcess/sim_sanity_checks.R'))
+```
+
+```{r}
+subnums = c("01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "22", "23", "25", "27")
+data_prefix ="sub"
+data_suffix = "_data"
+```
+
+```{r}
+clean_beh_data_asymmnonorm = clean_beh_data
+
+sub_stims_asym = clean_beh_data_asymmnonorm %>%
+  select(leftLotteryEV, rightLotteryEV, leftQValue, rightQValue, probFractalDraw, reactionTime, choiceLeft, subnum, distorted_ev_diff, distorted_qv_diff, theta) %>%
+  rename(EVLeft = leftLotteryEV, EVRight = rightLotteryEV, QVLeft = leftQValue, QVRight = rightQValue, distortedEVDiff = distorted_ev_diff, distortedQVDiff = distorted_qv_diff)
+```
+
 ## Single integrator
+
+```{r}
+optim_out_path = paste0(cpueaters_path, 'ddModels/cluster_scripts/optim_out/fitOneInt_oneParamAsymmLinear/')
+
+model = "oneIntegrator_sepProbDistortion"  
+
+ddm_fit_pars = data.frame()
+
+for(i in 1:length(subnums)){
+  cur_subnum = subnums[i]
+  tmp = get_optim_out(model_=model, data_=paste0(data_prefix, cur_subnum, data_suffix), optim_out_path_=optim_out_path, iters_ = F)
+  tmp$subnum = cur_subnum
+  ddm_fit_pars = rbind.all.columns(tmp, ddm_fit_pars)
+}
+```
+
+Summarise subject parameters as a mean of the converged values from different starting points
+
+```{r}
+oneIntEstsAsymmLinear = ddm_fit_pars %>%
+  group_by(subnum) %>%
+  summarise(d = mean(Param1),
+            sigma = mean(Param2))
+```
+
+Simulate predicted data
+
+```{r}
+oneIntPpcAsymmLinear = data.frame()
+
+for(i in 1:length(unique(oneIntEstsAsymmLinear$subnum))){
+  cur_sub = unique(oneIntEstsAsymmLinear$subnum)[i]
+  cur_stims =  sub_stims_asym %>% filter(subnum == cur_sub)
+  cur_pars = oneIntEstsAsymmLinear %>% filter(subnum == cur_sub)
+  sim_subj = sim_task(cur_stims, model_name = "model1", d=cur_pars$d, sigma=cur_pars$sigma)
+  sim_subj$subnum = cur_sub
+  oneIntPpcAsymmLinear = rbind(oneIntPpcAsymmLinear, sim_subj)
+}
+
+```
+
+```{r}
+p = sim_sanity_checks(oneIntPpcAsymmLinear, checks = c(5), true_data = sub_stims_asym, compare_logits = T, logit_facets = F, return_plot = T)
+
+p = p[[1]] +
+  geom_point(size=3)+
+  geom_line(size=3)+
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2, size=3)+
+  geom_rect(aes(xmin=.5, xmax=1.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01, inherit.aes = F)+
+  geom_rect(aes(xmin=5.5, xmax=6.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01, inherit.aes = F)+
+  geom_rect(aes(xmin=10.5, xmax=11.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01, inherit.aes = F)+
+  theme(legend.position = "none",
+        axis.text = element_text(size=24),
+        axis.title = element_text(size=24))+
+  labs(color="", x= "p(FD)", y="Beta estimate")+
+  expand_limits(y=c(-1,11))+
+  scale_y_continuous(breaks=seq(0, 10, 2.5))
+
+ggsave(file=paste0(fig_out_path, 'neuroecon_oneIntLogitSim.jpg'), p, height = 5, width=8, units="in")
+p
+```
+
+```{r}
+p = sim_sanity_checks(oneIntPpcAsymmLinear, checks = c(4), true_data = sub_stims_asym, compare_logits = T, logit_facets = F, return_plot = T)
+
+p = p[[1]] +
+  geom_point(aes(alpha = data_type),size=3)+
+  geom_errorbar(aes(ymin = mean_log_rt - sem_log_rt, ymax = mean_log_rt + sem_log_rt),width=.2,size=2)+
+  labs(y="Mean Log RT", x="p(FD)")+
+  scale_color_manual(values = c("black", "gray"))+
+  scale_alpha_manual(values = c(1,.5))+
+   theme(panel.grid = element_blank(),
+        axis.text = element_text(size=24),
+        axis.title = element_text(size=24),
+        legend.position = "none")+
+  geom_rect(aes(xmin=.5, xmax=1.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01)+
+  geom_rect(aes(xmin=5.5, xmax=6.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01)+
+  geom_rect(aes(xmin=10.5, xmax=11.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01)+
+  scale_y_continuous(breaks = c(-.3, 0, .3), limits=c(-.43, .43))
+
+ggsave(file=paste0(fig_out_path, 'neuroecon_oneIntRTSim.jpg'), p, height = 5, width=8, units="in")
+p
+```
 
 ## Two integrators
 
+```{r}
+optim_out_path = paste0(cpueaters_path, 'ddModels/cluster_scripts/optim_out/fitTwoInts_oneParamAsymmLinear/')
+
+model = "twoIntegrators_sepProbDistortion"  
+
+ddm_fit_pars = data.frame()
+
+for(i in 1:length(subnums)){
+  cur_subnum = subnums[i]
+  tmp = get_optim_out(model_=model, data_=paste0(data_prefix, cur_subnum, data_suffix), optim_out_path_=optim_out_path, iters_ = F)
+  tmp$subnum = cur_subnum
+  ddm_fit_pars = rbind.all.columns(tmp, ddm_fit_pars)
+}
+```
+
+Summarise subject parameters as a mean of the converged values from different starting points
+
+```{r}
+twoIntsEstsAsymmLinear = ddm_fit_pars %>%
+  group_by(subnum) %>%
+  summarise(dLott = mean(Param1),
+            dFrac = mean(Param2),
+            sigmaLott = mean(Param3),
+            sigmaFrac = mean(Param4))
+```
+
+Simulate predicted data
+
+```{r}
+twoIntsPpcAsymmLinear = data.frame()
+
+for(i in 1:length(unique(twoIntsEstsAsymmLinear$subnum))){
+  cur_sub = unique(twoIntsEstsAsymmLinear$subnum)[i]
+  cur_stims =  sub_stims_asym %>% filter(subnum == cur_sub)
+  cur_pars = twoIntsEstsAsymmLinear %>% filter(subnum == cur_sub)
+  sim_subj = sim_task(cur_stims, model_name = "model2", dLott=cur_pars$dLott, dFrac=cur_pars$dFrac, sigmaLott=cur_pars$sigmaLott, sigmaFrac=cur_pars$sigmaFrac)
+  sim_subj$subnum = cur_sub
+  twoIntsPpcAsymmLinear = rbind(twoIntsPpcAsymmLinear, sim_subj)
+}
+
+```
+
+
+```{r}
+p = sim_sanity_checks(twoIntsPpcAsymmLinear , checks = c(5), true_data = sub_stims_asym, compare_logits = T, logit_facets = F, return_plot = T)
+
+p = p[[1]] +
+  geom_point(size=3)+
+  geom_line(size=3)+
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2, size=3)+
+  geom_rect(aes(xmin=.5, xmax=1.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01, inherit.aes = F)+
+  geom_rect(aes(xmin=5.5, xmax=6.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01, inherit.aes = F)+
+  geom_rect(aes(xmin=10.5, xmax=11.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01, inherit.aes = F)+
+  theme(legend.position = "none",
+        axis.text = element_text(size=24),
+        axis.title = element_text(size=24))+
+  labs(color="", x= "p(FD)", y="Beta estimate")+
+  expand_limits(y=c(-1,11))+
+  scale_y_continuous(breaks=seq(0, 10, 2.5))
+
+ggsave(file=paste0(fig_out_path, 'neuroecon_twoIntsLogitSim.jpg'), p, height = 5, width=8, units="in")
+p
+```
+
+```{r}
+p = sim_sanity_checks(twoIntsPpcAsymmLinear, checks = c(4), true_data = sub_stims_asym, compare_logits = T, logit_facets = F, return_plot = T)
+
+p = p[[1]] +
+  geom_point(aes(alpha = data_type),size=3)+
+  geom_errorbar(aes(ymin = mean_log_rt - sem_log_rt, ymax = mean_log_rt + sem_log_rt),width=.2,size=2)+
+  labs(y="Mean Log RT", x="p(FD)")+
+  scale_color_manual(values = c("black", "gray"))+
+  scale_alpha_manual(values = c(1,.5))+
+   theme(panel.grid = element_blank(),
+        axis.text = element_text(size=24),
+        axis.title = element_text(size=24),
+        legend.position = "none")+
+  geom_rect(aes(xmin=.5, xmax=1.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01)+
+  geom_rect(aes(xmin=5.5, xmax=6.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01)+
+  geom_rect(aes(xmin=10.5, xmax=11.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01)+
+  scale_y_continuous(breaks = c(-.3, 0, .3), limits=c(-.43, .43))
+
+ggsave(file=paste0(fig_out_path, 'neuroecon_twoIntsRTSim.jpg'), p, height = 5, width=8, units="in")
+p
+```
+
 ## Single integrator with early integration
+
+```{r}
+optim_out_path = paste0(cpueaters_path, 'ddModels/cluster_scripts/optim_out/fitOneInt_oneParamAsymmLinear_earlyIntegration/')
+
+model = "oneIntegrator_sepProbDistortion_earlyIntegration"  
+
+ddm_fit_pars = data.frame()
+
+for(i in 1:length(subnums)){
+  cur_subnum = subnums[i]
+  tmp = get_optim_out(model_=model, data_=paste0(data_prefix, cur_subnum, data_suffix), optim_out_path_=optim_out_path, iters_ = F)
+  tmp$subnum = cur_subnum
+  ddm_fit_pars = rbind.all.columns(tmp, ddm_fit_pars)
+}
+```
+
+Summarise subject parameters as a mean of the converged values from different starting points
+
+```{r}
+oneIntEstsAsymmLinear_earlyInt = ddm_fit_pars %>%
+  group_by(subnum) %>%
+  summarise(d = mean(Param1),
+            sigma = mean(Param2))
+```
+
+```{r}
+oneIntPpcAsymmLinear_earlyInt = data.frame()
+
+for(i in 1:length(unique(oneIntEstsAsymmLinear_earlyInt$subnum))){
+  cur_sub = unique(oneIntEstsAsymmLinear_earlyInt$subnum)[i]
+  cur_stims =  sub_stims_asym %>% filter(subnum == cur_sub) %>%
+    mutate(probFractalDraw = as.numeric(as.character(probFractalDraw)))
+  cur_pars = oneIntEstsAsymmLinear_earlyInt %>% filter(subnum == cur_sub)
+  sim_subj = sim_task(cur_stims, model_name = "model1ea", d=cur_pars$d, sigma=cur_pars$sigma, theta=unique(cur_stims$theta), stimDelay=500)
+  sim_subj$subnum = cur_sub
+  oneIntPpcAsymmLinear_earlyInt = rbind(oneIntPpcAsymmLinear_earlyInt, sim_subj)
+}
+
+```
+
+
+```{r}
+p = sim_sanity_checks(oneIntPpcAsymmLinear_earlyInt , checks = c(5), true_data = sub_stims_asym, compare_logits = T, logit_facets = F, return_plot = T)
+
+p = p[[1]] +
+  geom_point(size=3)+
+  geom_line(size=3)+
+  geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate +std.error), width=0.2, size=3)+
+  geom_rect(aes(xmin=.5, xmax=1.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01, inherit.aes = F)+
+  geom_rect(aes(xmin=5.5, xmax=6.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01, inherit.aes = F)+
+  geom_rect(aes(xmin=10.5, xmax=11.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01, inherit.aes = F)+
+  theme(legend.position = "none",
+        axis.text = element_text(size=24),
+        axis.title = element_text(size=24))+
+  labs(color="", x= "p(FD)", y="Beta estimate")+
+  expand_limits(y=c(-1,11))+
+  scale_y_continuous(breaks=seq(0, 10, 2.5))
+
+ggsave(file=paste0(fig_out_path, 'neuroecon_oneIntEarlyIntLogitSim.jpg'), p, height = 5, width=8, units="in")
+p
+```
+
+```{r}
+p = sim_sanity_checks(oneIntPpcAsymmLinear_earlyInt, checks = c(4), true_data = sub_stims_asym, compare_logits = T, logit_facets = F, return_plot = T)
+
+p = p[[1]] +
+  geom_point(aes(alpha = data_type),size=3)+
+  geom_errorbar(aes(ymin = mean_log_rt - sem_log_rt, ymax = mean_log_rt + sem_log_rt),width=.2,size=2)+
+  labs(y="Mean Log RT", x="p(FD)")+
+  scale_color_manual(values = c("black", "gray"))+
+  scale_alpha_manual(values = c(1,.5))+
+   theme(panel.grid = element_blank(),
+        axis.text = element_text(size=24),
+        axis.title = element_text(size=24),
+        legend.position = "none")+
+  geom_rect(aes(xmin=.5, xmax=1.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01)+
+  geom_rect(aes(xmin=5.5, xmax=6.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01)+
+  geom_rect(aes(xmin=10.5, xmax=11.5, ymin=-Inf, ymax=Inf), color="transparent", fill="light gray", alpha=0.01)+
+  scale_y_continuous(breaks = c(-.3, 0, .3), limits=c(-.43, .43))
+
+ggsave(file=paste0(fig_out_path, 'neuroecon_oneIntEarlyIntRTSim.jpg'), p, height = 5, width=8, units="in")
+p
+```

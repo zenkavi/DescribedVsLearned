@@ -158,6 +158,19 @@ ggsave(file=paste0(fig_out_path, 'neuroecon_logit_build2.jpg'), p, height = 5, w
 p
 ```
 
+```{r}
+m1 = lme4::glmer(choiceLeft ~ lottery_ev_diff + fractal_prob_diff + (1|subnum), data = clean_beh_data, family = binomial(link="logit")) 
+m2 = lme4::glmer(choiceLeft ~ lottery_ev_diff + fractal_qv_diff + (1|subnum), data = clean_beh_data, family = binomial(link="logit")) 
+```
+
+```{r}
+summary(m1)
+```
+
+```{r}
+summary(m2)
+```
+
 # Plain RT inverse U
 
 ```{r}
